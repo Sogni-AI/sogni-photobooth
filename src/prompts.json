@@ -152,7 +152,11 @@
       "magazineCoverStudio": "glossy studio portrait framed like a magazine cover, seamless paper backdrop, rim lights, subtle paper texture, vignette, no readable text",
       "mallGlamour90s": "1990s mall glamour portrait, soft-focus diffusion, feather boa, studio gels (teal/purple), airbrushed sparkle, vignette",
       "relaxBath": "in bubble bath submerged to face, white bubbles, pink bathtub, 35mm cinematic film",
-      "vintageHollywood": "Attractive, 1940s Hollywood headshot, silver-gelatin sheen, soft glow glass filter, dramatic key light, velvet backdrop, coiffed waves, celebrity vibe"
+      "vintageHollywood": "Attractive, 1940s Hollywood headshot, silver-gelatin sheen, soft glow glass filter, dramatic key light, velvet backdrop, coiffed waves, celebrity vibe",
+      "satinStudio": "cinematic studio portrait, elegant human in flowing satin, soft beauty lighting, dramatic Rembrandt shadows, classic Hollywood glamour style, kodak porta 800 film look, golden highlights, masterpiece, best quality, photorealistic",
+      "fashionMag": "stunning editorial portrait, model against bright monochrome backdrop, neon rim lighting, saturated color grade, fashion magazine cover, high-gloss finish, sharp detail, vibrant commercial look, masterpiece, best quality",
+      "avantgarde": "avant-garde portrait, couture fashion styling, bold makeup, experimental hairstyle, magazine editorial photography, edgy urban background, high contrast color grade, masterpiece, best quality, photorealistic",
+      "profHeadshot": "clean corporate headshot, person in tailored suit, seamless gray studio background, balanced three-point lighting, crisp detail, neutral color grade, LinkedIn profile style, photorealistic, masterpiece, best quality"
     }
   },
   "raver-costume-space-party": {
@@ -198,7 +202,9 @@
       "luchaLibre": "Mexican lucha libre. triumphant",
       "kungFuMaster": "dynamic wushu long-fist pose, flowing silk uniform, temple courtyard, motion trails, drifting leaves",
       "mmaChampion": "octagon cage backdrop, 4oz gloves, corner floodlights, coach towels bokeh, dynamic feint blur, head to head, bloody nose",
-      "kendoDuelist": "kendo armor (bogu) with shinai clash at impact, dojang backlight beams, subtle breath fog, no readable text"
+      "kendoDuelist": "kendo armor (bogu) with shinai clash at impact, dojang backlight beams, subtle breath fog, no readable text",
+      "vintageBurlesque": "vintage burlesque, faded colors, pink",
+      "bodyBuilder": "bodybuilder extreme muscular body, modeling contest"
     }
   },
   "storybook-kidlit": {
