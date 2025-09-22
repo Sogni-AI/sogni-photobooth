@@ -3693,7 +3693,7 @@ const App = () => {
                 isPreview: false, // Clear preview flag so final image shows at full opacity
                 positivePrompt,
                 stylePrompt: positivePrompt, // Use the actual prompt that was used for generation
-                statusText: hashtag ? styleIdToDisplay(hashtag.replace('#', '')) : (selectedStyle && selectedStyle !== 'custom' && selectedStyle !== 'random' && selectedStyle !== 'randomMix' ? styleIdToDisplay(selectedStyle) : `#${(jobIndex || 0) + 1}`)
+                statusText: hashtag ? styleIdToDisplay(hashtag.replace('#', '')) : (selectedStyle && selectedStyle !== 'custom' && selectedStyle !== 'random' && selectedStyle !== 'randomMix' ? styleIdToDisplay(selectedStyle) : '#SogniPhotobooth')
               };
             }
             return updated;

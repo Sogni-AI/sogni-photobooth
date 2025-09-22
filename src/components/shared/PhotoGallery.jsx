@@ -2499,7 +2499,7 @@ const PhotoGallery = ({
           const loadingLabel = progress > 0 ? `${progress}%` : "";
           const labelText = isReference ? "Reference" : 
             photo.isGalleryImage && photo.promptDisplay ? photo.promptDisplay : 
-            `#${index-keepOriginalPhoto+1}`;
+            (getStyleDisplayText(photo) ? `#${index-keepOriginalPhoto+1}` : '#SogniPhotobooth');
           // Check if this photo represents the currently selected style
           const isCurrentStyle = isPromptSelectorMode && photo.promptKey && photo.promptKey === selectedStyle;
           // Loading or error state
