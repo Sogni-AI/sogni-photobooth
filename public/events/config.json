@@ -18,6 +18,17 @@
         ]
       }
     },
+    "AIYP": {
+      "label": "Korea Blockchain Week 2025 - AIYP",
+      "defaultAspectRatio": "narrow",
+      "framePadding": 0,
+      "tweetTemplate": "Check out my photo at the @sogni_protocol AI photobooth #AIYP #koreablockchainweek https://photobooth.sogni.ai",
+      "frames": {
+        "narrow": [
+          "/events/AIYP/narrow_1.png"
+        ]
+      }
+    },
     "showup": {
       "label": "Show Up Taipei Vibe",
       "defaultAspectRatio": "narrow",

@@ -750,7 +750,7 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
             checked={settings.sogniWatermark}
             onChange={(e) => updateSetting('sogniWatermark', e.target.checked)}
           />
-          <label htmlFor="sogni-watermark-toggle" className="control-label">Sogni watermark</label>
+          <label htmlFor="sogni-watermark-toggle" className="control-label">Sogni QR Code</label>
         </div>
 
         {/* Flash toggle */}
