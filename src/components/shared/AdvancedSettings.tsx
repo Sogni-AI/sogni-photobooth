@@ -750,7 +750,7 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
             checked={settings.sogniWatermark}
             onChange={(e) => updateSetting('sogniWatermark', e.target.checked)}
           />
-          <label htmlFor="sogni-watermark-toggle" className="control-label">Sogni QR Code</label>
+          <label htmlFor="sogni-watermark-toggle" className="control-label">Overlay Sogni QR Code</label>
         </div>
 
         {/* Flash toggle */}
@@ -830,7 +830,7 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
             checked={kioskMode || settings.kioskMode}
             onChange={(e) => handleKioskModeChange(e.target.checked)}
           />
-          <label htmlFor="kiosk-mode-toggle" className="control-label">Kiosk Mode</label>
+          <label htmlFor="kiosk-mode-toggle" className="control-label">Kiosk Mode (Share via QR Code)</label>
         </div>
         
         {/* Reset settings button */}
