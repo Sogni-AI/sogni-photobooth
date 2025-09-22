@@ -962,8 +962,8 @@ const PhotoGallery = ({
   // Generate composite framed image when photo is selected with decorative theme
   useEffect(() => {
     const generateFramedImage = async () => {
-      // Only generate for selected photos with supported themes
-      if (selectedPhotoIndex === null || !isThemeSupported() || !photos[selectedPhotoIndex]) {
+      // Generate for selected photos with supported themes OR when QR watermark is enabled
+      if (selectedPhotoIndex === null || (!isThemeSupported() && !settings.sogniWatermark) || !photos[selectedPhotoIndex]) {
         return;
       }
 
@@ -993,18 +993,20 @@ const PhotoGallery = ({
         
         // Create composite framed image
         // Gallery images should always use default polaroid styling, not theme frames
+        // For QR-only cases (no theme but QR enabled), don't add polaroid frame since CSS handles the frame
         const isGalleryImage = photo.isGalleryImage;
+        const isQROnly = !isThemeSupported() && settings.sogniWatermark;
         const framedImageUrl = await createPolaroidImage(imageUrl, '', {
           tezdevTheme: isGalleryImage ? 'off' : tezdevTheme,
           aspectRatio,
-          // Gallery images get default polaroid frame, theme images get no polaroid frame
+          // Gallery images get default polaroid frame, theme images and QR-only get no polaroid frame
           frameWidth: isGalleryImage ? 56 : 0,
           frameTopWidth: isGalleryImage ? 56 : 0,
           frameBottomWidth: isGalleryImage ? 196 : 0,
           frameColor: isGalleryImage ? 'white' : 'transparent',
           outputFormat: outputFormat,
-          // For Taipei theme, pass the current frame number to ensure consistency (but not for gallery images)
-          taipeiFrameNumber: (!isGalleryImage && tezdevTheme === 'taipeiblockchain') ? currentTaipeiFrameNumber : undefined,
+          // For Taipei theme, pass the current frame number to ensure consistency (but not for gallery images or QR-only)
+          taipeiFrameNumber: (!isGalleryImage && !isQROnly && tezdevTheme === 'taipeiblockchain') ? currentTaipeiFrameNumber : undefined,
           // Add QR watermark to selected photo frames (if enabled) - match download size
           watermarkOptions: settings.sogniWatermark ? {
             size: 90, // Match download/Twitter size for consistency
@@ -2615,9 +2617,9 @@ const PhotoGallery = ({
                   key={`${photo.id}-${photo.isPreview ? 'preview' : 'final'}`} // Force re-render when preview state changes
                   className={`${isSelected && photo.enhancing && photo.isPreview ? 'enhancement-preview-selected' : ''}`}
                   src={(() => {
-                    // For selected photos with supported themes, use composite framed image if available
+                    // For selected photos with supported themes OR QR watermark enabled, use composite framed image if available
                     // Skip custom theme framing for gallery images, but allow basic polaroid frames
-                    if (isSelected && isThemeSupported() && !photo.isGalleryImage) {
+                    if (isSelected && (isThemeSupported() || settings.sogniWatermark) && !photo.isGalleryImage) {
                       const currentSubIndex = photo.enhanced && photo.enhancedImageUrl 
                         ? -1 // Special case for enhanced images
                         : (selectedSubIndex || 0);
