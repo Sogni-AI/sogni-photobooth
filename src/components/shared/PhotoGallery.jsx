@@ -106,7 +106,8 @@ const PhotoGallery = ({
   onOneOfEachSelect = null,
   onCustomSelect = null,
   onThemeChange = null,
-  onBackToPhotos = null
+  onBackToPhotos = null,
+  initialThemeGroupState = null
 }) => {
   // Get settings from context
   const { settings } = useApp();
@@ -131,6 +132,10 @@ const PhotoGallery = ({
   // State for prompt selector mode
   const [themeGroupState, setThemeGroupState] = useState(() => {
     if (isPromptSelectorMode) {
+      // Use initialThemeGroupState prop if provided (for auto-reselect functionality)
+      if (initialThemeGroupState) {
+        return initialThemeGroupState;
+      }
       const saved = getThemeGroupPreferences();
       const defaultState = getDefaultThemeGroupState();
       // If no saved preferences exist (empty object), use default state (all enabled)
@@ -141,6 +146,13 @@ const PhotoGallery = ({
   const [showThemeFilters, setShowThemeFilters] = useState(false);
   const [showSearchInput, setShowSearchInput] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+
+  // Update theme group state when initialThemeGroupState prop changes
+  useEffect(() => {
+    if (isPromptSelectorMode && initialThemeGroupState) {
+      setThemeGroupState(initialThemeGroupState);
+    }
+  }, [isPromptSelectorMode, initialThemeGroupState]);
 
   // Keep track of the previous photos array length to detect new batches (for legacy compatibility)
   const [, setPreviousPhotosLength] = useState(0);

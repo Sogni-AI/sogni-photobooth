@@ -8,7 +8,7 @@ import { getCustomDimensions } from './utils/imageProcessing';
 import { goToPreviousPhoto, goToNextPhoto } from './utils/photoNavigation';
 import { initializeStylePrompts, getRandomStyle, getRandomMixPrompts } from './services/prompts';
 import { getDefaultThemeGroupState, getEnabledPrompts, getOneOfEachPrompts } from './constants/themeGroups';
-import { getThemeGroupPreferences } from './utils/cookies';
+import { getThemeGroupPreferences, saveThemeGroupPreferences } from './utils/cookies';
 import { initializeSogniClient } from './services/sogni';
 import { isNetworkError } from './services/api';
 import { enhancePhoto, undoEnhancement, redoEnhancement } from './services/PhotoEnhancer';
@@ -630,6 +630,19 @@ const App = () => {
   useEffect(() => {
     const loadGalleryForPromptSelector = async () => {
       if (currentPage === 'prompts' && stylePrompts && Object.keys(stylePrompts).length > 0) {
+        // Check if all theme groups are deselected and auto-reselect them
+        const currentThemePrefs = getThemeGroupPreferences();
+        const allDeselected = Object.keys(currentThemePrefs).length > 0 && 
+          Object.values(currentThemePrefs).every(value => value === false);
+        
+        if (allDeselected) {
+          console.log('All theme groups are deselected, auto-reselecting all styles for Style Explorer');
+          const allSelected = getDefaultThemeGroupState();
+          saveThemeGroupPreferences(allSelected);
+          // Update the current theme state to reflect the change
+          setCurrentThemeState(allSelected);
+        }
+        
         // Prevent loading more than once per session
         if (galleryImagesLoadedThisSession.current) {
           console.log('Gallery images already loaded this session, skipping reload');
@@ -639,6 +652,9 @@ const App = () => {
         // Also check if we already have gallery images loaded
         if (galleryPhotos.length > 0 && galleryPhotos[0]?.isGalleryImage) {
           console.log('Gallery images already loaded in state, skipping reload');
+          // Ensure photos state is synced with gallery photos to prevent race condition
+          setPhotos(galleryPhotos);
+          console.log(`Synced photos state with ${galleryPhotos.length} existing gallery images`);
           galleryImagesLoadedThisSession.current = true;
           return;
         }
@@ -653,6 +669,10 @@ const App = () => {
           if (loadedGalleryPhotos.length > 0) {
             console.log(`Loaded ${loadedGalleryPhotos.length} gallery images for prompt selector`);
             setGalleryPhotos(loadedGalleryPhotos);
+            // Also immediately update the photos state since we're in prompt selector mode
+            // This prevents a race condition where photos might be empty when PhotoGallery renders
+            setPhotos(loadedGalleryPhotos);
+            console.log(`Updated photos state with ${loadedGalleryPhotos.length} gallery images to prevent race condition`);
             galleryImagesLoadedThisSession.current = true; // Mark as loaded
           } else {
             console.warn('No gallery images found for prompt selector');
@@ -4511,6 +4531,7 @@ const App = () => {
                 onCustomSelect={handleCustomFromSampleGallery}
                 onThemeChange={handleThemeChange}
                 onBackToPhotos={handleBackToPhotosFromPromptSelector}
+                initialThemeGroupState={currentThemeState}
               />
             </div>
           )}
