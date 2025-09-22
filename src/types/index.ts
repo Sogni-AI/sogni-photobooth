@@ -88,6 +88,8 @@ export interface Settings {
   preferredCameraDeviceId?: string;
   kioskMode: boolean;
   sogniWatermark: boolean;
+  sogniWatermarkSize?: number;
+  sogniWatermarkMargin?: number;
   // Worker preferences
   requiredWorkers: string[];
   preferWorkers: string[];

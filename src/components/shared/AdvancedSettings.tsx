@@ -753,6 +753,40 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
           <label htmlFor="sogni-watermark-toggle" className="control-label">Overlay Sogni QR Code</label>
         </div>
 
+        {/* QR Code Size - only show when watermark is enabled */}
+        {settings.sogniWatermark && (
+          <div className="control-option">
+            <label htmlFor="qr-size-slider" className="control-label">QR Code Size: {settings.sogniWatermarkSize ?? 90}px</label>
+            <input
+              type="range"
+              id="qr-size-slider"
+              min="50"
+              max="150"
+              step="5"
+              value={settings.sogniWatermarkSize ?? 90}
+              onChange={(e) => updateSetting('sogniWatermarkSize', parseInt(e.target.value) || 90)}
+              className="slider"
+            />
+          </div>
+        )}
+
+        {/* QR Code Margin - only show when watermark is enabled */}
+        {settings.sogniWatermark && (
+          <div className="control-option">
+            <label htmlFor="qr-margin-slider" className="control-label">QR Code Margin: {settings.sogniWatermarkMargin ?? 10}px</label>
+            <input
+              type="range"
+              id="qr-margin-slider"
+              min="0"
+              max="30"
+              step="1"
+              value={settings.sogniWatermarkMargin ?? 10}
+              onChange={(e) => updateSetting('sogniWatermarkMargin', parseInt(e.target.value) || 10)}
+              className="slider"
+            />
+          </div>
+        )}
+
         {/* Flash toggle */}
         <div className="control-option checkbox">
           <input

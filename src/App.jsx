@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 
-import { getModelOptions, defaultStylePrompts as initialStylePrompts, TIMEOUT_CONFIG, isFluxKontextModel, TWITTER_SHARE_CONFIG } from './constants/settings';
+import { getModelOptions, defaultStylePrompts as initialStylePrompts, TIMEOUT_CONFIG, isFluxKontextModel, TWITTER_SHARE_CONFIG, getQRWatermarkConfig } from './constants/settings';
 import { photoThoughts, randomThoughts } from './constants/thoughts';
 import { saveSettingsToCookies, shouldShowPromoPopup, markPromoPopupShown } from './utils/cookies';
 import { styleIdToDisplay } from './utils';
@@ -1570,12 +1570,7 @@ const App = () => {
           // For Taipei theme, pass the current frame number to ensure consistency
           taipeiFrameNumber: tezdevTheme === 'taipeiblockchain' ? currentTaipeiFrameNumber : undefined,
           // Add QR watermark for mobile sharing (if enabled)
-          watermarkOptions: settings.sogniWatermark ? {
-            size: 80, // Smaller for mobile sharing
-            margin: 5, // Closer to edge
-            position: 'top-right',
-            opacity: 1.0
-          } : null
+          watermarkOptions: settings.sogniWatermark ? getQRWatermarkConfig(settings) : null
         });
       } else {
         // For non-TezDev themes, use traditional polaroid frame
@@ -1588,12 +1583,7 @@ const App = () => {
           aspectRatio,
           outputFormat: 'jpg', // Use JPG for mobile sharing
           // Add QR watermark for mobile sharing (if enabled)
-          watermarkOptions: settings.sogniWatermark ? {
-            size: 80, // Smaller for mobile sharing
-            margin: 5, // Closer to edge
-            position: 'top-right',
-            opacity: 1.0
-          } : null
+          watermarkOptions: settings.sogniWatermark ? getQRWatermarkConfig(settings) : null
         });
       }
       
@@ -1768,6 +1758,8 @@ const App = () => {
       aspectRatio,
       outputFormat,
       sogniWatermark: settings.sogniWatermark,
+      sogniWatermarkSize: settings.sogniWatermarkSize,
+      sogniWatermarkMargin: settings.sogniWatermarkMargin,
       onSuccess: () => {
         setSuccessMessage('Your photo has been shared to X/Twitter!');
         setShowSuccessToast(true);

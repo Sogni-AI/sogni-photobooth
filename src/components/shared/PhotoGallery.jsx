@@ -10,7 +10,7 @@ import { downloadImageMobile, enableMobileImageDownload } from '../../utils/mobi
 import { isMobile, styleIdToDisplay } from '../../utils/index';
 import { THEME_GROUPS, getDefaultThemeGroupState, getEnabledPrompts } from '../../constants/themeGroups';
 import { getThemeGroupPreferences, saveThemeGroupPreferences } from '../../utils/cookies';
-import { isFluxKontextModel, SAMPLE_GALLERY_CONFIG } from '../../constants/settings';
+import { isFluxKontextModel, SAMPLE_GALLERY_CONFIG, getQRWatermarkConfig } from '../../constants/settings';
 import { themeConfigService } from '../../services/themeConfig';
 import { useApp } from '../../context/AppContext';
 
@@ -742,12 +742,7 @@ const PhotoGallery = ({
                 // For Taipei theme, pass the current frame number to ensure consistency (but not for gallery images)
                 taipeiFrameNumber: (!isGalleryImage && tezdevTheme === 'taipeiblockchain') ? currentTaipeiFrameNumber : undefined,
                 // Add QR watermark to preview frames (if enabled)
-                watermarkOptions: settings.sogniWatermark ? {
-                  size: 90, // Match download/Twitter size for consistency
-                  margin: 5,
-                  position: 'top-right',
-                  opacity: 1.0
-                } : null
+                watermarkOptions: settings.sogniWatermark ? getQRWatermarkConfig(settings) : null
               });
               
               // Store the framed image URL
@@ -1008,12 +1003,7 @@ const PhotoGallery = ({
           // For Taipei theme, pass the current frame number to ensure consistency (but not for gallery images or QR-only)
           taipeiFrameNumber: (!isGalleryImage && !isQROnly && tezdevTheme === 'taipeiblockchain') ? currentTaipeiFrameNumber : undefined,
           // Add QR watermark to selected photo frames (if enabled) - match download size
-          watermarkOptions: settings.sogniWatermark ? {
-            size: 90, // Match download/Twitter size for consistency
-            margin: 5,
-            position: 'top-right',
-            opacity: 1.0
-          } : null
+          watermarkOptions: settings.sogniWatermark ? getQRWatermarkConfig(settings) : null
         });
         
         // Store the framed image URL
@@ -1233,12 +1223,7 @@ const PhotoGallery = ({
         // For Taipei theme, pass the current frame number to ensure consistency (but not for gallery images)
         taipeiFrameNumber: shouldUseTheme && tezdevTheme === 'taipeiblockchain' ? photos[photoIndex].taipeiFrameNumber : undefined,
         // Add QR watermark for downloads with improved settings (if enabled)
-        watermarkOptions: settings.sogniWatermark ? {
-          size: 90, // Standardized size for consistency
-          margin: 5, // Closer to edge
-          position: 'top-right',
-          opacity: 1.0 // Maximum opacity for best clarity
-        } : null
+        watermarkOptions: settings.sogniWatermark ? getQRWatermarkConfig(settings) : null
       });
       
              // Handle download
@@ -1321,12 +1306,7 @@ const PhotoGallery = ({
             // Add QR watermark to raw image (if enabled)
             if (settings.sogniWatermark) {
               const { addQRWatermark } = await import('../../utils/imageProcessing.js');
-              await addQRWatermark(ctx, canvas.width, canvas.height, {
-                size: 90, // Standardized size for consistency
-                margin: 5, // Closer to edge
-                position: 'top-right',
-                opacity: 1.0
-              });
+              await addQRWatermark(ctx, canvas.width, canvas.height, getQRWatermarkConfig(settings));
             }
             
             // Convert to data URL

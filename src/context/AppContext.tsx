@@ -117,6 +117,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       preferredCameraDeviceId: getSettingFromCookie('preferredCameraDeviceId', DEFAULT_SETTINGS.preferredCameraDeviceId),
       kioskMode: getSettingFromCookie('kioskMode', DEFAULT_SETTINGS.kioskMode),
       sogniWatermark: getSettingFromCookie('sogniWatermark', DEFAULT_SETTINGS.sogniWatermark),
+      sogniWatermarkSize: getSettingFromCookie('sogniWatermarkSize', DEFAULT_SETTINGS.sogniWatermarkSize),
+      sogniWatermarkMargin: getSettingFromCookie('sogniWatermarkMargin', DEFAULT_SETTINGS.sogniWatermarkMargin),
       // Worker preferences
       requiredWorkers: getSettingFromCookie('requiredWorkers', DEFAULT_SETTINGS.requiredWorkers),
       preferWorkers: getSettingFromCookie('preferWorkers', DEFAULT_SETTINGS.preferWorkers),

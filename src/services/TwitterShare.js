@@ -5,7 +5,7 @@
 import config from '../config';
 import { createPolaroidImage } from '../utils/imageProcessing';
 import { themeConfigService } from './themeConfig';
-import { TWITTER_SHARE_CONFIG } from '../constants/settings';
+import { TWITTER_SHARE_CONFIG, getQRWatermarkConfig } from '../constants/settings';
 
 /**
  * Extract hashtag from photo data
@@ -40,6 +40,8 @@ export const getPhotoHashtag = (photo) => {
  * @param {string} [params.aspectRatio] - Aspect ratio of the image
  * @param {string} [params.outputFormat='png'] - Output format ('png' or 'jpg') - Note: Twitter always uses JPG regardless of this setting
  * @param {boolean} [params.sogniWatermark=true] - Whether to include Sogni watermark
+ * @param {number} [params.sogniWatermarkSize=90] - Size of the QR watermark
+ * @param {number} [params.sogniWatermarkMargin=10] - Margin of the QR watermark from edge
  * @returns {Promise<void>}
  */
 export const shareToTwitter = async ({
@@ -54,6 +56,8 @@ export const shareToTwitter = async ({
   aspectRatio = null,
   outputFormat = 'png',
   sogniWatermark = true,
+  sogniWatermarkSize = 90,
+  sogniWatermarkMargin = 10,
 }) => {
   if (photoIndex === null || !photos[photoIndex] || !photos[photoIndex].images || !photos[photoIndex].images[0]) {
     console.error('No image selected or image URL is missing for sharing.');
@@ -176,10 +180,10 @@ export const shareToTwitter = async ({
         outputFormat: 'jpg', // Always use JPG for Twitter sharing
         // Add QR watermark for Twitter sharing (if enabled)
         watermarkOptions: sogniWatermark ? {
-          size: 90, // Standardized size for consistency
-          margin: 5, // Closer to edge
+          size: sogniWatermarkSize,
+          margin: sogniWatermarkMargin,
           position: 'top-right',
-          opacity: 0.8
+          opacity: 1.0
         } : null
       });
     } else {
@@ -194,10 +198,10 @@ export const shareToTwitter = async ({
         outputFormat: 'jpg', // Always use JPG for Twitter sharing
         // Add QR watermark for Twitter sharing (if enabled)
         watermarkOptions: sogniWatermark ? {
-          size: 90, // Standardized size for consistency
-          margin: 5, // Closer to edge
+          size: sogniWatermarkSize,
+          margin: sogniWatermarkMargin,
           position: 'top-right',
-          opacity: 0.8
+          opacity: 1.0
         } : null
       });
     }

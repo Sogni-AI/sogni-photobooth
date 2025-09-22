@@ -5,7 +5,7 @@ import { createPolaroidImage } from '../../utils/imageProcessing';
 // import { getPhotoHashtag } from '../../services/TwitterShare'; // Unused import
 import { themeConfigService } from '../../services/themeConfig';
 import { styleIdToDisplay } from '../../utils';
-import { TWITTER_SHARE_CONFIG } from '../../constants/settings';
+import { TWITTER_SHARE_CONFIG, getQRWatermarkConfig } from '../../constants/settings';
 import { useApp } from '../../context/AppContext';
 
 // Helper to ensure Permanent Marker font is loaded
@@ -122,12 +122,7 @@ const TwitterShareModal = ({
               frameColor: 'transparent', // No polaroid background
               outputFormat: 'jpg', // Always use JPG for Twitter sharing
               // Add QR watermark for Twitter sharing (if enabled)
-              watermarkOptions: settings.sogniWatermark ? {
-                size: 90, // Standardized size for consistency
-                margin: 5, // Closer to edge
-                position: 'top-right',
-                opacity: 0.9
-              } : null
+              watermarkOptions: settings.sogniWatermark ? getQRWatermarkConfig(settings) : null
             });
           } else {
             // For non-TezDev themes, use traditional polaroid frame
@@ -137,12 +132,7 @@ const TwitterShareModal = ({
               aspectRatio,
               outputFormat: 'jpg', // Always use JPG for Twitter sharing
               // Add QR watermark for Twitter sharing - positioned to not overlap label (if enabled)
-              watermarkOptions: settings.sogniWatermark ? {
-                size: 90, // Standardized size for consistency
-                margin: 5, // Closer to edge
-                position: 'top-right',
-                opacity: 0.9
-              } : null
+              watermarkOptions: settings.sogniWatermark ? getQRWatermarkConfig(settings) : null
             });
           }
           

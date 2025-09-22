@@ -163,6 +163,8 @@ const createDefaultSettings = (): Settings => {
     preferredCameraDeviceId: undefined,
     kioskMode: false,
     sogniWatermark: true, // Default to enabled
+    sogniWatermarkSize: 90, // Default QR code size
+    sogniWatermarkMargin: 10, // Default margin from edge
     // Worker preferences
     requiredWorkers: [],
     preferWorkers: ['SPICE.MUST.FLOW'],
@@ -214,6 +216,21 @@ export const defaultStylePrompts: { [key: string]: string } = {
 export const TWITTER_SHARE_CONFIG = {
   // Default fallback message for Twitter sharing
   DEFAULT_MESSAGE: "Just took my photo with the free @sogni_protocol AI photobooth https://photobooth.sogni.ai",
+} as const;
+
+// QR Code watermark configuration - centralized settings for all QR watermark usage
+export const getQRWatermarkConfig = (settings: Settings) => ({
+  size: settings.sogniWatermarkSize ?? 90,
+  margin: settings.sogniWatermarkMargin ?? 10,
+  position: 'top-right' as const,
+  opacity: 1.0, // Always 100% for maximum legibility
+});
+
+// Legacy static config for backward compatibility (deprecated - use getQRWatermarkConfig instead)
+export const QR_WATERMARK_CONFIG = {
+  SIZE: 96,
+  MARGIN: 16,
+  POSITION: 'top-right' as const,
 } as const;
 
 // Sample Gallery constants - hard-coded values that cannot be changed by user settings
