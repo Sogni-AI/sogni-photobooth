@@ -27,6 +27,9 @@ export interface Photo {
   canRedo?: boolean;
   originalEnhancedImage?: string;
   enhancedImageUrl?: string;
+
+  // Hide functionality for NSFW content during batch generation
+  hidden?: boolean;
 }
 
 export interface ProjectState {

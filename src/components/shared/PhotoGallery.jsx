@@ -2489,7 +2489,7 @@ const PhotoGallery = ({
             return (
               <div
                 key={photo.id}
-                className={`film-frame loading ${isSelected ? 'selected' : ''} ${isCurrentStyle ? 'current-style' : ''} ${photo.newlyArrived ? 'newly-arrived' : ''} ${isSelected && isThemeSupported() && !photo.isGalleryImage && tezdevTheme === 'supercasual' ? 'super-casual-theme' : ''} ${isSelected && isThemeSupported() && !photo.isGalleryImage && tezdevTheme === 'tezoswebx' ? 'tezos-webx-theme' : ''} ${isSelected && isThemeSupported() && !photo.isGalleryImage && tezdevTheme === 'showup' ? 'showup-theme' : ''} ${isSelected && isThemeSupported() && !photo.isGalleryImage ? `${tezdevTheme}-theme` : ''}`}
+                className={`film-frame loading ${isSelected ? 'selected' : ''} ${isCurrentStyle ? 'current-style' : ''} ${photo.newlyArrived ? 'newly-arrived' : ''} ${photo.hidden ? 'hidden' : ''} ${isSelected && isThemeSupported() && !photo.isGalleryImage && tezdevTheme === 'supercasual' ? 'super-casual-theme' : ''} ${isSelected && isThemeSupported() && !photo.isGalleryImage && tezdevTheme === 'tezoswebx' ? 'tezos-webx-theme' : ''} ${isSelected && isThemeSupported() && !photo.isGalleryImage && tezdevTheme === 'showup' ? 'showup-theme' : ''} ${isSelected && isThemeSupported() && !photo.isGalleryImage ? `${tezdevTheme}-theme` : ''}`}
                 data-enhancing={photo.enhancing ? 'true' : undefined}
                 data-error={photo.error ? 'true' : undefined}
                 data-enhanced={photo.enhanced ? 'true' : undefined}
@@ -2505,7 +2505,7 @@ const PhotoGallery = ({
                   position: 'relative',
                   borderRadius: '2px',
                   boxShadow: isExtensionMode ? '0 4px 12px rgba(0, 0, 0, 0.5)' : '0 4px 12px rgba(0, 0, 0, 0.3)',
-                  display: 'flex',
+                  display: photo.hidden ? 'none' : 'flex',
                   flexDirection: 'column',
                   '--stagger-delay': `${index * 1}s` // Add staggered delay based on index
                 }}
@@ -2517,6 +2517,59 @@ const PhotoGallery = ({
                   overflow: 'hidden'
                 }}>
                   <PlaceholderImage placeholderUrl={placeholderUrl} />
+                  
+                  {/* Hide button for loading/error state - only show on hover for grid photos */}
+                  {!isSelected && !photo.isOriginal && !photo.isGalleryImage && (
+                    <button
+                      className="photo-hide-btn"
+                      onMouseDown={(e) => {
+                        e.stopPropagation();
+                        setPhotos(prev => {
+                          const updated = [...prev];
+                          if (updated[index]) {
+                            updated[index] = {
+                              ...updated[index],
+                              hidden: true
+                            };
+                          }
+                          return updated;
+                        });
+                      }}
+                      style={{
+                        position: 'absolute',
+                        top: '4px',
+                        right: '4px',
+                        background: 'rgba(0, 0, 0, 0.7)',
+                        color: 'white',
+                        border: 'none',
+                        width: '20px',
+                        height: '20px',
+                        borderRadius: '50%',
+                        fontSize: '12px',
+                        fontWeight: 'bold',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        zIndex: 999,
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.5)',
+                        transition: 'all 0.2s ease',
+                        opacity: '0',
+                        transform: 'scale(0.8)'
+                      }}
+                      onMouseOver={(e) => {
+                        e.currentTarget.style.background = 'rgba(0, 0, 0, 0.9)';
+                        e.currentTarget.style.transform = 'scale(1)';
+                      }}
+                      onMouseOut={(e) => {
+                        e.currentTarget.style.background = 'rgba(0, 0, 0, 0.7)';
+                        e.currentTarget.style.transform = 'scale(0.8)';
+                      }}
+                      title="Hide this image"
+                    >
+                      ×
+                    </button>
+                  )}
                 </div>
                 <div className="photo-label">
                   {photo.error ? 
@@ -2570,7 +2623,7 @@ const PhotoGallery = ({
           return (
             <div 
               key={photo.id}
-              className={`film-frame ${isSelected ? 'selected' : ''} ${isCurrentStyle ? 'current-style' : ''} ${photo.loading ? 'loading' : ''} ${isLoaded ? 'loaded' : ''} ${photo.newlyArrived ? 'newly-arrived' : ''} ${isSelected && isThemeSupported() && !photo.isGalleryImage && tezdevTheme === 'supercasual' ? 'super-casual-theme' : ''} ${isSelected && isThemeSupported() && !photo.isGalleryImage && tezdevTheme === 'tezoswebx' ? 'tezos-webx-theme' : ''} ${isSelected && isThemeSupported() && !photo.isGalleryImage && tezdevTheme === 'taipeiblockchain' ? 'taipei-blockchain-theme' : ''} ${isSelected && isThemeSupported() && !photo.isGalleryImage && tezdevTheme === 'showup' ? 'showup-theme' : ''} ${isSelected && isThemeSupported() && !photo.isGalleryImage ? `${tezdevTheme}-theme` : ''}`}
+              className={`film-frame ${isSelected ? 'selected' : ''} ${isCurrentStyle ? 'current-style' : ''} ${photo.loading ? 'loading' : ''} ${isLoaded ? 'loaded' : ''} ${photo.newlyArrived ? 'newly-arrived' : ''} ${photo.hidden ? 'hidden' : ''} ${isSelected && isThemeSupported() && !photo.isGalleryImage && tezdevTheme === 'supercasual' ? 'super-casual-theme' : ''} ${isSelected && isThemeSupported() && !photo.isGalleryImage && tezdevTheme === 'tezoswebx' ? 'tezos-webx-theme' : ''} ${isSelected && isThemeSupported() && !photo.isGalleryImage && tezdevTheme === 'taipeiblockchain' ? 'taipei-blockchain-theme' : ''} ${isSelected && isThemeSupported() && !photo.isGalleryImage && tezdevTheme === 'showup' ? 'showup-theme' : ''} ${isSelected && isThemeSupported() && !photo.isGalleryImage ? `${tezdevTheme}-theme` : ''}`}
               onClick={e => isSelected ? handlePhotoViewerClick(e) : handlePhotoSelect(index, e)}
               data-enhancing={photo.enhancing ? 'true' : undefined}
               data-error={photo.error ? 'true' : undefined}
@@ -2583,7 +2636,7 @@ const PhotoGallery = ({
                 position: 'relative',
                 borderRadius: '2px',
                 boxShadow: isExtensionMode ? '0 4px 12px rgba(0, 0, 0, 0.5)' : '0 4px 12px rgba(0, 0, 0, 0.3)',
-                display: 'flex',
+                display: photo.hidden ? 'none' : 'flex',
                 flexDirection: 'column'
               }}
             >
@@ -2971,6 +3024,59 @@ const PhotoGallery = ({
                       </button>
                     </div>
                   </div>
+                )}
+
+                {/* Hide button - only show on hover for grid photos (not popup) and when image is loaded */}
+                {!isSelected && isLoaded && !photo.isOriginal && !photo.isGalleryImage && (
+                  <button
+                    className="photo-hide-btn"
+                    onMouseDown={(e) => {
+                      e.stopPropagation();
+                      setPhotos(prev => {
+                        const updated = [...prev];
+                        if (updated[index]) {
+                          updated[index] = {
+                            ...updated[index],
+                            hidden: true
+                          };
+                        }
+                        return updated;
+                      });
+                    }}
+                    style={{
+                      position: 'absolute',
+                      top: '4px',
+                      right: '4px',
+                      background: 'rgba(0, 0, 0, 0.7)',
+                      color: 'white',
+                      border: 'none',
+                      width: '20px',
+                      height: '20px',
+                      borderRadius: '50%',
+                      fontSize: '12px',
+                      fontWeight: 'bold',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      zIndex: 999,
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.5)',
+                      transition: 'all 0.2s ease',
+                      opacity: '0',
+                      transform: 'scale(0.8)'
+                    }}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.background = 'rgba(0, 0, 0, 0.9)';
+                      e.currentTarget.style.transform = 'scale(1)';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.background = 'rgba(0, 0, 0, 0.7)';
+                      e.currentTarget.style.transform = 'scale(0.8)';
+                    }}
+                    title="Hide this image"
+                  >
+                    ×
+                  </button>
                 )}
               </div>
               {/* No special label for selected view - use standard grid label below */}
