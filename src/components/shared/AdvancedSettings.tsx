@@ -808,34 +808,7 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
           <label htmlFor="background-animations-toggle" className="control-label">Background Animations</label>
         </div>
         
-        {/* Worker Preferences - DISABLED (hardcoded on server) */}
-        <div className="control-option worker-preference-section disabled">
-          <label className="control-label">Required<br/>Workers</label>
-          <TagInput
-            tags={settings.requiredWorkers || []}
-            onTagsChange={() => {}} // Disabled - no-op function
-            placeholder="Managed by server configuration"
-            className="disabled"
-            disabled={true}
-          />
-          <div className="control-description">
-            Required workers are managed by server configuration and cannot be changed
-          </div>
-        </div>
-
-        <div className="control-option worker-preference-section disabled">
-          <label className="control-label">Preferred<br/>Workers</label>
-          <TagInput
-            tags={settings.preferWorkers}
-            onTagsChange={() => {}} // Disabled - no-op function
-            placeholder="Managed by server configuration"
-            className="disabled"
-            disabled={true}
-          />
-          <div className="control-description">
-            Preferred workers are managed by server configuration and cannot be changed
-          </div>
-        </div>
+        {/* Worker Preferences - Required and Preferred Workers sections hidden (managed by server) */}
 
         <div className="control-option worker-preference-section">
           <label className="control-label">Skip<br/>Workers</label>
