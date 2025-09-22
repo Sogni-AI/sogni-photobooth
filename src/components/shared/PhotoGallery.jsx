@@ -269,6 +269,10 @@ const PhotoGallery = ({
 
   // Handler for the "more" button that can either generate more or cancel current generation
   const handleMoreButtonClick = useCallback(async () => {
+    if (onClearQrCode) {
+      onClearQrCode();
+    }
+    
     // Clear framed image cache when generating more photos
     console.log('Clearing framed image cache due to "More" button click');
     Object.values(framedImageUrls).forEach(url => {
@@ -305,7 +309,7 @@ const PhotoGallery = ({
       // Normal "generate more photos" behavior
       handleGenerateMorePhotos();
     }
-  }, [isGenerating, activeProjectReference, sogniClient, handleGenerateMorePhotos, framedImageUrls]);
+  }, [isGenerating, activeProjectReference, sogniClient, handleGenerateMorePhotos, framedImageUrls, onClearQrCode]);
 
   // Generate QR code when qrCodeData changes
   useEffect(() => {

@@ -4552,6 +4552,9 @@ const App = () => {
                   console.log('Clearing mobile share cache due to PhotoGallery request');
                   setMobileShareCache({});
                 }}
+                onClearQrCode={() => {
+                  setQrCodeData(null);
+                }}
                 qrCodeData={qrCodeData}
                 onCloseQR={() => setQrCodeData(null)}
                 // New props for prompt selector mode
@@ -5795,6 +5798,9 @@ const App = () => {
           onClearMobileShareCache={() => {
             console.log('Clearing mobile share cache due to PhotoGallery request');
             setMobileShareCache({});
+          }}
+          onClearQrCode={() => {
+            setQrCodeData(null);
           }}
           qrCodeData={qrCodeData}
           onCloseQR={() => setQrCodeData(null)}

@@ -73,7 +73,9 @@ router.post('/create', (req, res) => {
       outputFormat,
       timestamp,
       // Persist the precomputed Twitter message so the mobile share UI uses the correct text
-      twitterMessage
+      twitterMessage,
+      // Add creation timestamp for additional validation
+      createdAt: Date.now()
     };
     
     shareData.set(shareId, shareDataObj);
