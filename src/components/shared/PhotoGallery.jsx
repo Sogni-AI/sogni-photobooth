@@ -323,7 +323,7 @@ const PhotoGallery = ({
 
       try {
         const qrDataUrl = await QRCode.toDataURL(qrCodeData.shareUrl, {
-          width: 200,
+          width: 300,
           margin: 2,
           color: {
             dark: '#000000',
@@ -739,10 +739,10 @@ const PhotoGallery = ({
                 taipeiFrameNumber: (!isGalleryImage && tezdevTheme === 'taipeiblockchain') ? currentTaipeiFrameNumber : undefined,
                 // Add QR watermark to preview frames (if enabled)
                 watermarkOptions: settings.sogniWatermark ? {
-                  size: 60, // Smaller for preview frames
+                  size: 90, // Match download/Twitter size for consistency
                   margin: 5,
                   position: 'top-right',
-                  opacity: 0.8
+                  opacity: 1.0
                 } : null
               });
               
@@ -1000,7 +1000,14 @@ const PhotoGallery = ({
           frameColor: isGalleryImage ? 'white' : 'transparent',
           outputFormat: outputFormat,
           // For Taipei theme, pass the current frame number to ensure consistency (but not for gallery images)
-          taipeiFrameNumber: (!isGalleryImage && tezdevTheme === 'taipeiblockchain') ? currentTaipeiFrameNumber : undefined
+          taipeiFrameNumber: (!isGalleryImage && tezdevTheme === 'taipeiblockchain') ? currentTaipeiFrameNumber : undefined,
+          // Add QR watermark to selected photo frames (if enabled) - match download size
+          watermarkOptions: settings.sogniWatermark ? {
+            size: 90, // Match download/Twitter size for consistency
+            margin: 5,
+            position: 'top-right',
+            opacity: 1.0
+          } : null
         });
         
         // Store the framed image URL
