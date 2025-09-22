@@ -1357,8 +1357,12 @@ const App = () => {
 
   // Handle Kiosk Mode sharing with QR code
   const handleKioskModeShare = async (photoIndex) => {
-    console.log('Kiosk Mode Share - Photo Index:', photoIndex);
-    console.log('Kiosk Mode Share - Photo Data:', photos[photoIndex]);
+    console.log('🔗 Kiosk Mode Share - Starting QR code generation');
+    console.log('🔗 Photo Index:', photoIndex);
+    console.log('🔗 Photo Data:', photos[photoIndex]);
+    console.log('🔗 Settings - kioskMode:', kioskMode);
+    console.log('🔗 Settings - tezdevTheme:', tezdevTheme);
+    console.log('🔗 Settings - outputFormat:', outputFormat);
     
     if (!photos[photoIndex] || !photos[photoIndex].images || !photos[photoIndex].images[0]) {
       console.error('No image selected for QR sharing');
@@ -1382,6 +1386,7 @@ const App = () => {
     });
 
     try {
+      console.log('🔗 Starting mobile share creation process...');
       // Utilities are now pre-imported at the top of the file for better performance
       
       // Get the original image URL (handle enhanced images like Twitter sharing does)
@@ -1424,6 +1429,7 @@ const App = () => {
             twitterMessage: cachedMobileShare.twitterMessage || TWITTER_SHARE_CONFIG.DEFAULT_MESSAGE
           };
 
+          console.log('🔗 Sending cached mobile share data to backend...');
           const response = await fetch('/api/mobile-share/create', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -1431,8 +1437,10 @@ const App = () => {
           });
 
           if (!response.ok) {
-            throw new Error('Failed to create mobile share from cache');
+            console.error('🔗 Backend response not OK:', response.status, response.statusText);
+            throw new Error(`Failed to create mobile share from cache: ${response.status} ${response.statusText}`);
           }
+          console.log('🔗 Cached mobile share created successfully');
 
           // Present the fresh link in the QR overlay
           setQrCodeData({
@@ -1672,6 +1680,7 @@ const App = () => {
       console.log('Creating mobile share with framed data:', shareData);
 
       // Send the share data to the backend for storage
+      console.log('🔗 Sending new mobile share data to backend...');
       const response = await fetch('/api/mobile-share/create', {
         method: 'POST',
         headers: {
@@ -1681,8 +1690,12 @@ const App = () => {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to create mobile share');
+        console.error('🔗 Backend response not OK:', response.status, response.statusText);
+        const errorText = await response.text();
+        console.error('🔗 Backend error response:', errorText);
+        throw new Error(`Failed to create mobile share: ${response.status} ${response.statusText}`);
       }
+      console.log('🔗 New mobile share created successfully');
 
       // Cache the mobile share data for future use
       setMobileShareCache(prev => ({
@@ -1704,10 +1717,30 @@ const App = () => {
 
     } catch (error) {
       console.error('Error creating mobile share:', error);
+      console.error('Error details:', {
+        name: error.name,
+        message: error.message,
+        stack: error.stack
+      });
+      
       // Clear loading state on error
       setQrCodeData(null);
-      // Fallback to regular Twitter sharing
-      setShowTwitterModal(true);
+      
+      // Show a more informative error message with fallback option
+      setBackendError({
+        type: 'kiosk_mode_error',
+        title: '🔗 QR Code Generation Failed',
+        message: 'Unable to generate QR code for sharing. You can try again or use regular Twitter sharing instead.',
+        details: error.message,
+        canRetry: true,
+        fallbackAction: () => {
+          // Clear the error and show Twitter modal as fallback
+          setBackendError(null);
+          setTwitterPhotoIndex(photoIndex);
+          setShowTwitterModal(true);
+        },
+        fallbackLabel: 'Use Twitter Sharing'
+      });
     }
   };
   

@@ -24,6 +24,7 @@ const FriendlyErrorModal = ({ error, onClose, onRetry }) => {
       case 'popup_blocked': return '🚫';
       case 'connection_error': return '🌐';
       case 'auth_error': return '🔐';
+      case 'kiosk_mode_error': return '📱';
       default: return '⚠️';
     }
   };
@@ -33,6 +34,7 @@ const FriendlyErrorModal = ({ error, onClose, onRetry }) => {
       case 'popup_blocked': return '#ff9800'; // Orange for popup issues
       case 'connection_error': return '#2196f3'; // Blue for connection issues
       case 'auth_error': return '#9c27b0'; // Purple for auth issues
+      case 'kiosk_mode_error': return '#ff5722'; // Deep orange for kiosk mode issues
       default: return '#f44336'; // Red for generic errors
     }
   };
@@ -192,6 +194,40 @@ const FriendlyErrorModal = ({ error, onClose, onRetry }) => {
               </button>
             )}
 
+            {/* Fallback action button */}
+            {errorData.fallbackAction && (
+              <button
+                onClick={() => {
+                  onClose();
+                  setTimeout(errorData.fallbackAction, 100); // Small delay to let modal close
+                }}
+                style={{
+                  background: 'linear-gradient(135deg, #2196f3 0%, #1976d2 100%)',
+                  color: 'white',
+                  border: 'none',
+                  padding: '12px 24px',
+                  borderRadius: '25px',
+                  cursor: 'pointer',
+                  fontSize: '1rem',
+                  fontWeight: '600',
+                  boxShadow: '0 4px 12px rgba(33, 150, 243, 0.3)',
+                  transition: 'all 0.2s ease',
+                  minWidth: '120px',
+                  marginRight: '12px'
+                }}
+                onMouseOver={(e) => {
+                  e.target.style.transform = 'translateY(-1px)';
+                  e.target.style.boxShadow = '0 6px 16px rgba(33, 150, 243, 0.4)';
+                }}
+                onMouseOut={(e) => {
+                  e.target.style.transform = 'translateY(0)';
+                  e.target.style.boxShadow = '0 4px 12px rgba(33, 150, 243, 0.3)';
+                }}
+              >
+                {errorData.fallbackLabel || '🔄 Alternative'}
+              </button>
+            )}
+
             {/* Retry button */}
             {errorData.canRetry && onRetry && (
               <button
@@ -210,7 +246,8 @@ const FriendlyErrorModal = ({ error, onClose, onRetry }) => {
                   fontWeight: '600',
                   boxShadow: '0 4px 12px rgba(76, 175, 80, 0.3)',
                   transition: 'all 0.2s ease',
-                  minWidth: '120px'
+                  minWidth: '120px',
+                  marginRight: errorData.fallbackAction ? '12px' : '0'
                 }}
                 onMouseOver={(e) => {
                   e.target.style.transform = 'translateY(-1px)';
@@ -281,7 +318,9 @@ FriendlyErrorModal.propTypes = {
       details: PropTypes.string,
       canRetry: PropTypes.bool,
       fallbackUrl: PropTypes.string,
-      fallbackText: PropTypes.string
+      fallbackText: PropTypes.string,
+      fallbackAction: PropTypes.func,
+      fallbackLabel: PropTypes.string
     })
   ]),
   onClose: PropTypes.func.isRequired,
