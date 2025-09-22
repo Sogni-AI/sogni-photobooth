@@ -4537,15 +4537,12 @@ const App = () => {
                 onClearQrCode={() => {
                   if (qrCodeData) {
                     console.log('Clearing QR code due to image enhancement');
-                    setQrCodeData(null);
                   }
+                  setQrCodeData(null);
                 }}
                 onClearMobileShareCache={() => {
                   console.log('Clearing mobile share cache due to PhotoGallery request');
                   setMobileShareCache({});
-                }}
-                onClearQrCode={() => {
-                  setQrCodeData(null);
                 }}
                 qrCodeData={qrCodeData}
                 onCloseQR={() => setQrCodeData(null)}
@@ -5784,15 +5781,12 @@ const App = () => {
           onClearQrCode={() => {
             if (qrCodeData) {
               console.log('Clearing QR code due to image enhancement');
-              setQrCodeData(null);
             }
+            setQrCodeData(null);
           }}
           onClearMobileShareCache={() => {
             console.log('Clearing mobile share cache due to PhotoGallery request');
             setMobileShareCache({});
-          }}
-          onClearQrCode={() => {
-            setQrCodeData(null);
           }}
           qrCodeData={qrCodeData}
           onCloseQR={() => setQrCodeData(null)}
