@@ -655,10 +655,10 @@ const PhotoGallery = ({
                 nextFramePadding = await themeConfigService.getFramePadding(tezdevTheme);
               } catch (error) {
                 console.warn('Could not get frame padding for photo migration:', error);
-                nextFramePadding = 0;
+                nextFramePadding = { top: 0, left: 0, right: 0, bottom: 0 };
               }
             } else {
-              nextFramePadding = 0;
+              nextFramePadding = { top: 0, left: 0, right: 0, bottom: 0 };
             }
           }
           migrationDoneRef.current.add(photo.id);
@@ -2800,15 +2800,30 @@ const PhotoGallery = ({
                       if (!hasFramedImage) {
                         // No composite image yet, so check for frame padding and adjust
                         // Use cached frame padding from photo data or get it dynamically
-                        const framePadding = photo.framePadding || 0;
-                        if (framePadding > 0) {
-                          const borderPercent = `${framePadding}px`;
+                        const framePadding = photo.framePadding || { top: 0, left: 0, right: 0, bottom: 0 };
+                        
+                        // Handle both old number format and new object format
+                        let paddingObj;
+                        if (typeof framePadding === 'number') {
+                          paddingObj = { top: framePadding, left: framePadding, right: framePadding, bottom: framePadding };
+                        } else {
+                          paddingObj = framePadding;
+                        }
+                        
+                        // Check if we have any padding
+                        const hasPadding = paddingObj.top > 0 || paddingObj.left > 0 || paddingObj.right > 0 || paddingObj.bottom > 0;
+                        
+                        if (hasPadding) {
+                          // CRITICAL: Use object-fit: cover to ensure image fills entire available space
+                          // This ensures NO white space appears in the frame area
                           return {
                             ...baseStyle,
-                            width: `calc(100% - ${framePadding * 2}px)`,
-                            height: `calc(100% - ${framePadding * 2}px)`,
-                            top: borderPercent,
-                            left: borderPercent,
+                            width: `calc(100% - ${paddingObj.left + paddingObj.right}px)`,
+                            height: `calc(100% - ${paddingObj.top + paddingObj.bottom}px)`,
+                            top: `${paddingObj.top}px`,
+                            left: `${paddingObj.left}px`,
+                            objectFit: 'cover', // Fill entire space, crop if necessary to avoid white space
+                            objectPosition: 'center', // Center the image within the available space
                             // Add a subtle loading state when framed image is not ready
                             filter: isGeneratingFrame ? 'brightness(0.8) saturate(0.8)' : 'brightness(0.9) saturate(0.9)',
                             transition: 'filter 0.3s ease'

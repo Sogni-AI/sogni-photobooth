@@ -165,15 +165,52 @@ export async function createPolaroidImage(imageUrl, label, options = {}) {
       if (tezdevTheme !== 'off') {
         try {
           const framePadding = await themeConfigService.getFramePadding(tezdevTheme);
-          if (framePadding > 0) {
-            // Reduce image size to account for the border
-            const adjustedImageWidth = imageWidth - (framePadding * 2);
-            const adjustedImageHeight = imageHeight - (framePadding * 2);
-            // Center the smaller image within the original bounds
-            const adjustedX = frameWidth + framePadding;
-            const adjustedY = frameTopWidth + framePadding;
+          
+          // Check if we have any padding (either old number format or new object format)
+          const hasPadding = (typeof framePadding === 'number' && framePadding > 0) ||
+                           (typeof framePadding === 'object' && 
+                            (framePadding.top > 0 || framePadding.left > 0 || framePadding.right > 0 || framePadding.bottom > 0));
+          
+          if (hasPadding) {
+            // Handle both old number format and new object format
+            let paddingObj;
+            if (typeof framePadding === 'number') {
+              // Legacy format - convert to object
+              paddingObj = { top: framePadding, left: framePadding, right: framePadding, bottom: framePadding };
+            } else {
+              paddingObj = framePadding;
+            }
+            
+            // Intelligent positioning: image must COVER the entire available space
+            // CRITICAL: Preserve aspect ratio but ensure NO white space in frame
+            
+            // Calculate available space after accounting for frame padding
+            const availableWidth = imageWidth - (paddingObj.left + paddingObj.right);
+            const availableHeight = imageHeight - (paddingObj.top + paddingObj.bottom);
+            
+            // Calculate scale factor needed to COVER the available space (like object-fit: cover)
+            const originalAspectRatio = img.width / img.height;
+            const availableAspectRatio = availableWidth / availableHeight;
+            
+            let adjustedImageWidth, adjustedImageHeight;
+            
+            if (originalAspectRatio > availableAspectRatio) {
+              // Image is wider - scale by HEIGHT to ensure full coverage (image will be cropped horizontally)
+              adjustedImageHeight = availableHeight;
+              adjustedImageWidth = availableHeight * originalAspectRatio;
+            } else {
+              // Image is taller - scale by WIDTH to ensure full coverage (image will be cropped vertically)
+              adjustedImageWidth = availableWidth;
+              adjustedImageHeight = availableWidth / originalAspectRatio;
+            }
+            
+            // Center the scaled image within the available space (some parts may extend beyond bounds)
+            const adjustedX = frameWidth + paddingObj.left + (availableWidth - adjustedImageWidth) / 2;
+            const adjustedY = frameTopWidth + paddingObj.top + (availableHeight - adjustedImageHeight) / 2;
+            
             ctx.drawImage(img, adjustedX, adjustedY, adjustedImageWidth, adjustedImageHeight);
-            console.log(`Drew image with ${tezdevTheme} frame padding adjustment (${framePadding}px): ${adjustedImageWidth}x${adjustedImageHeight} at (${adjustedX}, ${adjustedY})`);
+            console.log(`Drew image with ${tezdevTheme} frame padding adjustment:`, paddingObj, 
+                       `Image: ${adjustedImageWidth}x${adjustedImageHeight} at (${adjustedX}, ${adjustedY})`);
           } else {
             // No padding needed for this theme
             ctx.drawImage(img, frameWidth, frameTopWidth, imageWidth, imageHeight);
@@ -490,13 +527,21 @@ export async function addQRWatermark(ctx, canvasWidth, canvasHeight, options = {
         const imageHeight = options.imageHeight;
         const offsetX = options.frameOffsetX || 0;
         const offsetY = options.frameOffsetY || 0;
-        const framePadding = options.framePadding || 0;
+        const framePadding = options.framePadding || { top: 0, left: 0, right: 0, bottom: 0 };
+        
+        // Handle both old number format and new object format for frame padding
+        let paddingObj;
+        if (typeof framePadding === 'number') {
+          paddingObj = { top: framePadding, left: framePadding, right: framePadding, bottom: framePadding };
+        } else {
+          paddingObj = framePadding;
+        }
         
         // Account for frame padding in positioning - QR should be inside the frame border
-        const adjustedOffsetX = offsetX + framePadding;
-        const adjustedOffsetY = offsetY + framePadding;
-        const adjustedImageWidth = imageWidth - (framePadding * 2);
-        const adjustedImageHeight = imageHeight - (framePadding * 2);
+        const adjustedOffsetX = offsetX + paddingObj.left;
+        const adjustedOffsetY = offsetY + paddingObj.top;
+        const adjustedImageWidth = imageWidth - (paddingObj.left + paddingObj.right);
+        const adjustedImageHeight = imageHeight - (paddingObj.top + paddingObj.bottom);
         
         switch (position) {
           case 'bottom-left':
@@ -519,8 +564,9 @@ export async function addQRWatermark(ctx, canvasWidth, canvasHeight, options = {
             break;
         }
         
-        if (framePadding > 0) {
-          console.log(`QR positioned with frame padding: ${framePadding}px, adjusted position: (${x}, ${y})`);
+        const hasPadding = paddingObj.top > 0 || paddingObj.left > 0 || paddingObj.right > 0 || paddingObj.bottom > 0;
+        if (hasPadding) {
+          console.log(`QR positioned with frame padding:`, paddingObj, `adjusted position: (${x}, ${y})`);
         }
       } else {
         // Original positioning for full canvas

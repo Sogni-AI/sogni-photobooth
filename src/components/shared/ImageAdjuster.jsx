@@ -61,11 +61,11 @@ const ImageAdjuster = ({
         } catch (error) {
           console.warn('Could not load theme frame URLs:', error);
           setFrameUrls([]);
-          setFramePadding(0);
+          setFramePadding({ top: 0, left: 0, right: 0, bottom: 0 });
         }
       } else {
         setFrameUrls([]);
-        setFramePadding(0);
+        setFramePadding({ top: 0, left: 0, right: 0, bottom: 0 });
       }
     };
 
@@ -77,7 +77,7 @@ const ImageAdjuster = ({
   
   // For dynamic theme frame URLs
   const [frameUrls, setFrameUrls] = useState([]);
-  const [framePadding, setFramePadding] = useState(0);
+  const [framePadding, setFramePadding] = useState({ top: 0, left: 0, right: 0, bottom: 0 });
   
   // For pinch zoom gesture
   const [isPinching, setIsPinching] = useState(false);

@@ -5,7 +5,7 @@
     "taipeiblockchain": {
       "label": "Taipei Blockchain Week 2025",
       "defaultAspectRatio": "narrow",
-      "framePadding": 26,
+      "framePadding": { "top": 26, "left": 26, "right": 26, "bottom": 26 },
       "tweetTemplate": "Just took my photo at the @sogni_protocol AI photobooth #TaipeiBlockchainWeek2025 https://photobooth.sogni.ai",
       "frames": {
         "narrow": [
@@ -21,7 +21,7 @@
     "AIYP": {
       "label": "Korea Blockchain Week 2025 - AIYP",
       "defaultAspectRatio": "narrow",
-      "framePadding": 0,
+      "framePadding": { "top": 0, "left": 0, "right": 52, "bottom": 85 },
       "tweetTemplate": "Check out my photo at the @sogni_protocol AI photobooth #AIYP #koreablockchainweek https://photobooth.sogni.ai",
       "frames": {
         "narrow": [
@@ -32,7 +32,7 @@
     "showup": {
       "label": "Show Up Taipei Vibe",
       "defaultAspectRatio": "narrow",
-      "framePadding": 30,
+      "framePadding": { "top": 30, "left": 30, "right": 30, "bottom": 30 },
       "tweetTemplate": "Just took my photo at the @sogni_protocol AI photobooth https://photobooth.sogni.ai",
       "frames": {
         "narrow": [
@@ -43,7 +43,7 @@
     "nodesamongus": {
       "label": "Nodes Among Us",
       "defaultAspectRatio": "narrow",
-      "framePadding": 20,
+      "framePadding": { "top": 20, "left": 20, "right": 20, "bottom": 20 },
       "tweetTemplate": "Just took my photo at the @sogni_protocol AI photobooth at Nodes Among Us: Taipei Blockchain Week https://photobooth.sogni.ai",
       "frames": {
         "narrow": [
@@ -54,7 +54,7 @@
     "supercasual": {
       "label": "Super Casual",
       "defaultAspectRatio": "narrow",
-      "framePadding": 0,
+      "framePadding": { "top": 0, "left": 0, "right": 0, "bottom": 0 },
       "tweetTemplate": "Just took my photo at the @sogni_protocol AI photobooth #SuperCasual https://photobooth.sogni.ai",
       "frames": {
         "narrow": [
@@ -65,7 +65,7 @@
     "tezoswebx": {
       "label": "Tezos WebX Asia",
       "defaultAspectRatio": "narrow",
-      "framePadding": 0,
+      "framePadding": { "top": 0, "left": 0, "right": 0, "bottom": 0 },
       "tweetTemplate": "Just took my photo at the @sogni_protocol AI photobooth at the @Tezos booth at G-79 @WebX_Asia! #SogniAtWebXAsia @tzapac @etherlink https://photobooth.sogni.ai",
       "frames": {
         "narrow": [
