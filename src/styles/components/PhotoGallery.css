@@ -742,9 +742,11 @@ html body .photo-action-buttons .action-button,
   cursor: pointer !important;
 }
 
-/* Show hide button on photo hover - only for grid photos (not selected) */
-.film-frame:not(.selected):hover .photo-hide-btn {
-  opacity: 1 !important;
-  transform: scale(1) !important;
-  pointer-events: auto !important;
+/* Show hide button on photo hover - only for grid photos (not selected) and only on non-touch devices */
+@media (hover: hover) and (pointer: fine) {
+  .film-frame:not(.selected):hover .photo-hide-btn {
+    opacity: 1 !important;
+    transform: scale(1) !important;
+    pointer-events: auto !important;
+  }
 }
