@@ -2,6 +2,17 @@
   "version": "1.0",
   "defaultTheme": null,
   "themes": {
+    "aethir": {
+      "label": "Korea Blockchain Week 2025 - Aethir x Sogni",
+      "defaultAspectRatio": "narrow",
+      "framePadding": { "top": 0, "left": 0, "right": 63, "bottom": 70 },
+      "tweetTemplate": "Check out my photo at the @sogni_protocol x @AethirCloud AI photobooth during #koreablockchainweek https://photobooth.sogni.ai",
+      "frames": {
+        "narrow": [
+          "/events/aethir/narrow_1.png"
+        ]
+      }
+    },
     "taipeiblockchain": {
       "label": "Taipei Blockchain Week 2025",
       "defaultAspectRatio": "narrow",
