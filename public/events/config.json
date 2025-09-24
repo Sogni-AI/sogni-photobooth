@@ -2,14 +2,58 @@
   "version": "1.0",
   "defaultTheme": null,
   "themes": {
+    "depin-x-ai-day": {
+      "label": "Korea Blockchain Week 2025 - Depin x AI Day 2025",
+      "defaultAspectRatio": "narrow",
+      "framePadding": { "top": 0, "left": 0, "right": 95, "bottom": 138 },
+      "tweetTemplate": "Check out my photo at the @sogni_protocol AI photobooth during DePIN x AI Day 2025 #koreablockchainweek https://photobooth.sogni.ai",
+      "frames": {
+        "narrow": [
+          "/events/depin-x-ai-day/narrow_1.png"
+        ]
+      }
+    },
+    "future-canvas": {
+      "label": "Korea Blockchain Week 2025 - Future Canvas",
+      "defaultAspectRatio": "narrow",
+      "framePadding": { "top": 0, "left": 0, "right": 0, "bottom": 99 },
+      "tweetTemplate": "Check out my photo at the @sogni_protocol AI photobooth during FutureCanvas 2025 #koreablockchainweek https://photobooth.sogni.ai",
+      "frames": {
+        "narrow": [
+          "/events/future-canvas/narrow_1.png"
+        ]
+      }
+    },
     "aethir": {
       "label": "Korea Blockchain Week 2025 - Aethir x Sogni",
       "defaultAspectRatio": "narrow",
-      "framePadding": { "top": 0, "left": 0, "right": 63, "bottom": 70 },
+      "framePadding": { "top": 0, "left": 0, "right": 52, "bottom": 85 },
       "tweetTemplate": "Check out my photo at the @sogni_protocol x @AethirCloud AI photobooth during #koreablockchainweek https://photobooth.sogni.ai",
       "frames": {
         "narrow": [
           "/events/aethir/narrow_1.png"
+        ]
+      }
+    },
+    "aethir2": {
+      "label": "Korea Blockchain Week 2025 - Aethir x Sogni 2",
+      "defaultAspectRatio": "narrow",
+      "framePadding": { "top": 92, "left": 90, "right": 108, "bottom": 102 },
+      "tweetTemplate": "Check out my photo at the @sogni_protocol x @AethirCloud AI photobooth during #koreablockchainweek https://photobooth.sogni.ai",
+      "frames": {
+        "narrow": [
+          "/events/aethir2/narrow_1.png"
+        ]
+      }
+    },
+    "aethir3": {
+      "label": "Korea Blockchain Week 2025 - Aethir x Sogni 3",
+      "defaultAspectRatio": "narrow",
+      "framePadding": { "top": 226, "left": 161, "right": 189, "bottom": 230 },
+      "tweetTemplate": "Check out my photo at the @sogni_protocol x @AethirCloud AI photobooth during #koreablockchainweek https://photobooth.sogni.ai",
+      "frames": {
+        "narrow": [
+          "/events/aethir3/narrow_1.png"
         ]
       }
     },
