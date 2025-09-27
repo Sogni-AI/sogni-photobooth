@@ -164,7 +164,7 @@ const App = () => {
   }, []);
 
   // --- Use AppContext for settings ---
-  const { settings, updateSetting, switchToModel, resetSettings } = useApp();
+  const { settings, updateSetting, switchToModel, resetSettings, registerCacheClearingCallback } = useApp();
   const { 
     selectedStyle, 
     selectedModel, 
@@ -254,6 +254,40 @@ const App = () => {
   
   // Add state to store framed image cache from PhotoGallery
   const [photoGalleryFramedImageCache, setPhotoGalleryFramedImageCache] = useState({});
+  
+  // Store reference to PhotoGallery's frame cache clearing function
+  const photoGalleryFrameClearRef = useRef(null);
+  
+  // Register cache clearing callbacks with AppContext
+  useEffect(() => {
+    // Register callbacks for clearing various caches
+    const unregisterCallbacks = [
+      // Clear QR code data
+      registerCacheClearingCallback(() => {
+        console.log('Clearing QR code data due to QR settings change');
+        setQrCodeData(null);
+      }),
+      
+      // Clear mobile share cache
+      registerCacheClearingCallback(() => {
+        console.log('Clearing mobile share cache due to QR settings change');
+        setMobileShareCache({});
+      }),
+      
+      // Clear PhotoGallery frame cache if available
+      registerCacheClearingCallback(() => {
+        if (photoGalleryFrameClearRef.current) {
+          console.log('Clearing PhotoGallery frame cache due to QR settings change');
+          photoGalleryFrameClearRef.current();
+        }
+      })
+    ];
+    
+    // Cleanup function
+    return () => {
+      unregisterCallbacks.forEach(unregister => unregister());
+    };
+  }, []);
   
   // Cleanup old mobile share cache entries to prevent memory leaks
   const cleanupMobileShareCache = useCallback(() => {
@@ -4544,6 +4578,9 @@ const App = () => {
                   console.log('Clearing mobile share cache due to PhotoGallery request');
                   setMobileShareCache({});
                 }}
+                onRegisterFrameCacheClear={(clearFunction) => {
+                  photoGalleryFrameClearRef.current = clearFunction;
+                }}
                 qrCodeData={qrCodeData}
                 onCloseQR={() => setQrCodeData(null)}
                 // New props for prompt selector mode
@@ -5787,6 +5824,9 @@ const App = () => {
           onClearMobileShareCache={() => {
             console.log('Clearing mobile share cache due to PhotoGallery request');
             setMobileShareCache({});
+          }}
+          onRegisterFrameCacheClear={(clearFunction) => {
+            photoGalleryFrameClearRef.current = clearFunction;
           }}
           qrCodeData={qrCodeData}
           onCloseQR={() => setQrCodeData(null)}

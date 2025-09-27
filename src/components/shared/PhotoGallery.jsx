@@ -94,6 +94,7 @@ const PhotoGallery = ({
   onFramedImageCacheUpdate, // New prop to expose framed image cache to parent
   onClearQrCode, // New prop to clear QR codes when images change
   onClearMobileShareCache, // New prop to clear mobile share cache when images change
+  onRegisterFrameCacheClear, // New prop to register frame cache clearing function
   qrCodeData,
   onCloseQR,
   onUseGalleryPrompt, // New prop to handle using a gallery prompt
@@ -248,6 +249,17 @@ const PhotoGallery = ({
     });
     setFramedImageUrls({});
   }, [aspectRatio]);
+
+  // Clear framed image cache when QR watermark settings change
+  useEffect(() => {
+    // Clean up existing blob URLs
+    Object.values(framedImageUrls).forEach(url => {
+      if (url && url.startsWith('blob:')) {
+        URL.revokeObjectURL(url);
+      }
+    });
+    setFramedImageUrls({});
+  }, [settings.sogniWatermark, settings.sogniWatermarkSize, settings.sogniWatermarkMargin]);
   
   // Effect to handle the 10-second timeout for showing the "more" button during generation
   useEffect(() => {
@@ -344,6 +356,14 @@ const PhotoGallery = ({
     generateQRCode();
   }, [qrCodeData]);
 
+  // Helper function to generate consistent frame keys that include QR settings
+  const generateFrameKey = useCallback((photoIndex, subIndex, taipeiFrameNumber) => {
+    const qrSettings = settings.sogniWatermark 
+      ? `-qr${settings.sogniWatermarkSize || 94}-${settings.sogniWatermarkMargin || 16}`
+      : '';
+    return `${photoIndex}-${subIndex}-${tezdevTheme}-${taipeiFrameNumber}-${outputFormat}-${aspectRatio}${qrSettings}`;
+  }, [tezdevTheme, outputFormat, aspectRatio, settings.sogniWatermark, settings.sogniWatermarkSize, settings.sogniWatermarkMargin]);
+
   // Utility function to clear frame cache for a specific photo
   const clearFrameCacheForPhoto = useCallback((photoIndex) => {
     console.log(`Clearing frame cache for photo #${photoIndex}`);
@@ -362,6 +382,27 @@ const PhotoGallery = ({
       return cleaned;
     });
   }, []);
+  
+  // Function to clear all frame cache
+  const clearAllFrameCache = useCallback(() => {
+    console.log('Clearing all frame cache');
+    setFramedImageUrls(prev => {
+      // Revoke all blob URLs
+      Object.values(prev).forEach(url => {
+        if (url && typeof url === 'string' && url.startsWith('blob:')) {
+          try { URL.revokeObjectURL(url); } catch (e) { /* no-op */ }
+        }
+      });
+      return {};
+    });
+  }, []);
+  
+  // Register frame cache clearing function with parent
+  useEffect(() => {
+    if (onRegisterFrameCacheClear) {
+      onRegisterFrameCacheClear(clearAllFrameCache);
+    }
+  }, [onRegisterFrameCacheClear, clearAllFrameCache]);
 
   // Cleanup old framed image cache entries to prevent memory leaks
   const cleanupFramedImageCache = useCallback(() => {
@@ -708,7 +749,7 @@ const PhotoGallery = ({
     if (!imageUrl) return;
 
     const currentTaipeiFrameNumber = photo.taipeiFrameNumber || ((photoIndex % 6) + 1);
-    const frameKey = `${photoIndex}-${currentSubIndex}-${tezdevTheme}-${currentTaipeiFrameNumber}-${outputFormat}-${aspectRatio}`;
+    const frameKey = generateFrameKey(photoIndex, currentSubIndex, currentTaipeiFrameNumber);
     
     // Check current state to avoid stale closures
     setFramedImageUrls(currentFramedUrls => {
@@ -771,7 +812,7 @@ const PhotoGallery = ({
       });
       return currentFramedUrls;
     });
-  }, [isThemeSupported, photos, selectedSubIndex, tezdevTheme, outputFormat, aspectRatio]);
+  }, [isThemeSupported, photos, selectedSubIndex, generateFrameKey]);
 
   // Helper function to pre-generate frames for adjacent photos to improve navigation smoothness
   const preGenerateAdjacentFrames = useCallback(async (currentIndex) => {
@@ -975,7 +1016,7 @@ const PhotoGallery = ({
 
       // Get the current Taipei frame number for this photo
       const currentTaipeiFrameNumber = photo.taipeiFrameNumber || 1;
-      const frameKey = `${selectedPhotoIndex}-${currentSubIndex}-${tezdevTheme}-${currentTaipeiFrameNumber}-${outputFormat}-${aspectRatio}`;
+      const frameKey = generateFrameKey(selectedPhotoIndex, currentSubIndex, currentTaipeiFrameNumber);
       
       // Check if we already have this framed image
       if (framedImageUrls[frameKey]) {
@@ -1020,7 +1061,7 @@ const PhotoGallery = ({
     };
 
     generateFramedImage();
-  }, [selectedPhotoIndex, selectedSubIndex, photos, aspectRatio, outputFormat, isThemeSupported, preGenerateAdjacentFrames]);
+  }, [selectedPhotoIndex, selectedSubIndex, photos, isThemeSupported, preGenerateAdjacentFrames, generateFrameKey]);
 
   // Track photo selection changes to manage smooth transitions
   useEffect(() => {
@@ -2657,7 +2698,7 @@ const PhotoGallery = ({
                         ? -1 // Special case for enhanced images
                         : (selectedSubIndex || 0);
                       const photoTaipeiFrameNumber = photo.taipeiFrameNumber || 1;
-                      const frameKey = `${index}-${currentSubIndex}-${tezdevTheme}-${photoTaipeiFrameNumber}-${outputFormat}-${aspectRatio}`;
+                      const frameKey = generateFrameKey(index, currentSubIndex, photoTaipeiFrameNumber);
                       const framedImageUrl = framedImageUrls[frameKey];
                       const isGeneratingFrame = generatingFrames.has(frameKey);
                       
@@ -2793,7 +2834,7 @@ const PhotoGallery = ({
                         ? -1 // Special case for enhanced images
                         : (selectedSubIndex || 0);
                       const photoTaipeiFrameNumber = photo.taipeiFrameNumber || 1;
-                      const frameKey = `${index}-${currentSubIndex}-${tezdevTheme}-${photoTaipeiFrameNumber}-${outputFormat}-${aspectRatio}`;
+                      const frameKey = generateFrameKey(index, currentSubIndex, photoTaipeiFrameNumber);
                       const hasFramedImage = framedImageUrls[frameKey];
                       const isGeneratingFrame = generatingFrames.has(frameKey);
                       
@@ -2869,7 +2910,7 @@ const PhotoGallery = ({
                     ? -1 // Special case for enhanced images
                     : (selectedSubIndex || 0);
                   const photoTaipeiFrameNumber = photo.taipeiFrameNumber || 1;
-                  const frameKey = `${index}-${currentSubIndex}-${tezdevTheme}-${photoTaipeiFrameNumber}-${outputFormat}-${aspectRatio}`;
+                  const frameKey = generateFrameKey(index, currentSubIndex, photoTaipeiFrameNumber);
                   
                   // If we have a composite framed image, don't show theme overlays
                   if (framedImageUrls[frameKey]) {
@@ -3343,6 +3384,7 @@ PhotoGallery.propTypes = {
   onFramedImageCacheUpdate: PropTypes.func, // New prop for framed image cache updates
   onClearQrCode: PropTypes.func, // New prop to clear QR codes when images change
   onClearMobileShareCache: PropTypes.func, // New prop to clear mobile share cache when images change
+  onRegisterFrameCacheClear: PropTypes.func, // New prop to register frame cache clearing function
   qrCodeData: PropTypes.object,
   onCloseQR: PropTypes.func,
   onUseGalleryPrompt: PropTypes.func, // New prop to handle using a gallery prompt

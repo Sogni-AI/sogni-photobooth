@@ -64,6 +64,10 @@ interface AppContextType {
   setShowPhotoGrid: React.Dispatch<React.SetStateAction<boolean>>;
   dragActive: boolean;
   setDragActive: React.Dispatch<React.SetStateAction<boolean>>;
+  
+  // Cache clearing functions
+  clearImageCaches: () => void;
+  registerCacheClearingCallback: (callback: () => void) => () => void;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -140,6 +144,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [showPhotoGrid, setShowPhotoGrid] = useState(false);
   const [dragActive, setDragActive] = useState(false);
+  
+  // Cache clearing callbacks
+  const cacheClearingCallbacks = useRef<(() => void)[]>([]);
   
   const updateSetting = <K extends keyof Settings>(key: K, value: Settings[K]) => {
     // Special handling for model changes
@@ -263,6 +270,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     console.log(`Reset settings for model ${currentModel} to defaults:`, modelDefaults);
   };
   
+  // Cache clearing functions
+  const clearImageCaches = () => {
+    console.log('Clearing all image caches due to QR settings change');
+    cacheClearingCallbacks.current.forEach(callback => {
+      try {
+        callback();
+      } catch (error) {
+        console.warn('Error executing cache clearing callback:', error);
+      }
+    });
+  };
+  
+  const registerCacheClearingCallback = (callback: () => void) => {
+    cacheClearingCallbacks.current.push(callback);
+    // Return cleanup function
+    return () => {
+      const index = cacheClearingCallbacks.current.indexOf(callback);
+      if (index > -1) {
+        cacheClearingCallbacks.current.splice(index, 1);
+      }
+    };
+  };
+  
   const contextValue = useMemo(() => ({
     photos,
     setPhotos,
@@ -283,6 +313,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setShowPhotoGrid,
     dragActive,
     setDragActive,
+    clearImageCaches,
+    registerCacheClearingCallback,
   }), [
     photos,
     selectedPhotoIndex,

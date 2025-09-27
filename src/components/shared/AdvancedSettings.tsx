@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useApp } from '../../context/AppContext';
 import { AspectRatioOption, TezDevTheme, OutputFormat } from '../../types/index';
 import { isFluxKontextModel, getModelRanges, getModelDefaults } from '../../constants/settings';
@@ -117,7 +117,8 @@ interface AdvancedSettingsProps {
  */
 export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
   // Get current settings from context if not provided via props
-  const { settings, updateSetting } = useApp();
+  const appContext = useApp();
+  const { settings, updateSetting, clearImageCaches } = appContext;
   
   // Ref for positive prompt textarea
   const positivePromptRef = useRef<HTMLTextAreaElement>(null);
@@ -126,7 +127,75 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
   const [availableThemes, setAvailableThemes] = useState<Array<{value: string, label: string, defaultAspectRatio?: string}>>([]);
   const [themesLoading, setThemesLoading] = useState(false);
   const [themesError, setThemesError] = useState<string | null>(null);
-
+  
+  // Debounced setting updates for QR settings
+  const debouncedSizeUpdate = useRef<NodeJS.Timeout | null>(null);
+  const debouncedMarginUpdate = useRef<NodeJS.Timeout | null>(null);
+  
+  // Local state for real-time slider display
+  const [localQRSize, setLocalQRSize] = useState(settings.sogniWatermarkSize ?? 94);
+  const [localQRMargin, setLocalQRMargin] = useState(settings.sogniWatermarkMargin ?? 16);
+  
+  // Update local state when settings change from external sources
+  useEffect(() => {
+    setLocalQRSize(settings.sogniWatermarkSize ?? 94);
+  }, [settings.sogniWatermarkSize]);
+  
+  useEffect(() => {
+    setLocalQRMargin(settings.sogniWatermarkMargin ?? 16);
+  }, [settings.sogniWatermarkMargin]);
+  
+  // Cleanup timeouts on unmount
+  useEffect(() => {
+    return () => {
+      if (debouncedSizeUpdate.current) {
+        clearTimeout(debouncedSizeUpdate.current);
+      }
+      if (debouncedMarginUpdate.current) {
+        clearTimeout(debouncedMarginUpdate.current);
+      }
+    };
+  }, []);
+  
+  // Custom handlers for QR code settings that trigger cache clearing
+  const handleSogniWatermarkChange = useCallback((enabled: boolean) => {
+    updateSetting('sogniWatermark', enabled);
+    // Clear caches immediately when toggling QR code overlay on/off
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+    clearImageCaches();
+  }, [updateSetting, clearImageCaches]);
+  
+  const handleSogniWatermarkSizeChange = useCallback((size: number) => {
+    // Update local state immediately for responsive UI
+    setLocalQRSize(size);
+    
+    // Clear any existing timeout
+    if (debouncedSizeUpdate.current) {
+      clearTimeout(debouncedSizeUpdate.current);
+    }
+    
+    // Debounce the actual setting update
+    debouncedSizeUpdate.current = setTimeout(() => {
+      updateSetting('sogniWatermarkSize', size);
+      console.log('Debounced QR size update applied:', size);
+    }, 300); // 300ms debounce for smooth slider interaction
+  }, [updateSetting]);
+  
+  const handleSogniWatermarkMarginChange = useCallback((margin: number) => {
+    // Update local state immediately for responsive UI
+    setLocalQRMargin(margin);
+    
+    // Clear any existing timeout
+    if (debouncedMarginUpdate.current) {
+      clearTimeout(debouncedMarginUpdate.current);
+    }
+    
+    // Debounce the actual setting update
+    debouncedMarginUpdate.current = setTimeout(() => {
+      updateSetting('sogniWatermarkMargin', margin);
+      console.log('Debounced QR margin update applied:', margin);
+    }, 300); // 300ms debounce for smooth slider interaction
+  }, [updateSetting]);
 
   const {
     visible,
@@ -748,7 +817,7 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
             type="checkbox"
             id="sogni-watermark-toggle"
             checked={settings.sogniWatermark}
-            onChange={(e) => updateSetting('sogniWatermark', e.target.checked)}
+            onChange={(e) => handleSogniWatermarkChange(e.target.checked)}
           />
           <label htmlFor="sogni-watermark-toggle" className="control-label">Overlay Sogni QR Code</label>
         </div>
@@ -756,15 +825,15 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
         {/* QR Code Size - only show when watermark is enabled */}
         {settings.sogniWatermark && (
           <div className="control-option">
-            <label htmlFor="qr-size-slider" className="control-label">QR Code Size: {settings.sogniWatermarkSize ?? 90}px</label>
+            <label htmlFor="qr-size-slider" className="control-label">QR Code Size: {localQRSize}px</label>
             <input
               type="range"
               id="qr-size-slider"
               min="50"
               max="150"
               step="5"
-              value={settings.sogniWatermarkSize ?? 90}
-              onChange={(e) => updateSetting('sogniWatermarkSize', parseInt(e.target.value) || 90)}
+              value={localQRSize}
+              onChange={(e) => handleSogniWatermarkSizeChange(parseInt(e.target.value) || 94)}
               className="slider"
             />
           </div>
@@ -773,15 +842,15 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
         {/* QR Code Margin - only show when watermark is enabled */}
         {settings.sogniWatermark && (
           <div className="control-option">
-            <label htmlFor="qr-margin-slider" className="control-label">QR Code Margin: {settings.sogniWatermarkMargin ?? 10}px</label>
+            <label htmlFor="qr-margin-slider" className="control-label">QR Code Margin: {localQRMargin}px</label>
             <input
               type="range"
               id="qr-margin-slider"
               min="0"
               max="30"
               step="1"
-              value={settings.sogniWatermarkMargin ?? 10}
-              onChange={(e) => updateSetting('sogniWatermarkMargin', parseInt(e.target.value) || 10)}
+              value={localQRMargin}
+              onChange={(e) => handleSogniWatermarkMarginChange(parseInt(e.target.value) || 16)}
               className="slider"
             />
           </div>
