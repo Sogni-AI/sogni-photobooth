@@ -259,7 +259,7 @@ const PhotoGallery = ({
       }
     });
     setFramedImageUrls({});
-  }, [settings.sogniWatermark, settings.sogniWatermarkSize, settings.sogniWatermarkMargin]);
+  }, [settings.sogniWatermark, settings.sogniWatermarkSize, settings.sogniWatermarkMargin, settings.qrCodeUrl]);
   
   // Effect to handle the 10-second timeout for showing the "more" button during generation
   useEffect(() => {
@@ -359,10 +359,10 @@ const PhotoGallery = ({
   // Helper function to generate consistent frame keys that include QR settings
   const generateFrameKey = useCallback((photoIndex, subIndex, taipeiFrameNumber) => {
     const qrSettings = settings.sogniWatermark 
-      ? `-qr${settings.sogniWatermarkSize || 94}-${settings.sogniWatermarkMargin || 16}`
+      ? `-qr${settings.sogniWatermarkSize || 94}-${settings.sogniWatermarkMargin || 16}-${encodeURIComponent(settings.qrCodeUrl || 'https://qr.sogni.ai')}`
       : '';
     return `${photoIndex}-${subIndex}-${tezdevTheme}-${taipeiFrameNumber}-${outputFormat}-${aspectRatio}${qrSettings}`;
-  }, [tezdevTheme, outputFormat, aspectRatio, settings.sogniWatermark, settings.sogniWatermarkSize, settings.sogniWatermarkMargin]);
+  }, [tezdevTheme, outputFormat, aspectRatio, settings.sogniWatermark, settings.sogniWatermarkSize, settings.sogniWatermarkMargin, settings.qrCodeUrl]);
 
   // Utility function to clear frame cache for a specific photo
   const clearFrameCacheForPhoto = useCallback((photoIndex) => {

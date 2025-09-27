@@ -3,6 +3,7 @@ import { useApp } from '../../context/AppContext';
 import { AspectRatioOption, TezDevTheme, OutputFormat } from '../../types/index';
 import { isFluxKontextModel, getModelRanges, getModelDefaults } from '../../constants/settings';
 import { themeConfigService } from '../../services/themeConfig';
+import { sanitizeUrl, getUrlValidationError } from '../../utils/urlValidation';
 import TagInput from './TagInput';
 
 interface AdvancedSettingsProps {
@@ -131,10 +132,13 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
   // Debounced setting updates for QR settings
   const debouncedSizeUpdate = useRef<NodeJS.Timeout | null>(null);
   const debouncedMarginUpdate = useRef<NodeJS.Timeout | null>(null);
+  const debouncedUrlUpdate = useRef<NodeJS.Timeout | null>(null);
   
-  // Local state for real-time slider display
+  // Local state for real-time slider display and URL input
   const [localQRSize, setLocalQRSize] = useState(settings.sogniWatermarkSize ?? 94);
   const [localQRMargin, setLocalQRMargin] = useState(settings.sogniWatermarkMargin ?? 16);
+  const [localQRUrl, setLocalQRUrl] = useState(settings.qrCodeUrl || 'https://qr.sogni.ai');
+  const [qrUrlError, setQrUrlError] = useState<string>('');
   
   // Update local state when settings change from external sources
   useEffect(() => {
@@ -145,6 +149,10 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
     setLocalQRMargin(settings.sogniWatermarkMargin ?? 16);
   }, [settings.sogniWatermarkMargin]);
   
+  useEffect(() => {
+    setLocalQRUrl(settings.qrCodeUrl || 'https://qr.sogni.ai');
+  }, [settings.qrCodeUrl]);
+  
   // Cleanup timeouts on unmount
   useEffect(() => {
     return () => {
@@ -153,6 +161,9 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
       }
       if (debouncedMarginUpdate.current) {
         clearTimeout(debouncedMarginUpdate.current);
+      }
+      if (debouncedUrlUpdate.current) {
+        clearTimeout(debouncedUrlUpdate.current);
       }
     };
   }, []);
@@ -196,6 +207,35 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
       console.log('Debounced QR margin update applied:', margin);
     }, 300); // 300ms debounce for smooth slider interaction
   }, [updateSetting]);
+  
+  const handleQRUrlChange = useCallback((url: string) => {
+    // Update local state immediately for responsive UI
+    setLocalQRUrl(url);
+    
+    // Validate URL and show error if invalid
+    const error = getUrlValidationError(url);
+    setQrUrlError(error);
+    
+    // Clear any existing timeout
+    if (debouncedUrlUpdate.current) {
+      clearTimeout(debouncedUrlUpdate.current);
+    }
+    
+    // Only update setting if URL is valid
+    if (!error) {
+      // Debounce the actual setting update
+      debouncedUrlUpdate.current = setTimeout(() => {
+        const sanitized = sanitizeUrl(url);
+        if (sanitized) {
+          updateSetting('qrCodeUrl', sanitized);
+          // Clear caches when URL changes to regenerate QR code
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+          clearImageCaches();
+          console.log('Debounced QR URL update applied:', sanitized);
+        }
+      }, 500); // 500ms debounce for URL input
+    }
+  }, [updateSetting, clearImageCaches]);
 
   const {
     visible,
@@ -811,7 +851,7 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
           <label htmlFor="sensitive-content-filter-toggle" className="control-label">Sensitive Content Filter</label>
         </div>
 
-        {/* Sogni Watermark toggle */}
+        {/* QR Code Watermark toggle */}
         <div className="control-option checkbox">
           <input
             type="checkbox"
@@ -819,7 +859,7 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
             checked={settings.sogniWatermark}
             onChange={(e) => handleSogniWatermarkChange(e.target.checked)}
           />
-          <label htmlFor="sogni-watermark-toggle" className="control-label">Overlay Sogni QR Code</label>
+          <label htmlFor="sogni-watermark-toggle" className="control-label">Overlay QR Code</label>
         </div>
 
         {/* QR Code Size - only show when watermark is enabled */}
@@ -853,6 +893,41 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
               onChange={(e) => handleSogniWatermarkMarginChange(parseInt(e.target.value) || 16)}
               className="slider"
             />
+          </div>
+        )}
+
+        {/* QR Code URL - only show when watermark is enabled */}
+        {settings.sogniWatermark && (
+          <div className="control-option">
+            <label htmlFor="qr-url-input" className="control-label">QR Code URL</label>
+            <input
+              type="url"
+              id="qr-url-input"
+              value={localQRUrl}
+              onChange={(e) => handleQRUrlChange(e.target.value)}
+              placeholder="https://example.com"
+              className={`url-input ${qrUrlError ? 'error' : ''}`}
+              style={{
+                width: '100%',
+                padding: '8px 12px',
+                border: qrUrlError ? '2px solid #ff4444' : '2px solid #333',
+                borderRadius: '6px',
+                backgroundColor: '#1a1a1a',
+                color: '#fff',
+                fontSize: '14px',
+                fontFamily: 'monospace'
+              }}
+            />
+            {qrUrlError && (
+              <div className="error-message" style={{
+                color: '#ff4444',
+                fontSize: '12px',
+                marginTop: '4px',
+                fontStyle: 'italic'
+              }}>
+                {qrUrlError}
+              </div>
+            )}
           </div>
         )}
 

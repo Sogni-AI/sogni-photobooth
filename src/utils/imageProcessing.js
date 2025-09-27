@@ -498,16 +498,32 @@ export const blobToDataURL = (blob) => {
  * @param {number} options.margin - Margin from edges (default: 20)
  * @param {string} options.position - Position ('bottom-right', 'bottom-left', 'top-right', 'top-left')
  * @param {number} options.opacity - Opacity of the watermark (0-1, default: 1.0)
+ * @param {string} options.url - URL to encode in QR code (default: 'https://qr.sogni.ai')
  */
 export async function addQRWatermark(ctx, canvasWidth, canvasHeight, options = {}) {
   const {
     size = 80,
     margin = 20,
     position = 'bottom-right',
-    opacity = 1.0
+    opacity = 1.0,
+    url = 'https://qr.sogni.ai'
   } = options;
 
-  return new Promise((resolve) => {
+  try {
+    // Import QR code service dynamically
+    const { qrCodeService } = await import('../services/qrCodeService');
+    
+    // Generate QR code data URL
+    const qrDataUrl = await qrCodeService.generateQRCode(url, {
+      width: size * 2, // Generate at higher resolution for better quality
+      margin: 1, // Minimal margin since we control positioning
+      color: {
+        dark: '#000000',
+        light: '#FFFFFF'
+      }
+    });
+
+    return new Promise((resolve) => {
     const qrImage = new Image();
     qrImage.crossOrigin = 'anonymous';
     
@@ -604,18 +620,22 @@ export async function addQRWatermark(ctx, canvasWidth, canvasHeight, options = {
       // Restore context state
       ctx.restore();
       
-      console.log(`✅ QR watermark applied at ${position} (${x}, ${y}) with size ${size}px`);
+      console.log(`✅ QR watermark applied at ${position} (${x}, ${y}) with size ${size}px for URL: ${url}`);
       resolve();
-    };
-    
-    qrImage.onerror = (error) => {
-      console.warn('Failed to load QR code watermark, continuing without it:', error);
-      resolve(); // Don't reject, just continue without watermark
-    };
-    
-    // Load the QR code image using the same path pattern as custom frames
-    qrImage.src = '/assets/sogni-linktree-qr.png';
-  });
+      };
+      
+      qrImage.onerror = (error) => {
+        console.warn('Failed to load generated QR code watermark, continuing without it:', error);
+        resolve(); // Don't reject, just continue without watermark
+      };
+      
+      // Use the generated QR code data URL
+      qrImage.src = qrDataUrl;
+    });
+  } catch (error) {
+    console.warn('Failed to generate QR code watermark, continuing without it:', error);
+    return Promise.resolve(); // Don't reject, just continue without watermark
+  }
 }
 
 /**

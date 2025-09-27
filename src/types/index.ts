@@ -93,6 +93,7 @@ export interface Settings {
   sogniWatermark: boolean;
   sogniWatermarkSize?: number;
   sogniWatermarkMargin?: number;
+  qrCodeUrl?: string;
   // Worker preferences
   requiredWorkers: string[];
   preferWorkers: string[];
