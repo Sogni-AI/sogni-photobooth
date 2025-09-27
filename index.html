@@ -2,10 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <!-- AGGRESSIVE CACHE BUSTING -->
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <meta http-equiv="Pragma" content="no-cache">
-    <meta http-equiv="Expires" content="0">
+    <!-- Cache control for development - less aggressive for PWA compatibility -->
     <meta name="cache-buster" content="1.0.21">
     <link rel="icon" href="/favicon.ico?v=1.0.20" />
     <title>Sogni AI Photobooth</title>
@@ -25,6 +22,10 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="Sogni Photobooth" />
     <meta name="application-name" content="Sogni Photobooth" />
+    
+    <!-- Additional PWA meta tags for better iOS support -->
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="apple-touch-fullscreen" content="yes" />
     
     <!-- iOS Splash Screens -->
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
