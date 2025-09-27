@@ -2,6 +2,17 @@
   "version": "1.0",
   "defaultTheme": null,
   "themes": {
+    "token2049-singapore-2025-tezos": {
+      "label": "Token2049 Singapore 2025 - Tezos",
+      "defaultAspectRatio": "narrow",
+      "framePadding": { "top": 0, "left": 0, "right": 0, "bottom": 0 },
+      "tweetTemplate": "Just took my AI photo at the @Tezos booth at Token2049 Singapore! @sogni_protocol @tzapac @etherlink https://photobooth.sogni.ai",
+      "frames": {
+        "narrow": [
+          "/events/token2049-singapore-2025-tezos/narrow_1.png"
+        ]
+      }
+    },
     "depin-x-ai-day": {
       "label": "Korea Blockchain Week 2025 - Depin x AI Day 2025",
       "defaultAspectRatio": "narrow",
