@@ -385,6 +385,22 @@ html body .photo-action-buttons .action-button,
   transform: translateY(1px);
 }
 
+/* Video button styling */
+.video-btn {
+  background: linear-gradient(135deg, #FF6B6B, #FF5252);
+  color: white;
+}
+
+.video-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #FF5252, #E53935);
+  transform: translateY(-2px);
+}
+
+.video-btn:active:not(:disabled) {
+  background: linear-gradient(135deg, #E53935, #C62828);
+  transform: translateY(1px);
+}
+
 /* Loading animation for enhance button */
 .enhance-btn.loading {
   position: relative;

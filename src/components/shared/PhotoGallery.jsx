@@ -147,6 +147,16 @@ const PhotoGallery = ({
   const [showThemeFilters, setShowThemeFilters] = useState(false);
   const [showSearchInput, setShowSearchInput] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  
+  // State for video overlay
+  const [showVideo, setShowVideo] = useState(false);
+  
+  // Cleanup video when leaving the view
+  useEffect(() => {
+    if (selectedPhotoIndex === null) {
+      setShowVideo(false);
+    }
+  }, [selectedPhotoIndex]);
 
   // Update theme group state when initialThemeGroupState prop changes
   useEffect(() => {
@@ -1589,46 +1599,68 @@ const PhotoGallery = ({
           }}>
             {/* Share to X Button or Use this Prompt Button for Gallery Images */}
             {selectedPhoto.isGalleryImage ? (
-              <button
-                className="action-button use-prompt-btn"
-                onClick={(e) => {
-                  console.log('🚨 USE THIS STYLE CLICKED - DEBUGGING START');
-                  console.log('🔍 isExtensionMode:', isExtensionMode);
-                  console.log('🔍 window.extensionMode:', window.extensionMode);
-                  console.log('🔍 isPromptSelectorMode:', isPromptSelectorMode);
-                  
-                  // Reset scroll position to top in extension mode before style selection
-                  if (isExtensionMode) {
-                    console.log('✅ EXTENSION MODE DETECTED - EXECUTING SCROLL RESET (Use This Style)');
+              <>
+                <button
+                  className="action-button use-prompt-btn"
+                  onClick={(e) => {
+                    console.log('🚨 USE THIS STYLE CLICKED - DEBUGGING START');
+                    console.log('🔍 isExtensionMode:', isExtensionMode);
+                    console.log('🔍 window.extensionMode:', window.extensionMode);
+                    console.log('🔍 isPromptSelectorMode:', isPromptSelectorMode);
                     
-                    // Direct approach - just scroll the film strip container to top
-                    const filmStripContainer = document.querySelector('.film-strip-container');
-                    if (filmStripContainer) {
-                      console.log('📍 Found .film-strip-container, scrollTop before:', filmStripContainer.scrollTop);
-                      filmStripContainer.scrollTop = 0;
-                      console.log('📍 Set scrollTop to 0, scrollTop after:', filmStripContainer.scrollTop);
-                      filmStripContainer.scrollTo({ top: 0, behavior: 'instant' });
-                      console.log('📍 Called scrollTo({top: 0, behavior: instant})');
-                    } else {
-                      console.log('❌ .film-strip-container NOT FOUND');
+                    // Reset scroll position to top in extension mode before style selection
+                    if (isExtensionMode) {
+                      console.log('✅ EXTENSION MODE DETECTED - EXECUTING SCROLL RESET (Use This Style)');
+                      
+                      // Direct approach - just scroll the film strip container to top
+                      const filmStripContainer = document.querySelector('.film-strip-container');
+                      if (filmStripContainer) {
+                        console.log('📍 Found .film-strip-container, scrollTop before:', filmStripContainer.scrollTop);
+                        filmStripContainer.scrollTop = 0;
+                        console.log('📍 Set scrollTop to 0, scrollTop after:', filmStripContainer.scrollTop);
+                        filmStripContainer.scrollTo({ top: 0, behavior: 'instant' });
+                        console.log('📍 Called scrollTo({top: 0, behavior: instant})');
+                      } else {
+                        console.log('❌ .film-strip-container NOT FOUND');
+                      }
                     }
+                    
+                    if (isPromptSelectorMode && onPromptSelect && selectedPhoto.promptKey) {
+                      onPromptSelect(selectedPhoto.promptKey);
+                    } else if (onUseGalleryPrompt && selectedPhoto.promptKey) {
+                      onUseGalleryPrompt(selectedPhoto.promptKey);
+                    }
+                    e.stopPropagation();
+                  }}
+                  disabled={
+                    !selectedPhoto.promptKey ||
+                    (!onUseGalleryPrompt && !onPromptSelect)
                   }
-                  
-                  if (isPromptSelectorMode && onPromptSelect && selectedPhoto.promptKey) {
-                    onPromptSelect(selectedPhoto.promptKey);
-                  } else if (onUseGalleryPrompt && selectedPhoto.promptKey) {
-                    onUseGalleryPrompt(selectedPhoto.promptKey);
-                  }
-                  e.stopPropagation();
-                }}
-                disabled={
-                  !selectedPhoto.promptKey ||
-                  (!onUseGalleryPrompt && !onPromptSelect)
-                }
-              >
-                <svg fill="currentColor" width="16" height="16" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
-                Use this Style
-              </button>
+                >
+                  <svg fill="currentColor" width="16" height="16" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                  Use this Style
+                </button>
+                
+                {/* Video Button - Only show for Jazz Saxophonist style */}
+                {selectedPhoto.promptKey === 'jazzSaxophonist' && (
+                  <button
+                    className="action-button video-btn"
+                    onClick={(e) => {
+                      setShowVideo(!showVideo);
+                      e.stopPropagation();
+                    }}
+                  >
+                    <svg fill="currentColor" width="16" height="16" viewBox="0 0 24 24">
+                      {showVideo ? (
+                        <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+                      ) : (
+                        <path d="M8 5v14l11-7z"/>
+                      )}
+                    </svg>
+                    {showVideo ? 'Hide Video' : 'Video'}
+                  </button>
+                )}
+              </>
             ) : (
               <button
                 className="action-button twitter-btn"
@@ -2896,6 +2928,34 @@ const PhotoGallery = ({
                     };
                   })()}
                 />
+                
+                {/* Video Overlay - Only show for Jazz Saxophonist style when video is enabled */}
+                {isSelected && photo.promptKey === 'jazzSaxophonist' && showVideo && (
+                  <video
+                    src="https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/videos/sogni-photobooth-video-demo_832x1216.mp4"
+                    autoPlay
+                    loop
+                    playsInline
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover',
+                      objectPosition: 'center',
+                      zIndex: 3, // Above theme overlays
+                      borderRadius: 'inherit'
+                    }}
+                    onLoadedData={() => {
+                      console.log('Video loaded and ready to play');
+                    }}
+                    onError={(e) => {
+                      console.error('Video failed to load:', e);
+                      setShowVideo(false); // Hide video on error
+                    }}
+                  />
+                )}
                 
                 {/* Event Theme Overlays - Only show on selected (popup) view when theme is supported and not using composite framed image */}
                 {(() => {
