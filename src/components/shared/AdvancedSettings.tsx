@@ -931,6 +931,26 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
           </div>
         )}
 
+        {/* QR Code Position - only show when watermark is enabled */}
+        {settings.sogniWatermark && (
+          <div className="control-option">
+            <label className="control-label">QR Code Position:</label>
+            <select
+              className="model-select"
+              onChange={(e) => {
+                const position = e.target.value as 'top-left' | 'top-right';
+                updateSetting('sogniWatermarkPosition', position);
+                // Clear caches when position changes to regenerate QR code
+                clearImageCaches();
+              }}
+              value={settings.sogniWatermarkPosition || 'top-right'}
+            >
+              <option value="top-right">Top Right</option>
+              <option value="top-left">Top Left</option>
+            </select>
+          </div>
+        )}
+
         {/* Flash toggle */}
         <div className="control-option checkbox">
           <input

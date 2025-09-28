@@ -165,6 +165,7 @@ const createDefaultSettings = (): Settings => {
     sogniWatermark: true, // Default to enabled
     sogniWatermarkSize: 94, // Default QR code size
     sogniWatermarkMargin: 16, // Default margin from edge
+    sogniWatermarkPosition: 'top-right' as const, // Default position
     qrCodeUrl: 'https://qr.sogni.ai', // Default QR code URL
     // Worker preferences
     requiredWorkers: [],
@@ -223,7 +224,7 @@ export const TWITTER_SHARE_CONFIG = {
 export const getQRWatermarkConfig = (settings: Settings) => ({
   size: settings.sogniWatermarkSize ?? 94,
   margin: settings.sogniWatermarkMargin ?? 16,
-  position: 'top-right' as const,
+  position: settings.sogniWatermarkPosition ?? 'top-right',
   opacity: 1.0, // Always 100% for maximum legibility
   url: settings.qrCodeUrl || 'https://qr.sogni.ai', // URL to encode in QR code
 });

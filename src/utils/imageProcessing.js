@@ -300,7 +300,7 @@ export async function createPolaroidImage(imageUrl, label, options = {}) {
           // Position QR watermark within the image area to avoid overlapping with label
           const imageAreaWatermarkOptions = {
             ...watermarkOptions,
-            position: 'top-right', // Always use top-right for polaroid frames
+            // Use the position from watermarkOptions, defaulting to top-right for polaroid frames
             // Adjust positioning to be within the image area
             imageAreaOnly: true,
             imageWidth,
