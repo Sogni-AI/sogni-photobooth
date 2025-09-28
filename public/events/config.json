@@ -2,6 +2,17 @@
   "version": "1.0",
   "defaultTheme": null,
   "themes": {
+    "token2049-singapore-2025": {
+      "label": "Token2049 Singapore 2025",
+      "defaultAspectRatio": "narrow",
+      "framePadding": { "top": 0, "left": 0, "right": 0, "bottom": 155 },
+      "tweetTemplate": "Just took my AI photo at Token2049 Singapore 2025 with @sogni_protocol https://photobooth.sogni.ai",
+      "frames": {
+        "narrow": [
+          "/events/token2049-singapore-2025/narrow_1.png"
+        ]
+      }
+    },
     "token2049-singapore-2025-comma-3-afterparty": {
       "label": "Token2049 Singapore 2025 - Comma 3 Afterparty",
       "defaultAspectRatio": "narrow",

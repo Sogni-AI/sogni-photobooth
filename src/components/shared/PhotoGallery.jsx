@@ -13,6 +13,7 @@ import { getThemeGroupPreferences, saveThemeGroupPreferences } from '../../utils
 import { isFluxKontextModel, SAMPLE_GALLERY_CONFIG, getQRWatermarkConfig } from '../../constants/settings';
 import { themeConfigService } from '../../services/themeConfig';
 import { useApp } from '../../context/AppContext';
+import { trackDownloadWithStyle } from '../../services/analyticsService';
 
 // Memoized placeholder image component to prevent blob reloading
 const PlaceholderImage = memo(({ placeholderUrl }) => {
@@ -1174,11 +1175,11 @@ const PhotoGallery = ({
   // Manual cleanup can be added if needed in specific scenarios
 
   // Universal download function that works on all devices
-  const downloadImage = async (imageUrl, filename) => {
+  const downloadImage = async (imageUrl, filename, analyticsOptions = {}) => {
     try {
       // Use mobile-optimized download for mobile devices
       if (isMobile()) {
-        const result = await downloadImageMobile(imageUrl, filename);
+        const result = await downloadImageMobile(imageUrl, filename, analyticsOptions);
         // If mobile download returns true (success or user cancellation), don't fallback
         if (result) {
           return true;
@@ -1291,8 +1292,36 @@ const PhotoGallery = ({
         watermarkOptions: settings.sogniWatermark ? getQRWatermarkConfig(settings) : null
       });
       
-             // Handle download
-       downloadImage(polaroidUrl, filename);
+      // Prepare analytics options for mobile sharing
+      const analyticsOptions = {
+        selectedStyle,
+        stylePrompts,
+        metadata: {
+          downloadType: 'framed',
+          filename,
+          photoIndex,
+          styleDisplayText,
+          outputFormat,
+          tezdevTheme,
+          aspectRatio
+        }
+      };
+      
+      // Handle download
+      const downloadSuccess = await downloadImage(polaroidUrl, filename, analyticsOptions);
+      
+      // Track analytics if download was successful (for desktop downloads)
+      if (downloadSuccess && !isMobile()) {
+        await trackDownloadWithStyle(selectedStyle, stylePrompts, {
+          downloadType: 'framed',
+          filename,
+          photoIndex,
+          styleDisplayText,
+          outputFormat,
+          tezdevTheme,
+          aspectRatio
+        });
+      }
     } catch (error) {
       console.error('Error downloading photo:', error);
     }
@@ -1397,7 +1426,34 @@ const PhotoGallery = ({
         img.src = imageUrl;
       });
       
-      downloadImage(processedImageUrl, filename);
+      // Prepare analytics options for mobile sharing
+      const analyticsOptions = {
+        selectedStyle,
+        stylePrompts,
+        metadata: {
+          downloadType: 'raw',
+          filename,
+          photoIndex,
+          styleDisplayText,
+          actualExtension,
+          hasWatermark: settings.sogniWatermark
+        }
+      };
+      
+      // Handle download and track analytics
+      const downloadSuccess = await downloadImage(processedImageUrl, filename, analyticsOptions);
+      
+      // Track analytics if download was successful (for desktop downloads)
+      if (downloadSuccess && !isMobile()) {
+        await trackDownloadWithStyle(selectedStyle, stylePrompts, {
+          downloadType: 'raw',
+          filename,
+          photoIndex,
+          styleDisplayText,
+          actualExtension,
+          hasWatermark: settings.sogniWatermark
+        });
+      }
     } catch (error) {
       console.error('Error downloading raw photo:', error);
     }
@@ -3475,7 +3531,8 @@ PhotoGallery.propTypes = {
   onOneOfEachSelect: PropTypes.func,
   onCustomSelect: PropTypes.func,
   onThemeChange: PropTypes.func,
-  onBackToPhotos: PropTypes.func
+  onBackToPhotos: PropTypes.func,
+  initialThemeGroupState: PropTypes.object
 };
 
 export default PhotoGallery; 

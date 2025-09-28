@@ -5,6 +5,7 @@
 
 import { isIOS, isMobile } from './index';
 import { TWITTER_SHARE_CONFIG } from '../constants/settings';
+import { trackShareWithStyle } from '../services/analyticsService';
 
 /**
  * Detect if device is Android
@@ -45,8 +46,11 @@ export const createMobileOptimizedImage = (imageUrl, alt = 'Photo') => {
 /**
  * Enhanced download function for mobile devices
  * Attempts to trigger native photo saving behavior
+ * @param {string} imageUrl - The image URL to download/share
+ * @param {string} filename - The filename for the download
+ * @param {Object} analyticsOptions - Optional analytics tracking options
  */
-export const downloadImageMobile = async (imageUrl, filename) => {
+export const downloadImageMobile = async (imageUrl, filename, analyticsOptions = {}) => {
   try {
     if (isMobile()) {
       // Method 1: Try native Web Share API first (works on modern iOS and Android)
@@ -62,6 +66,22 @@ export const downloadImageMobile = async (imageUrl, filename) => {
               title: 'Save Photo',
               text: TWITTER_SHARE_CONFIG.DEFAULT_MESSAGE
             });
+            
+            // Track analytics for successful mobile share
+            if (analyticsOptions.selectedStyle && analyticsOptions.stylePrompts) {
+              await trackShareWithStyle(
+                analyticsOptions.selectedStyle, 
+                analyticsOptions.stylePrompts, 
+                'mobile-web-share', 
+                {
+                  filename,
+                  platform: 'mobile',
+                  method: 'web-share-api',
+                  ...analyticsOptions.metadata
+                }
+              );
+            }
+            
             return true;
           }
         } catch (shareError) {

@@ -18,6 +18,7 @@ import { trackPageView, initializeGA, trackEvent } from './utils/analytics';
 import { ensurePermanentUrl } from './utils/imageUpload.js';
 import { createPolaroidImage } from './utils/imageProcessing.js';
 import { getPhotoHashtag } from './services/TwitterShare.js';
+import { trackShareWithStyle } from './services/analyticsService';
 import clickSound from './click.mp3';
 import cameraWindSound from './camera-wind.mp3';
 // import helloSound from './hello.mp3';
@@ -58,6 +59,7 @@ import UploadProgress from './components/shared/UploadProgress';
 import PromoPopup from './components/shared/PromoPopup';
 import NetworkStatus from './components/shared/NetworkStatus';
 import ConfettiCelebration from './components/shared/ConfettiCelebration';
+import AnalyticsDashboard from './components/admin/AnalyticsDashboard';
 import { subscribeToConnectionState, getCurrentConnectionState } from './services/api';
 
 
@@ -225,9 +227,13 @@ const App = () => {
   
   
   // State for current page routing
-  const [currentPage, setCurrentPage] = useState(
-    immediatePageParam === 'prompts' ? 'prompts' : 'camera'
-  );
+  const [currentPage, setCurrentPage] = useState(() => {
+    // Check for admin dashboard access
+    if (window.location.pathname === '/admin/analytics' || window.location.hash === '#admin-analytics') {
+      return 'admin-analytics';
+    }
+    return immediatePageParam === 'prompts' ? 'prompts' : 'camera';
+  });
   
   // PWA install prompt state - for manual testing only
   const [showPWAPromptManually, setShowPWAPromptManually] = useState(false);
@@ -1794,10 +1800,21 @@ const App = () => {
       sogniWatermark: settings.sogniWatermark,
       sogniWatermarkSize: settings.sogniWatermarkSize,
       sogniWatermarkMargin: settings.sogniWatermarkMargin,
-      onSuccess: () => {
+      onSuccess: async () => {
         setSuccessMessage('Your photo has been shared to X/Twitter!');
         setShowSuccessToast(true);
         setShowTwitterModal(false);
+        
+        // Track analytics for successful Twitter share
+        await trackShareWithStyle(selectedStyle, stylePrompts, 'twitter', {
+          photoIndex: twitterPhotoIndex,
+          customMessage,
+          shareUrl: shareUrl.toString(),
+          tezdevTheme,
+          aspectRatio,
+          outputFormat,
+          hasWatermark: settings.sogniWatermark
+        });
       }
     });
   };
@@ -5420,6 +5437,12 @@ const App = () => {
   // -------------------------
   //   Render
   // -------------------------
+  
+  // Show analytics dashboard if accessing admin route
+  if (currentPage === 'admin-analytics') {
+    return <AnalyticsDashboard />;
+  }
+  
   return (
     <>
       {/* Splash Screen */}

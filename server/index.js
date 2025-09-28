@@ -9,6 +9,7 @@ import xAuthRoutes from './routes/xAuthRoutes.js';
 import metricsRoutes from './routes/metricsRoutes.js';
 import mobileShareRoutes from './routes/mobileShare.js';
 import imageHostingRoutes from './routes/imageHosting.js';
+import analyticsRoutes from './routes/analytics.js';
 import process from 'process'; // Added to address linter error
 
 // Load environment variables FIRST
@@ -88,6 +89,7 @@ app.use('/auth/x', xAuthRoutes); // Also keep /auth/x for the direct callback fr
 app.use('/api/metrics', metricsRoutes); // Metrics routes
 app.use('/api/mobile-share', mobileShareRoutes); // Mobile sharing routes
 app.use('/api/images', imageHostingRoutes); // Image hosting routes
+app.use('/api/analytics', analyticsRoutes); // Analytics routes
 
 // Health check endpoint
 app.get('/health', (req, res) => {
