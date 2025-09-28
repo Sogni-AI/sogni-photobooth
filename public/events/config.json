@@ -2,6 +2,39 @@
   "version": "1.0",
   "defaultTheme": null,
   "themes": {
+    "token2049-singapore-2025-comma-3-afterparty": {
+      "label": "Token2049 Singapore 2025 - Comma 3 Afterparty",
+      "defaultAspectRatio": "narrow",
+      "framePadding": { "top": 0, "left": 0, "right": 0, "bottom": 112 },
+      "tweetTemplate": "Just took my AI photo at the Comma 3 Summit Afterparty via @sogni_protocol @comma3vc https://photobooth.sogni.ai",
+      "frames": {
+        "narrow": [
+          "/events/token2049-singapore-2025-comma-3-afterparty/narrow_1.png"
+        ]
+      }
+    },
+    "token2049-singapore-2025-fortify-labs": {
+      "label": "Token2049 Singapore 2025 - Fortify Labs",
+      "defaultAspectRatio": "narrow",
+      "framePadding": { "top": 0, "left": 0, "right": 0, "bottom": 0 },
+      "tweetTemplate": "Just took my AI photo at the @sogni_protocol photobooth at Fortify Labs Open House @TzApac @etherlink https://photobooth.sogni.ai",
+      "frames": {
+        "narrow": [
+          "/events/token2049-singapore-2025-fortify-labs/narrow_1.png"
+        ]
+      }
+    },
+    "token2049-singapore-2025-comma-3": {
+      "label": "Token2049 Singapore 2025 - Comma 3",
+      "defaultAspectRatio": "narrow",
+      "framePadding": { "top": 0, "left": 0, "right": 0, "bottom": 0 },
+      "tweetTemplate": "Just took my AI photo at the Comma 3 Summit 2025 via @sogni_protocol @comma3vc https://photobooth.sogni.ai",
+      "frames": {
+        "narrow": [
+          "/events/token2049-singapore-2025-comma-3/narrow_1.png"
+        ]
+      }
+    },
     "token2049-singapore-2025-nosana": {
       "label": "Token2049 Singapore 2025 - Nosana",
       "defaultAspectRatio": "narrow",
