@@ -36,7 +36,7 @@ router.post('/track/download', async (req, res) => {
     
     await trackDownload(promptId, enrichedMetadata);
     
-    console.log(`[Analytics API] Download tracked for prompt: ${promptId}`);
+    console.log(`[Analytics API] ✅ Download tracked for prompt: ${promptId}`);
     
     res.json({ 
       success: true, 
@@ -44,7 +44,7 @@ router.post('/track/download', async (req, res) => {
       promptId 
     });
   } catch (error) {
-    console.error('[Analytics API] Error tracking download:', error);
+    console.error('[Analytics API] ❌ Error tracking download:', error);
     res.status(500).json({ 
       error: 'Failed to track download' 
     });

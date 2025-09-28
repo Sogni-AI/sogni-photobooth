@@ -9,9 +9,18 @@
 const getApiBaseUrl = () => {
   if (typeof window !== 'undefined') {
     const hostname = window.location.hostname;
+    
+    // Local development
     if (hostname.includes('localhost') || hostname.includes('127.0.0.1')) {
       return 'http://localhost:3001';
     }
+    
+    // Local SSL development (photobooth-local.sogni.ai)
+    if (hostname.includes('photobooth-local.sogni.ai')) {
+      return 'https://photobooth-api-local.sogni.ai';
+    }
+    
+    // Production
     return 'https://photobooth-api.sogni.ai';
   }
   return 'http://localhost:3001';
@@ -83,9 +92,9 @@ export const trackDownload = async (promptId, metadata = {}) => {
     }
     
     const result = await response.json();
-    console.log(`[Analytics] Download tracked for prompt: ${promptId}`, result);
+    console.log(`[Analytics] ✅ Download tracked for prompt: ${promptId}`);
   } catch (error) {
-    console.error('[Analytics] Failed to track download:', error);
+    console.error('[Analytics] ❌ Failed to track download:', error);
     // Don't throw - analytics failures shouldn't break the user experience
   }
 };
@@ -143,6 +152,7 @@ export const trackShare = async (promptId, shareType = 'unknown', metadata = {})
  */
 export const trackDownloadWithStyle = async (selectedStyle, stylePrompts, metadata = {}) => {
   const promptId = extractPromptId(selectedStyle, stylePrompts);
+  
   if (promptId) {
     await trackDownload(promptId, {
       ...metadata,

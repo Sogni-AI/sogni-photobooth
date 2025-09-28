@@ -248,6 +248,14 @@ export const listAllTwitterSessions = async () => {
 
 export const redisReady = () => redisClient.isOpen;
 
+/**
+ * Get the Redis client instance
+ * @returns {Object|null} - Redis client or null if not connected
+ */
+export const getRedisClient = () => {
+  return redisClient.isOpen ? redisClient : null;
+};
+
 export default redisClient;
 
 // Metrics tracking prefixes

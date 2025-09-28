@@ -72,18 +72,18 @@ export const trackDownload = async (promptId, metadata = {}) => {
     pipeline.incr(KEYS.LIFETIME_COMBINED(promptId));
     
     // Update leaderboards (sorted sets with scores)
-    pipeline.zincrby(KEYS.DAILY_LEADERBOARD_DOWNLOADS(date), 1, promptId);
-    pipeline.zincrby(KEYS.DAILY_LEADERBOARD_COMBINED(date), 1, promptId);
-    pipeline.zincrby(KEYS.LIFETIME_LEADERBOARD_DOWNLOADS(), 1, promptId);
-    pipeline.zincrby(KEYS.LIFETIME_LEADERBOARD_COMBINED(), 1, promptId);
+    pipeline.zIncrBy(KEYS.DAILY_LEADERBOARD_DOWNLOADS(date), 1, promptId);
+    pipeline.zIncrBy(KEYS.DAILY_LEADERBOARD_COMBINED(date), 1, promptId);
+    pipeline.zIncrBy(KEYS.LIFETIME_LEADERBOARD_DOWNLOADS(), 1, promptId);
+    pipeline.zIncrBy(KEYS.LIFETIME_LEADERBOARD_COMBINED(), 1, promptId);
     
     // Track active prompts for the day
-    pipeline.sadd(KEYS.DAILY_ACTIVE_PROMPTS(date), promptId);
+    pipeline.sAdd(KEYS.DAILY_ACTIVE_PROMPTS(date), promptId);
     
     // Store metadata if provided
     if (Object.keys(metadata).length > 0) {
       const metadataKey = KEYS.PROMPT_METADATA(promptId);
-      pipeline.hset(metadataKey, {
+      pipeline.hSet(metadataKey, {
         lastDownload: timestamp,
         ...metadata
       });
@@ -98,9 +98,9 @@ export const trackDownload = async (promptId, metadata = {}) => {
     
     await pipeline.exec();
     
-    console.log(`[Analytics] Tracked download for prompt: ${promptId} on ${date}`);
+    console.log(`[Analytics] ✅ Tracked download for prompt: ${promptId} on ${date}`);
   } catch (error) {
-    console.error('[Analytics] Error tracking download:', error);
+    console.error('[Analytics] ❌ Error tracking download:', error);
   }
 };
 
@@ -137,18 +137,18 @@ export const trackShare = async (promptId, metadata = {}) => {
     pipeline.incr(KEYS.LIFETIME_COMBINED(promptId));
     
     // Update leaderboards (sorted sets with scores)
-    pipeline.zincrby(KEYS.DAILY_LEADERBOARD_SHARES(date), 1, promptId);
-    pipeline.zincrby(KEYS.DAILY_LEADERBOARD_COMBINED(date), 1, promptId);
-    pipeline.zincrby(KEYS.LIFETIME_LEADERBOARD_SHARES(), 1, promptId);
-    pipeline.zincrby(KEYS.LIFETIME_LEADERBOARD_COMBINED(), 1, promptId);
+    pipeline.zIncrBy(KEYS.DAILY_LEADERBOARD_SHARES(date), 1, promptId);
+    pipeline.zIncrBy(KEYS.DAILY_LEADERBOARD_COMBINED(date), 1, promptId);
+    pipeline.zIncrBy(KEYS.LIFETIME_LEADERBOARD_SHARES(), 1, promptId);
+    pipeline.zIncrBy(KEYS.LIFETIME_LEADERBOARD_COMBINED(), 1, promptId);
     
     // Track active prompts for the day
-    pipeline.sadd(KEYS.DAILY_ACTIVE_PROMPTS(date), promptId);
+    pipeline.sAdd(KEYS.DAILY_ACTIVE_PROMPTS(date), promptId);
     
     // Store metadata if provided
     if (Object.keys(metadata).length > 0) {
       const metadataKey = KEYS.PROMPT_METADATA(promptId);
-      pipeline.hset(metadataKey, {
+      pipeline.hSet(metadataKey, {
         lastShare: timestamp,
         ...metadata
       });
@@ -199,7 +199,7 @@ export const getPromptAnalytics = async (promptId, date = null) => {
       redis.get(KEYS.LIFETIME_DOWNLOADS(promptId)),
       redis.get(KEYS.LIFETIME_SHARES(promptId)),
       redis.get(KEYS.LIFETIME_COMBINED(promptId)),
-      redis.hgetall(KEYS.PROMPT_METADATA(promptId))
+      redis.hGetAll(KEYS.PROMPT_METADATA(promptId))
     ]);
     
     return {
@@ -260,15 +260,17 @@ export const getTopPrompts = async (type = 'combined', period = 'lifetime', date
     }
     
     // Get top prompts with scores (descending order)
-    const results = await redis.zrevrange(leaderboardKey, 0, limit - 1, 'WITHSCORES');
+    const results = await redis.zRangeWithScores(leaderboardKey, 0, limit - 1, { REV: true });
     
     // Parse results into array of objects
     const topPrompts = [];
-    for (let i = 0; i < results.length; i += 2) {
-      topPrompts.push({
-        promptId: results[i],
-        count: parseInt(results[i + 1]) || 0,
-        rank: Math.floor(i / 2) + 1
+    if (Array.isArray(results)) {
+      results.forEach((result, index) => {
+        topPrompts.push({
+          promptId: result.value,
+          count: parseInt(result.score) || 0,
+          rank: index + 1
+        });
       });
     }
     
@@ -294,7 +296,7 @@ export const getDailyAnalyticsSummary = async (date = null) => {
     const targetDate = date || getCurrentUTCDate();
     
     // Get all active prompts for the date
-    const activePrompts = await redis.smembers(KEYS.DAILY_ACTIVE_PROMPTS(targetDate));
+    const activePrompts = await redis.sMembers(KEYS.DAILY_ACTIVE_PROMPTS(targetDate));
     
     if (activePrompts.length === 0) {
       return {
