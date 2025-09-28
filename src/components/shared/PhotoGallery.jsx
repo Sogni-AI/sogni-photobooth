@@ -1310,8 +1310,10 @@ const PhotoGallery = ({
       // Handle download
       const downloadSuccess = await downloadImage(polaroidUrl, filename, analyticsOptions);
       
-      // Track analytics if download was successful (for desktop downloads)
-      if (downloadSuccess && !isMobile()) {
+      // Track analytics if download was successful (for all platforms)
+      if (downloadSuccess) {
+        // Get the actual prompt that was used for this photo
+        const actualPrompt = targetPhoto.positivePrompt || targetPhoto.stylePrompt;
         await trackDownloadWithStyle(selectedStyle, stylePrompts, {
           downloadType: 'framed',
           filename,
@@ -1319,7 +1321,9 @@ const PhotoGallery = ({
           styleDisplayText,
           outputFormat,
           tezdevTheme,
-          aspectRatio
+          aspectRatio,
+          platform: isMobile() ? 'mobile' : 'desktop',
+          actualPrompt
         });
       }
     } catch (error) {
@@ -1443,15 +1447,19 @@ const PhotoGallery = ({
       // Handle download and track analytics
       const downloadSuccess = await downloadImage(processedImageUrl, filename, analyticsOptions);
       
-      // Track analytics if download was successful (for desktop downloads)
-      if (downloadSuccess && !isMobile()) {
+      // Track analytics if download was successful (for all platforms)
+      if (downloadSuccess) {
+        // Get the actual prompt that was used for this photo
+        const actualPrompt = targetPhoto.positivePrompt || targetPhoto.stylePrompt;
         await trackDownloadWithStyle(selectedStyle, stylePrompts, {
           downloadType: 'raw',
           filename,
           photoIndex,
           styleDisplayText,
           actualExtension,
-          hasWatermark: settings.sogniWatermark
+          hasWatermark: settings.sogniWatermark,
+          platform: isMobile() ? 'mobile' : 'desktop',
+          actualPrompt
         });
       }
     } catch (error) {

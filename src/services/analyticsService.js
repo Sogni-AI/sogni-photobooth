@@ -32,13 +32,12 @@ const getApiBaseUrl = () => {
  * @param {Object} stylePrompts - The style prompts object
  * @returns {string|null} - The prompt ID or null if not trackable
  */
-export const extractPromptId = (selectedStyle, stylePrompts = {}) => {
+export const extractPromptId = (selectedStyle, stylePrompts = {}, actualPrompt = null) => {
   // Don't track certain special styles
   const nonTrackableStyles = [
     'custom',
     'browseGallery',
     'random',
-    'randomMix',
     'RANDOM_SINGLE_STYLE'
   ];
   
@@ -46,13 +45,19 @@ export const extractPromptId = (selectedStyle, stylePrompts = {}) => {
     return null;
   }
   
-  // For regular prompt styles, use the style key as the prompt ID
-  if (stylePrompts[selectedStyle]) {
-    return selectedStyle;
+  // For randomMix, we need to extract the actual prompt that was used
+  if (selectedStyle === 'randomMix' && actualPrompt) {
+    // Find which style key matches this exact prompt text
+    for (const [styleKey, promptText] of Object.entries(stylePrompts)) {
+      if (promptText === actualPrompt) {
+        return styleKey;
+      }
+    }
+    // If no exact match found, return randomMix as fallback
+    return 'randomMix';
   }
   
-  // Fallback: if we have a selectedStyle but no matching prompt, still track it
-  // This handles cases where prompts might be loaded from external sources
+  // For regular styles, use the selectedStyle as the prompt ID
   return selectedStyle;
 };
 
@@ -63,7 +68,6 @@ export const extractPromptId = (selectedStyle, stylePrompts = {}) => {
  */
 export const trackDownload = async (promptId, metadata = {}) => {
   if (!promptId) {
-    console.log('[Analytics] No prompt ID provided for download tracking');
     return;
   }
   
@@ -90,11 +94,8 @@ export const trackDownload = async (promptId, metadata = {}) => {
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
-    
-    const result = await response.json();
-    console.log(`[Analytics] ✅ Download tracked for prompt: ${promptId}`);
   } catch (error) {
-    console.error('[Analytics] ❌ Failed to track download:', error);
+    console.error('[Analytics] Failed to track download:', error);
     // Don't throw - analytics failures shouldn't break the user experience
   }
 };
@@ -151,7 +152,7 @@ export const trackShare = async (promptId, shareType = 'unknown', metadata = {})
  * @param {Object} metadata - Optional metadata
  */
 export const trackDownloadWithStyle = async (selectedStyle, stylePrompts, metadata = {}) => {
-  const promptId = extractPromptId(selectedStyle, stylePrompts);
+  const promptId = extractPromptId(selectedStyle, stylePrompts, metadata.actualPrompt);
   
   if (promptId) {
     await trackDownload(promptId, {

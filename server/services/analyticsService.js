@@ -1,38 +1,6 @@
 import { getRedisClient } from './redisService.js';
 
 /**
- * Analytics Service for tracking photobooth style popularity
- * Tracks downloads and shares by prompt ID with daily and lifetime metrics
- */
-
-// Redis key patterns
-const KEYS = {
-  // Daily metrics: analytics:daily:2025-01-15:downloads:anime1990s
-  DAILY_DOWNLOADS: (date, promptId) => `analytics:daily:${date}:downloads:${promptId}`,
-  DAILY_SHARES: (date, promptId) => `analytics:daily:${date}:shares:${promptId}`,
-  
-  // Lifetime metrics: analytics:lifetime:downloads:anime1990s
-  LIFETIME_DOWNLOADS: (promptId) => `analytics:lifetime:downloads:${promptId}`,
-  LIFETIME_SHARES: (promptId) => `analytics:lifetime:shares:${promptId}`,
-  
-  // Combined metrics: analytics:daily:2025-01-15:combined:anime1990s
-  DAILY_COMBINED: (date, promptId) => `analytics:daily:${date}:combined:${promptId}`,
-  LIFETIME_COMBINED: (promptId) => `analytics:lifetime:combined:${promptId}`,
-  
-  // Metadata
-  PROMPT_METADATA: (promptId) => `analytics:metadata:${promptId}`,
-  DAILY_ACTIVE_PROMPTS: (date) => `analytics:active:${date}`,
-  
-  // Leaderboards
-  DAILY_LEADERBOARD_DOWNLOADS: (date) => `analytics:leaderboard:daily:${date}:downloads`,
-  DAILY_LEADERBOARD_SHARES: (date) => `analytics:leaderboard:daily:${date}:shares`,
-  DAILY_LEADERBOARD_COMBINED: (date) => `analytics:leaderboard:daily:${date}:combined`,
-  LIFETIME_LEADERBOARD_DOWNLOADS: () => `analytics:leaderboard:lifetime:downloads`,
-  LIFETIME_LEADERBOARD_SHARES: () => `analytics:leaderboard:lifetime:shares`,
-  LIFETIME_LEADERBOARD_COMBINED: () => `analytics:leaderboard:lifetime:combined`
-};
-
-/**
  * Get current UTC date in YYYY-MM-DD format
  */
 const getCurrentUTCDate = () => {
@@ -58,47 +26,23 @@ export const trackDownload = async (promptId, metadata = {}) => {
 
   try {
     const date = getCurrentUTCDate();
-    const timestamp = Date.now();
     
-    // Use Redis pipeline for atomic operations
-    const pipeline = redis.multi();
+    // Use sorted sets for efficient leaderboards and simple counters for totals
+    const dailyLeaderboard = `analytics:daily:${date}:downloads:leaderboard`;
+    const lifetimeLeaderboard = `analytics:lifetime:downloads:leaderboard`;
+    const dailyTotalKey = `analytics:daily:${date}:downloads:total`;
+    const lifetimeTotalKey = `analytics:lifetime:downloads:total`;
     
-    // Increment daily counters
-    pipeline.incr(KEYS.DAILY_DOWNLOADS(date, promptId));
-    pipeline.incr(KEYS.DAILY_COMBINED(date, promptId));
+    // Increment leaderboards (sorted sets) and totals atomically
+    await redis.zIncrBy(dailyLeaderboard, 1, promptId);
+    await redis.zIncrBy(lifetimeLeaderboard, 1, promptId);
+    await redis.incrBy(dailyTotalKey, 1);
+    await redis.incrBy(lifetimeTotalKey, 1);
     
-    // Increment lifetime counters
-    pipeline.incr(KEYS.LIFETIME_DOWNLOADS(promptId));
-    pipeline.incr(KEYS.LIFETIME_COMBINED(promptId));
+    // Set expiry on daily keys (30 days)
+    await redis.expire(dailyLeaderboard, 30 * 24 * 60 * 60);
+    await redis.expire(dailyTotalKey, 30 * 24 * 60 * 60);
     
-    // Update leaderboards (sorted sets with scores)
-    pipeline.zIncrBy(KEYS.DAILY_LEADERBOARD_DOWNLOADS(date), 1, promptId);
-    pipeline.zIncrBy(KEYS.DAILY_LEADERBOARD_COMBINED(date), 1, promptId);
-    pipeline.zIncrBy(KEYS.LIFETIME_LEADERBOARD_DOWNLOADS(), 1, promptId);
-    pipeline.zIncrBy(KEYS.LIFETIME_LEADERBOARD_COMBINED(), 1, promptId);
-    
-    // Track active prompts for the day
-    pipeline.sAdd(KEYS.DAILY_ACTIVE_PROMPTS(date), promptId);
-    
-    // Store metadata if provided
-    if (Object.keys(metadata).length > 0) {
-      const metadataKey = KEYS.PROMPT_METADATA(promptId);
-      pipeline.hSet(metadataKey, {
-        lastDownload: timestamp,
-        ...metadata
-      });
-    }
-    
-    // Set expiration for daily keys (30 days)
-    pipeline.expire(KEYS.DAILY_DOWNLOADS(date, promptId), 30 * 24 * 60 * 60);
-    pipeline.expire(KEYS.DAILY_COMBINED(date, promptId), 30 * 24 * 60 * 60);
-    pipeline.expire(KEYS.DAILY_LEADERBOARD_DOWNLOADS(date), 30 * 24 * 60 * 60);
-    pipeline.expire(KEYS.DAILY_LEADERBOARD_COMBINED(date), 30 * 24 * 60 * 60);
-    pipeline.expire(KEYS.DAILY_ACTIVE_PROMPTS(date), 30 * 24 * 60 * 60);
-    
-    await pipeline.exec();
-    
-    console.log(`[Analytics] ✅ Tracked download for prompt: ${promptId} on ${date}`);
   } catch (error) {
     console.error('[Analytics] ❌ Error tracking download:', error);
   }
@@ -107,9 +51,10 @@ export const trackDownload = async (promptId, metadata = {}) => {
 /**
  * Track a share event for a specific prompt
  * @param {string} promptId - The prompt ID (e.g., 'anime1990s')
+ * @param {string} shareType - Type of share (e.g., 'twitter', 'web-share', 'copy-link')
  * @param {Object} metadata - Optional metadata about the share
  */
-export const trackShare = async (promptId, metadata = {}) => {
+export const trackShare = async (promptId, shareType = 'unknown', metadata = {}) => {
   if (!promptId) {
     console.warn('[Analytics] trackShare called without promptId');
     return;
@@ -123,325 +68,139 @@ export const trackShare = async (promptId, metadata = {}) => {
 
   try {
     const date = getCurrentUTCDate();
-    const timestamp = Date.now();
     
-    // Use Redis pipeline for atomic operations
-    const pipeline = redis.multi();
+    // Use sorted sets for efficient leaderboards and simple counters for totals
+    const dailyLeaderboard = `analytics:daily:${date}:shares:leaderboard`;
+    const lifetimeLeaderboard = `analytics:lifetime:shares:leaderboard`;
+    const dailyTotalKey = `analytics:daily:${date}:shares:total`;
+    const lifetimeTotalKey = `analytics:lifetime:shares:total`;
     
-    // Increment daily counters
-    pipeline.incr(KEYS.DAILY_SHARES(date, promptId));
-    pipeline.incr(KEYS.DAILY_COMBINED(date, promptId));
+    // Increment leaderboards (sorted sets) and totals atomically
+    await redis.zIncrBy(dailyLeaderboard, 1, promptId);
+    await redis.zIncrBy(lifetimeLeaderboard, 1, promptId);
+    await redis.incrBy(dailyTotalKey, 1);
+    await redis.incrBy(lifetimeTotalKey, 1);
     
-    // Increment lifetime counters
-    pipeline.incr(KEYS.LIFETIME_SHARES(promptId));
-    pipeline.incr(KEYS.LIFETIME_COMBINED(promptId));
+    // Set expiry on daily keys (30 days)
+    await redis.expire(dailyLeaderboard, 30 * 24 * 60 * 60);
+    await redis.expire(dailyTotalKey, 30 * 24 * 60 * 60);
     
-    // Update leaderboards (sorted sets with scores)
-    pipeline.zIncrBy(KEYS.DAILY_LEADERBOARD_SHARES(date), 1, promptId);
-    pipeline.zIncrBy(KEYS.DAILY_LEADERBOARD_COMBINED(date), 1, promptId);
-    pipeline.zIncrBy(KEYS.LIFETIME_LEADERBOARD_SHARES(), 1, promptId);
-    pipeline.zIncrBy(KEYS.LIFETIME_LEADERBOARD_COMBINED(), 1, promptId);
-    
-    // Track active prompts for the day
-    pipeline.sAdd(KEYS.DAILY_ACTIVE_PROMPTS(date), promptId);
-    
-    // Store metadata if provided
-    if (Object.keys(metadata).length > 0) {
-      const metadataKey = KEYS.PROMPT_METADATA(promptId);
-      pipeline.hSet(metadataKey, {
-        lastShare: timestamp,
-        ...metadata
-      });
-    }
-    
-    // Set expiration for daily keys (30 days)
-    pipeline.expire(KEYS.DAILY_SHARES(date, promptId), 30 * 24 * 60 * 60);
-    pipeline.expire(KEYS.DAILY_COMBINED(date, promptId), 30 * 24 * 60 * 60);
-    pipeline.expire(KEYS.DAILY_LEADERBOARD_SHARES(date), 30 * 24 * 60 * 60);
-    pipeline.expire(KEYS.DAILY_LEADERBOARD_COMBINED(date), 30 * 24 * 60 * 60);
-    pipeline.expire(KEYS.DAILY_ACTIVE_PROMPTS(date), 30 * 24 * 60 * 60);
-    
-    await pipeline.exec();
-    
-    console.log(`[Analytics] Tracked share for prompt: ${promptId} on ${date}`);
   } catch (error) {
-    console.error('[Analytics] Error tracking share:', error);
+    console.error('[Analytics] ❌ Error tracking share:', error);
   }
 };
 
 /**
- * Get analytics for a specific prompt
- * @param {string} promptId - The prompt ID
- * @param {string} date - Optional date (YYYY-MM-DD), defaults to today
+ * Get analytics dashboard data
+ * @returns {Object} Dashboard data with daily and lifetime stats
  */
-export const getPromptAnalytics = async (promptId, date = null) => {
+export const getDashboardData = async () => {
   const redis = getRedisClient();
   if (!redis) {
-    console.warn('[Analytics] Redis not available');
-    return null;
+    console.warn('[Analytics] Redis not available, returning empty dashboard data');
+    return {
+      daily: { downloads: 0, shares: 0, combined: 0 },
+      lifetime: { downloads: 0, shares: 0, combined: 0 },
+      topPrompts: [],
+      date: getCurrentUTCDate()
+    };
   }
 
   try {
-    const targetDate = date || getCurrentUTCDate();
+    const date = getCurrentUTCDate();
     
-    const [
-      dailyDownloads,
-      dailyShares,
-      dailyCombined,
-      lifetimeDownloads,
-      lifetimeShares,
-      lifetimeCombined,
-      metadata
-    ] = await Promise.all([
-      redis.get(KEYS.DAILY_DOWNLOADS(targetDate, promptId)),
-      redis.get(KEYS.DAILY_SHARES(targetDate, promptId)),
-      redis.get(KEYS.DAILY_COMBINED(targetDate, promptId)),
-      redis.get(KEYS.LIFETIME_DOWNLOADS(promptId)),
-      redis.get(KEYS.LIFETIME_SHARES(promptId)),
-      redis.get(KEYS.LIFETIME_COMBINED(promptId)),
-      redis.hGetAll(KEYS.PROMPT_METADATA(promptId))
-    ]);
+    // Get daily and lifetime totals
+    const dailyDownloads = parseInt(await redis.get(`analytics:daily:${date}:downloads:total`) || '0', 10);
+    const dailyShares = parseInt(await redis.get(`analytics:daily:${date}:shares:total`) || '0', 10);
+    const lifetimeDownloads = parseInt(await redis.get(`analytics:lifetime:downloads:total`) || '0', 10);
+    const lifetimeShares = parseInt(await redis.get(`analytics:lifetime:shares:total`) || '0', 10);
+    
+    // Get top prompts efficiently using sorted sets
+    const lifetimeDownloadLeaderboard = await redis.zRangeWithScores('analytics:lifetime:downloads:leaderboard', 0, 19, { REV: true });
+    const lifetimeShareLeaderboard = await redis.zRangeWithScores('analytics:lifetime:shares:leaderboard', 0, 19, { REV: true });
+    
+    // Create a map to combine download and share data
+    const promptStats = new Map();
+    
+    // Process download leaderboard
+    lifetimeDownloadLeaderboard.forEach(item => {
+      const promptId = item.value;
+      const downloads = item.score;
+      promptStats.set(promptId, { promptId, downloads, shares: 0, combined: downloads });
+    });
+    
+    // Process share leaderboard and merge with downloads
+    lifetimeShareLeaderboard.forEach(item => {
+      const promptId = item.value;
+      const shares = item.score;
+      if (promptStats.has(promptId)) {
+        const existing = promptStats.get(promptId);
+        existing.shares = shares;
+        existing.combined = existing.downloads + shares;
+      } else {
+        promptStats.set(promptId, { promptId, downloads: 0, shares, combined: shares });
+      }
+    });
+    
+    // Convert to array and sort by combined score
+    const topPrompts = Array.from(promptStats.values())
+      .sort((a, b) => b.combined - a.combined)
+      .slice(0, 20);
     
     return {
-      promptId,
-      date: targetDate,
       daily: {
-        downloads: parseInt(dailyDownloads) || 0,
-        shares: parseInt(dailyShares) || 0,
-        combined: parseInt(dailyCombined) || 0
+        downloads: dailyDownloads,
+        shares: dailyShares,
+        combined: dailyDownloads + dailyShares
       },
       lifetime: {
-        downloads: parseInt(lifetimeDownloads) || 0,
-        shares: parseInt(lifetimeShares) || 0,
-        combined: parseInt(lifetimeCombined) || 0
+        downloads: lifetimeDownloads,
+        shares: lifetimeShares,
+        combined: lifetimeDownloads + lifetimeShares
       },
-      metadata: metadata || {}
+      topPrompts,
+      date
     };
   } catch (error) {
-    console.error('[Analytics] Error getting prompt analytics:', error);
-    return null;
-  }
-};
-
-/**
- * Get top prompts leaderboard
- * @param {string} type - 'downloads', 'shares', or 'combined'
- * @param {string} period - 'daily' or 'lifetime'
- * @param {string} date - Required for daily, ignored for lifetime (YYYY-MM-DD)
- * @param {number} limit - Number of top results to return (default: 50)
- */
-export const getTopPrompts = async (type = 'combined', period = 'lifetime', date = null, limit = 50) => {
-  const redis = getRedisClient();
-  if (!redis) {
-    console.warn('[Analytics] Redis not available');
-    return [];
-  }
-
-  try {
-    let leaderboardKey;
-    
-    if (period === 'daily') {
-      const targetDate = date || getCurrentUTCDate();
-      if (type === 'downloads') {
-        leaderboardKey = KEYS.DAILY_LEADERBOARD_DOWNLOADS(targetDate);
-      } else if (type === 'shares') {
-        leaderboardKey = KEYS.DAILY_LEADERBOARD_SHARES(targetDate);
-      } else {
-        leaderboardKey = KEYS.DAILY_LEADERBOARD_COMBINED(targetDate);
-      }
-    } else {
-      if (type === 'downloads') {
-        leaderboardKey = KEYS.LIFETIME_LEADERBOARD_DOWNLOADS();
-      } else if (type === 'shares') {
-        leaderboardKey = KEYS.LIFETIME_LEADERBOARD_SHARES();
-      } else {
-        leaderboardKey = KEYS.LIFETIME_LEADERBOARD_COMBINED();
-      }
-    }
-    
-    // Get top prompts with scores (descending order)
-    const results = await redis.zRangeWithScores(leaderboardKey, 0, limit - 1, { REV: true });
-    
-    // Parse results into array of objects
-    const topPrompts = [];
-    if (Array.isArray(results)) {
-      results.forEach((result, index) => {
-        topPrompts.push({
-          promptId: result.value,
-          count: parseInt(result.score) || 0,
-          rank: index + 1
-        });
-      });
-    }
-    
-    return topPrompts;
-  } catch (error) {
-    console.error('[Analytics] Error getting top prompts:', error);
-    return [];
-  }
-};
-
-/**
- * Get analytics summary for a specific date
- * @param {string} date - Date in YYYY-MM-DD format, defaults to today
- */
-export const getDailyAnalyticsSummary = async (date = null) => {
-  const redis = getRedisClient();
-  if (!redis) {
-    console.warn('[Analytics] Redis not available');
-    return null;
-  }
-
-  try {
-    const targetDate = date || getCurrentUTCDate();
-    
-    // Get all active prompts for the date
-    const activePrompts = await redis.sMembers(KEYS.DAILY_ACTIVE_PROMPTS(targetDate));
-    
-    if (activePrompts.length === 0) {
-      return {
-        date: targetDate,
-        totalPrompts: 0,
-        totalDownloads: 0,
-        totalShares: 0,
-        totalCombined: 0,
-        topPrompts: {
-          downloads: [],
-          shares: [],
-          combined: []
-        }
-      };
-    }
-    
-    // Get totals and top prompts
-    const [
-      topDownloads,
-      topShares,
-      topCombined
-    ] = await Promise.all([
-      getTopPrompts('downloads', 'daily', targetDate, 10),
-      getTopPrompts('shares', 'daily', targetDate, 10),
-      getTopPrompts('combined', 'daily', targetDate, 10)
-    ]);
-    
-    // Calculate totals
-    const totalDownloads = topDownloads.reduce((sum, item) => sum + item.count, 0);
-    const totalShares = topShares.reduce((sum, item) => sum + item.count, 0);
-    const totalCombined = topCombined.reduce((sum, item) => sum + item.count, 0);
-    
+    console.error('[Analytics] ❌ Error getting dashboard data:', error);
     return {
-      date: targetDate,
-      totalPrompts: activePrompts.length,
-      totalDownloads,
-      totalShares,
-      totalCombined,
-      topPrompts: {
-        downloads: topDownloads,
-        shares: topShares,
-        combined: topCombined
-      }
+      daily: { downloads: 0, shares: 0, combined: 0 },
+      lifetime: { downloads: 0, shares: 0, combined: 0 },
+      topPrompts: [],
+      date: getCurrentUTCDate()
     };
-  } catch (error) {
-    console.error('[Analytics] Error getting daily summary:', error);
-    return null;
   }
 };
 
 /**
- * Get lifetime analytics summary
+ * Get top prompts by popularity
+ * @param {number} limit - Number of top prompts to return
+ * @returns {Array} Array of top prompts with stats
  */
-export const getLifetimeAnalyticsSummary = async () => {
-  const redis = getRedisClient();
-  if (!redis) {
-    console.warn('[Analytics] Redis not available');
-    return null;
-  }
-
-  try {
-    // Get top prompts
-    const [
-      topDownloads,
-      topShares,
-      topCombined
-    ] = await Promise.all([
-      getTopPrompts('downloads', 'lifetime', null, 10),
-      getTopPrompts('shares', 'lifetime', null, 10),
-      getTopPrompts('combined', 'lifetime', null, 10)
-    ]);
-    
-    // Calculate totals
-    const totalDownloads = topDownloads.reduce((sum, item) => sum + item.count, 0);
-    const totalShares = topShares.reduce((sum, item) => sum + item.count, 0);
-    const totalCombined = topCombined.reduce((sum, item) => sum + item.count, 0);
-    
-    // Count unique prompts that have any activity
-    const uniquePromptsCount = new Set([
-      ...topDownloads.map(p => p.promptId),
-      ...topShares.map(p => p.promptId)
-    ]).size;
-    
-    return {
-      totalPrompts: uniquePromptsCount,
-      totalDownloads,
-      totalShares,
-      totalCombined,
-      topPrompts: {
-        downloads: topDownloads,
-        shares: topShares,
-        combined: topCombined
-      }
-    };
-  } catch (error) {
-    console.error('[Analytics] Error getting lifetime summary:', error);
-    return null;
-  }
+export const getTopPrompts = async (limit = 10) => {
+  const dashboardData = await getDashboardData();
+  return dashboardData.topPrompts.slice(0, limit);
 };
 
 /**
- * Clear analytics data (for testing/admin purposes)
- * @param {string} type - 'daily', 'lifetime', or 'all'
- * @param {string} date - Required for daily cleanup (YYYY-MM-DD)
+ * Clear all analytics data (for testing/admin purposes)
  */
-export const clearAnalytics = async (type = 'all', date = null) => {
+export const clearAllAnalytics = async () => {
   const redis = getRedisClient();
   if (!redis) {
-    console.warn('[Analytics] Redis not available');
+    console.warn('[Analytics] Redis not available, cannot clear analytics');
     return false;
   }
 
   try {
-    let keysToDelete = [];
-    
-    if (type === 'daily' && date) {
-      // Get all keys for a specific date
-      const pattern = `analytics:daily:${date}:*`;
-      keysToDelete = await redis.keys(pattern);
-      keysToDelete.push(KEYS.DAILY_ACTIVE_PROMPTS(date));
-    } else if (type === 'lifetime') {
-      // Get all lifetime keys
-      const patterns = [
-        'analytics:lifetime:*',
-        'analytics:leaderboard:lifetime:*',
-        'analytics:metadata:*'
-      ];
-      
-      for (const pattern of patterns) {
-        const keys = await redis.keys(pattern);
-        keysToDelete.push(...keys);
-      }
-    } else if (type === 'all') {
-      // Get all analytics keys
-      keysToDelete = await redis.keys('analytics:*');
+    const analyticsKeys = await redis.keys('analytics:*');
+    if (analyticsKeys.length > 0) {
+      await redis.del(analyticsKeys);
+      console.log(`[Analytics] ✅ Cleared ${analyticsKeys.length} analytics keys`);
     }
-    
-    if (keysToDelete.length > 0) {
-      await redis.del(keysToDelete);
-      console.log(`[Analytics] Cleared ${keysToDelete.length} keys for type: ${type}`);
-    }
-    
     return true;
   } catch (error) {
-    console.error('[Analytics] Error clearing analytics:', error);
+    console.error('[Analytics] ❌ Error clearing analytics:', error);
     return false;
   }
 };

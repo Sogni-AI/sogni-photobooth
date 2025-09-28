@@ -85,7 +85,7 @@ const AnalyticsDashboard = () => {
     );
   }
 
-  const { today, yesterday, lifetime } = dashboardData || {};
+  const { daily, lifetime, topPrompts, date } = dashboardData || {};
 
   return (
     <div className="analytics-dashboard">
@@ -110,44 +110,22 @@ const AnalyticsDashboard = () => {
       {/* Summary Cards */}
       <div className="summary-cards">
         <div className="summary-card today">
-          <h3>📅 Today ({today?.date})</h3>
+          <h3>📅 Today ({date})</h3>
           <div className="metrics">
             <div className="metric">
-              <span className="value">{formatNumber(today?.summary?.totalDownloads)}</span>
+              <span className="value">{formatNumber(daily?.downloads)}</span>
               <span className="label">Downloads</span>
             </div>
             <div className="metric">
-              <span className="value">{formatNumber(today?.summary?.totalShares)}</span>
+              <span className="value">{formatNumber(daily?.shares)}</span>
               <span className="label">Shares</span>
             </div>
             <div className="metric">
-              <span className="value">{formatNumber(today?.summary?.totalCombined)}</span>
+              <span className="value">{formatNumber(daily?.combined)}</span>
               <span className="label">Total</span>
             </div>
             <div className="metric">
-              <span className="value">{today?.summary?.totalPrompts || 0}</span>
-              <span className="label">Active Prompts</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="summary-card yesterday">
-          <h3>📊 Yesterday ({yesterday?.date})</h3>
-          <div className="metrics">
-            <div className="metric">
-              <span className="value">{formatNumber(yesterday?.summary?.totalDownloads)}</span>
-              <span className="label">Downloads</span>
-            </div>
-            <div className="metric">
-              <span className="value">{formatNumber(yesterday?.summary?.totalShares)}</span>
-              <span className="label">Shares</span>
-            </div>
-            <div className="metric">
-              <span className="value">{formatNumber(yesterday?.summary?.totalCombined)}</span>
-              <span className="label">Total</span>
-            </div>
-            <div className="metric">
-              <span className="value">{yesterday?.summary?.totalPrompts || 0}</span>
+              <span className="value">{topPrompts?.length || 0}</span>
               <span className="label">Active Prompts</span>
             </div>
           </div>
@@ -157,90 +135,45 @@ const AnalyticsDashboard = () => {
           <h3>🏆 All Time</h3>
           <div className="metrics">
             <div className="metric">
-              <span className="value">{formatNumber(lifetime?.summary?.totalDownloads)}</span>
+              <span className="value">{formatNumber(lifetime?.downloads)}</span>
               <span className="label">Downloads</span>
             </div>
             <div className="metric">
-              <span className="value">{formatNumber(lifetime?.summary?.totalShares)}</span>
+              <span className="value">{formatNumber(lifetime?.shares)}</span>
               <span className="label">Shares</span>
             </div>
             <div className="metric">
-              <span className="value">{formatNumber(lifetime?.summary?.totalCombined)}</span>
+              <span className="value">{formatNumber(lifetime?.combined)}</span>
               <span className="label">Total</span>
             </div>
             <div className="metric">
-              <span className="value">{lifetime?.summary?.totalPrompts || 0}</span>
+              <span className="value">{topPrompts?.length || 0}</span>
               <span className="label">Total Prompts</span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Leaderboards */}
+      {/* Top Prompts */}
       <div className="leaderboards">
-        {/* Today's Top Prompts */}
         <div className="leaderboard-section">
-          <h3>🔥 Today's Most Popular Prompts</h3>
+          <h3>🔥 Most Popular Prompts</h3>
           <div className="leaderboard-tabs">
             <div className="leaderboard combined">
               <h4>Combined (Downloads + Shares)</h4>
               <div className="leaderboard-list">
-                {today?.topPrompts?.combined?.slice(0, 10).map((item, index) => (
+                {topPrompts?.slice(0, 20).map((item, index) => (
                   <div key={item.promptId} className="leaderboard-item">
                     <span className="rank">#{index + 1}</span>
                     <span className="prompt-name">{formatPromptName(item.promptId)}</span>
-                    <span className="count">{formatNumber(item.count)}</span>
+                    <div className="counts">
+                      <span className="count total">{formatNumber(item.combined)} total</span>
+                      <span className="count downloads">{formatNumber(item.downloads)} downloads</span>
+                      <span className="count shares">{formatNumber(item.shares)} shares</span>
+                    </div>
                   </div>
                 )) || <p className="no-data">No data available</p>}
               </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Lifetime Top Prompts */}
-        <div className="leaderboard-section">
-          <h3>👑 All-Time Most Popular Prompts</h3>
-          <div className="leaderboard-tabs">
-            <div className="leaderboard combined">
-              <h4>Combined (Downloads + Shares)</h4>
-              <div className="leaderboard-list">
-                {lifetime?.topPrompts?.combined?.slice(0, 20).map((item, index) => (
-                  <div key={item.promptId} className="leaderboard-item">
-                    <span className="rank">#{index + 1}</span>
-                    <span className="prompt-name">{formatPromptName(item.promptId)}</span>
-                    <span className="count">{formatNumber(item.count)}</span>
-                  </div>
-                )) || <p className="no-data">No data available</p>}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Separate Downloads and Shares for Lifetime */}
-        <div className="leaderboard-section split">
-          <div className="leaderboard downloads">
-            <h4>💾 Top Downloads (All-Time)</h4>
-            <div className="leaderboard-list">
-              {lifetime?.topPrompts?.downloads?.slice(0, 10).map((item, index) => (
-                <div key={item.promptId} className="leaderboard-item">
-                  <span className="rank">#{index + 1}</span>
-                  <span className="prompt-name">{formatPromptName(item.promptId)}</span>
-                  <span className="count">{formatNumber(item.count)}</span>
-                </div>
-              )) || <p className="no-data">No data available</p>}
-            </div>
-          </div>
-
-          <div className="leaderboard shares">
-            <h4>📤 Top Shares (All-Time)</h4>
-            <div className="leaderboard-list">
-              {lifetime?.topPrompts?.shares?.slice(0, 10).map((item, index) => (
-                <div key={item.promptId} className="leaderboard-item">
-                  <span className="rank">#{index + 1}</span>
-                  <span className="prompt-name">{formatPromptName(item.promptId)}</span>
-                  <span className="count">{formatNumber(item.count)}</span>
-                </div>
-              )) || <p className="no-data">No data available</p>}
             </div>
           </div>
         </div>
