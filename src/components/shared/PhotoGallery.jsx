@@ -1723,8 +1723,8 @@ const PhotoGallery = ({
                   Use this Style
                 </button>
                 
-                {/* Video Button - Only show for Jazz Saxophonist style */}
-                {selectedPhoto.promptKey === 'jazzSaxophonist' && (
+                {/* Video Button - Only show for Jazz Saxophonist and Kitty Swarm styles */}
+                {(selectedPhoto.promptKey === 'jazzSaxophonist' || selectedPhoto.promptKey === 'kittySwarm') && (
                   <button
                     className="action-button video-btn"
                     onClick={(e) => {
@@ -3011,10 +3011,17 @@ const PhotoGallery = ({
                   })()}
                 />
                 
-                {/* Video Overlay - Only show for Jazz Saxophonist style when video is enabled */}
-                {isSelected && photo.promptKey === 'jazzSaxophonist' && showVideo && (
+                {/* Video Overlay - Only show for Jazz Saxophonist and Kitty Swarm styles when video is enabled */}
+                {isSelected && (photo.promptKey === 'jazzSaxophonist' || photo.promptKey === 'kittySwarm') && showVideo && (
                   <video
-                    src="https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/videos/sogni-photobooth-video-demo_832x1216.mp4"
+                    src={(() => {
+                      if (photo.promptKey === 'jazzSaxophonist') {
+                        return "https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/videos/sogni-photobooth-video-demo_832x1216.mp4";
+                      } else if (photo.promptKey === 'kittySwarm') {
+                        return "https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/videos/sogni-photobooth-kittyswarm-raw.mp4";
+                      }
+                      return "";
+                    })()}
                     autoPlay
                     loop
                     playsInline
@@ -3024,16 +3031,17 @@ const PhotoGallery = ({
                       left: 0,
                       width: '100%',
                       height: '100%',
-                      objectFit: 'cover',
+                      objectFit: photo.promptKey === 'kittySwarm' ? 'contain' : 'cover', // Use contain for kittySwarm to show black bars
                       objectPosition: 'center',
+                      backgroundColor: photo.promptKey === 'kittySwarm' ? '#000' : 'transparent', // Black background for letterboxing
                       zIndex: 3, // Above theme overlays
                       borderRadius: 'inherit'
                     }}
                     onLoadedData={() => {
-                      console.log('Video loaded and ready to play');
+                      console.log(`${photo.promptKey} video loaded and ready to play`);
                     }}
                     onError={(e) => {
-                      console.error('Video failed to load:', e);
+                      console.error(`${photo.promptKey} video failed to load:`, e);
                       setShowVideo(false); // Hide video on error
                     }}
                   />
