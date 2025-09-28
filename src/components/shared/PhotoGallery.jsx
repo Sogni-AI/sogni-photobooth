@@ -1009,11 +1009,17 @@ const PhotoGallery = ({
   useEffect(() => {
     const generateFramedImage = async () => {
       // Generate for selected photos with supported themes OR when QR watermark is enabled
-      if (selectedPhotoIndex === null || (!isThemeSupported() && !settings.sogniWatermark) || !photos[selectedPhotoIndex]) {
+      if (selectedPhotoIndex === null || (!isThemeSupported() && !settings.sogniWatermark)) {
         return;
       }
 
-      const photo = photos[selectedPhotoIndex];
+      // Get the correct photo from the appropriate array (filtered or original)
+      const currentPhotosArray = isPromptSelectorMode ? filteredPhotos : photos;
+      const photo = currentPhotosArray[selectedPhotoIndex];
+      
+      if (!photo) {
+        return;
+      }
       const currentSubIndex = photo.enhanced && photo.enhancedImageUrl 
         ? -1 // Special case for enhanced images
         : (selectedSubIndex || 0);
@@ -1071,14 +1077,17 @@ const PhotoGallery = ({
     };
 
     generateFramedImage();
-  }, [selectedPhotoIndex, selectedSubIndex, photos, isThemeSupported, preGenerateAdjacentFrames, generateFrameKey]);
+  }, [selectedPhotoIndex, selectedSubIndex, photos, filteredPhotos, isPromptSelectorMode, isThemeSupported, preGenerateAdjacentFrames, generateFrameKey]);
 
   // Track photo selection changes to manage smooth transitions
   useEffect(() => {
     if (selectedPhotoIndex !== previousSelectedIndex && isThemeSupported()) {
       // Store the current framed image before switching
-      if (previousSelectedIndex !== null && photos[previousSelectedIndex]) {
-        const prevPhoto = photos[previousSelectedIndex];
+      if (previousSelectedIndex !== null) {
+        const prevPhotosArray = isPromptSelectorMode ? filteredPhotos : photos;
+        const prevPhoto = prevPhotosArray[previousSelectedIndex];
+        
+        if (prevPhoto) {
         const prevSubIndex = prevPhoto.enhanced && prevPhoto.enhancedImageUrl ? -1 : (selectedSubIndex || 0);
         const prevTaipeiFrameNumber = prevPhoto.taipeiFrameNumber || 1;
         const prevFrameKey = `${previousSelectedIndex}-${prevSubIndex}-${tezdevTheme}-${prevTaipeiFrameNumber}-${outputFormat}-${aspectRatio}`;
@@ -1087,12 +1096,13 @@ const PhotoGallery = ({
         if (prevFramedImageUrl) {
           setPreviousFramedImage(prevFramedImageUrl);
         }
+        }
       }
       
       // Update the previous selected index
       setPreviousSelectedIndex(selectedPhotoIndex);
     }
-  }, [selectedPhotoIndex, previousSelectedIndex, photos, selectedSubIndex, tezdevTheme, outputFormat, aspectRatio, framedImageUrls, isThemeSupported]);
+  }, [selectedPhotoIndex, previousSelectedIndex, photos, filteredPhotos, isPromptSelectorMode, selectedSubIndex, tezdevTheme, outputFormat, aspectRatio, framedImageUrls, isThemeSupported]);
 
   // Skip rendering if there are no photos or the grid is hidden
   // Exception: In prompt selector mode, we need to render even with empty photos while they're loading
@@ -1210,28 +1220,32 @@ const PhotoGallery = ({
 
   // Handle download photo with polaroid frame
   const handleDownloadPhoto = async (photoIndex) => {
-    if (!photos[photoIndex] || !photos[photoIndex].images || photos[photoIndex].images.length === 0) {
+    // Get the correct photo from the appropriate array (filtered or original)
+    const currentPhotosArray = isPromptSelectorMode ? filteredPhotos : photos;
+    const targetPhoto = currentPhotosArray[photoIndex];
+    
+    if (!targetPhoto || !targetPhoto.images || targetPhoto.images.length === 0) {
       return;
     }
 
     // Get the current image URL (handle enhanced images)
-    const currentSubIndex = photos[photoIndex].enhanced && photos[photoIndex].enhancedImageUrl 
+    const currentSubIndex = targetPhoto.enhanced && targetPhoto.enhancedImageUrl 
       ? -1 // Special case for enhanced images
       : (selectedSubIndex || 0);
       
     const imageUrl = currentSubIndex === -1
-      ? photos[photoIndex].enhancedImageUrl
-      : photos[photoIndex].images[currentSubIndex];
+      ? targetPhoto.enhancedImageUrl
+      : targetPhoto.images[currentSubIndex];
     
     if (!imageUrl) return;
     
     try {
       // Get style display text (spaced format, no hashtags)
-      const styleDisplayText = getStyleDisplayText(photos[photoIndex]);
+      const styleDisplayText = getStyleDisplayText(targetPhoto);
       
       // Determine photo label (only used for default polaroid frame)
       // Fix duplicate label issue by using statusText directly or just the style
-      const photoNumberLabel = photos[photoIndex]?.statusText?.split('#')[0]?.trim() || '';
+      const photoNumberLabel = targetPhoto?.statusText?.split('#')[0]?.trim() || '';
       const photoLabel = photoNumberLabel || styleDisplayText || '';
       
       // Generate filename based on outputFormat setting
@@ -1253,7 +1267,7 @@ const PhotoGallery = ({
       // Create framed image: supported custom theme frame OR default polaroid frame
       // Use the outputFormat setting for framed downloads (unlike Twitter which always uses JPG)
       const useTheme = isThemeSupported();
-      const isGalleryImage = photos[photoIndex].isGalleryImage;
+      const isGalleryImage = targetPhoto.isGalleryImage;
       // Gallery images should always use default polaroid styling, regardless of theme
       const shouldUseTheme = useTheme && !isGalleryImage;
       // Truncate label earlier to make room for QR code
@@ -1272,7 +1286,7 @@ const PhotoGallery = ({
         frameColor: !shouldUseTheme ? 'white' : 'transparent',
         outputFormat: outputFormat, // Use the actual outputFormat setting for framed downloads
         // For Taipei theme, pass the current frame number to ensure consistency (but not for gallery images)
-        taipeiFrameNumber: shouldUseTheme && tezdevTheme === 'taipeiblockchain' ? photos[photoIndex].taipeiFrameNumber : undefined,
+        taipeiFrameNumber: shouldUseTheme && tezdevTheme === 'taipeiblockchain' ? targetPhoto.taipeiFrameNumber : undefined,
         // Add QR watermark for downloads with improved settings (if enabled)
         watermarkOptions: settings.sogniWatermark ? getQRWatermarkConfig(settings) : null
       });
@@ -1286,24 +1300,28 @@ const PhotoGallery = ({
 
   // Handle download raw photo WITHOUT any frame theme (pure original image)
   const handleDownloadRawPhoto = async (photoIndex) => {
-    if (!photos[photoIndex] || !photos[photoIndex].images || photos[photoIndex].images.length === 0) {
+    // Get the correct photo from the appropriate array (filtered or original)
+    const currentPhotosArray = isPromptSelectorMode ? filteredPhotos : photos;
+    const targetPhoto = currentPhotosArray[photoIndex];
+    
+    if (!targetPhoto || !targetPhoto.images || targetPhoto.images.length === 0) {
       return;
     }
 
     // Get the current image URL (handle enhanced images)
-    const currentSubIndex = photos[photoIndex].enhanced && photos[photoIndex].enhancedImageUrl 
+    const currentSubIndex = targetPhoto.enhanced && targetPhoto.enhancedImageUrl 
       ? -1 // Special case for enhanced images
       : (selectedSubIndex || 0);
       
     const imageUrl = currentSubIndex === -1
-      ? photos[photoIndex].enhancedImageUrl
-      : photos[photoIndex].images[currentSubIndex];
+      ? targetPhoto.enhancedImageUrl
+      : targetPhoto.images[currentSubIndex];
     
     if (!imageUrl) return;
     
     try {
       // Generate filename with correct extension based on outputFormat
-      const styleDisplayText = getStyleDisplayText(photos[photoIndex]);
+      const styleDisplayText = getStyleDisplayText(targetPhoto);
       const cleanStyleName = styleDisplayText ? styleDisplayText.toLowerCase().replace(/\s+/g, '-') : 'sogni';
       
       // For raw downloads, ensure we preserve the original format from the server
@@ -1689,11 +1707,11 @@ const PhotoGallery = ({
               e.stopPropagation();
             }}
             disabled={
-              photos[selectedPhotoIndex].loading || 
-              photos[selectedPhotoIndex].enhancing ||
-              photos[selectedPhotoIndex].error ||
-              !photos[selectedPhotoIndex].images ||
-              photos[selectedPhotoIndex].images.length === 0
+              selectedPhoto.loading || 
+              selectedPhoto.enhancing ||
+              selectedPhoto.error ||
+              !selectedPhoto.images ||
+              selectedPhoto.images.length === 0
             }
           >
             <span>💾</span>
@@ -1708,11 +1726,11 @@ const PhotoGallery = ({
               e.stopPropagation();
             }}
             disabled={
-              photos[selectedPhotoIndex].loading || 
-              photos[selectedPhotoIndex].enhancing ||
-              photos[selectedPhotoIndex].error ||
-              !photos[selectedPhotoIndex].images ||
-              photos[selectedPhotoIndex].images.length === 0
+              selectedPhoto.loading || 
+              selectedPhoto.enhancing ||
+              selectedPhoto.error ||
+              !selectedPhoto.images ||
+              selectedPhoto.images.length === 0
             }
           >
             <span>💾</span>
@@ -1721,7 +1739,7 @@ const PhotoGallery = ({
 
           {/* Enhanced Enhance Button with Undo/Redo functionality */}
           <div className="enhance-button-container">
-            {photos[selectedPhotoIndex].enhanced ? (
+            {selectedPhoto.enhanced ? (
               <div className="enhance-buttons-group">
                 <button
                   className="action-button enhance-btn"
@@ -1737,29 +1755,29 @@ const PhotoGallery = ({
                       });
                     }
                   }}
-                  disabled={photos[selectedPhotoIndex].loading || photos[selectedPhotoIndex].enhancing || photos[selectedPhotoIndex].error}
+                  disabled={selectedPhoto.loading || selectedPhoto.enhancing || selectedPhoto.error}
                 >
                   ↩️ Undo
                 </button>
                 <button
-                  className={`action-button enhance-btn ${photos[selectedPhotoIndex].enhancing ? 'loading' : ''}`}
+                  className={`action-button enhance-btn ${selectedPhoto.enhancing ? 'loading' : ''}`}
                   onClick={(e) => {
                     e.stopPropagation();
                     
-                    if (photos[selectedPhotoIndex].enhancing) return;
+                    if (selectedPhoto.enhancing) return;
                     // Show the enhance options dropdown (Krea/Kontext)
                     setShowEnhanceDropdown(prev => !prev);
                   }}
-                  disabled={photos[selectedPhotoIndex].loading || photos[selectedPhotoIndex].enhancing}
+                  disabled={selectedPhoto.loading || selectedPhoto.enhancing}
                 >
-                  <span>✨ {photos[selectedPhotoIndex].enhancing ? 
-                    (photos[selectedPhotoIndex].enhancementProgress !== undefined ? 
-                      `Enhancing ${Math.round((photos[selectedPhotoIndex].enhancementProgress || 0) * 100)}%` : 
+                  <span>✨ {selectedPhoto.enhancing ? 
+                    (selectedPhoto.enhancementProgress !== undefined ? 
+                      `Enhancing ${Math.round((selectedPhoto.enhancementProgress || 0) * 100)}%` : 
                       'Enhancing') : 
                     'Enhance'}</span>
                 </button>
               </div>
-            ) : photos[selectedPhotoIndex].canRedo ? (
+            ) : selectedPhoto.canRedo ? (
               // Show both Redo and Enhance buttons when redo is available
               <div className="enhance-buttons-group">
                 <button
@@ -1776,12 +1794,12 @@ const PhotoGallery = ({
                       });
                     }
                   }}
-                  disabled={photos[selectedPhotoIndex].loading || photos[selectedPhotoIndex].enhancing}
+                  disabled={selectedPhoto.loading || selectedPhoto.enhancing}
                 >
                   ↪️ Redo
                 </button>
                 <button
-                  className={`action-button enhance-btn ${photos[selectedPhotoIndex].enhancing ? 'loading' : ''}`}
+                  className={`action-button enhance-btn ${selectedPhoto.enhancing ? 'loading' : ''}`}
                   onClick={(e) => {
                     e.stopPropagation();
                     
@@ -1794,18 +1812,18 @@ const PhotoGallery = ({
                     // Show dropdown menu (same as single enhance button)
                     setShowEnhanceDropdown(prev => !prev);
                   }}
-                  disabled={photos[selectedPhotoIndex].loading || photos[selectedPhotoIndex].enhancing}
+                  disabled={selectedPhoto.loading || selectedPhoto.enhancing}
                 >
-                  <span>✨ {photos[selectedPhotoIndex].enhancing ? 
-                    (photos[selectedPhotoIndex].enhancementProgress !== undefined ? 
-                      `Enhancing ${Math.round((photos[selectedPhotoIndex].enhancementProgress || 0) * 100)}%` : 
+                  <span>✨ {selectedPhoto.enhancing ? 
+                    (selectedPhoto.enhancementProgress !== undefined ? 
+                      `Enhancing ${Math.round((selectedPhoto.enhancementProgress || 0) * 100)}%` : 
                       'Enhancing') : 
                     'Enhance'}</span>
                 </button>
               </div>
             ) : (
               <button
-                className={`action-button enhance-btn ${photos[selectedPhotoIndex].enhancing ? 'loading' : ''}`}
+                className={`action-button enhance-btn ${selectedPhoto.enhancing ? 'loading' : ''}`}
                 onClick={(e) => {
                   e.stopPropagation();
                   
@@ -1829,7 +1847,7 @@ const PhotoGallery = ({
             )}
 
             {/* Enhancement Options Dropdown rendered in a portal to escape any stacking context */}
-            {showEnhanceDropdown && !photos[selectedPhotoIndex].enhancing && createPortal(
+            {showEnhanceDropdown && !selectedPhoto.enhancing && createPortal(
               (
                 <div 
                   key="enhance-dropdown-stable"
@@ -1985,7 +2003,7 @@ const PhotoGallery = ({
             )}
             
             {/* Error message */}
-            {photos[selectedPhotoIndex].enhancementError && (
+            {selectedPhoto.enhancementError && (
               <div 
                 className="enhancement-error" 
                 style={{
