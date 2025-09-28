@@ -2,6 +2,28 @@
   "version": "1.0",
   "defaultTheme": null,
   "themes": {
+    "token2049-singapore-2025-nosana": {
+      "label": "Token2049 Singapore 2025 - Nosana",
+      "defaultAspectRatio": "narrow",
+      "framePadding": { "top": 0, "left": 0, "right": 40, "bottom": 0 },
+      "tweetTemplate": "Just took my AI photo at Nosana BUILD DAY! @nosana_ai @sogni_protocol https://photobooth.sogni.ai",
+      "frames": {
+        "narrow": [
+          "/events/token2049-singapore-2025-nosana/narrow_1.png"
+        ]
+      }
+    },
+    "token2049-singapore-2025-built-on-base": {
+      "label": "Token2049 Singapore 2025 - Built on Base",
+      "defaultAspectRatio": "narrow",
+      "framePadding": { "top": 0, "left": 0, "right": 0, "bottom": 146 },
+      "tweetTemplate": "Just took my AI photo at Base Builder Mixer, Token2049 Singapore! @sogni_protocol @base https://photobooth.sogni.ai",
+      "frames": {
+        "narrow": [
+          "/events/token2049-singapore-2025-built-on-base/narrow_1.png"
+        ]
+      }
+    },
     "token2049-singapore-2025-tezos": {
       "label": "Token2049 Singapore 2025 - Tezos",
       "defaultAspectRatio": "narrow",

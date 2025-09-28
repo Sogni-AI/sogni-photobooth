@@ -887,7 +887,7 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
               type="range"
               id="qr-margin-slider"
               min="0"
-              max="40"
+              max="100"
               step="1"
               value={localQRMargin}
               onChange={(e) => handleSogniWatermarkMarginChange(parseInt(e.target.value) || 16)}
