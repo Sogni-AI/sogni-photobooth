@@ -258,6 +258,27 @@ export const getAnalyticsDashboard = async () => {
 };
 
 /**
+ * Get historical analytics data
+ * @param {number} days - Number of days to retrieve (default 30)
+ */
+export const getHistoricalAnalytics = async (days = 30) => {
+  try {
+    const apiUrl = `${getApiBaseUrl()}/api/analytics/historical?days=${days}`;
+    
+    const response = await fetch(apiUrl);
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('[Analytics] Failed to get historical analytics:', error);
+    return null;
+  }
+};
+
+/**
  * Utility function to get current UTC date in YYYY-MM-DD format
  */
 export const getCurrentUTCDate = () => {

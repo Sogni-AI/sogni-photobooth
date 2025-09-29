@@ -154,7 +154,7 @@ const PhotoGallery = ({
   
   // Helper function to check if a prompt has a video easter egg
   const hasVideoEasterEgg = useCallback((promptKey) => {
-    return ['jazzSaxophonist', 'kittySwarm', 'stoneMoss', 'dapperVictorian', 'prismKaleidoscope'].includes(promptKey);
+    return ['jazzSaxophonist', 'kittySwarm', 'stoneMoss', 'dapperVictorian', 'prismKaleidoscope', 'apocalypseRooftop'].includes(promptKey);
   }, []);
   
   // Cleanup video when leaving the view
@@ -3030,6 +3030,8 @@ const PhotoGallery = ({
                         return "https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/videos/sogni-photobooth-dappervictorian-raw.mp4";
                       } else if (photo.promptKey === 'prismKaleidoscope') {
                         return "https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/videos/sogni-photobooth-prism-kaleidoscope-raw.mp4";
+                      } else if (photo.promptKey === 'apocalypseRooftop') {
+                        return "https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/videos/sogni-photobooth-apocalypserooftop-raw.mp4";
                       }
                       return "";
                     })()}

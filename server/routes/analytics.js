@@ -4,7 +4,9 @@ import {
   trackShare,
   getDashboardData,
   getTopPrompts,
-  clearAllAnalytics
+  clearAllAnalytics,
+  trackMetric,
+  getHistoricalData
 } from '../services/analyticsService.js';
 
 const router = express.Router();
@@ -128,6 +130,60 @@ router.get('/top', async (req, res) => {
     console.error('[Analytics API] ❌ Error getting top prompts:', error);
     res.status(500).json({ 
       error: 'Failed to get top prompts' 
+    });
+  }
+});
+
+/**
+ * Get historical analytics data
+ * GET /api/analytics/historical?days=30
+ */
+router.get('/historical', async (req, res) => {
+  try {
+    const { days = 30 } = req.query;
+    const daysNum = Math.min(parseInt(days) || 30, 365); // Cap at 1 year
+    
+    const historicalData = await getHistoricalData(daysNum);
+    
+    res.json({
+      days: daysNum,
+      data: historicalData
+    });
+  } catch (error) {
+    console.error('[Analytics API] ❌ Error getting historical data:', error);
+    res.status(500).json({ 
+      error: 'Failed to get historical data' 
+    });
+  }
+});
+
+/**
+ * Track a general metric
+ * POST /api/analytics/track/metric
+ * Body: { metricType: string, amount?: number }
+ */
+router.post('/track/metric', async (req, res) => {
+  try {
+    const { metricType, amount = 1 } = req.body;
+    
+    if (!metricType) {
+      return res.status(400).json({ 
+        error: 'metricType is required' 
+      });
+    }
+    
+    await trackMetric(metricType, amount);
+    
+    res.json({ 
+      success: true, 
+      message: 'Metric tracked successfully',
+      metricType,
+      amount
+    });
+  } catch (error) {
+    console.error('[Analytics API] ❌ Error tracking metric:', error);
+    res.status(500).json({ 
+      error: 'Failed to track metric' 
     });
   }
 });

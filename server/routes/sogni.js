@@ -8,6 +8,7 @@ import {
   incrementPhotosTakenViaCamera,
   incrementPhotosUploadedViaBrowse
 } from '../services/redisService.js';
+import { trackMetric } from '../services/analyticsService.js';
 import { redactProjectResult } from '../utils/logRedaction.js';
 import process from 'process';
 import { Buffer } from 'buffer';
@@ -638,29 +639,35 @@ router.post('/generate', ensureSessionId, async (req, res) => {
     
     console.log(`[${localProjectId}] Worker preferences enforced on server side:`, hardcodedWorkerPreferences);
     
-    // Track a new batch being generated for metrics
+    // Track a new batch being generated for metrics (both old and new systems)
     await incrementBatchesGenerated();
+    await trackMetric('batches_generated', 1);
     
     // If we have numImages parameter, increment photos generated count
     if (req.body.numberImages && !isNaN(parseInt(req.body.numberImages))) {
       const numberImages = parseInt(req.body.numberImages);
       await incrementPhotosGenerated(numberImages);
+      await trackMetric('photos_generated', numberImages);
       // if the selectedModel is flux it is an enhance job
       if (req.body.selectedModel === 'flux1-schnell-fp8') {
         await incrementPhotosEnhanced();
+        await trackMetric('photos_enhanced', 1);
       }
     } else {
       // Default to 1 if not specified
       await incrementPhotosGenerated(1);
+      await trackMetric('photos_generated', 1);
     }
     
     // Track camera vs file upload based on sourceType parameter
     const sourceType = req.body.sourceType;
     if (sourceType === 'camera') {
       await incrementPhotosTakenViaCamera();
+      await trackMetric('photos_taken_camera', 1);
       console.log(`[${localProjectId}] Tracked camera photo from sourceType parameter`);
     } else if (sourceType === 'upload') {
       await incrementPhotosUploadedViaBrowse();
+      await trackMetric('photos_uploaded_browse', 1);
       console.log(`[${localProjectId}] Tracked uploaded photo from sourceType parameter`);
     }
 

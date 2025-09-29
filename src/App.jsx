@@ -228,10 +228,6 @@ const App = () => {
   
   // State for current page routing
   const [currentPage, setCurrentPage] = useState(() => {
-    // Check for admin dashboard access
-    if (window.location.pathname === '/admin/analytics' || window.location.hash === '#admin-analytics') {
-      return 'admin-analytics';
-    }
     return immediatePageParam === 'prompts' ? 'prompts' : 'camera';
   });
   
@@ -664,6 +660,7 @@ const App = () => {
       }
     }
   }, [stylePrompts, updateSetting, selectedStyle, promptsData, currentPage]);
+
 
 
   // Load gallery images when entering prompt selector mode
@@ -5223,6 +5220,295 @@ const App = () => {
     }
   }, [selectedStyle, pendingGalleryPrompt, handleGenerateMorePhotos]);
 
+  // Add a dedicated useEffect for the aspect ratio CSS
+  useEffect(() => {
+    // Add our CSS fixes (all 5 issues at once)
+    const styleElement = document.createElement('style');
+    styleElement.textContent = `
+      /* ------- FIX 1: Style dropdown ------- */
+      .style-dropdown {
+        animation: dropdownAppear 0.3s cubic-bezier(0.17, 0.67, 0.25, 1.2) forwards;
+      }
+      
+      /* Position variations */
+      .style-dropdown.top-position {
+        bottom: 100%;
+        top: auto !important;
+        margin-bottom: 10px;
+        transform-origin: center bottom !important;
+        animation: dropdownAppearTop 0.3s cubic-bezier(0.17, 0.67, 0.25, 1.2) forwards;
+      }
+      
+      .style-dropdown.bottom-position {
+        top: 100%;
+        bottom: auto !important;
+        margin-top: 10px;
+        transform-origin: center top !important;
+        animation: dropdownAppearBottom 0.3s cubic-bezier(0.17, 0.67, 0.25, 1.2) forwards;
+      }
+      
+      @keyframes dropdownAppearTop {
+        from {
+          opacity: 0;
+          transform: translateX(-50%) translateY(10px);
+        }
+        to {
+          opacity: 1; 
+          transform: translateX(-50%) translateY(0);
+        }
+      }
+      
+      @keyframes dropdownAppearBottom {
+        from {
+          opacity: 0;
+          transform: translateX(-50%) translateY(-10px);
+        }
+        to {
+          opacity: 1; 
+          transform: translateX(-50%) translateY(0);
+        }
+      }
+      
+      .style-section.featured {
+        border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        padding-bottom: 8px;
+        margin-bottom: 8px;
+      }
+      
+      .style-option {
+        display: flex;
+        align-items: center;
+        padding: 10px 12px;
+        margin: 2px 0;
+        border-radius: 4px;
+        cursor: pointer;
+        color: #333;
+        transition: background-color 0.2s;
+      }
+      
+      .style-option:hover {
+        background-color: #f5f5f5;
+      }
+      
+      .style-option:hover:before {
+        display: none !important; /* Remove the carat */
+      }
+      
+      .style-option.selected {
+        background-color: #fff0f4 !important; /* Light pink background */
+        color: #ff5e8a !important;
+        font-weight: 500;
+      }
+      
+      .style-icon {
+        margin-right: 10px;
+        z-index: 2;
+      }
+      
+      /* ------- FIX 2: Camera widget Polaroid style ------- */
+      .photobooth-frame {
+        background: white;
+        box-shadow: 0 8px 30px rgba(0,0,0,0.2);
+        border-radius: 4px;
+        width: auto;
+        max-width: 70%;
+        margin: 20px auto;
+        padding: 8px 8px 60px 8px;
+        position: relative;
+      }
+      
+      .photobooth-header {
+        margin-bottom: 8px;
+      }
+      
+      /* Move Take Photo button to bottom */
+      .header-take-photo-btn {
+        position: absolute !important;
+        bottom: 15px !important;
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+        background: #ff5252 !important;
+        color: white !important;
+        font-weight: bold !important;
+        padding: 10px 20px !important;
+        border-radius: 25px !important;
+        border: none !important;
+        cursor: pointer !important;
+        z-index: 10 !important;
+      }
+      
+      .header-take-photo-btn:hover {
+        background: #ff7272 !important;
+      }
+
+      /* ------- FIX 4: Loading image fade effect ------- */
+      .film-frame.loading {
+        position: relative;
+      }
+      
+      .film-frame.loading img {
+        transition: opacity 5s;
+      }
+                
+      /* Fallback image styling */
+      .film-frame[data-error="true"] img,
+      .film-frame img.fallback {
+        filter: grayscale(20%) !important;
+      }
+      
+      /* Set aspect ratio CSS variable based on selected aspect ratio */
+      :root {
+        --current-aspect-ratio: ${
+          aspectRatio === 'ultranarrow' ? '768/1344' :
+          aspectRatio === 'narrow' ? '832/1216' :
+          aspectRatio === 'portrait' ? '896/1152' : 
+          aspectRatio === 'square' ? '1024/1024' : 
+          aspectRatio === 'landscape' ? '1152/896' :
+          aspectRatio === 'wide' ? '1216/832' :
+          aspectRatio === 'ultrawide' ? '1344/768' :
+          window.innerHeight > window.innerWidth ? '896/1152' : '1152/896'
+        };
+      }
+      
+      /* Ensure images display properly */
+      #webcam {
+        object-fit: cover;
+        width: 100%;
+        height: auto;
+        border-radius: 0 !important;
+      }
+      
+      /* Update film frame images */
+      .film-frame img {
+        object-fit: cover;
+        width: 100%;
+      }
+      .fade-in {
+        transition: opacity 0.5s !important;
+      }
+
+      /* ------- UPDATED: Improve Film Frame Hover Effects ------- */
+      .film-frame:not(.loading) {
+        transform-origin: center center !important;
+        transform: scale(1) translateZ(0) !important;
+        will-change: transform, box-shadow !important;
+        /* Remove the default transition to prevent background animations */
+      }
+      
+      /* Allow loading animations to work - but not in selected/popup view */
+      .film-frame.loading:not(.selected) {
+        transform-origin: center center !important;
+        will-change: transform, box-shadow !important;
+        /* Don't override transform for loading frames - let animation handle it */
+      }
+      
+      /* Only apply transitions on hover/active for deliberate interaction, but not on loading frames */
+      /* Only apply hover effects on devices that support hover (not touch devices) */
+      @media (hover: hover) and (pointer: fine) {
+        .film-frame:not(.selected):not(.loading):hover {
+          transform: scale(1.05) translateZ(0) !important;
+          box-shadow: 0 12px 28px rgba(0, 0, 0, 0.25) !important;
+          transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), 
+                      box-shadow 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
+        }
+        
+        .film-frame:not(.selected):not(.loading):active {
+          transform: scale(0.98) translateZ(0) !important;
+          box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2) !important;
+          transition: all 0.1s ease-out !important;
+        }
+      }
+      
+      /* Ensure only the deliberately selected photo animates */
+      .film-frame.selected {
+        transform: scale(1) !important;
+      }
+      
+      /* Add transition only for the specific photo being selected/deselected */
+      .film-frame.animating-selection {
+        transition: transform 0.5s cubic-bezier(0.2, 0, 0.2, 1) !important;
+      }
+            
+      /* ------- ADD: Psychedelic animation ------- */
+      @keyframes psychedelic-shift {
+        0% {
+          background-position: 0% 0%, 0 0, 0 0;
+        }
+        25% {
+          background-position: 100% 0%, 10px 10px, -10px -10px;
+        }
+        50% {
+          background-position: 100% 100%, 20px 20px, -20px -20px;
+        }
+        75% {
+          background-position: 0% 100%, 10px 30px, -10px -30px;
+        }
+        100% {
+          background-position: 0% 0%, 0 0, 0 0;
+        }
+      }
+    `;
+    
+    document.head.append(styleElement);
+    
+    // Update aspect ratio when orientation changes
+    const updateAspectRatio = () => {
+      // Only update if aspect ratio is not explicitly set by user
+      if (!aspectRatio || aspectRatio === 'auto') {
+        const isPortrait = window.innerHeight > window.innerWidth;
+        document.documentElement.style.setProperty(
+          '--current-aspect-ratio', 
+          isPortrait ? '896/1152' : '1152/896'
+        );
+      }
+    };
+    
+    // Set initial aspect ratio based on user selection or orientation
+    switch (aspectRatio) {
+      case 'ultranarrow':
+        document.documentElement.style.setProperty('--current-aspect-ratio', '768/1344');
+        break;
+      case 'narrow':
+        document.documentElement.style.setProperty('--current-aspect-ratio', '832/1216');
+        break;
+      case 'portrait':
+        document.documentElement.style.setProperty('--current-aspect-ratio', '896/1152');
+        break;
+      case 'square':
+        document.documentElement.style.setProperty('--current-aspect-ratio', '1024/1024');
+        break;
+      case 'landscape':
+        document.documentElement.style.setProperty('--current-aspect-ratio', '1152/896');
+        break;
+      case 'wide':
+        document.documentElement.style.setProperty('--current-aspect-ratio', '1216/832');
+        break;
+      case 'ultrawide':
+        document.documentElement.style.setProperty('--current-aspect-ratio', '1344/768');
+        break;
+      default:
+        // Default to orientation-based
+        updateAspectRatio();
+        break;
+    }
+    
+    // Update on resize only if not using explicit aspect ratio
+    window.addEventListener('resize', updateAspectRatio);
+    
+    return () => {
+      window.removeEventListener('resize', updateAspectRatio);
+      if (styleElement && document.head.contains(styleElement)) {
+        styleElement.remove();
+      }
+    };
+  }, [aspectRatio]);
+
+  // -------------------------
+  //   Early Returns (after all hooks)
+  // -------------------------
+  
+  // Note: Analytics dashboard routing is now handled by AppRouter component
+
   // Add retry all function for network issues
   const handleRetryAllPhotos = async () => {
     console.log('Retrying all failed retryable photos');
@@ -5437,12 +5723,7 @@ const App = () => {
   // -------------------------
   //   Render
   // -------------------------
-  
-  // Show analytics dashboard if accessing admin route
-  if (currentPage === 'admin-analytics') {
-    return <AnalyticsDashboard />;
-  }
-  
+
   return (
     <>
       {/* Splash Screen */}
@@ -5939,288 +6220,6 @@ const App = () => {
         />
       )}
 
-      {/* Add a dedicated useEffect for the aspect ratio CSS */}
-      {useEffect(() => {
-        // Add our CSS fixes (all 5 issues at once)
-        const styleElement = document.createElement('style');
-        styleElement.textContent = `
-          /* ------- FIX 1: Style dropdown ------- */
-          .style-dropdown {
-            animation: dropdownAppear 0.3s cubic-bezier(0.17, 0.67, 0.25, 1.2) forwards;
-          }
-          
-          /* Position variations */
-          .style-dropdown.top-position {
-            bottom: 100%;
-            top: auto !important;
-            margin-bottom: 10px;
-            transform-origin: center bottom !important;
-            animation: dropdownAppearTop 0.3s cubic-bezier(0.17, 0.67, 0.25, 1.2) forwards;
-          }
-          
-          .style-dropdown.bottom-position {
-            top: 100%;
-            bottom: auto !important;
-            margin-top: 10px;
-            transform-origin: center top !important;
-            animation: dropdownAppearBottom 0.3s cubic-bezier(0.17, 0.67, 0.25, 1.2) forwards;
-          }
-          
-          @keyframes dropdownAppearTop {
-            from {
-              opacity: 0;
-              transform: translateX(-50%) translateY(10px);
-            }
-            to {
-              opacity: 1; 
-              transform: translateX(-50%) translateY(0);
-            }
-          }
-          
-          @keyframes dropdownAppearBottom {
-            from {
-              opacity: 0;
-              transform: translateX(-50%) translateY(-10px);
-            }
-            to {
-              opacity: 1; 
-              transform: translateX(-50%) translateY(0);
-            }
-          }
-          
-          .style-section.featured {
-            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-            padding-bottom: 8px;
-            margin-bottom: 8px;
-          }
-          
-          .style-option {
-            display: flex;
-            align-items: center;
-            padding: 10px 12px;
-            margin: 2px 0;
-            border-radius: 4px;
-            cursor: pointer;
-            color: #333;
-            transition: background-color 0.2s;
-          }
-          
-          .style-option:hover {
-            background-color: #f5f5f5;
-          }
-          
-          .style-option:hover:before {
-            display: none !important; /* Remove the carat */
-          }
-          
-          .style-option.selected {
-            background-color: #fff0f4 !important; /* Light pink background */
-            color: #ff5e8a !important;
-            font-weight: 500;
-          }
-          
-          .style-icon {
-            margin-right: 10px;
-            z-index: 2;
-          }
-          
-          /* ------- FIX 2: Camera widget Polaroid style ------- */
-          .photobooth-frame {
-            background: white;
-            box-shadow: 0 8px 30px rgba(0,0,0,0.2);
-            border-radius: 4px;
-            width: auto;
-            max-width: 70%;
-            margin: 20px auto;
-            padding: 8px 8px 60px 8px;
-            position: relative;
-          }
-          
-          .photobooth-header {
-            margin-bottom: 8px;
-          }
-          
-          /* Move Take Photo button to bottom */
-          .header-take-photo-btn {
-            position: absolute !important;
-            bottom: 15px !important;
-            left: 50% !important;
-            transform: translateX(-50%) !important;
-            background: #ff5252 !important;
-            color: white !important;
-            font-weight: bold !important;
-            padding: 10px 20px !important;
-            border-radius: 25px !important;
-            border: none !important;
-            cursor: pointer !important;
-            z-index: 10 !important;
-          }
-          
-          .header-take-photo-btn:hover {
-            background: #ff7272 !important;
-          }
-
-          /* ------- FIX 4: Loading image fade effect ------- */
-          .film-frame.loading {
-            position: relative;
-          }
-          
-          .film-frame.loading img {
-            transition: opacity 5s;
-          }
-                    
-          /* Fallback image styling */
-          .film-frame[data-error="true"] img,
-          .film-frame img.fallback {
-            filter: grayscale(20%) !important;
-          }
-          
-          /* Set aspect ratio CSS variable based on selected aspect ratio */
-          :root {
-            --current-aspect-ratio: ${
-              aspectRatio === 'ultranarrow' ? '768/1344' :
-              aspectRatio === 'narrow' ? '832/1216' :
-              aspectRatio === 'portrait' ? '896/1152' : 
-              aspectRatio === 'square' ? '1024/1024' : 
-              aspectRatio === 'landscape' ? '1152/896' :
-              aspectRatio === 'wide' ? '1216/832' :
-              aspectRatio === 'ultrawide' ? '1344/768' :
-              window.innerHeight > window.innerWidth ? '896/1152' : '1152/896'
-            };
-          }
-          
-          /* Ensure images display properly */
-          #webcam {
-            object-fit: cover;
-            width: 100%;
-            height: auto;
-            border-radius: 0 !important;
-          }
-          
-          /* Update film frame images */
-          .film-frame img {
-            object-fit: cover;
-            width: 100%;
-          }
-          .fade-in {
-            transition: opacity 0.5s !important;
-          }
-
-          /* ------- UPDATED: Improve Film Frame Hover Effects ------- */
-          .film-frame:not(.loading) {
-            transform-origin: center center !important;
-            transform: scale(1) translateZ(0) !important;
-            will-change: transform, box-shadow !important;
-            /* Remove the default transition to prevent background animations */
-          }
-          
-          /* Allow loading animations to work - but not in selected/popup view */
-          .film-frame.loading:not(.selected) {
-            transform-origin: center center !important;
-            will-change: transform, box-shadow !important;
-            /* Don't override transform for loading frames - let animation handle it */
-          }
-          
-          /* Only apply transitions on hover/active for deliberate interaction, but not on loading frames */
-          /* Only apply hover effects on devices that support hover (not touch devices) */
-          @media (hover: hover) and (pointer: fine) {
-            .film-frame:not(.selected):not(.loading):hover {
-              transform: scale(1.05) translateZ(0) !important;
-              box-shadow: 0 12px 28px rgba(0, 0, 0, 0.25) !important;
-              transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), 
-                          box-shadow 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
-            }
-            
-            .film-frame:not(.selected):not(.loading):active {
-              transform: scale(0.98) translateZ(0) !important;
-              box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2) !important;
-              transition: all 0.1s ease-out !important;
-            }
-          }
-          
-          /* Ensure only the deliberately selected photo animates */
-          .film-frame.selected {
-            transform: scale(1) !important;
-          }
-          
-          /* Add transition only for the specific photo being selected/deselected */
-          .film-frame.animating-selection {
-            transition: transform 0.5s cubic-bezier(0.2, 0, 0.2, 1) !important;
-          }
-                
-          /* ------- ADD: Psychedelic animation ------- */
-          @keyframes psychedelic-shift {
-            0% {
-              background-position: 0% 0%, 0 0, 0 0;
-            }
-            25% {
-              background-position: 100% 0%, 10px 10px, -10px -10px;
-            }
-            50% {
-              background-position: 100% 100%, 20px 20px, -20px -20px;
-            }
-            75% {
-              background-position: 0% 100%, 10px 30px, -10px -30px;
-            }
-            100% {
-              background-position: 0% 0%, 0 0, 0 0;
-            }
-          }
-        `;
-        
-        document.head.append(styleElement);
-        
-        // Update aspect ratio when orientation changes
-        const updateAspectRatio = () => {
-          // Only update if aspect ratio is not explicitly set by user
-          if (!aspectRatio || aspectRatio === 'auto') {
-            const isPortrait = window.innerHeight > window.innerWidth;
-            document.documentElement.style.setProperty(
-              '--current-aspect-ratio', 
-              isPortrait ? '896/1152' : '1152/896'
-            );
-          }
-        };
-        
-        // Set initial aspect ratio based on user selection or orientation
-        switch (aspectRatio) {
-          case 'ultranarrow':
-            document.documentElement.style.setProperty('--current-aspect-ratio', '768/1344');
-            break;
-          case 'narrow':
-            document.documentElement.style.setProperty('--current-aspect-ratio', '832/1216');
-            break;
-          case 'portrait':
-            document.documentElement.style.setProperty('--current-aspect-ratio', '896/1152');
-            break;
-          case 'square':
-            document.documentElement.style.setProperty('--current-aspect-ratio', '1024/1024');
-            break;
-          case 'landscape':
-            document.documentElement.style.setProperty('--current-aspect-ratio', '1152/896');
-            break;
-          case 'wide':
-            document.documentElement.style.setProperty('--current-aspect-ratio', '1216/832');
-            break;
-          case 'ultrawide':
-            document.documentElement.style.setProperty('--current-aspect-ratio', '1344/768');
-            break;
-          default:
-            // Default to orientation-based
-            updateAspectRatio();
-            break;
-        }
-        
-        // Update on resize only if not using explicit aspect ratio
-        window.addEventListener('resize', updateAspectRatio);
-        
-        return () => {
-          window.removeEventListener('resize', updateAspectRatio);
-          if (styleElement && document.head.contains(styleElement)) {
-            styleElement.remove();
-          }
-        };
-      }, [aspectRatio])}
 
       {/* Promotional Popup */}
       <PromoPopup 
@@ -6256,7 +6255,6 @@ const App = () => {
         isVisible={showConfetti && backgroundAnimationsEnabled}
         onComplete={() => setShowConfetti(false)}
       />
-
     </>
   );
 };

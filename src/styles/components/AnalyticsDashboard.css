@@ -31,9 +31,31 @@
   display: flex;
   align-items: center;
   gap: 15px;
+  flex-wrap: wrap;
 }
 
-.refresh-btn, .retry-btn {
+.chart-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.chart-select {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background: white;
+  font-size: 0.9em;
+  cursor: pointer;
+}
+
+.chart-select:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+}
+
+.refresh-btn, .retry-btn, .back-btn {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   border: none;
@@ -45,7 +67,11 @@
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 }
 
-.refresh-btn:hover, .retry-btn:hover {
+.back-btn {
+  background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%);
+}
+
+.refresh-btn:hover, .retry-btn:hover, .back-btn:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
 }
@@ -93,6 +119,21 @@
   font-size: 1.2em;
   margin-bottom: 20px;
   color: #e74c3c;
+}
+
+/* Chart Section */
+.chart-section {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 12px;
+  padding: 25px;
+  margin-bottom: 30px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+.chart-container {
+  position: relative;
+  height: 400px;
+  width: 100%;
 }
 
 /* Summary Cards */
@@ -238,10 +279,36 @@
   margin: 0 15px;
 }
 
+.leaderboard-item .counts {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  min-width: 120px;
+}
+
 .leaderboard-item .count {
+  font-weight: 600;
+  font-size: 0.9em;
+  padding: 2px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.leaderboard-item .count.total {
+  color: #2c3e50;
+  background: rgba(52, 73, 94, 0.1);
   font-weight: 700;
+}
+
+.leaderboard-item .count.downloads {
   color: #27ae60;
-  font-size: 1.1em;
+  background: rgba(39, 174, 96, 0.1);
+}
+
+.leaderboard-item .count.shares {
+  color: #3498db;
+  background: rgba(52, 152, 219, 0.1);
 }
 
 .no-data {
@@ -317,11 +384,15 @@
   .leaderboard-item {
     flex-direction: column;
     align-items: flex-start;
-    gap: 5px;
+    gap: 8px;
   }
   
   .leaderboard-item .rank,
-  .leaderboard-item .count {
+  .leaderboard-item .counts {
     align-self: flex-end;
+  }
+  
+  .leaderboard-item .counts {
+    min-width: 100px;
   }
 }

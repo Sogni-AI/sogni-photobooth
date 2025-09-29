@@ -43,7 +43,7 @@ const MetricsBar = () => {
   if (isExpanded && isLoading) {
     return (
       <div className="metrics-bar metrics-loading">
-        <div className="metrics-header discreet" onClick={expandStats}>
+        <div className="metrics-header discreet" onClick={() => window.location.hash = '#analytics'}>
           View stats
         </div>
         <div className="metrics-container">
@@ -58,7 +58,7 @@ const MetricsBar = () => {
     console.warn('[MetricsBar] Error or missing data:', error);
     return (
       <div className="metrics-bar metrics-error">
-        <div className="metrics-header discreet" onClick={expandStats}>
+        <div className="metrics-header discreet" onClick={() => window.location.hash = '#analytics'}>
           View stats
         </div>
         <div className="metrics-container">
@@ -73,7 +73,7 @@ const MetricsBar = () => {
 
   return (
     <div className="metrics-bar">
-      <div className="metrics-header discreet" onClick={expandStats}>
+      <div className="metrics-header discreet" onClick={() => window.location.hash = '#analytics'}>
         View stats
       </div>
       

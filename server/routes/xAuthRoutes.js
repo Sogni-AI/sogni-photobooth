@@ -14,6 +14,7 @@ import {
   listAllTwitterSessions,
   incrementTwitterShares
 } from '../services/redisService.js';
+import { trackMetric } from '../services/analyticsService.js';
 
 const router = express.Router();
 
@@ -254,8 +255,9 @@ router.post('/start', getSessionId, async (req, res) => {
             sessionOAuthData.set(sessionId, existingOAuthData);
           }
           
-          // Track successful share in metrics
+          // Track successful share in metrics (both old and new systems)
           await incrementTwitterShares();
+          await trackMetric('twitter_shares', 1);
           
           // Send direct success response
           console.log('[Twitter OAuth] Successfully shared directly using existing token');
@@ -442,9 +444,10 @@ router.get('/callback', async (req, res) => {
         throw new Error('Could not verify successful image share. Tweet data incomplete.');
       }
       
-      // Increment share count in analytics
+      // Increment share count in analytics (both old and new systems)
       if (sessionId && redisReady()) {
         await incrementTwitterShares();
+        await trackMetric('twitter_shares', 1);
       }
       
       console.log('[Twitter OAuth] Image successfully shared to X, tweet ID:', tweetResult.data.id);
