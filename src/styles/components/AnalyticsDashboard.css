@@ -1,3 +1,23 @@
+/* Ensure proper scrolling for analytics dashboard */
+html, body {
+  overflow-x: hidden;
+}
+
+/* When analytics dashboard is active, ensure proper scrolling */
+body.analytics-active {
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  height: auto !important;
+  max-height: none !important;
+  position: static !important;
+}
+
+html:has(body.analytics-active) {
+  overflow-y: auto !important;
+  height: auto !important;
+  max-height: none !important;
+}
+
 /* Analytics Dashboard Styles */
 .analytics-dashboard {
   max-width: 1400px;
@@ -7,6 +27,8 @@
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   min-height: 100vh;
   color: #333;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .dashboard-header {
@@ -434,6 +456,11 @@
 @media (max-width: 480px) {
   .analytics-dashboard {
     padding: 10px;
+    padding-bottom: 40px; /* Extra bottom padding for mobile scrolling */
+    height: auto;
+    max-height: none;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
   }
   
   .dashboard-header {
@@ -534,6 +561,47 @@
   
   .dashboard-footer {
     padding: 15px;
+    padding-bottom: 30px; /* Extra bottom padding for mobile */
     font-size: 0.8em;
+    margin-bottom: 20px; /* Ensure content doesn't get cut off */
+  }
+}
+
+/* Additional mobile viewport fixes */
+@media (max-width: 480px) {
+  /* Ensure the viewport allows scrolling */
+  .analytics-dashboard {
+    min-height: calc(100vh + 100px); /* Allow extra height for scrolling */
+    position: relative;
+    z-index: 1;
+  }
+  
+  /* Fix for mobile browsers that hide/show address bar */
+  .analytics-dashboard {
+    min-height: calc(100dvh + 100px); /* Use dynamic viewport height if supported */
+  }
+  
+  /* Ensure body can scroll when analytics is active */
+  body.analytics-active {
+    position: static !important;
+    transform: none !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 100vh !important;
+    overflow-y: scroll !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+  
+  /* Override any fixed positioning that might interfere with scrolling */
+  body.analytics-active {
+    position: static !important;
+  }
+  
+  body.analytics-active .analytics-dashboard {
+    position: relative !important;
+    transform: none !important;
+    width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
   }
 }

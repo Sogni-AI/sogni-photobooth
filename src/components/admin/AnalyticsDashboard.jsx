@@ -35,6 +35,19 @@ const AnalyticsDashboard = () => {
   const [chartDays, setChartDays] = useState(30);
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
 
+  // Ensure proper scrolling on mobile when analytics dashboard is active
+  useEffect(() => {
+    document.body.classList.add('analytics-active');
+    document.documentElement.style.overflow = 'auto';
+    document.body.style.overflow = 'auto';
+    
+    return () => {
+      document.body.classList.remove('analytics-active');
+      document.documentElement.style.overflow = '';
+      document.body.style.overflow = '';
+    };
+  }, []);
+
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
