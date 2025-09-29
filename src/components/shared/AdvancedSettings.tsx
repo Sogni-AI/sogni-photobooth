@@ -938,7 +938,7 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
             <select
               className="model-select"
               onChange={(e) => {
-                const position = e.target.value as 'top-left' | 'top-right';
+                const position = e.target.value as 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
                 updateSetting('sogniWatermarkPosition', position);
                 // Clear caches when position changes to regenerate QR code
                 clearImageCaches();
@@ -947,6 +947,8 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
             >
               <option value="top-right">Top Right</option>
               <option value="top-left">Top Left</option>
+              <option value="bottom-right">Bottom Right</option>
+              <option value="bottom-left">Bottom Left</option>
             </select>
           </div>
         )}
