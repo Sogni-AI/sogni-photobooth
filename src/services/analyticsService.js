@@ -38,6 +38,7 @@ export const extractPromptId = (selectedStyle, stylePrompts = {}, actualPrompt =
     'custom',
     'browseGallery',
     'random',
+    'randomMix',
     'RANDOM_SINGLE_STYLE'
   ];
   
@@ -49,12 +50,12 @@ export const extractPromptId = (selectedStyle, stylePrompts = {}, actualPrompt =
   if (selectedStyle === 'randomMix' && actualPrompt) {
     // Find which style key matches this exact prompt text
     for (const [styleKey, promptText] of Object.entries(stylePrompts)) {
-      if (promptText === actualPrompt) {
+      if (promptText === actualPrompt && !nonTrackableStyles.includes(styleKey)) {
         return styleKey;
       }
     }
-    // If no exact match found, return randomMix as fallback
-    return 'randomMix';
+    // If no exact match found, don't track anything (return null instead of randomMix)
+    return null;
   }
   
   // For regular styles, use the selectedStyle as the prompt ID

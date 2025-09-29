@@ -171,8 +171,10 @@ export const getDashboardData = async () => {
       }
     });
     
-    // Convert to array and sort by combined score
+    // Filter out non-trackable prompts and convert to array and sort by combined score
+    const nonTrackablePrompts = ['custom', 'browseGallery', 'random', 'randomMix', 'RANDOM_SINGLE_STYLE'];
     const topPrompts = Array.from(promptStats.values())
+      .filter(item => !nonTrackablePrompts.includes(item.promptId))
       .sort((a, b) => b.combined - a.combined)
       .slice(0, 20);
     
