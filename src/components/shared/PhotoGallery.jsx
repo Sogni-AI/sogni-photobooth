@@ -151,6 +151,7 @@ const PhotoGallery = ({
   
   // State for video overlay
   const [showVideo, setShowVideo] = useState(false);
+  const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
   
   // Helper function to check if a prompt has a video easter egg
   const hasVideoEasterEgg = useCallback((promptKey) => {
@@ -161,8 +162,16 @@ const PhotoGallery = ({
   useEffect(() => {
     if (selectedPhotoIndex === null) {
       setShowVideo(false);
+      setCurrentVideoIndex(0);
     }
   }, [selectedPhotoIndex]);
+
+  // Reset video index when video is hidden or photo changes
+  useEffect(() => {
+    if (!showVideo) {
+      setCurrentVideoIndex(0);
+    }
+  }, [showVideo, selectedPhotoIndex]);
 
   // Update theme group state when initialThemeGroupState prop changes
   useEffect(() => {
@@ -3033,13 +3042,27 @@ const PhotoGallery = ({
                       } else if (photo.promptKey === 'apocalypseRooftop') {
                         return "https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/videos/sogni-photobooth-apocalypserooftop-raw.mp4";
                       } else if (photo.promptKey === 'anime1990s') {
-                        return "https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/videos/sogni-photobooth-anime1990s-raw.mp4";
+                        const animeVideos = [
+                          "https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/videos/sogni-photobooth-anime1990s-raw.mp4",
+                          "https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/videos/sogni-photobooth-anime1990s-raw2.mp4"
+                        ];
+                        return animeVideos[currentVideoIndex] || animeVideos[0];
                       }
                       return "";
                     })()}
                     autoPlay
-                    loop
+                    loop={photo.promptKey !== 'anime1990s'}
                     playsInline
+                    onEnded={() => {
+                      if (photo.promptKey === 'anime1990s') {
+                        const animeVideos = [
+                          "https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/videos/sogni-photobooth-anime1990s-raw.mp4",
+                          "https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/videos/sogni-photobooth-anime1990s-raw2.mp4"
+                        ];
+                        const nextIndex = (currentVideoIndex + 1) % animeVideos.length;
+                        setCurrentVideoIndex(nextIndex);
+                      }
+                    }}
                     style={{
                       position: 'absolute',
                       top: 0,
