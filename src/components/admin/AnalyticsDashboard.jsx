@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getAnalyticsDashboard, getHistoricalAnalytics, getCurrentUTCDate } from '../../services/analyticsService';
+import { getAnalyticsDashboard, getHistoricalAnalytics } from '../../services/analyticsService';
 import '../../styles/components/AnalyticsDashboard.css';
 import {
   Chart as ChartJS,
@@ -33,6 +33,7 @@ const AnalyticsDashboard = () => {
   const [lastRefresh, setLastRefresh] = useState(null);
   const [chartType, setChartType] = useState('line');
   const [chartDays, setChartDays] = useState(30);
+  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
 
   const fetchDashboardData = async () => {
     try {
@@ -77,6 +78,16 @@ const AnalyticsDashboard = () => {
       fetchDashboardData();
     }
   }, [chartDays]);
+
+  // Handle window resize for responsive chart options
+  useEffect(() => {
+    const handleResize = () => {
+      setWindowWidth(window.innerWidth);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const formatNumber = (num) => {
     if (num >= 1000000) {
@@ -170,18 +181,50 @@ const AnalyticsDashboard = () => {
 
   const chartOptions = {
     responsive: true,
+    maintainAspectRatio: false,
     plugins: {
       legend: {
-        position: 'top',
+        position: windowWidth < 768 ? 'bottom' : 'top',
+        labels: {
+          boxWidth: windowWidth < 480 ? 12 : 20,
+          font: {
+            size: windowWidth < 480 ? 10 : 12,
+          },
+          padding: windowWidth < 480 ? 8 : 20,
+        },
       },
       title: {
         display: true,
         text: `Analytics Trends - Last ${chartDays} Days`,
+        font: {
+          size: windowWidth < 480 ? 14 : 16,
+        },
       },
     },
     scales: {
       y: {
         beginAtZero: true,
+        ticks: {
+          font: {
+            size: windowWidth < 480 ? 10 : 12,
+          },
+        },
+      },
+      x: {
+        ticks: {
+          font: {
+            size: windowWidth < 480 ? 10 : 12,
+          },
+          maxRotation: windowWidth < 480 ? 45 : 0,
+        },
+      },
+    },
+    elements: {
+      point: {
+        radius: windowWidth < 480 ? 2 : 3,
+      },
+      line: {
+        borderWidth: windowWidth < 480 ? 1.5 : 2,
       },
     },
   };
