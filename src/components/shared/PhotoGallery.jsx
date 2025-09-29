@@ -152,6 +152,11 @@ const PhotoGallery = ({
   // State for video overlay
   const [showVideo, setShowVideo] = useState(false);
   
+  // Helper function to check if a prompt has a video easter egg
+  const hasVideoEasterEgg = useCallback((promptKey) => {
+    return ['jazzSaxophonist', 'kittySwarm', 'stoneMoss', 'dapperVictorian', 'prismKaleidoscope'].includes(promptKey);
+  }, []);
+  
   // Cleanup video when leaving the view
   useEffect(() => {
     if (selectedPhotoIndex === null) {
@@ -1723,8 +1728,8 @@ const PhotoGallery = ({
                   Use this Style
                 </button>
                 
-                {/* Video Button - Only show for Jazz Saxophonist and Kitty Swarm styles */}
-                {(selectedPhoto.promptKey === 'jazzSaxophonist' || selectedPhoto.promptKey === 'kittySwarm') && (
+                {/* Video Button - Only show for styles with video easter eggs */}
+                {hasVideoEasterEgg(selectedPhoto.promptKey) && (
                   <button
                     className="action-button video-btn"
                     onClick={(e) => {
@@ -3011,14 +3016,20 @@ const PhotoGallery = ({
                   })()}
                 />
                 
-                {/* Video Overlay - Only show for Jazz Saxophonist and Kitty Swarm styles when video is enabled */}
-                {isSelected && (photo.promptKey === 'jazzSaxophonist' || photo.promptKey === 'kittySwarm') && showVideo && (
+                {/* Video Overlay - Only show for styles with video easter eggs when video is enabled */}
+                {isSelected && hasVideoEasterEgg(photo.promptKey) && showVideo && (
                   <video
                     src={(() => {
                       if (photo.promptKey === 'jazzSaxophonist') {
                         return "https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/videos/sogni-photobooth-video-demo_832x1216.mp4";
                       } else if (photo.promptKey === 'kittySwarm') {
                         return "https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/videos/sogni-photobooth-kittyswarm-raw.mp4";
+                      } else if (photo.promptKey === 'stoneMoss') {
+                        return "https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/videos/sogni-photobooth-stonemoss-raw.mp4";
+                      } else if (photo.promptKey === 'dapperVictorian') {
+                        return "https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/videos/sogni-photobooth-dappervictorian-raw.mp4";
+                      } else if (photo.promptKey === 'prismKaleidoscope') {
+                        return "https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/videos/sogni-photobooth-prism-kaleidoscope-raw.mp4";
                       }
                       return "";
                     })()}
@@ -3031,9 +3042,9 @@ const PhotoGallery = ({
                       left: 0,
                       width: '100%',
                       height: '100%',
-                      objectFit: photo.promptKey === 'kittySwarm' ? 'contain' : 'cover', // Use contain for kittySwarm to show black bars
+                      objectFit: photo.promptKey === 'kittySwarm' ? 'contain' : 'cover', // Use contain for kittySwarm to show black bars, cover for others
                       objectPosition: 'center',
-                      backgroundColor: photo.promptKey === 'kittySwarm' ? '#000' : 'transparent', // Black background for letterboxing
+                      backgroundColor: photo.promptKey === 'kittySwarm' ? '#000' : 'transparent', // Black background for letterboxing on kittySwarm
                       zIndex: 3, // Above theme overlays
                       borderRadius: 'inherit'
                     }}
