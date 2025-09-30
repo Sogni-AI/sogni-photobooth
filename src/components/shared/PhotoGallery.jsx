@@ -155,7 +155,7 @@ const PhotoGallery = ({
   
   // Helper function to check if a prompt has a video easter egg
   const hasVideoEasterEgg = useCallback((promptKey) => {
-    return ['jazzSaxophonist', 'kittySwarm', 'stoneMoss', 'dapperVictorian', 'prismKaleidoscope', 'apocalypseRooftop', 'anime1990s'].includes(promptKey);
+    return ['jazzSaxophonist', 'kittySwarm', 'stoneMoss', 'dapperVictorian', 'prismKaleidoscope', 'apocalypseRooftop', 'anime1990s', 'nftBoredApe'].includes(promptKey);
   }, []);
   
   // Cleanup video when leaving the view
@@ -3047,6 +3047,8 @@ const PhotoGallery = ({
                           "https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/videos/sogni-photobooth-anime1990s-raw2.mp4"
                         ];
                         return animeVideos[currentVideoIndex] || animeVideos[0];
+                      } else if (photo.promptKey === 'nftBoredApe') {
+                        return "https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/videos/sogni-photobooth-nft-bored-ape-raw.mp4";
                       }
                       return "";
                     })()}
