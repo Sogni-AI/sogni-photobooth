@@ -2966,6 +2966,16 @@ const App = () => {
       // Clear any existing timeouts before starting new generation
       if (!isMoreOperation) {
         clearAllTimeouts();
+        
+        // Clear QR codes and mobile share cache when starting a new batch since photo indices will change
+        if (qrCodeData) {
+          console.log('Clearing QR code due to new batch generation from fresh photo');
+          setQrCodeData(null);
+        }
+        
+        // Clear mobile share cache since photo indices will point to different images
+        console.log('Clearing mobile share cache due to new batch generation from fresh photo');
+        setMobileShareCache({});
       }
       
       setLastPhotoData({ blob: photoBlob, dataUrl, sourceType });
