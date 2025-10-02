@@ -2,6 +2,28 @@
   "version": "1.0",
   "defaultTheme": null,
   "themes": {
+    "token2049-singapore-2025-fight-night": {
+      "label": "Token2049 Singapore 2025 - Fight Night",
+      "defaultAspectRatio": "narrow",
+      "framePadding": { "top": 0, "left": 0, "right": 61, "bottom": 120 },
+      "tweetTemplate": "Just took my AI photo at Token2049 Singapore 2025 Web3 Fight Night with @sogni_protocol https://photobooth.sogni.ai",
+      "frames": {
+        "narrow": [
+          "/events/token2049-singapore-2025-fight-night/narrow_1.png"
+        ]
+      }
+    },
+    "token2049-singapore-2025-superconnect": {
+      "label": "Token2049 Singapore 2025 - Super Connect",
+      "defaultAspectRatio": "narrow",
+      "framePadding": { "top": 0, "left": 0, "right": 0, "bottom": 47 },
+      "tweetTemplate": "Just took my AI photo at Token2049 Singapore 2025 Super Connect with @sogni_protocol https://photobooth.sogni.ai",
+      "frames": {
+        "narrow": [
+          "/events/token2049-singapore-2025-superconnect/narrow_1.png"
+        ]
+      }
+    },
     "token2049-singapore-2025-liquify": {
       "label": "Token2049 Singapore 2025 - Liquify",
       "defaultAspectRatio": "narrow",
