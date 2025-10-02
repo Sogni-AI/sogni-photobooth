@@ -9,6 +9,7 @@
   "background_color": "#000000",
   "scope": "/",
   "version": "1.0.20",
+  "id": "/",
   "icons": [
     {
       "src": "/icons/icon-72x72.png?v=1.0.20",
@@ -86,5 +87,13 @@
   "prefer_related_applications": false,
   "categories": ["photo", "entertainment", "utilities"],
   "lang": "en",
-  "dir": "ltr"
+  "dir": "ltr",
+  "screenshots": [
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "form_factor": "wide"
+    }
+  ]
 }

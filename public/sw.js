@@ -5,6 +5,8 @@ const STATIC_CACHE_NAME = `sogni-photobooth-static-v${CACHE_VERSION}`;
 
 // Assets that are safe to cache long-term (rarely change)
 const CACHEABLE_ASSETS = [
+  '/',
+  '/manifest.json',
   '/favicon.ico',
   '/icons/icon-72x72.png',
   '/icons/icon-96x96.png',
@@ -90,6 +92,21 @@ self.addEventListener('fetch', (event) => {
     console.log('Bypassing cache for events theme config:', url.pathname);
     event.respondWith(
       fetch(event.request, { cache: 'no-store' })
+    );
+    return;
+  }
+
+  // Handle navigation requests (including start_url)
+  if (event.request.mode === 'navigate') {
+    console.log('Handling navigation request:', url.pathname);
+    event.respondWith(
+      fetch(event.request, { cache: 'no-store' }).catch(() => {
+        // If network fails, return cached version or offline page
+        return caches.match('/') || new Response('Offline - Please check your internet connection', {
+          status: 503,
+          statusText: 'Service Unavailable'
+        });
+      })
     );
     return;
   }

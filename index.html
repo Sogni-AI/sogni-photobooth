@@ -6,7 +6,7 @@
     <meta name="cache-buster" content="1.0.21">
     <link rel="icon" href="/favicon.ico?v=1.0.20" />
     <title>Sogni AI Photobooth</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover" />
     
     <!-- PWA Manifest -->
     <link rel="manifest" href="/manifest.json?v=1.0.20" />
@@ -201,7 +201,7 @@
     <script>
       if ('serviceWorker' in navigator) {
         // Skip service worker in development to prevent caching issues
-        const isLocalDev = location.hostname === 'localhost' || location.hostname === '127.0.0.1' || location.hostname.includes('local');
+        const isLocalDev = location.hostname === 'localhost' || location.hostname === '127.0.0.1' || location.hostname.includes('local') || location.hostname.includes('192.168') || location.hostname.includes('10.0');
         
         if (!isLocalDev) {
           window.addEventListener('load', () => {
