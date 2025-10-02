@@ -125,8 +125,6 @@
   animation-delay: var(--stagger-delay, 0s) !important;
   /* Override any conflicting transitions during loading */
   transition: none !important;
-  /* Use will-change to optimize for animations but only during loading */
-  will-change: transform;
 }
 
 /* Add subtle inner bevel to all frames that's visible above all images - but NOT in selected/slideshow mode */
@@ -197,8 +195,6 @@
   visibility: visible !important;
   /* Remove all transitions that might cause post-load pulse */
   transition: none !important;
-  /* Remove will-change after loading completes to free up GPU resources */
-  will-change: auto;
 }
 
 /* Allow transitions for loaded newly-arrived frames */

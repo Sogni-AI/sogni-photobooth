@@ -253,25 +253,38 @@ const PhotoGallery = ({
     setPreviousPhotosLength(currentLength);
   }, [photos.length]); // Only depend on photos.length, not previousPhotosLength state
 
-  // Consolidated frame cache clearing to reduce useEffect count
-  const frameCacheKey = useMemo(() => {
-    return `${tezdevTheme}-${aspectRatio}-${settings.sogniWatermark}-${settings.sogniWatermarkSize}-${settings.sogniWatermarkMargin}-${settings.qrCodeUrl}`;
-  }, [tezdevTheme, aspectRatio, settings.sogniWatermark, settings.sogniWatermarkSize, settings.sogniWatermarkMargin, settings.qrCodeUrl]);
-  
-  const previousFrameCacheKeyRef = useRef(frameCacheKey);
-  
+  // Clear framed image cache when theme changes
   useEffect(() => {
-    if (previousFrameCacheKeyRef.current !== frameCacheKey) {
-      // Clean up existing blob URLs
-      Object.values(framedImageUrls).forEach(url => {
-        if (url && url.startsWith('blob:')) {
-          URL.revokeObjectURL(url);
-        }
-      });
-      setFramedImageUrls({});
-      previousFrameCacheKeyRef.current = frameCacheKey;
-    }
-  }, [frameCacheKey]); // Single useEffect for all frame cache clearing
+    // Clean up existing blob URLs
+    Object.values(framedImageUrls).forEach(url => {
+      if (url && url.startsWith('blob:')) {
+        URL.revokeObjectURL(url);
+      }
+    });
+    setFramedImageUrls({});
+  }, [tezdevTheme]);
+
+  // Clear framed image cache when aspect ratio changes
+  useEffect(() => {
+    // Clean up existing blob URLs
+    Object.values(framedImageUrls).forEach(url => {
+      if (url && url.startsWith('blob:')) {
+        URL.revokeObjectURL(url);
+      }
+    });
+    setFramedImageUrls({});
+  }, [aspectRatio]);
+
+  // Clear framed image cache when QR watermark settings change
+  useEffect(() => {
+    // Clean up existing blob URLs
+    Object.values(framedImageUrls).forEach(url => {
+      if (url && url.startsWith('blob:')) {
+        URL.revokeObjectURL(url);
+      }
+    });
+    setFramedImageUrls({});
+  }, [settings.sogniWatermark, settings.sogniWatermarkSize, settings.sogniWatermarkMargin, settings.qrCodeUrl]);
   
   // Effect to handle the 10-second timeout for showing the "more" button during generation
   useEffect(() => {
@@ -475,20 +488,13 @@ const PhotoGallery = ({
     });
   }, [selectedPhotoIndex]);
   
-  // Run framed image cleanup when cache gets large - use ref to avoid dependency on framedImageUrls
-  const frameCacheSizeRef = useRef(0);
-  
+  // Run framed image cleanup when cache gets large
   useEffect(() => {
     const entries = Object.keys(framedImageUrls).length;
-    frameCacheSizeRef.current = entries;
-    
     if (entries > 32) { // Trigger cleanup when we have more than 32 entries
-      // Use setTimeout to avoid blocking the main thread
-      setTimeout(() => {
-        cleanupFramedImageCache();
-      }, 0);
+      cleanupFramedImageCache();
     }
-  }, [Object.keys(framedImageUrls).length]); // Only depend on the length, not the entire object
+  }, [framedImageUrls]); // Removed cleanupFramedImageCache function from dependencies
 
   // Handle enhancement with Krea (default behavior)
   const handleEnhanceWithKrea = useCallback(() => {
@@ -685,75 +691,69 @@ const PhotoGallery = ({
   // MUST be called before any early returns to maintain hook order
   const migrationDoneRef = useRef(new Set());
   
-  // Use a ref to track migration to avoid dependency on photos array
-  const migrationTimeoutRef = useRef(null);
-  
   useEffect(() => {
-    // Clear any existing timeout
-    if (migrationTimeoutRef.current) {
-      clearTimeout(migrationTimeoutRef.current);
+    const photosNeedingMigration = photos.filter(photo => 
+      (!photo.taipeiFrameNumber || photo.framePadding === undefined) &&
+      !migrationDoneRef.current.has(photo.id)
+    );
+    
+    if (photosNeedingMigration.length === 0) {
+      return;
     }
     
-    // Debounce migration to avoid excessive calls during batch updates
-    migrationTimeoutRef.current = setTimeout(() => {
-      const photosNeedingMigration = photos.filter(photo => 
-        (!photo.taipeiFrameNumber || photo.framePadding === undefined) &&
-        !migrationDoneRef.current.has(photo.id)
+    const migratePhotos = async () => {
+      // Build minimal per-photo updates to avoid overwriting concurrent changes (e.g., enhancement)
+      const updates = await Promise.all(
+        photos.map(async (photo, index) => {
+          if (migrationDoneRef.current.has(photo.id)) {
+            return null;
+          }
+          const needsFrameNumber = !photo.taipeiFrameNumber;
+          const needsPadding = photo.framePadding === undefined;
+          if (!needsFrameNumber && !needsPadding) {
+            return null;
+          }
+          const nextTaipeiFrameNumber = needsFrameNumber ? ((index % 6) + 1) : photo.taipeiFrameNumber;
+          let nextFramePadding = photo.framePadding;
+          if (needsPadding) {
+            if (tezdevTheme !== 'off') {
+              try {
+                nextFramePadding = await themeConfigService.getFramePadding(tezdevTheme);
+              } catch (error) {
+                console.warn('Could not get frame padding for photo migration:', error);
+                nextFramePadding = { top: 0, left: 0, right: 0, bottom: 0 };
+              }
+            } else {
+              nextFramePadding = { top: 0, left: 0, right: 0, bottom: 0 };
+            }
+          }
+          migrationDoneRef.current.add(photo.id);
+          return { id: photo.id, index, taipeiFrameNumber: nextTaipeiFrameNumber, framePadding: nextFramePadding };
+        })
       );
       
-      if (photosNeedingMigration.length === 0) {
+      const effectiveUpdates = updates.filter(Boolean);
+      if (effectiveUpdates.length === 0) {
         return;
       }
       
-      const migratePhotos = async () => {
-        // Build minimal per-photo updates to avoid overwriting concurrent changes (e.g., enhancement)
-        const updates = await Promise.all(
-          photosNeedingMigration.map(async (photo, index) => {
-            const needsFrameNumber = !photo.taipeiFrameNumber;
-            const needsPadding = photo.framePadding === undefined;
-            const nextTaipeiFrameNumber = needsFrameNumber ? ((index % 6) + 1) : photo.taipeiFrameNumber;
-            let nextFramePadding = photo.framePadding;
-            if (needsPadding) {
-              if (tezdevTheme !== 'off') {
-                try {
-                  nextFramePadding = await themeConfigService.getFramePadding(tezdevTheme);
-                } catch (error) {
-                  console.warn('Could not get frame padding for photo migration:', error);
-                  nextFramePadding = { top: 0, left: 0, right: 0, bottom: 0 };
-                }
-              } else {
-                nextFramePadding = { top: 0, left: 0, right: 0, bottom: 0 };
-              }
-            }
-            migrationDoneRef.current.add(photo.id);
-            return { id: photo.id, taipeiFrameNumber: nextTaipeiFrameNumber, framePadding: nextFramePadding };
-          })
-        );
-        
-        // Apply only the migrated fields to the latest state to prevent stale overwrites
-        setPhotos(prev => {
-          const idToUpdate = new Map(updates.map(u => [u.id, u]));
-          return prev.map(photo => {
-            const u = idToUpdate.get(photo.id);
-            if (!u) return photo;
-            return {
-              ...photo,
-              taipeiFrameNumber: u.taipeiFrameNumber,
-              framePadding: u.framePadding
-            };
-          });
+      // Apply only the migrated fields to the latest state to prevent stale overwrites
+      setPhotos(prev => {
+        const idToUpdate = new Map(effectiveUpdates.map(u => [u.id, u]));
+        return prev.map(photo => {
+          const u = idToUpdate.get(photo.id);
+          if (!u) return photo;
+          return {
+            ...photo,
+            taipeiFrameNumber: u.taipeiFrameNumber,
+            framePadding: u.framePadding
+          };
         });
-      };
-      
-      migratePhotos();
-    }, 100); // 100ms debounce
-    
-    return () => {
-      if (migrationTimeoutRef.current) {
-        clearTimeout(migrationTimeoutRef.current);
-      }
+      });
     };
-  }, [photos.length, tezdevTheme]); // Only depend on length and theme, not entire photos array
+    
+    migratePhotos();
+  }, [photos, tezdevTheme, setPhotos]);
 
 
   // Helper function to pre-generate framed image for a specific photo index
@@ -1117,7 +1117,7 @@ const PhotoGallery = ({
       // Update the previous selected index
       setPreviousSelectedIndex(selectedPhotoIndex);
     }
-  }, [selectedPhotoIndex, previousSelectedIndex, isPromptSelectorMode, selectedSubIndex, tezdevTheme, outputFormat, aspectRatio, isThemeSupported]); // Removed photos, filteredPhotos, framedImageUrls from deps
+  }, [selectedPhotoIndex, previousSelectedIndex, photos, filteredPhotos, isPromptSelectorMode, selectedSubIndex, tezdevTheme, outputFormat, aspectRatio, framedImageUrls, isThemeSupported]);
 
   // Skip rendering if there are no photos or the grid is hidden
   // Exception: In prompt selector mode, we need to render even with empty photos while they're loading
@@ -2910,36 +2910,24 @@ const PhotoGallery = ({
                       e.target.src = photo.originalDataUrl;
                       e.target.style.opacity = '0.7';
                       e.target.classList.add('fallback');
-                      // Use a ref to batch error updates and avoid triggering immediate re-renders
-                      const errorTimeoutKey = `error-${photo.id}`;
-                      if (!window.photoErrorTimeouts) window.photoErrorTimeouts = {};
-                      
-                      if (window.photoErrorTimeouts[errorTimeoutKey]) {
-                        clearTimeout(window.photoErrorTimeouts[errorTimeoutKey]);
-                      }
-                      
-                      window.photoErrorTimeouts[errorTimeoutKey] = setTimeout(() => {
-                        setPhotos(prev => {
-                          const updated = [...prev];
-                          const photoIndex = updated.findIndex(p => p.id === photo.id);
-                          if (photoIndex !== -1) {
-                            updated[photoIndex] = {
-                              ...updated[photoIndex],
-                              loadError: true,
-                              statusText: `${updated[photoIndex].statusText || 'Whoops, image failed to load'}`
-                            };
-                          }
-                          return updated;
-                        });
-                        delete window.photoErrorTimeouts[errorTimeoutKey];
-                      }, 50); // Batch error updates with 50ms delay
+                      setPhotos(prev => {
+                        const updated = [...prev];
+                        if (updated[index]) {
+                          updated[index] = {
+                            ...updated[index],
+                            loadError: true,
+                            statusText: `${updated[index].statusText || 'Whoops, image failed to load'}`
+                          };
+                        }
+                        return updated;
+                      });
                     }
                   }}
                   onContextMenu={e => {
                     // Allow native context menu for image downloads
                     e.stopPropagation();
                   }}
-                  style={useMemo(() => {
+                  style={(() => {
                     const baseStyle = {
                       objectFit: 'cover',
                       position: 'relative',
@@ -3034,7 +3022,7 @@ const PhotoGallery = ({
                       top: 0,
                       left: 0
                     };
-                  }, [isSelected, photo.enhancing, photo.isPreview, photo.isGalleryImage, photo.framePadding, selectedSubIndex, index, framedImageUrls, generatingFrames, isThemeSupported()])}
+                  })()}
                 />
                 
                 {/* Video Overlay - Only show for styles with video easter eggs when video is enabled */}
