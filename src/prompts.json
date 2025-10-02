@@ -209,6 +209,17 @@
       "bodyBuilder": "bodybuilder extreme muscular body, modeling contest"
     }
   },
+  "fighters": {
+    "name": "Fighter",
+    "prompts": {
+      "makeMeABoxer": "tribal face tattoo, boxer in boxing ring, leotard, holding championship belt",
+      "proWrestler": "ring entrance pose, feathered robe flare, pyro spark fountains, championship belt shine, ropes and fog machine haze, no readable text",
+      "luchaLibre": "Mexican lucha libre. triumphant",
+      "kungFuMaster": "dynamic wushu long-fist pose, flowing silk uniform, temple courtyard, motion trails, drifting leaves",
+      "mmaChampion": "octagon cage backdrop, 4oz gloves, corner floodlights, coach towels bokeh, dynamic feint blur, head to head, bloody nose",
+      "bodyBuilder": "bodybuilder extreme muscular body, modeling contest"
+    }
+  },
   "storybook-kidlit": {
     "name": "Storybook / Kidlit",
     "prompts": {
