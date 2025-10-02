@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PWA Installation Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .pass { color: #28a745; }
+        .fail { color: #dc3545; }
+        .warning { color: #ffc107; }
+        .test-result {
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 4px;
+        }
+        .test-result.pass { background: #d4edda; border: 1px solid #c3e6cb; }
+        .test-result.fail { background: #f8d7da; border: 1px solid #f5c6cb; }
+        .test-result.warning { background: #fff3cd; border: 1px solid #ffeaa7; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #0056b3; }
+        pre {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>PWA Installation Test</h1>
+    <p>This page tests if your PWA meets the installation requirements for Chrome Android 13.</p>
+    
+    <div class="test-section">
+        <h2>Quick Tests</h2>
+        <button onclick="runAllTests()">Run All Tests</button>
+        <button onclick="testManifest()">Test Manifest</button>
+        <button onclick="testServiceWorker()">Test Service Worker</button>
+        <button onclick="testInstallability()">Test Installability</button>
+        <button onclick="clearResults()">Clear Results</button>
+    </div>
+
+    <div class="test-section">
+        <h2>Test Results</h2>
+        <div id="results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Debug Information</h2>
+        <div id="debug-info"></div>
+    </div>
+
+    <script>
+        function addResult(test, passed, message, details = '') {
+            const results = document.getElementById('results');
+            const div = document.createElement('div');
+            div.className = `test-result ${passed ? 'pass' : 'fail'}`;
+            div.innerHTML = `
+                <strong>${test}:</strong> 
+                <span class="${passed ? 'pass' : 'fail'}">${passed ? '✓ PASS' : '✗ FAIL'}</span> - 
+                ${message}
+                ${details ? `<br><small>${details}</small>` : ''}
+            `;
+            results.appendChild(div);
+        }
+
+        function addWarning(test, message, details = '') {
+            const results = document.getElementById('results');
+            const div = document.createElement('div');
+            div.className = 'test-result warning';
+            div.innerHTML = `
+                <strong>${test}:</strong> 
+                <span class="warning">⚠ WARNING</span> - 
+                ${message}
+                ${details ? `<br><small>${details}</small>` : ''}
+            `;
+            results.appendChild(div);
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+            document.getElementById('debug-info').innerHTML = '';
+        }
+
+        async function testManifest() {
+            try {
+                const response = await fetch('/manifest.json');
+                if (!response.ok) {
+                    addResult('Manifest File', false, 'Could not fetch manifest.json');
+                    return;
+                }
+
+                const manifest = await response.json();
+                addResult('Manifest File', true, 'manifest.json found and valid JSON');
+
+                // Test required fields
+                const requiredFields = ['name', 'short_name', 'start_url', 'display', 'icons'];
+                requiredFields.forEach(field => {
+                    if (manifest[field]) {
+                        addResult(`Manifest ${field}`, true, `${field} is present: ${JSON.stringify(manifest[field]).substring(0, 100)}...`);
+                    } else {
+                        addResult(`Manifest ${field}`, false, `${field} is missing`);
+                    }
+                });
+
+                // Test icons
+                if (manifest.icons && Array.isArray(manifest.icons)) {
+                    const has192 = manifest.icons.some(icon => icon.sizes === '192x192');
+                    const has512 = manifest.icons.some(icon => icon.sizes === '512x512');
+                    const hasMaskable = manifest.icons.some(icon => icon.purpose && icon.purpose.includes('maskable'));
+
+                    addResult('Icon 192x192', has192, has192 ? 'Found 192x192 icon' : 'Missing 192x192 icon (required for Android)');
+                    addResult('Icon 512x512', has512, has512 ? 'Found 512x512 icon' : 'Missing 512x512 icon (required for Android)');
+                    addResult('Maskable Icons', hasMaskable, hasMaskable ? 'Found maskable icons' : 'Missing maskable icons (recommended for Android)');
+                }
+
+                // Test display mode
+                if (manifest.display === 'standalone' || manifest.display === 'fullscreen' || manifest.display === 'minimal-ui') {
+                    addResult('Display Mode', true, `Display mode is ${manifest.display} (good for PWA)`);
+                } else {
+                    addResult('Display Mode', false, `Display mode is ${manifest.display || 'not set'} (should be standalone, fullscreen, or minimal-ui)`);
+                }
+
+                // Test theme color
+                if (manifest.theme_color) {
+                    addResult('Theme Color', true, `Theme color is set: ${manifest.theme_color}`);
+                } else {
+                    addWarning('Theme Color', 'Theme color not set (recommended for better UX)');
+                }
+
+                // Display full manifest
+                document.getElementById('debug-info').innerHTML += `<h3>Manifest Content:</h3><pre>${JSON.stringify(manifest, null, 2)}</pre>`;
+
+            } catch (error) {
+                addResult('Manifest Test', false, `Error testing manifest: ${error.message}`);
+            }
+        }
+
+        async function testServiceWorker() {
+            if ('serviceWorker' in navigator) {
+                addResult('Service Worker Support', true, 'Service Worker API is supported');
+
+                try {
+                    const registration = await navigator.serviceWorker.getRegistration();
+                    if (registration) {
+                        addResult('Service Worker Registration', true, `Service Worker is registered at scope: ${registration.scope}`);
+                        
+                        if (registration.active) {
+                            addResult('Service Worker Active', true, `Service Worker is active, state: ${registration.active.state}`);
+                        } else {
+                            addResult('Service Worker Active', false, 'No active Service Worker found');
+                        }
+                    } else {
+                        addResult('Service Worker Registration', false, 'No Service Worker registration found');
+                    }
+                } catch (error) {
+                    addResult('Service Worker Test', false, `Error testing Service Worker: ${error.message}`);
+                }
+            } else {
+                addResult('Service Worker Support', false, 'Service Worker API not supported');
+            }
+        }
+
+        function testInstallability() {
+            // Test HTTPS
+            if (location.protocol === 'https:' || location.hostname === 'localhost') {
+                addResult('HTTPS', true, `Site is served over ${location.protocol}`);
+            } else {
+                addResult('HTTPS', false, `Site is served over ${location.protocol} (HTTPS required for PWA)`);
+            }
+
+            // Test viewport meta tag
+            const viewport = document.querySelector('meta[name="viewport"]');
+            if (viewport) {
+                addResult('Viewport Meta', true, `Viewport meta tag found: ${viewport.content}`);
+            } else {
+                addResult('Viewport Meta', false, 'Viewport meta tag missing');
+            }
+
+            // Test beforeinstallprompt event
+            let beforeInstallPromptFired = false;
+            window.addEventListener('beforeinstallprompt', (e) => {
+                beforeInstallPromptFired = true;
+                addResult('Install Prompt Event', true, 'beforeinstallprompt event fired - PWA is installable!');
+            });
+
+            // Check after a delay
+            setTimeout(() => {
+                if (!beforeInstallPromptFired) {
+                    addWarning('Install Prompt Event', 'beforeinstallprompt event has not fired yet', 'This could mean the PWA criteria are not fully met, or the user has already installed/dismissed the prompt');
+                }
+            }, 2000);
+
+            // Test if already installed
+            if (window.matchMedia('(display-mode: standalone)').matches) {
+                addResult('Installation Status', true, 'PWA is currently running in standalone mode (installed)');
+            } else {
+                addResult('Installation Status', false, 'PWA is not installed or not running in standalone mode');
+            }
+
+            // Test user agent
+            const userAgent = navigator.userAgent;
+            const isAndroid = /Android/.test(userAgent);
+            const isChrome = /Chrome/.test(userAgent) && !/Edge/.test(userAgent);
+            
+            addResult('Android Device', isAndroid, isAndroid ? 'Running on Android device' : 'Not running on Android device');
+            addResult('Chrome Browser', isChrome, isChrome ? 'Running on Chrome browser' : 'Not running on Chrome browser');
+
+            document.getElementById('debug-info').innerHTML += `<h3>User Agent:</h3><pre>${userAgent}</pre>`;
+            document.getElementById('debug-info').innerHTML += `<h3>Location:</h3><pre>${JSON.stringify({
+                protocol: location.protocol,
+                hostname: location.hostname,
+                port: location.port,
+                pathname: location.pathname
+            }, null, 2)}</pre>`;
+        }
+
+        async function runAllTests() {
+            clearResults();
+            await testManifest();
+            await testServiceWorker();
+            testInstallability();
+        }
+
+        // Auto-run tests on page load
+        window.addEventListener('load', () => {
+            setTimeout(runAllTests, 1000);
+        });
+    </script>
+</body>
+</html>
