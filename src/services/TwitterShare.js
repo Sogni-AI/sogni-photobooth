@@ -40,8 +40,8 @@ export const getPhotoHashtag = (photo) => {
  * @param {string} [params.aspectRatio] - Aspect ratio of the image
  * @param {string} [params.outputFormat='png'] - Output format ('png' or 'jpg') - Note: Twitter always uses JPG regardless of this setting
  * @param {boolean} [params.sogniWatermark=true] - Whether to include Sogni watermark
- * @param {number} [params.sogniWatermarkSize=90] - Size of the QR watermark
- * @param {number} [params.sogniWatermarkMargin=10] - Margin of the QR watermark from edge
+ * @param {number} [params.sogniWatermarkSize=100] - Size of the QR watermark
+ * @param {number} [params.sogniWatermarkMargin=26] - Margin of the QR watermark from edge
  * @returns {Promise<void>}
  */
 export const shareToTwitter = async ({
@@ -56,8 +56,8 @@ export const shareToTwitter = async ({
   aspectRatio = null,
   outputFormat = 'png',
   sogniWatermark = true,
-  sogniWatermarkSize = 90,
-  sogniWatermarkMargin = 10,
+  sogniWatermarkSize = 100,
+  sogniWatermarkMargin = 26,
 }) => {
   if (photoIndex === null || !photos[photoIndex] || !photos[photoIndex].images || !photos[photoIndex].images[0]) {
     console.error('No image selected or image URL is missing for sharing.');

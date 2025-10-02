@@ -135,18 +135,18 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
   const debouncedUrlUpdate = useRef<NodeJS.Timeout | null>(null);
   
   // Local state for real-time slider display and URL input
-  const [localQRSize, setLocalQRSize] = useState(settings.sogniWatermarkSize ?? 94);
-  const [localQRMargin, setLocalQRMargin] = useState(settings.sogniWatermarkMargin ?? 16);
+  const [localQRSize, setLocalQRSize] = useState(settings.sogniWatermarkSize ?? 100);
+  const [localQRMargin, setLocalQRMargin] = useState(settings.sogniWatermarkMargin ?? 28);
   const [localQRUrl, setLocalQRUrl] = useState(settings.qrCodeUrl || 'https://qr.sogni.ai');
   const [qrUrlError, setQrUrlError] = useState<string>('');
   
   // Update local state when settings change from external sources
   useEffect(() => {
-    setLocalQRSize(settings.sogniWatermarkSize ?? 94);
+    setLocalQRSize(settings.sogniWatermarkSize ?? 100);
   }, [settings.sogniWatermarkSize]);
   
   useEffect(() => {
-    setLocalQRMargin(settings.sogniWatermarkMargin ?? 16);
+    setLocalQRMargin(settings.sogniWatermarkMargin ?? 26);
   }, [settings.sogniWatermarkMargin]);
   
   useEffect(() => {
