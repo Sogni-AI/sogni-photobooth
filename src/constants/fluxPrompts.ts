@@ -24,6 +24,8 @@ export const FLUX_KONTEXT_PROMPTS = {
   addCats: "Add cats and match style",
   hatsAndGlasses: "Add cowboy hats and sunglasses",
   makeMeDoodleArt: "Convert into a minimalist bold line colorful cartoon abstract portrait, minimal features, very simple, surreal playful pastel style, abstract vector, minimal facial features, thick outlines, rainbow, clouds",
+  bougieBlack: "detailed studio portrait, seated on a black bar stool (detailed metal frame:1.1), wearing a black suit (detailed clothing:1.2), black turtleneck, and white sneakers (accessories:1.1), centered in the frame,  mid-shot, mid-length,  black and white photorealistic portrait, minimalist style, (stark white background), (simple background:1.0), light and shadow well-defined (lighting:1.1), neutral color palette (b&w), fashion editorial photography, haute couture, confident and casual pose, sharp focus, high-detail photorealistic style, 8k resolution, cement floor, Moody, cinematic, Ilford FP4 film look",
+  bougieWhite: "editorial studio lighting black and white portrait, (bright white backdrop), bokeh, medium format camera, film, contrasty, detailed, sharp, wearing a crisp white polo shirt (detailed clothing:1.2), and white trousers (detailed clothing:1.2), (accessories:1.1), (facial features:1.3), (expression:1.1), standing, pose:1.2), simple and elegant composition, minimalist style, studio shot against a stark white background, sharp focus, clean lines, black and white photorealistic style, high detail,  (detailed fabric texture:1.2),  well-lit, even lighting, classic portrait, (clean background:1.1), posing, dignified, hands behind back, Moody, cinematic, Ilford FP4 film look",
 }
 
 // Helper function to get Flux.1 Kontext prompts
