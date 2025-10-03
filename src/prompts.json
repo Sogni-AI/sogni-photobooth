@@ -197,9 +197,8 @@
       "velodromeCyclist": "track cyclist banked on steep velodrome curve, aero helmet, skinsuit, speed lines and wheel spoke blur",
       "rockClimber": "lead climber dyno on colorful indoor holds, chalk burst, quickdraws and rope, overhead gym lighting",
       "soccerGoalie": "hero shot socker goalie, action sports photography, motion blur, airborne goalkeeper save, goalie gloves, soccer ball flying, sneaker cleats, stadium bokeh, neon sideline LEDs, grass clippings frozen midair, no readable text",
-      "fencer": "hero shot, one single Fencing rapier pointing at viewer, motion blur, lunge action shot, white lamé suit and mask lifted to reveal face, crisp high key backlight",
-      "kendoDuelist": "kendo armor (bogu) with shinai clash at impact, dojang backlight beams, subtle breath fog, no readable text",
-      "vintageBurlesque": "vintage burlesque, faded colors, pink"
+      "vintageBurlesque": "vintage burlesque, faded colors, pink",
+      "bodyBuilder": "bodybuilder extreme muscular body, modeling contest"
     }
   },
   "fighters": {
@@ -210,7 +209,6 @@
       "luchaLibre": "Mexican lucha libre. triumphant",
       "kungFuMaster": "dynamic wushu long-fist pose, flowing silk uniform, temple courtyard, motion trails, drifting leaves",
       "mmaChampion": "octagon cage backdrop, 4oz gloves, corner floodlights, coach towels bokeh, dynamic feint blur, head to head, bloody nose",
-      "bodyBuilder": "bodybuilder extreme muscular body, modeling contest",
       "sumoChampion": "yokozuna stance on dohyo, ceremonial belt, salt toss captured midair, lantern glow, taiko drum vibe",
       "streetFighterChamp": "8-bit arcade game style, arcade fighter pose, urban rooftop at night, neon skyline, oversized boxing gloves, exaggerated motion trails, stylized anime shading",
       "darkFantasyBerserker": "towering barbarian fighter, giant axe, spiked armor, glowing red eyes, stormy sky backdrop, cracked battlefield ground, cinematic fantasy",
@@ -218,7 +216,9 @@
       "kombatWarrior": "arcade game character, martial arts stance, glowing aura, cracked stone arena, lightning bolts, scorched floor, tattered gi, cinematic fire embers",
       "samuraiRonin": "ancient ronin samurai warrior, katana, cherry blossoms falling, moonlit temple steps, traditional armor, cinematic atmosphere",
       "gladiatorChampion": "ancient Roman coliseum, bloodied sand floor, bronze helmet with plume, gladiator sword and shield, victorious stance, crowd blurred in background",
-      "muayThaiWarrior": "dynamic flying knee strike, ancient temple backdrop, ceremonial mongkol headband, rope hand wraps, sweat and dust motion trails, golden sunlight"
+      "muayThaiWarrior": "dynamic flying knee strike, ancient temple backdrop, ceremonial mongkol headband, rope hand wraps, sweat and dust motion trails, golden sunlight",
+      "fencer": "hero shot, one single Fencing rapier pointing at viewer, motion blur, lunge action shot, white lamé suit and mask lifted to reveal face, crisp high key backlight",
+      "kendoDuelist": "kendo armor (bogu) with shinai clash at impact, dojang backlight beams, subtle breath fog, no readable text"
     }
   },
   "storybook-kidlit": {
