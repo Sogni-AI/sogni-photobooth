@@ -2667,6 +2667,64 @@ const PhotoGallery = ({
                   // In prompt selector mode, just show selected state - don't immediately set style
                   isSelected ? setSelectedPhotoIndex(null) : setSelectedPhotoIndex(index);
                 }}
+                // Add touch event handlers for swipe navigation when photo is selected
+                onTouchStart={isSelected && photos.length > 1 ? (e) => {
+                  const touch = e.touches[0];
+                  const touchStartData = {
+                    x: touch.clientX,
+                    y: touch.clientY,
+                    time: Date.now()
+                  };
+                  e.currentTarget.touchStartData = touchStartData;
+                } : undefined}
+                onTouchMove={isSelected && photos.length > 1 ? (e) => {
+                  // Prevent default scrolling behavior during swipe
+                  if (e.currentTarget.touchStartData) {
+                    const touch = e.touches[0];
+                    const deltaX = Math.abs(touch.clientX - e.currentTarget.touchStartData.x);
+                    const deltaY = Math.abs(touch.clientY - e.currentTarget.touchStartData.y);
+                    
+                    // If horizontal movement is greater than vertical, prevent scrolling
+                    if (deltaX > deltaY && deltaX > 10) {
+                      e.preventDefault();
+                    }
+                  }
+                } : undefined}
+                onTouchEnd={isSelected && photos.length > 1 ? (e) => {
+                  const touchStartData = e.currentTarget.touchStartData;
+                  if (!touchStartData) return;
+                  
+                  const touch = e.changedTouches[0];
+                  const deltaX = touch.clientX - touchStartData.x;
+                  const deltaY = touch.clientY - touchStartData.y;
+                  const deltaTime = Date.now() - touchStartData.time;
+                  
+                  // Swipe thresholds
+                  const minSwipeDistance = 50; // Minimum distance for a swipe
+                  const maxSwipeTime = 500; // Maximum time for a swipe (ms)
+                  const maxVerticalDistance = 100; // Maximum vertical movement allowed
+                  
+                  // Check if this is a valid horizontal swipe
+                  if (Math.abs(deltaX) > minSwipeDistance && 
+                      Math.abs(deltaY) < maxVerticalDistance && 
+                      deltaTime < maxSwipeTime) {
+                    
+                    // Prevent the click event from firing
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    if (deltaX > 0) {
+                      // Swipe right - go to previous photo
+                      handlePreviousPhoto();
+                    } else {
+                      // Swipe left - go to next photo
+                      handleNextPhoto();
+                    }
+                  }
+                  
+                  // Clean up touch data
+                  delete e.currentTarget.touchStartData;
+                } : undefined}
                 style={{
                   width: '100%',
                   margin: '0 auto',
@@ -2797,6 +2855,64 @@ const PhotoGallery = ({
               data-enhancing={photo.enhancing ? 'true' : undefined}
               data-error={photo.error ? 'true' : undefined}
               data-enhanced={photo.enhanced ? 'true' : undefined}
+              // Add touch event handlers for swipe navigation when photo is selected
+              onTouchStart={isSelected && photos.length > 1 ? (e) => {
+                const touch = e.touches[0];
+                const touchStartData = {
+                  x: touch.clientX,
+                  y: touch.clientY,
+                  time: Date.now()
+                };
+                e.currentTarget.touchStartData = touchStartData;
+              } : undefined}
+              onTouchMove={isSelected && photos.length > 1 ? (e) => {
+                // Prevent default scrolling behavior during swipe
+                if (e.currentTarget.touchStartData) {
+                  const touch = e.touches[0];
+                  const deltaX = Math.abs(touch.clientX - e.currentTarget.touchStartData.x);
+                  const deltaY = Math.abs(touch.clientY - e.currentTarget.touchStartData.y);
+                  
+                  // If horizontal movement is greater than vertical, prevent scrolling
+                  if (deltaX > deltaY && deltaX > 10) {
+                    e.preventDefault();
+                  }
+                }
+              } : undefined}
+              onTouchEnd={isSelected && photos.length > 1 ? (e) => {
+                const touchStartData = e.currentTarget.touchStartData;
+                if (!touchStartData) return;
+                
+                const touch = e.changedTouches[0];
+                const deltaX = touch.clientX - touchStartData.x;
+                const deltaY = touch.clientY - touchStartData.y;
+                const deltaTime = Date.now() - touchStartData.time;
+                
+                // Swipe thresholds
+                const minSwipeDistance = 50; // Minimum distance for a swipe
+                const maxSwipeTime = 500; // Maximum time for a swipe (ms)
+                const maxVerticalDistance = 100; // Maximum vertical movement allowed
+                
+                // Check if this is a valid horizontal swipe
+                if (Math.abs(deltaX) > minSwipeDistance && 
+                    Math.abs(deltaY) < maxVerticalDistance && 
+                    deltaTime < maxSwipeTime) {
+                  
+                  // Prevent the click event from firing
+                  e.preventDefault();
+                  e.stopPropagation();
+                  
+                  if (deltaX > 0) {
+                    // Swipe right - go to previous photo
+                    handlePreviousPhoto();
+                  } else {
+                    // Swipe left - go to next photo
+                    handleNextPhoto();
+                  }
+                }
+                
+                // Clean up touch data
+                delete e.currentTarget.touchStartData;
+              } : undefined}
 
               style={{
                 width: '100%',
