@@ -896,6 +896,23 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
           </div>
         )}
 
+        {/* QR Code Margin Starts Inside Frame toggle - only show when watermark is enabled */}
+        {settings.sogniWatermark && (
+          <div className="control-option checkbox">
+            <input
+              type="checkbox"
+              id="qr-margin-inside-frame-toggle"
+              checked={settings.qrCodeMarginStartsInsideFrame ?? false}
+              onChange={(e) => {
+                updateSetting('qrCodeMarginStartsInsideFrame', e.target.checked);
+                // Clear caches when positioning logic changes to regenerate QR code
+                clearImageCaches();
+              }}
+            />
+            <label htmlFor="qr-margin-inside-frame-toggle" className="control-label">QR Code Margin Starts Inside Frame</label>
+          </div>
+        )}
+
         {/* QR Code URL - only show when watermark is enabled */}
         {settings.sogniWatermark && (
           <div className="control-option">

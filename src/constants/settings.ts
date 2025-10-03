@@ -166,6 +166,7 @@ const createDefaultSettings = (): Settings => {
     sogniWatermarkSize: 100, // Default QR code size
     sogniWatermarkMargin: 26, // Default margin from edge
     sogniWatermarkPosition: 'top-right' as const, // Default position
+    qrCodeMarginStartsInsideFrame: false, // Default to margin from corner regardless of frame
     qrCodeUrl: 'https://qr.sogni.ai', // Default QR code URL
     // Worker preferences
     requiredWorkers: [],
@@ -227,6 +228,7 @@ export const getQRWatermarkConfig = (settings: Settings) => ({
   position: settings.sogniWatermarkPosition ?? 'top-right',
   opacity: 1.0, // Always 100% for maximum legibility
   url: settings.qrCodeUrl || 'https://qr.sogni.ai', // URL to encode in QR code
+  marginStartsInsideFrame: settings.qrCodeMarginStartsInsideFrame ?? false, // Whether margin starts inside frame or from corner
 });
 
 // Legacy static config for backward compatibility (deprecated - use getQRWatermarkConfig instead)

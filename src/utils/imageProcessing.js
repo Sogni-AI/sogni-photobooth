@@ -297,12 +297,11 @@ export async function createPolaroidImage(imageUrl, label, options = {}) {
             }
           }
           
-          // Position QR watermark within the image area to avoid overlapping with label
+          // Position QR watermark based on user preference
           const imageAreaWatermarkOptions = {
             ...watermarkOptions,
             // Use the position from watermarkOptions, defaulting to top-right for polaroid frames
-            // Adjust positioning to be within the image area
-            imageAreaOnly: true,
+            // Pass through the marginStartsInsideFrame setting from watermarkOptions
             imageWidth,
             imageHeight,
             frameOffsetX: frameWidth,
@@ -499,6 +498,12 @@ export const blobToDataURL = (blob) => {
  * @param {string} options.position - Position ('bottom-right', 'bottom-left', 'top-right', 'top-left')
  * @param {number} options.opacity - Opacity of the watermark (0-1, default: 1.0)
  * @param {string} options.url - URL to encode in QR code (default: 'https://qr.sogni.ai')
+ * @param {boolean} options.marginStartsInsideFrame - Whether margin starts inside frame (true) or from corner (false, default)
+ * @param {number} options.imageWidth - Width of image area (required when marginStartsInsideFrame is true)
+ * @param {number} options.imageHeight - Height of image area (required when marginStartsInsideFrame is true)
+ * @param {number} options.frameOffsetX - X offset of image from canvas edge (required when marginStartsInsideFrame is true)
+ * @param {number} options.frameOffsetY - Y offset of image from canvas edge (required when marginStartsInsideFrame is true)
+ * @param {Object} options.framePadding - Frame padding object for custom themes
  */
 export async function addQRWatermark(ctx, canvasWidth, canvasHeight, options = {}) {
   const {
@@ -537,8 +542,8 @@ export async function addQRWatermark(ctx, canvasWidth, canvasHeight, options = {
       // Calculate position based on preference
       let x, y;
       
-      // If imageAreaOnly is specified, position within the image area, not the full canvas
-      if (options.imageAreaOnly && options.imageWidth && options.imageHeight) {
+      // If marginStartsInsideFrame is true, position within the image area, not the full canvas
+      if (options.marginStartsInsideFrame && options.imageWidth && options.imageHeight) {
         const imageWidth = options.imageWidth;
         const imageHeight = options.imageHeight;
         const offsetX = options.frameOffsetX || 0;

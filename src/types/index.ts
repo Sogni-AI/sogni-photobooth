@@ -94,6 +94,7 @@ export interface Settings {
   sogniWatermarkSize?: number;
   sogniWatermarkMargin?: number;
   sogniWatermarkPosition?: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+  qrCodeMarginStartsInsideFrame?: boolean;
   qrCodeUrl?: string;
   // Worker preferences
   requiredWorkers: string[];
