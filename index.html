@@ -6,7 +6,7 @@
     <meta name="cache-buster" content="1.0.21">
     <link rel="icon" href="/favicon.ico?v=1.0.20" />
     <title>Sogni AI Photobooth</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     
     <!-- PWA Manifest -->
     <link rel="manifest" href="/manifest.json?v=1.0.20" />
@@ -162,6 +162,54 @@
           }
         }
         lastTouchEnd = now;
+      }, { passive: false });
+      
+      // Prevent pull-to-refresh behavior
+      let touchStartY = 0;
+      let touchStartX = 0;
+      
+      document.addEventListener('touchstart', function(event) {
+        touchStartY = event.touches[0].clientY;
+        touchStartX = event.touches[0].clientX;
+      }, { passive: true });
+      
+      document.addEventListener('touchmove', function(event) {
+        const touchY = event.touches[0].clientY;
+        const touchX = event.touches[0].clientX;
+        const touchDeltaY = touchY - touchStartY;
+        const touchDeltaX = touchX - touchStartX;
+        
+        // Check if we're at the top of the page and trying to scroll down (pull-to-refresh)
+        const isAtTop = window.scrollY === 0 || document.documentElement.scrollTop === 0;
+        const isPullingDown = touchDeltaY > 0;
+        const isVerticalSwipe = Math.abs(touchDeltaY) > Math.abs(touchDeltaX);
+        
+        // Check if we're inside a scrollable container that should allow scrolling
+        let element = event.target;
+        let isInScrollableContainer = false;
+        
+        while (element && element !== document.body) {
+          const computedStyle = window.getComputedStyle(element);
+          const overflowY = computedStyle.overflowY;
+          
+          if (overflowY === 'auto' || overflowY === 'scroll') {
+            // Check if this element actually has scrollable content
+            if (element.scrollHeight > element.clientHeight) {
+              isInScrollableContainer = true;
+              break;
+            }
+          }
+          element = element.parentElement;
+        }
+        
+        // Prevent pull-to-refresh if:
+        // 1. We're at the top of the page
+        // 2. User is pulling down
+        // 3. It's primarily a vertical swipe
+        // 4. We're not inside a scrollable container that needs scrolling
+        if (isAtTop && isPullingDown && isVerticalSwipe && !isInScrollableContainer) {
+          event.preventDefault();
+        }
       }, { passive: false });
     </script>
 
