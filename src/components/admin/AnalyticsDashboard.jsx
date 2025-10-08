@@ -129,6 +129,10 @@ const AnalyticsDashboard = () => {
       return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     });
 
+    // Use different background opacity based on chart type
+    // Bar charts need more opaque colors to be visible, line charts use light backgrounds
+    const backgroundOpacity = chartType === 'bar' ? 0.8 : 0.1;
+
     return {
       labels,
       datasets: [
@@ -136,56 +140,56 @@ const AnalyticsDashboard = () => {
           label: 'Downloads',
           data: data.map(item => item.downloads),
           borderColor: 'rgb(39, 174, 96)',
-          backgroundColor: 'rgba(39, 174, 96, 0.1)',
+          backgroundColor: `rgba(39, 174, 96, ${backgroundOpacity})`,
           tension: 0.1,
         },
         {
           label: 'Shares',
           data: data.map(item => item.shares),
           borderColor: 'rgb(52, 152, 219)',
-          backgroundColor: 'rgba(52, 152, 219, 0.1)',
+          backgroundColor: `rgba(52, 152, 219, ${backgroundOpacity})`,
           tension: 0.1,
         },
         {
           label: 'Batches Generated',
           data: data.map(item => item.batches_generated),
           borderColor: 'rgb(155, 89, 182)',
-          backgroundColor: 'rgba(155, 89, 182, 0.1)',
+          backgroundColor: `rgba(155, 89, 182, ${backgroundOpacity})`,
           tension: 0.1,
         },
         {
           label: 'Photos Generated',
           data: data.map(item => item.photos_generated),
           borderColor: 'rgb(230, 126, 34)',
-          backgroundColor: 'rgba(230, 126, 34, 0.1)',
+          backgroundColor: `rgba(230, 126, 34, ${backgroundOpacity})`,
           tension: 0.1,
         },
         {
           label: 'Photos Enhanced',
           data: data.map(item => item.photos_enhanced),
           borderColor: 'rgb(231, 76, 60)',
-          backgroundColor: 'rgba(231, 76, 60, 0.1)',
+          backgroundColor: `rgba(231, 76, 60, ${backgroundOpacity})`,
           tension: 0.1,
         },
         {
           label: 'Camera Photos',
           data: data.map(item => item.photos_taken_camera),
           borderColor: 'rgb(46, 204, 113)',
-          backgroundColor: 'rgba(46, 204, 113, 0.1)',
+          backgroundColor: `rgba(46, 204, 113, ${backgroundOpacity})`,
           tension: 0.1,
         },
         {
           label: 'Uploaded Photos',
           data: data.map(item => item.photos_uploaded_browse),
           borderColor: 'rgb(52, 73, 94)',
-          backgroundColor: 'rgba(52, 73, 94, 0.1)',
+          backgroundColor: `rgba(52, 73, 94, ${backgroundOpacity})`,
           tension: 0.1,
         },
         {
           label: 'Twitter Shares',
           data: data.map(item => item.twitter_shares),
           borderColor: 'rgb(29, 161, 242)',
-          backgroundColor: 'rgba(29, 161, 242, 0.1)',
+          backgroundColor: `rgba(29, 161, 242, ${backgroundOpacity})`,
           tension: 0.1,
         }
       ]
