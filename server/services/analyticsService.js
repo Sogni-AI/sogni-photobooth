@@ -172,7 +172,8 @@ export const getDashboardData = async () => {
     });
     
     // Filter out non-trackable prompts and convert to array and sort by combined score
-    const nonTrackablePrompts = ['custom', 'browseGallery', 'random', 'randomMix', 'RANDOM_SINGLE_STYLE'];
+    // With the updated frontend logic, sampler modes are resolved to actual prompts or 'custom'
+    const nonTrackablePrompts = ['custom'];
     const topPrompts = Array.from(promptStats.values())
       .filter(item => !nonTrackablePrompts.includes(item.promptId))
       .sort((a, b) => b.combined - a.combined)

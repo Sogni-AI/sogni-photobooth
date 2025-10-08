@@ -33,33 +33,18 @@ const getApiBaseUrl = () => {
  * @returns {string|null} - The prompt ID or null if not trackable
  */
 export const extractPromptId = (selectedStyle, stylePrompts = {}, actualPrompt = null) => {
-  // Don't track certain special styles
-  const nonTrackableStyles = [
-    'custom',
-    'browseGallery',
-    'random',
-    'randomMix',
-    'RANDOM_SINGLE_STYLE'
-  ];
-  
-  if (!selectedStyle || nonTrackableStyles.includes(selectedStyle)) {
-    return null;
-  }
-  
-  // For randomMix, we need to extract the actual prompt that was used
-  if (selectedStyle === 'randomMix' && actualPrompt) {
+  if (actualPrompt && selectedStyle !== 'custom') {
     // Find which style key matches this exact prompt text
     for (const [styleKey, promptText] of Object.entries(stylePrompts)) {
-      if (promptText === actualPrompt && !nonTrackableStyles.includes(styleKey)) {
+      if (promptText === actualPrompt) {
         return styleKey;
       }
     }
-    // If no exact match found, don't track anything (return null instead of randomMix)
-    return null;
+    return 'custom';
   }
   
   // For regular styles, use the selectedStyle as the prompt ID
-  return selectedStyle;
+  return selectedStyle || 'custom';
 };
 
 /**
