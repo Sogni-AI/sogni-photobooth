@@ -109,7 +109,9 @@ const PhotoGallery = ({
   onCustomSelect = null,
   onThemeChange = null,
   onBackToPhotos = null,
-  initialThemeGroupState = null
+  initialThemeGroupState = null,
+  onSearchChange = null,
+  initialSearchTerm = ''
 }) => {
   // Get settings from context
   const { settings } = useApp();
@@ -147,7 +149,7 @@ const PhotoGallery = ({
   });
   const [showThemeFilters, setShowThemeFilters] = useState(false);
   const [showSearchInput, setShowSearchInput] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState(initialSearchTerm);
   
   // State for video overlay
   const [showVideo, setShowVideo] = useState(false);
@@ -179,6 +181,16 @@ const PhotoGallery = ({
       setThemeGroupState(initialThemeGroupState);
     }
   }, [isPromptSelectorMode, initialThemeGroupState]);
+
+  // Update search term when initialSearchTerm prop changes (only from URL/parent, not local changes)
+  useEffect(() => {
+    if (isPromptSelectorMode) {
+      setSearchTerm(initialSearchTerm);
+      if (initialSearchTerm) {
+        setShowSearchInput(true);
+      }
+    }
+  }, [isPromptSelectorMode, initialSearchTerm]);
 
   // Keep track of the previous photos array length to detect new batches (for legacy compatibility)
   const [, setPreviousPhotosLength] = useState(0);
@@ -2538,7 +2550,13 @@ const PhotoGallery = ({
                   type="text"
                   placeholder="Search styles..."
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={(e) => {
+                    const newValue = e.target.value;
+                    setSearchTerm(newValue);
+                    if (onSearchChange) {
+                      onSearchChange(newValue);
+                    }
+                  }}
                   style={{
                     width: '180px',
                     padding: '6px 10px',
@@ -2563,7 +2581,12 @@ const PhotoGallery = ({
                 />
                 {searchTerm && (
                   <button
-                    onClick={() => setSearchTerm('')}
+                    onClick={() => {
+                      setSearchTerm('');
+                      if (onSearchChange) {
+                        onSearchChange('');
+                      }
+                    }}
                     style={{
                       padding: '4px 6px',
                       fontSize: '11px',
@@ -3706,7 +3729,9 @@ PhotoGallery.propTypes = {
   onCustomSelect: PropTypes.func,
   onThemeChange: PropTypes.func,
   onBackToPhotos: PropTypes.func,
-  initialThemeGroupState: PropTypes.object
+  initialThemeGroupState: PropTypes.object,
+  onSearchChange: PropTypes.func,
+  initialSearchTerm: PropTypes.string
 };
 
 export default PhotoGallery; 

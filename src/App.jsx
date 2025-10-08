@@ -59,24 +59,32 @@ import UploadProgress from './components/shared/UploadProgress';
 import PromoPopup from './components/shared/PromoPopup';
 import NetworkStatus from './components/shared/NetworkStatus';
 import ConfettiCelebration from './components/shared/ConfettiCelebration';
-import AnalyticsDashboard from './components/admin/AnalyticsDashboard';
+// import AnalyticsDashboard from './components/admin/AnalyticsDashboard';
 import { subscribeToConnectionState, getCurrentConnectionState } from './services/api';
 
 
 
-// Helper function to update URL with prompt parameter
+// Enhanced URL management for deep linking
+const updateUrlParams = (updates) => {
+  const url = new URL(window.location.href);
+  
+  // Apply all updates
+  Object.entries(updates).forEach(([key, value]) => {
+    if (value === null || value === undefined || value === '') {
+      url.searchParams.delete(key);
+    } else {
+      url.searchParams.set(key, value);
+    }
+  });
+  
+  window.history.replaceState({}, '', url);
+};
+
+// Helper function to update URL with prompt parameter (backward compatibility)
 const updateUrlWithPrompt = (promptKey) => {
-  if (!promptKey || ['randomMix', 'random', 'custom', 'oneOfEach'].includes(promptKey)) {
-    // Remove the parameter if randomMix or empty
-    const url = new URL(window.location.href);
-    url.searchParams.delete('prompt');
-    window.history.replaceState({}, '', url);
-  } else {
-    // Add/update the parameter
-    const url = new URL(window.location.href);
-    url.searchParams.set('prompt', promptKey);
-    window.history.replaceState({}, '', url);
-  }
+  updateUrlParams({ 
+    prompt: (!promptKey || ['randomMix', 'random', 'custom', 'oneOfEach'].includes(promptKey)) ? null : promptKey 
+  });
 };
 
 // Helper function to get the hashtag for a style
@@ -211,10 +219,6 @@ const App = () => {
     return { ...defaultState, ...saved };
   });
 
-  // Callback to handle theme changes from PromptSelectorPage
-  const handleThemeChange = useCallback((newThemeState) => {
-    setCurrentThemeState(newThemeState);
-  }, []);
 
   // Info modal state - adding back the missing state
   const [showInfoModal, setShowInfoModal] = useState(false);
@@ -230,6 +234,32 @@ const App = () => {
   const [currentPage, setCurrentPage] = useState(() => {
     return immediatePageParam === 'prompts' ? 'prompts' : 'camera';
   });
+
+  // Callback to handle theme changes from PromptSelectorPage
+  const handleThemeChange = useCallback((newThemeState) => {
+    setCurrentThemeState(newThemeState);
+    
+    // Update URL with theme filters for deep linking
+    if (currentPage === 'prompts') {
+      const enabledThemes = Object.entries(newThemeState)
+        .filter(([, enabled]) => enabled)
+        .map(([groupId]) => groupId);
+      
+      // Only add themes parameter if not all themes are selected
+      const allThemes = Object.keys(getDefaultThemeGroupState());
+      const themesParam = enabledThemes.length === allThemes.length ? null : enabledThemes.join(',');
+      
+      updateUrlParams({ themes: themesParam });
+    }
+  }, [currentPage]);
+
+  // Handler for search term changes
+  const handleSearchChange = useCallback((searchTerm) => {
+    // Update URL with search term for deep linking
+    if (currentPage === 'prompts') {
+      updateUrlParams({ search: searchTerm || null });
+    }
+  }, [currentPage]);
   
   // PWA install prompt state - for manual testing only
   const [showPWAPromptManually, setShowPWAPromptManually] = useState(false);
@@ -610,14 +640,19 @@ const App = () => {
     return () => { isCancelled = true; };
   }, [currentPage, lastEditablePhoto, lastPhotoData]);
 
+  // State for URL-based search parameters
+  const [urlSearchTerm, setUrlSearchTerm] = useState('');
+
   // --- Handle URL parameters for deeplinks ---
   useEffect(() => {
-    // Check for prompt parameter in URL
+    // Check for all URL parameters
     const url = new URL(window.location.href);
     const promptParam = url.searchParams.get('prompt');
     const pageParam = url.searchParams.get('page');
     const extensionParam = url.searchParams.get('extension');
     const skipWelcomeParam = url.searchParams.get('skipWelcome');
+    const themesParam = url.searchParams.get('themes');
+    const searchParam = url.searchParams.get('search');
     
     // Skip welcome screen if requested (e.g., from browser extension)
     if (skipWelcomeParam === 'true') {
@@ -644,6 +679,29 @@ const App = () => {
         
         window.addEventListener('message', handleExtensionMessage);
       }
+    }
+    
+    // Handle theme filters parameter
+    if (themesParam && currentPage === 'prompts') {
+      try {
+        const themeIds = themesParam.split(',');
+        const defaultState = getDefaultThemeGroupState();
+        const newThemeState = Object.fromEntries(
+          Object.keys(defaultState).map(groupId => [
+            groupId, 
+            themeIds.includes(groupId)
+          ])
+        );
+        setCurrentThemeState(newThemeState);
+        saveThemeGroupPreferences(newThemeState);
+      } catch (error) {
+        console.warn('Invalid themes parameter:', themesParam);
+      }
+    }
+    
+    // Handle search parameter
+    if (searchParam && currentPage === 'prompts') {
+      setUrlSearchTerm(searchParam);
     }
     
     if (promptParam && stylePrompts && promptParam !== selectedStyle) {
@@ -810,6 +868,13 @@ const App = () => {
   useEffect(() => {
     const updatePolaroidBorders = () => {
       const root = document.documentElement;
+      
+      // In Style Explorer (prompts mode), always show default polaroid borders regardless of theme
+      if (currentPage === 'prompts') {
+        // Don't modify borders here - let the prompts mode effect handle it
+        return;
+      }
+      
       if (tezdevTheme !== 'off') {
         // Theme frame is active - remove polaroid borders since theme provides its own
         root.style.setProperty('--polaroid-side-border', '0px');
@@ -822,7 +887,7 @@ const App = () => {
     };
 
     updatePolaroidBorders();
-  }, [tezdevTheme]);
+  }, [tezdevTheme, currentPage]);
 
   // At the top of App component, add a new ref for tracking project state
   const projectStateReference = useRef({
@@ -1028,6 +1093,9 @@ const App = () => {
     // Set page to prompts (Sample Gallery mode)
     setCurrentPage('prompts');
     
+    // Update URL to reflect prompts page
+    updateUrlParams({ page: 'prompts' });
+    
     // Ensure photo grid is shown in Sample Gallery mode
     setShowPhotoGrid(true);
   };
@@ -1045,6 +1113,9 @@ const App = () => {
     
     // Set page back to camera
     setCurrentPage('camera');
+    
+    // Update URL to reflect camera page
+    updateUrlParams({ page: null });
     
     // Navigate to start menu instead of directly starting camera
     // This prevents unwanted camera permission requests on mobile/iPad
@@ -1073,6 +1144,9 @@ const App = () => {
     
     // Set page back to camera (this exits Sample Gallery mode)
     setCurrentPage('camera');
+    
+    // Update URL to reflect camera page
+    updateUrlParams({ page: null });
     
     // Show photo grid to display user's photos
     setShowPhotoGrid(true);
@@ -1110,7 +1184,7 @@ const App = () => {
       return;
     }
     
-    // Update style without URL changes to avoid navigation issues
+    // Update style and URL for deep linking
     updateSetting('selectedStyle', promptKey);
     if (promptKey === 'custom') {
       updateSetting('positivePrompt', ''); 
@@ -1120,7 +1194,8 @@ const App = () => {
     }
     // Update current hashtag for sharing
     setCurrentHashtag(getHashtagForStyle(promptKey));
-    // Don't call updateUrlWithPrompt to avoid URL navigation issues
+    // Update URL with selected prompt for deep linking
+    updateUrlWithPrompt(promptKey);
     // Don't automatically redirect - let user choose to navigate with camera/photos buttons
     
     // Close the photo popup to provide visual feedback that the style was selected
@@ -1128,26 +1203,32 @@ const App = () => {
   };
 
   const handleRandomMixFromPage = () => {
-    // Update style without URL changes to avoid navigation issues
+    // Update style and URL for deep linking
     updateSetting('selectedStyle', 'randomMix');
     updateSetting('positivePrompt', '');
     setCurrentHashtag(null);
+    // Update URL (randomMix will clear the prompt parameter)
+    updateUrlWithPrompt('randomMix');
     // Don't automatically redirect - let user choose to navigate with camera/photos buttons
   };
 
   const handleRandomSingleFromPage = () => {
-    // Update style without URL changes to avoid navigation issues
+    // Update style and URL for deep linking
     updateSetting('selectedStyle', 'random');
     updateSetting('positivePrompt', '');
     setCurrentHashtag(null);
+    // Update URL (random will clear the prompt parameter)
+    updateUrlWithPrompt('random');
     // Don't automatically redirect - let user choose to navigate with camera/photos buttons
   };
 
   const handleOneOfEachFromPage = () => {
-    // Update style without URL changes to avoid navigation issues
+    // Update style and URL for deep linking
     updateSetting('selectedStyle', 'oneOfEach');
     updateSetting('positivePrompt', '');
     setCurrentHashtag(null);
+    // Update URL (oneOfEach will clear the prompt parameter)
+    updateUrlWithPrompt('oneOfEach');
     // Don't automatically redirect - let user choose to navigate with camera/photos buttons
   };
 
@@ -1156,6 +1237,8 @@ const App = () => {
     updateSetting('selectedStyle', 'custom');
     updateSetting('positivePrompt', '');
     setCurrentHashtag(null);
+    // Update URL (custom will clear the prompt parameter)
+    updateUrlWithPrompt('custom');
     // Show control overlay for custom prompt editing - stay in Sample Gallery mode
     setShowControlOverlay(true);
     // Set flag to auto-focus positive prompt
@@ -4618,6 +4701,8 @@ const App = () => {
                 onThemeChange={handleThemeChange}
                 onBackToPhotos={handleBackToPhotosFromPromptSelector}
                 initialThemeGroupState={currentThemeState}
+                onSearchChange={handleSearchChange}
+                initialSearchTerm={urlSearchTerm}
               />
             </div>
           )}
