@@ -111,6 +111,10 @@ interface AdvancedSettingsProps {
   kioskMode?: boolean;
   /** Handler for kiosk mode change */
   onKioskModeChange?: (enabled: boolean) => void;
+  /** Show splash on inactivity state */
+  showSplashOnInactivity?: boolean;
+  /** Handler for show splash on inactivity change */
+  onShowSplashOnInactivityChange?: (enabled: boolean) => void;
 }
 
 /**
@@ -289,6 +293,8 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
     onSensitiveContentFilterChange,
     kioskMode = false,
     onKioskModeChange,
+    showSplashOnInactivity = false,
+    onShowSplashOnInactivityChange,
   } = props;
 
   // Determine the current model for getting defaults and ranges
@@ -442,6 +448,15 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
       onKioskModeChange(enabled);
     } else {
       updateSetting('kioskMode', enabled);
+    }
+  };
+
+  const handleShowSplashOnInactivityChange = (enabled: boolean) => {
+    // Use the provided handler or fallback to context
+    if (onShowSplashOnInactivityChange) {
+      onShowSplashOnInactivityChange(enabled);
+    } else {
+      updateSetting('showSplashOnInactivity', enabled);
     }
   };
 
@@ -1048,6 +1063,17 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
             onChange={(e) => handleKioskModeChange(e.target.checked)}
           />
           <label htmlFor="kiosk-mode-toggle" className="control-label">Kiosk Mode (Share via QR Code)</label>
+        </div>
+        
+        {/* Show Splash on Inactivity toggle */}
+        <div className="control-option checkbox">
+          <input
+            type="checkbox"
+            id="splash-inactivity-toggle"
+            checked={showSplashOnInactivity || settings.showSplashOnInactivity}
+            onChange={(e) => handleShowSplashOnInactivityChange(e.target.checked)}
+          />
+          <label htmlFor="splash-inactivity-toggle" className="control-label">Show Splash Screen on Inactivity</label>
         </div>
         
         {/* Reset settings button */}

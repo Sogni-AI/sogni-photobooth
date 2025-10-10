@@ -199,7 +199,9 @@ const App = () => {
     tezdevTheme,
     outputFormat,
     sensitiveContentFilter,
-    kioskMode
+    kioskMode,
+    showSplashOnInactivity,
+    inactivityTimeout
   } = settings;
 
   // Extract preferredCameraDeviceId for easier access
@@ -936,13 +938,137 @@ const App = () => {
 
   // Add state for splash screen
   const [showSplashScreen, setShowSplashScreen] = useState(true);
+  const [splashTriggeredByInactivity, setSplashTriggeredByInactivity] = useState(false);
+  
+  // Debug: Log when splash screen state changes
+  useEffect(() => {
+    console.log('🎬 Splash screen state changed:', showSplashScreen ? 'SHOWING' : 'HIDDEN');
+  }, [showSplashScreen]);
+
+  // Debug: Log current inactivity settings
+  useEffect(() => {
+    console.log('⚙️ Inactivity settings:', {
+      showSplashOnInactivity,
+      inactivityTimeout,
+      settingsObject: settings
+    });
+    
+    // Check what's actually in localStorage
+    const storedValue = localStorage.getItem('sogni_showSplashOnInactivity');
+    console.log('💾 Value in localStorage:', storedValue);
+  }, [showSplashOnInactivity, inactivityTimeout, settings]);
+  
+  // Inactivity timer for splash screen
+  const inactivityTimerRef = useRef(null);
+  const lastActivityRef = useRef(Date.now());
 
   // Cleanup timeouts when component unmounts
   useEffect(() => {
     return () => {
       clearAllTimeouts();
+      if (inactivityTimerRef.current) {
+        clearTimeout(inactivityTimerRef.current);
+      }
     };
   }, []);
+
+  // Function to reset inactivity timer
+  const resetInactivityTimer = useCallback(() => {
+    console.log('🔄 Resetting inactivity timer', {
+      showSplashOnInactivity,
+      showSplashScreen,
+      inactivityTimeout,
+      timestamp: new Date().toLocaleTimeString()
+    });
+    
+    lastActivityRef.current = Date.now();
+    
+    if (inactivityTimerRef.current) {
+      console.log('⏹️ Clearing existing timer');
+      clearTimeout(inactivityTimerRef.current);
+    }
+    
+    if (showSplashOnInactivity && !showSplashScreen) {
+      console.log(`⏰ Setting new timer for ${inactivityTimeout} seconds`);
+      inactivityTimerRef.current = setTimeout(() => {
+        console.log('🚀 Inactivity timeout reached - showing splash screen');
+        setSplashTriggeredByInactivity(true);
+        setShowSplashScreen(true);
+      }, inactivityTimeout * 1000);
+    } else {
+      console.log('❌ Not setting timer:', {
+        showSplashOnInactivity: showSplashOnInactivity ? 'enabled' : 'disabled',
+        showSplashScreen: showSplashScreen ? 'already showing' : 'hidden'
+      });
+    }
+  }, [showSplashOnInactivity, inactivityTimeout, showSplashScreen]);
+
+  // Set up inactivity detection
+  useEffect(() => {
+    console.log('🔧 Inactivity detection useEffect triggered', {
+      showSplashOnInactivity,
+      showSplashScreen,
+      inactivityTimeout
+    });
+
+    if (!showSplashOnInactivity) {
+      console.log('🚫 Inactivity detection disabled - clearing timer');
+      if (inactivityTimerRef.current) {
+        clearTimeout(inactivityTimerRef.current);
+        inactivityTimerRef.current = null;
+      }
+      return;
+    }
+
+    const events = ['mousedown', 'keypress', 'scroll', 'touchstart', 'click'];
+    
+    // Throttle mousemove to avoid excessive logging and timer resets
+    let mouseMoveThrottle = null;
+    const handleMouseMove = () => {
+      if (mouseMoveThrottle) return;
+      console.log('👆 User activity detected: mousemove (throttled)');
+      resetInactivityTimer();
+      mouseMoveThrottle = setTimeout(() => {
+        mouseMoveThrottle = null;
+      }, 1000); // Throttle to once per second
+    };
+    
+    const handleActivity = (event) => {
+      console.log('👆 User activity detected:', event.type);
+      resetInactivityTimer();
+    };
+
+    console.log('📡 Adding event listeners for:', [...events, 'mousemove (throttled)']);
+    // Add event listeners
+    events.forEach(event => {
+      document.addEventListener(event, handleActivity, true);
+    });
+    // Add throttled mousemove listener
+    document.addEventListener('mousemove', handleMouseMove, true);
+
+    // Start the timer if splash screen is not currently showing
+    if (!showSplashScreen) {
+      console.log('🎬 Splash screen not showing - starting inactivity timer');
+      resetInactivityTimer();
+    } else {
+      console.log('🎬 Splash screen already showing - not starting timer');
+    }
+
+    return () => {
+      console.log('🧹 Cleaning up inactivity detection');
+      // Cleanup event listeners
+      events.forEach(event => {
+        document.removeEventListener(event, handleActivity, true);
+      });
+      document.removeEventListener('mousemove', handleMouseMove, true);
+      if (mouseMoveThrottle) {
+        clearTimeout(mouseMoveThrottle);
+      }
+      if (inactivityTimerRef.current) {
+        clearTimeout(inactivityTimerRef.current);
+      }
+    };
+  }, [showSplashOnInactivity, inactivityTimeout, showSplashScreen, resetInactivityTimer]);
 
   // Track page views when view changes
   useEffect(() => {
@@ -5822,8 +5948,20 @@ const App = () => {
   return (
     <>
       {/* Splash Screen */}
-      {showSplashScreen && (
-        <SplashScreen onDismiss={() => setShowSplashScreen(false)} />
+      {showSplashScreen ? (
+        <>
+          {console.log('🎬 RENDERING SplashScreen component')}
+          <SplashScreen 
+            bypassLocalStorage={splashTriggeredByInactivity}
+            onDismiss={() => {
+              console.log('🎬 Splash screen dismissed - will restart inactivity timer if enabled');
+              setShowSplashScreen(false);
+              setSplashTriggeredByInactivity(false); // Reset the flag
+            }} 
+          />
+        </>
+      ) : (
+        console.log('🎬 NOT rendering SplashScreen - showSplashScreen is false')
       )}
       
       {/* PWA Install Prompt - Always rendered, handles its own timing and visibility */}
@@ -6003,6 +6141,11 @@ const App = () => {
           onKioskModeChange={(value) => {
             updateSetting('kioskMode', value);
             saveSettingsToCookies({ kioskMode: value });
+          }}
+          showSplashOnInactivity={showSplashOnInactivity}
+          onShowSplashOnInactivityChange={(value) => {
+            updateSetting('showSplashOnInactivity', value);
+            saveSettingsToCookies({ showSplashOnInactivity: value });
           }}
           onResetSettings={resetSettings} // Pass context reset function
           modelOptions={getModelOptions()} 

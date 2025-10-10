@@ -171,13 +171,13 @@
   border-radius: 15px;
 }
 
-.slideshow-container {
+.video-container {
   flex: 0 0 auto;
   position: relative;
   height: auto;
 }
 
-.splash-screen.hiding .slideshow-container {
+.splash-screen.hiding .video-container {
   animation: slideshowFlyRight 1.5s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
 }
 
@@ -196,22 +196,16 @@
   }
 }
 
-/* Override the fixed positioning in the original slideshow */
-.slideshow-container .gallery-slideshow {
+/* Video container styling */
+.video-container {
   position: relative;
-  top: auto;
-  right: auto;
-  bottom: auto;
-  left: auto;
   margin: 0;
-  transform: none !important;
-  opacity: 1;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
-  width: 330px;
-  height: 465px; /* Adjusted for aspect ratio */
-  border-radius: 20px;
-  overflow: hidden;
-  border: 4px solid rgba(255, 255, 255, 0.8);
+  width: 340px; /* Match video's native width */
+}
+
+.splash-video {
+  width: 340px; /* Set to native video width */
+  object-fit: contain;
 }
 
 @keyframes textSlideIn {
@@ -277,12 +271,70 @@
   50% { opacity: 0.4; }
 }
 
-/* Hide the close button on the slideshow */
-.splash-screen .slideshow-close-btn {
-  display: none !important;
+/* Audio Toggle Button */
+.audio-toggle-btn {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: rgba(0, 0, 0, 0.6);
+  border: none;
+  border-radius: 50%;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: white;
+  transition: all 0.3s ease;
+  z-index: 10001;
+  backdrop-filter: blur(10px);
 }
 
-/* Responsive styles */
+.audio-toggle-btn:hover {
+  background: rgba(0, 0, 0, 0.8);
+  transform: scale(1.1);
+}
+
+.audio-toggle-btn:active {
+  transform: scale(0.95);
+}
+
+/* Video-specific styles for splash screen */
+.splash-screen .splash-video {
+  transition: opacity 0.3s ease;
+}
+
+/* Responsive styles for audio toggle */
+@media (max-width: 692px) {
+  .audio-toggle-btn {
+    top: 15px;
+    right: 15px;
+    width: 40px;
+    height: 40px;
+  }
+  
+  .audio-toggle-btn svg {
+    width: 20px;
+    height: 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .audio-toggle-btn {
+    top: 10px;
+    right: 10px;
+    width: 36px;
+    height: 36px;
+  }
+  
+  .audio-toggle-btn svg {
+    width: 18px;
+    height: 18px;
+  }
+}
+
+/* Main responsive styles */
 @media (max-width: 692px) {
   
   .splash-layout {
@@ -300,9 +352,9 @@
     max-width: 160px;
   }
   
-  .slideshow-container .gallery-slideshow {
+  .video-container {
     width: 280px;
-    height: 393px;
+    height: 420px; /* Proportional to 340x510 */
   }
   
   .splash-tagline {
@@ -366,9 +418,9 @@
     top: -35px;
   }
   
-  .slideshow-container .gallery-slideshow {
+  .video-container {
     width: 240px;
-    height: 338px;
+    height: 360px; /* Proportional to 340x510 */
   }
   
   .splash-tagline {
@@ -444,9 +496,9 @@
     padding: 4px 8px;
   }
   
-  .slideshow-container .gallery-slideshow {
+  .video-container {
     width: 200px;
-    height: 280px;
+    height: 300px; /* Proportional to 340x510 */
   }
   
   .splash-cta-section {
@@ -474,9 +526,9 @@
     max-width: 100px;
   }
   
-  .slideshow-container .gallery-slideshow {
+  .video-container {
     width: 160px;
-    height: 225px;
+    height: 240px; /* Proportional to 340x510 */
   }
   
   .splash-tagline {

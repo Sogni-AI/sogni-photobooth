@@ -127,7 +127,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       // Worker preferences
       requiredWorkers: getSettingFromCookie('requiredWorkers', DEFAULT_SETTINGS.requiredWorkers),
       preferWorkers: getSettingFromCookie('preferWorkers', DEFAULT_SETTINGS.preferWorkers),
-      skipWorkers: getSettingFromCookie('skipWorkers', DEFAULT_SETTINGS.skipWorkers)
+      skipWorkers: getSettingFromCookie('skipWorkers', DEFAULT_SETTINGS.skipWorkers),
+      // Inactivity splash screen settings
+      showSplashOnInactivity: getSettingFromCookie('showSplashOnInactivity', DEFAULT_SETTINGS.showSplashOnInactivity),
+      inactivityTimeout: getSettingFromCookie('inactivityTimeout', DEFAULT_SETTINGS.inactivityTimeout)
     };
   });
   
@@ -163,8 +166,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       // Save model-specific settings separately
       const modelSpecificSettings = ['inferenceSteps', 'scheduler', 'timeStepSpacing', 'promptGuidance', 'guidance', 'numImages'];
       if (modelSpecificSettings.includes(key)) {
+        console.log(`📦 Saving model-specific setting ${String(key)}`);
         saveModelSpecificSettings(newSettings.selectedModel, { [key]: value });
       } else {
+        console.log(`🌐 Saving global setting ${String(key)} via saveSettingsToCookies`);
         saveSettingsToCookies({ [key]: value });
       }
       
@@ -233,6 +238,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
   
   const resetSettings = () => {
+    console.log('🔄 RESET SETTINGS CALLED - This will reset showSplashOnInactivity to false');
+    console.trace('Reset settings call stack');
+    
     // Get the current model
     const currentModel = settings.selectedModel;
     

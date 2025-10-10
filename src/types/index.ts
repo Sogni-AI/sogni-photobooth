@@ -100,4 +100,7 @@ export interface Settings {
   requiredWorkers: string[];
   preferWorkers: string[];
   skipWorkers: string[];
+  // Inactivity splash screen settings
+  showSplashOnInactivity: boolean;
+  inactivityTimeout: number; // in seconds
 } 

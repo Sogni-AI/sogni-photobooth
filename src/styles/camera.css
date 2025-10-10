@@ -2,15 +2,6 @@
    Camera / Webcam Feed
    --------------------- */
 
-/* Wrapper ensuring video fills available area while preserving aspect ratio */
-.video-container {
-  position: relative !important;
-  inset: unset !important;
-  width: 100% !important;
-  height: auto !important;
-  z-index: 2;
-}
-
 /* Actual <video> element (id="webcam") */
 #webcam {
   @apply w-full h-full object-cover;

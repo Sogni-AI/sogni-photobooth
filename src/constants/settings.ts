@@ -172,6 +172,9 @@ const createDefaultSettings = (): Settings => {
     requiredWorkers: [],
     preferWorkers: ['SPICE.MUST.FLOW'],
     skipWorkers: ['freeman123'],
+    // Inactivity splash screen settings
+    showSplashOnInactivity: false, // Default to disabled
+    inactivityTimeout: 60 * 5, // Default to 5 minutes
   };
 };
 

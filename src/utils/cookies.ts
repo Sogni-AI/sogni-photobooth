@@ -22,16 +22,23 @@ export function getSettingFromCookie<T>(name: string, defaultValue: T): T {
 }
 
 export function saveSettingsToCookies(settings: Partial<Settings>): void {
+  console.log('🍪 saveSettingsToCookies called with:', settings);
   Object.entries(settings).forEach(([key, value]) => {
     try {
       if (value === undefined) {
         // Remove the setting if value is undefined
+        console.log(`🗑️ Removing setting ${key} from localStorage`);
         localStorage.removeItem(`sogni_${key}`);
       } else {
+        console.log(`💾 Saving setting ${key} = ${value} to localStorage as sogni_${key}`);
         localStorage.setItem(`sogni_${key}`, JSON.stringify(value));
+        
+        // Verify it was saved
+        const saved = localStorage.getItem(`sogni_${key}`);
+        console.log(`✅ Verification: sogni_${key} = ${saved}`);
       }
     } catch (e) {
-      console.warn(`Error saving setting ${key}:`, e);
+      console.warn(`❌ Error saving setting ${key}:`, e);
     }
   });
 }
