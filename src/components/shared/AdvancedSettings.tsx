@@ -315,10 +315,20 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
       }, 150);
     }
   }, [visible, autoFocusPositivePrompt]);
-  const modelRanges = getModelRanges(currentModel);
+  // Check if user is logged in with frontend auth to allow higher image limits
+  const isLoggedInWithFrontendAuth = authState.isAuthenticated && authState.authMode === 'frontend';
+  const modelRanges = getModelRanges(currentModel, isLoggedInWithFrontendAuth);
 
   // Apply defaults to props that weren't provided
   const finalNumImages = numImages ?? modelDefaults.numImages ?? 8;
+  
+  // Effect to clamp numImages when auth state changes and limits change
+  useEffect(() => {
+    const maxImages = modelRanges.numImages?.max || 16;
+    if (finalNumImages > maxImages) {
+      onNumImagesChange?.(maxImages);
+    }
+  }, [isLoggedInWithFrontendAuth, currentModel, finalNumImages, modelRanges.numImages?.max, onNumImagesChange]);
   const finalPromptGuidance = promptGuidance ?? modelDefaults.promptGuidance ?? 2;
   const finalGuidance = guidance ?? modelDefaults.guidance ?? 3;
   const finalControlNetStrength = controlNetStrength ?? modelDefaults.controlNetStrength ?? 0.7;

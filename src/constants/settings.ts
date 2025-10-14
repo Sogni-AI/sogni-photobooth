@@ -61,8 +61,13 @@ export const isFluxKontextModel = (modelValue: string): boolean => {
   return modelValue === "flux1-dev-kontext_fp8_scaled";
 };
 
+// Helper function to identify Stable Diffusion models (SDXL-based models)
+export const isStableDiffusionModel = (modelValue: string): boolean => {
+  return !isFluxKontextModel(modelValue);
+};
+
 // Model parameter ranges and constraints
-export const getModelRanges = (modelValue: string) => {
+export const getModelRanges = (modelValue: string, isLoggedInWithFrontendAuth: boolean = false) => {
   if (isFluxKontextModel(modelValue)) {
     return {
       guidance: { min: 1, max: 5, step: 0.1, default: 2.8 },
@@ -73,14 +78,17 @@ export const getModelRanges = (modelValue: string) => {
     };
   }
   
-  // Ranges for other models (SDXL-based)
+  // Ranges for Stable Diffusion models (SDXL-based)
+  // When user is logged in with frontend auth and spending own credits, allow up to 512 images
+  const maxImages = isLoggedInWithFrontendAuth ? 512 : 16;
+  
   return {
     promptGuidance: { min: 1.8, max: 3, step: 0.1, default: 2 },
     guidance: { min: 1, max: 5, step: 0.1, default: 3 }, // Not used but kept for consistency
     controlNetStrength: { min: 0.4, max: 1, step: 0.1, default: 0.7 },
     controlNetGuidanceEnd: { min: 0.2, max: 0.8, step: 0.1, default: 0.6 },
     inferenceSteps: { min: 4, max: 10, step: 1, default: 7 },
-    numImages: { min: 1, max: 16, step: 1, default: 8 },
+    numImages: { min: 1, max: maxImages, step: 1, default: 8 },
     schedulerOptions: ['DPM++ SDE', 'DPM++ 2M SDE'],
     timeStepSpacingOptions: ['Karras', 'SGM Uniform'],
   };
