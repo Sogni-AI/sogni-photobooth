@@ -106,38 +106,56 @@ export class FrontendProjectAdapter extends BrowserEventEmitter implements Sogni
     // Set up global job event handler for progress events (better reliability)
     this.setupGlobalProgressHandler();
 
-    // Listen for individual project events for prompt capture (better accuracy)
-    this.realProject.on('jobStarted', (event: any) => {
-      // Capture individual job prompt if provided in the event
+    // CRITICAL FIX: Set up comprehensive job prompt capture to handle RandomMix race condition
+    // Listen for ALL possible events that might contain individual job prompts
+    const captureJobPrompt = (event: any, source: string) => {
       const jobId = event.jobId || event.id;
       if (jobId && event.positivePrompt) {
+        console.log(`🔧 Captured job prompt from ${source}:`, { jobId, positivePrompt: event.positivePrompt });
         this.jobPrompts.set(jobId, event.positivePrompt);
       }
+    };
+
+    // Listen for individual project events for prompt capture (better accuracy)
+    this.realProject.on('jobStarted', (event: any) => {
+      captureJobPrompt(event, 'jobStarted');
     });
 
     // Also listen for any other events that might contain individual job prompts
     this.realProject.on('progress', (event: any) => {
-      const jobId = event.jobId || event.id;
-      if (jobId && event.positivePrompt) {
-        this.jobPrompts.set(jobId, event.positivePrompt);
-      }
+      captureJobPrompt(event, 'progress');
     });
 
     this.realProject.on('jobCompleted', (event: any) => {
-      const jobId = event.jobId || event.id;
-      if (jobId && event.positivePrompt) {
-        this.jobPrompts.set(jobId, event.positivePrompt);
-      }
+      captureJobPrompt(event, 'jobCompleted');
     });
+
+    // ADDITIONAL: Listen for job events directly from the real client if available
+    if (this.realClient && this.realClient.projects && typeof this.realClient.projects.on === 'function') {
+      this.realClient.projects.on('job', (event: any) => {
+        // Only process events for this specific project
+        if (event.projectId === this.realProject.id) {
+          captureJobPrompt(event, 'client.projects.job');
+        }
+      });
+    }
 
     // Map jobStarted events to job events with 'started' type
     this.realProject.on('jobStarted', (job: any) => {
       
-      // Capture individual job prompt from the job object itself
-      if (job.id && job.positivePrompt) {
-        this.jobPrompts.set(job.id, job.positivePrompt);
-      } else if (job.id && job.params && job.params.positivePrompt) {
-        this.jobPrompts.set(job.id, job.params.positivePrompt);
+      // ENHANCED: Capture individual job prompt from multiple sources in the job object
+      if (job.id) {
+        let jobPrompt = '';
+        if (job.positivePrompt) {
+          jobPrompt = job.positivePrompt;
+        } else if (job.params && job.params.positivePrompt) {
+          jobPrompt = job.params.positivePrompt;
+        }
+        
+        if (jobPrompt) {
+          console.log(`🔧 Captured job prompt from jobStarted object:`, { jobId: job.id, positivePrompt: jobPrompt });
+          this.jobPrompts.set(job.id, jobPrompt);
+        }
       }
       
       // Assign job index
@@ -167,24 +185,33 @@ export class FrontendProjectAdapter extends BrowserEventEmitter implements Sogni
     // Map jobCompleted events with proper completion tracking
     this.realProject.on('jobCompleted', (job: any) => {
       
-      // Try multiple sources for the individual job prompt
+      // Try multiple sources for the individual job prompt with enhanced debugging
       let individualJobPrompt = '';
+      let promptSource = '';
       
-      // 1. Check our captured prompts map
+      // 1. Check our captured prompts map (PREFERRED for RandomMix)
       if (this.jobPrompts.has(job.id)) {
         individualJobPrompt = this.jobPrompts.get(job.id) || '';
+        promptSource = 'captured-map';
       }
       // 2. Check job object itself
       else if (job.positivePrompt) {
         individualJobPrompt = job.positivePrompt;
+        promptSource = 'job-object';
+        // Also store it for future reference
+        this.jobPrompts.set(job.id, job.positivePrompt);
       }
       // 3. Check job params
       else if (job.params && job.params.positivePrompt) {
         individualJobPrompt = job.params.positivePrompt;
+        promptSource = 'job-params';
+        // Also store it for future reference
+        this.jobPrompts.set(job.id, job.params.positivePrompt);
       }
-      // 4. Fallback to project prompt
+      // 4. Fallback to project prompt (this causes the race condition issue for RandomMix)
       else {
         individualJobPrompt = this.realProject.params?.positivePrompt || '';
+        promptSource = 'project-fallback';
       }
       
       // Emit the jobCompleted event that the UI expects
