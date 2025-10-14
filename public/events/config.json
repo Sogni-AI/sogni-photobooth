@@ -14,6 +14,17 @@
         ]
       }
     },
+    "RIT 2": {
+      "label": "RIT X Sogni 2",
+      "defaultAspectRatio": "narrow",
+      "framePadding": { "top": 0, "left": 0, "right": 0, "bottom": 0 },
+      "tweetTemplate": "Just took my AI photo at RIT via @sogni_protocol https://photobooth.sogni.ai",
+      "frames": {
+        "narrow": [
+          "/events/RIT2/narrow_1.png"
+        ]
+      }
+    },
     "taipeiblockchain": {
       "label": "Taipei Blockchain Week 2025",
       "defaultAspectRatio": "narrow",
