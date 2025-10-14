@@ -3,25 +3,14 @@
   "defaultTheme": null,
   "themes": {
     
-    "token2049-singapore-2025-Dreamhaus": {
-      "label": "Token2049 Singapore 2025 - Dreamhaus",
+    "RIT": {
+      "label": "RIT X Sogni",
       "defaultAspectRatio": "narrow",
-      "framePadding": { "top": 0, "left": 0, "right": 110, "bottom": 123 },
-      "tweetTemplate": "Just took my AI photo at Token2049 Singapore Dreamhaus via @sogni_protocol @nosana_ai @tezos https://photobooth.sogni.ai",
+      "framePadding": { "top": 0, "left": 0, "right": 0, "bottom": 46 },
+      "tweetTemplate": "Just took my AI photo at RIT via @sogni_protocol https://photobooth.sogni.ai",
       "frames": {
         "narrow": [
-          "/events/token2049-singapore-2025-Dreamhaus/narrow_1.png"
-        ]
-      }
-    },
-    "token2049-singapore-2025-Dreamhaus2": {
-      "label": "Token2049 Singapore 2025 - Dreamhaus 2",
-      "defaultAspectRatio": "narrow",
-      "framePadding": { "top": 0, "left": 0, "right": 110, "bottom": 123 },
-      "tweetTemplate": "Just took my AI photo at Token2049 Singapore Dreamhaus via @sogni_protocol @nosana_ai @tezos https://photobooth.sogni.ai",
-      "frames": {
-        "narrow": [
-          "/events/token2049-singapore-2025-Dreamhaus2/narrow_1.png"
+          "/events/RIT/narrow_1.png"
         ]
       }
     },
