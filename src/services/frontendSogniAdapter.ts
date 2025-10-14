@@ -187,31 +187,26 @@ export class FrontendProjectAdapter extends BrowserEventEmitter implements Sogni
       
       // Try multiple sources for the individual job prompt with enhanced debugging
       let individualJobPrompt = '';
-      let promptSource = '';
       
       // 1. Check our captured prompts map (PREFERRED for RandomMix)
       if (this.jobPrompts.has(job.id)) {
         individualJobPrompt = this.jobPrompts.get(job.id) || '';
-        promptSource = 'captured-map';
       }
       // 2. Check job object itself
       else if (job.positivePrompt) {
         individualJobPrompt = job.positivePrompt;
-        promptSource = 'job-object';
         // Also store it for future reference
         this.jobPrompts.set(job.id, job.positivePrompt);
       }
       // 3. Check job params
       else if (job.params && job.params.positivePrompt) {
         individualJobPrompt = job.params.positivePrompt;
-        promptSource = 'job-params';
         // Also store it for future reference
         this.jobPrompts.set(job.id, job.params.positivePrompt);
       }
       // 4. Fallback to project prompt (this causes the race condition issue for RandomMix)
       else {
         individualJobPrompt = this.realProject.params?.positivePrompt || '';
-        promptSource = 'project-fallback';
       }
       
       // Emit the jobCompleted event that the UI expects
