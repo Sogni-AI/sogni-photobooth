@@ -915,7 +915,8 @@ const App = () => {
   // Add new state for button cooldown
   const [isPhotoButtonCooldown, setIsPhotoButtonCooldown] = useState(false); // Keep this
   // Ref to track current project
-  const activeProjectReference = useRef(null); // Keep this
+  const activeProjectReference = useRef(null);
+  const activeProjectObjectReference = useRef(null); // Keep this
   
   // Ref to track project timeouts and job state
   const projectTimeoutRef = useRef({
@@ -2133,7 +2134,16 @@ const App = () => {
 
         client.projects.on('job', (event) => {
           console.log('Job event full payload:', event);
-          // Only keep this for logging - individual job progress is handled by the adapter
+          
+          // For frontend clients, capture individual job prompts and pass them to the active project adapter
+          if (authState.authMode === 'frontend' && activeProjectObjectReference.current && event.positivePrompt) {
+            const project = activeProjectObjectReference.current;
+            
+            // If the project is our adapter, store the individual job prompt
+            if (project && typeof project.setJobPrompt === 'function') {
+              project.setJobPrompt(event.jobId, event.positivePrompt);
+            }
+          }
         });
       }
 
@@ -3548,6 +3558,7 @@ const App = () => {
       const project = await sogniClient.projects.create(projectConfig);
 
       activeProjectReference.current = project.id;
+      activeProjectObjectReference.current = project;
       console.log('Project created:', project.id, 'with jobs:', project.jobs);
       console.log('Initializing job map for project', project.id);
       

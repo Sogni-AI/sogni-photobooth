@@ -64,11 +64,26 @@ export class FrontendProjectAdapter extends BrowserEventEmitter implements Sogni
   private nextJobIndex: number = 0;
   private isCompleted: boolean = false;
   private uploadProgressEmitted: boolean = false;
+  private jobPrompts: Map<string, string> = new Map(); // Store individual job prompts from global events
+  private completionTracker = {
+    expectedJobs: 0,
+    sentJobCompletions: 0,
+    projectCompletionReceived: false,
+    projectCompletionEvent: null as any,
+    jobCompletionTimeouts: new Map<string, NodeJS.Timeout>()
+  };
 
   constructor(realProject: any) {
     super();
     this.realProject = realProject;
+    // Initialize completion tracker with expected job count
+    this.completionTracker.expectedJobs = realProject.params?.numberOfImages || 1;
     this.setupEventMapping();
+  }
+
+  // Method to set individual job prompt from global events
+  setJobPrompt(jobId: string, positivePrompt: string) {
+    this.jobPrompts.set(jobId, positivePrompt);
   }
 
   // Expose the real project's properties and methods
@@ -84,8 +99,41 @@ export class FrontendProjectAdapter extends BrowserEventEmitter implements Sogni
     // Handle upload progress - the real SDK doesn't emit this, so we simulate it
     this.simulateUploadProgress();
 
+    // Listen for global events that contain individual job prompts (like the backend does)
+    // The Sogni SDK emits events with individual resolved prompts from {prompt1|prompt2|...} syntax
+    this.realProject.on('jobStarted', (event: any) => {
+      // Capture individual job prompt if provided in the event
+      const jobId = event.jobId || event.id;
+      if (jobId && event.positivePrompt) {
+        this.jobPrompts.set(jobId, event.positivePrompt);
+      }
+    });
+
+    // Also listen for any other events that might contain individual job prompts
+    this.realProject.on('progress', (event: any) => {
+      const jobId = event.jobId || event.id;
+      if (jobId && event.positivePrompt) {
+        this.jobPrompts.set(jobId, event.positivePrompt);
+      }
+    });
+
+    this.realProject.on('jobCompleted', (event: any) => {
+      const jobId = event.jobId || event.id;
+      if (jobId && event.positivePrompt) {
+        this.jobPrompts.set(jobId, event.positivePrompt);
+      }
+    });
+
     // Map jobStarted events to job events with 'started' type
     this.realProject.on('jobStarted', (job: any) => {
+      
+      // Capture individual job prompt from the job object itself
+      if (job.id && job.positivePrompt) {
+        this.jobPrompts.set(job.id, job.positivePrompt);
+      } else if (job.id && job.params && job.params.positivePrompt) {
+        this.jobPrompts.set(job.id, job.params.positivePrompt);
+      }
+      
       // Assign job index
       if (!this.jobIndexMap.has(job.id)) {
         this.jobIndexMap.set(job.id, this.nextJobIndex++);
@@ -116,6 +164,9 @@ export class FrontendProjectAdapter extends BrowserEventEmitter implements Sogni
         });
       });
       
+      // Use the individual job prompt from global events (like backend proxy does)
+      const individualJobPrompt = this.jobPrompts.get(job.id) || this.realProject.params?.positivePrompt || '';
+      
       // Also emit the job started event that the UI expects for status updates
       this.emit('job', {
         type: 'started',
@@ -123,7 +174,7 @@ export class FrontendProjectAdapter extends BrowserEventEmitter implements Sogni
         projectId: this.realProject.id,
         workerName: job.workerName || 'Art Robot',
         jobIndex,
-        positivePrompt: job.positivePrompt || ''
+        positivePrompt: individualJobPrompt // Use the individual job prompt from global events
       });
     });
 
@@ -152,46 +203,69 @@ export class FrontendProjectAdapter extends BrowserEventEmitter implements Sogni
       }
     });
 
-    // Map jobCompleted events
+    // Map jobCompleted events with proper completion tracking
     this.realProject.on('jobCompleted', (job: any) => {
+      
+      // Try multiple sources for the individual job prompt
+      let individualJobPrompt = '';
+      
+      // 1. Check our captured prompts map
+      if (this.jobPrompts.has(job.id)) {
+        individualJobPrompt = this.jobPrompts.get(job.id);
+      }
+      // 2. Check job object itself
+      else if (job.positivePrompt) {
+        individualJobPrompt = job.positivePrompt;
+      }
+      // 3. Check job params
+      else if (job.params && job.params.positivePrompt) {
+        individualJobPrompt = job.params.positivePrompt;
+      }
+      // 4. Fallback to project prompt
+      else {
+        individualJobPrompt = this.realProject.params?.positivePrompt || '';
+      }
+      
       // Emit the jobCompleted event that the UI expects
       this.emit('jobCompleted', {
         id: job.id,
         resultUrl: job.resultUrl,
         previewUrl: job.previewUrl,
         isPreview: job.isPreview || false,
-        positivePrompt: job.positivePrompt || '',
+        positivePrompt: individualJobPrompt, // Use the individual job prompt
         workerName: job.workerName || 'Art Robot'
       });
+
+      // Track job completion for proper project completion handling
+      this.completionTracker.sentJobCompletions++;
+
+      // Clear any timeout for this job
+      const timeoutId = this.completionTracker.jobCompletionTimeouts.get(job.id);
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+        this.completionTracker.jobCompletionTimeouts.delete(job.id);
+      }
+
+      // Check if we can send project completion (like backend does)
+      this.checkAndSendProjectCompletion();
     });
 
-    // Map project completion
+    // Map project completion with proper timing handling (like backend does)
     this.realProject.on('completed', () => {
-      if (!this.isCompleted) {
-        this.isCompleted = true;
+      if (!this.completionTracker.projectCompletionReceived) {
+        
+        // Store the completion event instead of sending it immediately (fix for SDK timing issue)
+        this.completionTracker.projectCompletionReceived = true;
+        this.completionTracker.projectCompletionEvent = {
+          type: 'completed',
+          projectId: this.realProject.id
+        };
         
         // Emit uploadComplete to hide upload progress
         this.emit('uploadComplete');
         
-        // Process any jobs that might not have been handled yet
-        if (this.realProject.jobs) {
-          this.realProject.jobs.forEach((job: any) => {
-            if (job.resultUrl && !job.processed) {
-              job.processed = true;
-              this.emit('jobCompleted', {
-                id: job.id,
-                resultUrl: job.resultUrl,
-                previewUrl: job.previewUrl,
-                isPreview: job.isPreview || false,
-                positivePrompt: job.positivePrompt || '',
-                workerName: job.workerName || 'Art Robot'
-              });
-            }
-          });
-        }
-        
-        // Emit project completion
-        this.emit('completed');
+        // Check if we can send the project completion immediately
+        this.checkAndSendProjectCompletion();
       }
     });
 
@@ -203,6 +277,64 @@ export class FrontendProjectAdapter extends BrowserEventEmitter implements Sogni
     // Forward any other events that might be needed
     this.realProject.on('error', (error: any) => {
       this.emit('error', error);
+    });
+
+    // Set up job completion timeouts (like backend does) to handle stuck jobs
+    this.setupJobCompletionTimeouts();
+  }
+
+  // Check if we can send project completion (replicates backend logic)
+  private checkAndSendProjectCompletion() {
+    if (this.completionTracker.projectCompletionReceived && 
+        this.completionTracker.sentJobCompletions >= this.completionTracker.expectedJobs) {
+      
+      if (!this.isCompleted) {
+        this.isCompleted = true;
+        
+        // Clear any remaining timeouts
+        this.completionTracker.jobCompletionTimeouts.forEach((timeoutId) => {
+          clearTimeout(timeoutId);
+        });
+        this.completionTracker.jobCompletionTimeouts.clear();
+        
+        // Emit project completion
+        this.emit('completed');
+      }
+    }
+  }
+
+  // Set up timeouts to handle jobs that might get stuck (like backend does)
+  private setupJobCompletionTimeouts() {
+    // Monitor job progress and set up timeouts for jobs that reach high progress but don't complete
+    this.realProject.on('progress', (event: any) => {
+      if (event.jobId && event.progress >= 0.85) { // 85% progress threshold like backend
+        // Set up a timeout to handle potentially stuck jobs
+        if (!this.completionTracker.jobCompletionTimeouts.has(event.jobId)) {
+          const timeoutId = setTimeout(() => {
+            
+            // Send fallback completion like backend does
+            this.emit('jobCompleted', {
+              id: event.jobId,
+              resultUrl: null,
+              previewUrl: null,
+              isPreview: false,
+              positivePrompt: this.jobPrompts.get(event.jobId) || this.realProject.params?.positivePrompt || '',
+              workerName: event.workerName || 'Art Robot',
+              fallback: true
+            });
+
+            this.completionTracker.sentJobCompletions++;
+            
+            // Clean up timeout
+            this.completionTracker.jobCompletionTimeouts.delete(event.jobId);
+            
+            // Check if all jobs are done
+            this.checkAndSendProjectCompletion();
+          }, 20000); // Wait 20 seconds after reaching 85% like backend
+          
+          this.completionTracker.jobCompletionTimeouts.set(event.jobId, timeoutId);
+        }
+      }
     });
   }
 
