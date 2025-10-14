@@ -38,6 +38,21 @@ const ERROR_CODE_MESSAGES = {
     type: 'error',
     title: 'Server Error',
     message: 'A server error occurred. Please try again later.'
+  },
+  4007: {
+    type: 'error',
+    title: 'Processing Failed',
+    message: 'Image generation failed due to an internal error. Your batch has been cancelled.'
+  },
+  4008: {
+    type: 'error',
+    title: 'Service Unavailable',
+    message: 'The image generation service is temporarily unavailable. Please try again later.'
+  },
+  4019: {
+    type: 'error',
+    title: 'Processing Failed',
+    message: 'Image processing failed. Your batch has been cancelled.'
   }
 };
 
@@ -65,6 +80,63 @@ const ERROR_REASON_MESSAGES = {
     title: 'Server Maintenance',
     message: 'The server is undergoing maintenance. Please try again later.'
   }
+};
+
+/**
+ * Determine if an error should cancel the current batch
+ * @param {Object} error - The WebSocket error
+ * @returns {boolean} True if the batch should be cancelled
+ */
+export const shouldCancelBatchForError = (error) => {
+  if (!error) return false;
+
+  // Error codes that should cancel the batch
+  const batchCancellingCodes = [
+    4007, // Internal error
+    4008, // Service unavailable
+    4009, // Rate limit exceeded (severe)
+    4010, // Invalid request
+    4011, // Insufficient resources
+    4012, // Service maintenance
+    4013, // Account suspended
+    4014, // Project limit exceeded
+    4016, // Model unavailable
+    4017, // Content policy violation
+    4018, // Invalid model parameters
+    4019, // Processing failed
+    4020  // System overload
+  ];
+
+  // Check for specific error codes
+  if (error.code && batchCancellingCodes.includes(error.code)) {
+    return true;
+  }
+
+  // Check for error messages that indicate batch should be cancelled
+  if (error.message) {
+    const message = error.message.toLowerCase();
+    if (message.includes('internal error') ||
+        message.includes('service unavailable') ||
+        message.includes('processing failed') ||
+        message.includes('system error') ||
+        message.includes('server error') ||
+        message.includes('failed due to an internal error')) {
+      return true;
+    }
+  }
+
+  // Check for error reasons
+  if (error.reason) {
+    const reason = error.reason.toLowerCase();
+    if (reason.includes('internal error') ||
+        reason.includes('service unavailable') ||
+        reason.includes('processing failed') ||
+        reason.includes('system error')) {
+      return true;
+    }
+  }
+
+  return false;
 };
 
 /**
@@ -128,9 +200,10 @@ export const getErrorMessage = (error) => {
  * @param {Object} client - The Sogni client instance
  * @param {Function} showToast - Function to show toast notifications
  * @param {Object} options - Configuration options
+ * @param {Function} cancelBatch - Function to cancel the current batch (optional)
  * @returns {Function} Cleanup function to remove listeners
  */
-export const setupWebSocketErrorHandler = (client, showToast, options = {}) => {
+export const setupWebSocketErrorHandler = (client, showToast, options = {}, cancelBatch = null) => {
   if (!client || !showToast) {
     console.warn('WebSocket error handler: client or showToast function not provided');
     return () => {};
@@ -144,6 +217,9 @@ export const setupWebSocketErrorHandler = (client, showToast, options = {}) => {
   } = options;
 
   const listeners = [];
+  
+  // Track if we've seen a disconnection - only show reconnection toasts after a disconnection
+  let hasBeenDisconnected = false;
 
   try {
     // Handle general socket errors
@@ -152,6 +228,14 @@ export const setupWebSocketErrorHandler = (client, showToast, options = {}) => {
         if (!showGeneralErrors) return;
 
         const errorMessage = getErrorMessage(error);
+        
+        // Check if this error should cancel the current batch
+        const shouldCancelBatch = shouldCancelBatchForError(error);
+        
+        if (shouldCancelBatch && cancelBatch) {
+          console.log('WebSocket error requires batch cancellation:', error);
+          cancelBatch(error);
+        }
         
         showToast({
           title: errorMessage.title,
@@ -172,6 +256,9 @@ export const setupWebSocketErrorHandler = (client, showToast, options = {}) => {
     // Handle disconnection events
     if (client.apiClient && typeof client.apiClient.on === 'function') {
       const disconnectHandler = (data) => {
+        // Mark that we've been disconnected
+        hasBeenDisconnected = true;
+        
         if (!showDisconnectionToasts) return;
 
         const reason = data?.reason || 'Connection lost';
@@ -194,7 +281,8 @@ export const setupWebSocketErrorHandler = (client, showToast, options = {}) => {
     // Handle reconnection events
     if (client.apiClient && typeof client.apiClient.on === 'function') {
       const reconnectHandler = () => {
-        if (!showReconnectionToasts) return;
+        // Only show reconnection toast if we've previously been disconnected
+        if (!showReconnectionToasts || !hasBeenDisconnected) return;
 
         showToast({
           title: 'Reconnected',

@@ -2658,22 +2658,69 @@ const App = () => {
     }
   }, [authState.isAuthenticated, authState.authMode, initializeSogni]);
 
+  // Create batch cancellation function for WebSocket errors
+  const cancelBatchOnError = useCallback((error) => {
+    if (!activeProjectReference.current) {
+      return; // No active project to cancel
+    }
+
+    console.log('Cancelling batch due to WebSocket error:', error);
+    
+    // Clear all timeouts
+    clearAllTimeouts();
+    
+    // Try to cancel the project on the backend
+    if (sogniClient && activeProjectReference.current) {
+      sogniClient.cancelProject?.(activeProjectReference.current)
+        .catch(err => console.warn('Failed to cancel project on backend:', err));
+    }
+    
+    // Mark all generating photos as failed due to the error
+    setRegularPhotos(prev => {
+      const updated = [...prev];
+      
+      updated.forEach((photo, index) => {
+        if (photo.generating) {
+          updated[index] = {
+            ...photo,
+            generating: false,
+            loading: false,
+            error: 'BATCH CANCELLED',
+            permanentError: true,
+            statusText: 'Cancelled',
+            cancelled: true
+          };
+        }
+      });
+      
+      return updated;
+    });
+    
+    // Clear the active project reference
+    activeProjectReference.current = null;
+  }, [sogniClient]);
+
   // Set up WebSocket error handling when sogniClient changes
   useEffect(() => {
     if (!sogniClient || !showToast) {
       return;
     }
     
-    const cleanupWebSocketHandler = setupWebSocketErrorHandler(sogniClient, showToast, {
-      showDisconnectionToasts: true,
-      showReconnectionToasts: true,
-      showGeneralErrors: true,
-      autoCloseTimeout: 5000
-    });
+    const cleanupWebSocketHandler = setupWebSocketErrorHandler(
+      sogniClient, 
+      showToast, 
+      {
+        showDisconnectionToasts: true,
+        showReconnectionToasts: true,
+        showGeneralErrors: true,
+        autoCloseTimeout: 5000
+      },
+      cancelBatchOnError // Pass the batch cancellation function
+    );
 
     // Return cleanup function
     return cleanupWebSocketHandler;
-  }, [sogniClient, showToast]);
+  }, [sogniClient, showToast, cancelBatchOnError]);
 
   // Listen for email verification errors from frontend client
   useEffect(() => {
@@ -3934,6 +3981,62 @@ const App = () => {
           });
           
           return;
+        }
+
+        // Check if this is a batch-cancelling error (like code 4007)
+        if (error && typeof error === 'object') {
+          // Import the shouldCancelBatchForError function logic here
+          const shouldCancel = (
+            (error.code && [4007, 4008, 4009, 4010, 4011, 4012, 4013, 4014, 4016, 4017, 4018, 4019, 4020].includes(error.code)) ||
+            (error.message && (
+              error.message.toLowerCase().includes('internal error') ||
+              error.message.toLowerCase().includes('service unavailable') ||
+              error.message.toLowerCase().includes('processing failed') ||
+              error.message.toLowerCase().includes('system error') ||
+              error.message.toLowerCase().includes('server error') ||
+              error.message.toLowerCase().includes('failed due to an internal error')
+            ))
+          );
+
+          if (shouldCancel) {
+            console.log('Project failed with batch-cancelling error, showing toast and cancelling batch');
+            
+            // Show appropriate toast notification
+            const errorMessage = error.code === 4007 ? 
+              'Image generation failed due to an internal error. Your batch has been cancelled.' :
+              `Processing failed: ${error.message || 'Unknown error'}. Your batch has been cancelled.`;
+            
+            showToast({
+              title: 'Processing Failed',
+              message: errorMessage,
+              type: 'error',
+              timeout: 8000
+            });
+            
+            // Cancel the batch using the same logic as cancelBatchOnError
+            clearAllTimeouts();
+            activeProjectReference.current = null;
+            
+            // Mark all generating photos as cancelled
+            setRegularPhotos(prevPhotos => {
+              return prevPhotos.map(photo => {
+                if (photo.generating) {
+                  return {
+                    ...photo,
+                    generating: false,
+                    loading: false,
+                    error: 'BATCH CANCELLED',
+                    permanentError: true,
+                    statusText: 'Cancelled',
+                    cancelled: true
+                  };
+                }
+                return photo;
+              });
+            });
+            
+            return; // Exit early for batch-cancelling errors
+          }
         }
         
         // Clear all timeouts when project fails

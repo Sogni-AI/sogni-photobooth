@@ -73,6 +73,38 @@ class WebSocketErrorTester {
     handleSpecificErrors.insufficientCredits(this.showToast);
   }
 
+  // Simulate internal error (code 4007) that should cancel batch
+  simulateInternalError() {
+    if (!this.showToast) {
+      return;
+    }
+
+    this.showToast({
+      title: 'Processing Failed',
+      message: 'Image generation failed due to an internal error. Your batch has been cancelled.',
+      type: 'error',
+      timeout: 8000
+    });
+  }
+
+  // Simulate project failure (this tests the actual project failure path)
+  simulateProjectFailure() {
+    if (!this.showToast) {
+      return;
+    }
+
+    // This simulates what happens when a project fails with code 4007
+    console.log('🧪 Simulating project failure with code 4007...');
+    
+    // Note: This only shows the toast - actual batch cancellation happens in the project.on('failed') handler
+    this.showToast({
+      title: 'Processing Failed',
+      message: 'Image generation failed due to an internal error. Your batch has been cancelled.',
+      type: 'error',
+      timeout: 8000
+    });
+  }
+
   // Simulate a server toast message
   simulateToastMessage(type = 'info', title = 'Test Message', message = 'This is a test toast message from the server') {
     if (!this.showToast) {
@@ -113,6 +145,8 @@ Available methods:
 - simulateConnectionSwitched() - Test connection switched error (code 4015)
 - simulateNetworkError() - Test network connection error
 - simulateInsufficientCredits() - Test insufficient credits error
+- simulateInternalError() - Test internal error (code 4007) that cancels batch
+- simulateProjectFailure() - Test project failure with code 4007
 - simulateToastMessage(type, title, message) - Test custom toast message
 - testAllErrors() - Test all error types in sequence
 - help() - Show this help message

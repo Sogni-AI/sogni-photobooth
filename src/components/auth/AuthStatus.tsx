@@ -34,7 +34,7 @@ export const AuthStatus: React.FC = () => {
       <span
         onClick={() => setShowUserMenu(!showUserMenu)}
         style={{
-          color: '#fbbf24',
+          color: 'white',
           fontSize: '14px',
           fontWeight: '500',
           cursor: 'pointer'
