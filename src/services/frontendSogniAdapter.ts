@@ -166,7 +166,7 @@ export class FrontendProjectAdapter extends BrowserEventEmitter implements Sogni
     });
 
     // Map project completion
-    this.realProject.on('completed', (data: any) => {
+    this.realProject.on('completed', () => {
       if (!this.isCompleted) {
         this.isCompleted = true;
         
