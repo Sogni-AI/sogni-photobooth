@@ -70,9 +70,10 @@ import { subscribeToConnectionState, getCurrentConnectionState } from './service
 
 
 // Enhanced URL management for deep linking
-const updateUrlParams = (updates) => {
+const updateUrlParams = (updates, options = {}) => {
+  const { usePushState = false, navigationContext = {} } = options;
   const url = new URL(window.location.href);
-  
+
   // Apply all updates
   Object.entries(updates).forEach(([key, value]) => {
     if (value === null || value === undefined || value === '') {
@@ -81,8 +82,13 @@ const updateUrlParams = (updates) => {
       url.searchParams.set(key, value);
     }
   });
-  
-  window.history.replaceState({}, '', url);
+
+  // Use pushState for navigation actions (adds to history), replaceState for state updates
+  if (usePushState) {
+    window.history.pushState({ navigationContext }, '', url);
+  } else {
+    window.history.replaceState({ navigationContext }, '', url);
+  }
 };
 
 // Helper function to update URL with prompt parameter (backward compatibility)
@@ -677,6 +683,12 @@ const App = () => {
       setShowSplashScreen(false);
     }
     
+    // Initialize history state on first load if not already set
+    if (!window.history.state || !window.history.state.navigationContext) {
+      const initialContext = { from: 'initial', timestamp: Date.now() };
+      window.history.replaceState({ navigationContext: initialContext }, '', window.location.href);
+    }
+
     // Handle page parameter for direct navigation
     if (pageParam === 'prompts') {
       setCurrentPage('prompts');
@@ -1223,78 +1235,104 @@ const App = () => {
     }
   };
 
+  // Track navigation source for proper back button behavior
+  const navigationSourceRef = useRef('startMenu');
+
   // Navigation handlers for prompt selector page
   const handleNavigateToPromptSelector = () => {
     // Clear selected photo state when entering Sample Gallery mode
     setSelectedPhotoIndex(null);
-    
+
     // Stop camera when entering Sample Gallery mode
     stopCamera();
+
+    // Store where we're coming from for back button navigation
+    navigationSourceRef.current = showPhotoGrid && photos.length > 0 ? 'photoGrid' : 'startMenu';
     
+    // Store navigation context to know where we came from
+    const navigationContext = {
+      from: navigationSourceRef.current,
+      timestamp: Date.now()
+    };
+
     // Set page to prompts (Sample Gallery mode)
     setCurrentPage('prompts');
-    
-    // Update URL to reflect prompts page
-    updateUrlParams({ page: 'prompts' });
-    
+
+    // Update URL to reflect prompts page (use pushState to add to history)
+    updateUrlParams({ page: 'prompts' }, { usePushState: true, navigationContext });
+
     // Ensure photo grid is shown in Sample Gallery mode
     setShowPhotoGrid(true);
   };
 
-  const handleBackToCameraFromPromptSelector = () => {
+  const handleBackToCameraFromPromptSelector = (fromPopStateOrEvent = false) => {
+    // Check if first argument is a React event object (has nativeEvent property)
+    // If so, treat as false; otherwise use the actual boolean value
+    const fromPopState = fromPopStateOrEvent?.nativeEvent !== undefined ? false : fromPopStateOrEvent;
+    
+    console.log('📸 Navigating from Style Explorer to start menu, fromPopState:', fromPopState);
+    
+    // Update URL FIRST before changing state
+    // Use replaceState (not pushState) to avoid creating redundant history entries
+    if (!fromPopState) {
+      updateUrlParams({ page: null }, { usePushState: false });
+      console.log('📸 URL updated, removed page param. New URL:', window.location.href);
+    }
+
     // Clear selected photo state when leaving Sample Gallery mode
     setSelectedPhotoIndex(null);
-    
+
     // Close any open overlays to prevent white overlay bug
     setShowControlOverlay(false);
     setAutoFocusPositivePrompt(false);
-    
+
     // Hide photo grid to prevent film-strip-container from rendering
     setShowPhotoGrid(false);
-    
+
     // Set page back to camera
     setCurrentPage('camera');
-    
-    // Update URL to reflect camera page
-    updateUrlParams({ page: null });
-    
-    // Navigate to start menu instead of directly starting camera
-    // This prevents unwanted camera permission requests on mobile/iPad
-    console.log('📸 Navigating from Style Explorer to start menu');
-    
+    console.log('📸 Set currentPage to camera');
+
     // Scroll to top smoothly
     window.scrollTo({ top: 0, behavior: 'smooth' });
-    
+
     // Hide slothicorn if visible
     if (slothicornReference.current) {
       slothicornReference.current.style.setProperty('bottom', '-360px', 'important');
       slothicornReference.current.classList.remove('animating');
     }
-    
+
     // Show the start menu so user can choose camera or upload
     setShowStartMenu(true);
   };
 
-  const handleBackToPhotosFromPromptSelector = () => {
+  const handleBackToPhotosFromPromptSelector = (fromPopStateOrEvent = false) => {
+    // Check if first argument is a React event object (has nativeEvent property)
+    // If so, treat as false; otherwise use the actual boolean value
+    const fromPopState = fromPopStateOrEvent?.nativeEvent !== undefined ? false : fromPopStateOrEvent;
+    
     // Clear selected photo state when leaving Sample Gallery mode
     setSelectedPhotoIndex(null);
-    
+
     // Close any open overlays to prevent white overlay bug
     setShowControlOverlay(false);
     setAutoFocusPositivePrompt(false);
-    
+
     // Set page back to camera (this exits Sample Gallery mode)
     setCurrentPage('camera');
-    
+
     // Update URL to reflect camera page
-    updateUrlParams({ page: null });
-    
+    // Use replaceState (not pushState) to avoid creating redundant history entries
+    if (!fromPopState) {
+      updateUrlParams({ page: null }, { usePushState: false });
+    }
+
     // Show photo grid to display user's photos
     setShowPhotoGrid(true);
-    
+
     // Don't restart camera - user wants to see their photos, not take new ones
     console.log('📸 Navigating from Style Explorer to user photo grid');
-    
+
     // Small delay to ensure state updates properly
     setTimeout(() => {
       // Scroll to top for smooth transition
@@ -5038,6 +5076,40 @@ const App = () => {
     
     setCameraManuallyStarted(true); // User explicitly selected a camera
   };
+
+  // Handle browser back/forward button navigation
+  useEffect(() => {
+    const handlePopState = () => {
+      const url = new URL(window.location.href);
+      const pageParam = url.searchParams.get('page');
+
+      console.log('🔙 Browser back/forward button pressed, page param:', pageParam, 'navigationSource:', navigationSourceRef.current);
+
+      if (pageParam === 'prompts') {
+        // Navigating forward to prompts page (or direct access)
+        setCurrentPage('prompts');
+        setShowPhotoGrid(true);
+        setSelectedPhotoIndex(null);
+        stopCamera();
+      } else {
+        // Navigating back from prompts to camera/start menu
+        // Use the stored navigation source to determine where to go
+        if (navigationSourceRef.current === 'photoGrid') {
+          // User came from photo grid, so go back to photo grid
+          handleBackToPhotosFromPromptSelector(true);
+        } else {
+          // User came from start menu, so go back to start menu
+          handleBackToCameraFromPromptSelector(true);
+        }
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [stopCamera, handleBackToPhotosFromPromptSelector, handleBackToCameraFromPromptSelector]);
 
   // -------------------------
   //   Main area (video)
