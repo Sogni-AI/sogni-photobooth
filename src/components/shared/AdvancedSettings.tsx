@@ -4,6 +4,7 @@ import { AspectRatioOption, TezDevTheme, OutputFormat } from '../../types/index'
 import { isFluxKontextModel, getModelRanges, getModelDefaults } from '../../constants/settings';
 import { themeConfigService } from '../../services/themeConfig';
 import { sanitizeUrl, getUrlValidationError } from '../../utils/urlValidation';
+import { useSogniAuth } from '../../services/sogniAuth';
 import TagInput from './TagInput';
 
 interface AdvancedSettingsProps {
@@ -124,6 +125,9 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
   // Get current settings from context if not provided via props
   const appContext = useApp();
   const { settings, updateSetting, clearImageCaches } = appContext;
+  
+  // Get authentication state to check if user is logged in with frontend auth
+  const authState = useSogniAuth();
   
   // Ref for positive prompt textarea
   const positivePromptRef = useRef<HTMLTextAreaElement>(null);
@@ -1040,7 +1044,34 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
           <label htmlFor="background-animations-toggle" className="control-label">Background Animations</label>
         </div>
         
-        {/* Worker Preferences - Required and Preferred Workers sections hidden (managed by server) */}
+        {/* Worker Preferences - Show all options when user is logged in with frontend auth (spending own credits) */}
+        {authState.isAuthenticated && authState.authMode === 'frontend' && (
+          <>
+            <div className="control-option worker-preference-section">
+              <label className="control-label">Required<br/>Workers</label>
+              <TagInput
+                tags={settings.requiredWorkers}
+                onTagsChange={(tags) => updateSetting('requiredWorkers', tags)}
+                placeholder="Type worker name and press Enter..."
+              />
+              <div className="control-description">
+                Only these workers will be used for processing your images
+              </div>
+            </div>
+
+            <div className="control-option worker-preference-section">
+              <label className="control-label">Preferred<br/>Workers</label>
+              <TagInput
+                tags={settings.preferWorkers}
+                onTagsChange={(tags) => updateSetting('preferWorkers', tags)}
+                placeholder="Type worker name and press Enter..."
+              />
+              <div className="control-description">
+                These workers will be prioritized when processing your images
+              </div>
+            </div>
+          </>
+        )}
 
         <div className="control-option worker-preference-section">
           <label className="control-label">Skip<br/>Workers</label>

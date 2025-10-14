@@ -3387,10 +3387,23 @@ const App = () => {
         finalPositivePrompt = stylePrompts[selectedStyle] || finalPositivePrompt || '';
       }
 
-      // Inject worker preferences into the prompt (only for backend/demo mode)
-      // Frontend authentication uses user's personal credits and shouldn't have hardcoded worker preferences
+      // Inject worker preferences into the prompt
+      // For backend/demo mode: use hardcoded preferences from server
+      // For frontend auth mode: use user-configured preferences from settings
       const workerPreferences = [];
       if (authState.authMode !== 'frontend') {
+        // Backend/demo mode - use hardcoded server preferences (kept for backward compatibility)
+        if (settings.requiredWorkers && Array.isArray(settings.requiredWorkers) && settings.requiredWorkers.length > 0) {
+          workerPreferences.push(`--workers=${settings.requiredWorkers.join(',')}`);
+        }
+        if (settings.preferWorkers && settings.preferWorkers.length > 0) {
+          workerPreferences.push(`--preferred-workers=${settings.preferWorkers.join(',')}`);
+        }
+        if (settings.skipWorkers && settings.skipWorkers.length > 0) {
+          workerPreferences.push(`--skip-workers=${settings.skipWorkers.join(',')}`);
+        }
+      } else {
+        // Frontend auth mode - use user-configured preferences
         if (settings.requiredWorkers && Array.isArray(settings.requiredWorkers) && settings.requiredWorkers.length > 0) {
           workerPreferences.push(`--workers=${settings.requiredWorkers.join(',')}`);
         }
