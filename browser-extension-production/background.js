@@ -143,13 +143,6 @@ class SSEConnectionManager {
     this.eventSource.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        console.log(`Background: [CONCURRENT-DEBUG] SSE message received:`, {
-          type: data.type,
-          projectId: data.projectId,
-          jobId: data.jobId,
-          activeProjects: Array.from(this.activeProjects.keys()),
-          pendingProjects: Array.from(this.pendingEvents.keys())
-        });
         
         // Route event to correct project
         if (data.projectId) {
@@ -161,13 +154,6 @@ class SSEConnectionManager {
               this.pendingEvents.set(data.projectId, []);
             }
             this.pendingEvents.get(data.projectId).push(data);
-            console.log('Background: [CONCURRENT-DEBUG] Buffering SSE for untracked project', {
-              projectId: data.projectId,
-              type: data.type,
-              bufferedCount: this.pendingEvents.get(data.projectId).length,
-              activeProjectKeys: Array.from(this.activeProjects.keys()),
-              totalActiveProjects: this.activeProjects.size
-            });
           }
         } else {
           console.warn('Background: SSE message missing projectId, ignoring', data);
@@ -236,12 +222,6 @@ class SSEConnectionManager {
 
   // Register a project for tracking
   trackProject(projectId, imageUrl, resolve, reject) {
-    console.log('Background: [CONCURRENT-DEBUG] Tracking new project', {
-      projectId,
-      imageUrl,
-      totalActive: this.activeProjects.size + 1,
-      allActiveProjects: [...Array.from(this.activeProjects.keys()), projectId]
-    });
     this.activeProjects.set(projectId, { resolve, reject, imageUrl, isResolved: false });
     // Flush any buffered events for this project in arrival order
     if (this.pendingEvents.has(projectId)) {
@@ -277,13 +257,6 @@ class SSEConnectionManager {
 
     const { resolve, reject, imageUrl } = project;
 
-    console.log('Background: [CONCURRENT-DEBUG] Routing event to project', {
-      projectId,
-      type: data.type,
-      imageUrl,
-      activeCount: this.activeProjects.size,
-      allActiveProjects: Array.from(this.activeProjects.keys())
-    });
 
     switch (data.type) {
       case 'connected':

@@ -29,7 +29,6 @@ const port = process.env.PORT || 3001;
 
 // Get allowed origins and determine effective cookie domain for subdomain compatibility
 const COOKIE_DOMAIN_EFFECTIVE = process.env.COOKIE_DOMAIN || (process.env.NODE_ENV === 'production' ? '.sogni.ai' : 'localhost');
-console.log("DEBUG - Effective COOKIE_DOMAIN (after fallback logic):", COOKIE_DOMAIN_EFFECTIVE);
 
 // Add warning for production environments with non-standard domain
 if (process.env.NODE_ENV === 'production' && COOKIE_DOMAIN_EFFECTIVE !== '.sogni.ai') {
@@ -50,19 +49,11 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 // Logging middleware - focused on cookie tracking for OAuth debugging
 app.use((req, res, next) => {
   
-  // Log the sogni_session_id specifically, which we're using for Twitter OAuth
-  if (req.cookies?.sogni_session_id) {
-    console.log('DEBUG - Found sogni_session_id:', req.cookies.sogni_session_id);
-  }
 
   // General Set-Cookie logging for all responses
   const originalEnd = res.end;
   res.end = function (...args) {
     const setCookieHeaders = res.getHeaders()['set-cookie'];
-    // Only log if Set-Cookie headers were actually added to this response
-    if (setCookieHeaders && (!Array.isArray(setCookieHeaders) || setCookieHeaders.length > 0)) {
-      console.log(`DEBUG - Response Final Set-Cookie for ${req.method} ${req.path}:`, setCookieHeaders);
-    }
     originalEnd.apply(res, args);
     return this;
   };

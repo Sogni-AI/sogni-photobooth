@@ -175,7 +175,7 @@ async function getOrCreateGlobalSogniClient() {
   // - SDK handles automatic renewal without requiring socket reconnection
   try {
     console.log(`[GLOBAL] Authenticating global client...`);
-            await client.account.login(sogniUsername, password);
+            await client.account.login(sogniUsername, password, false); // Don't use rememberMe for backend auth
     console.log(`[GLOBAL] Successfully authenticated global client: ${clientAppId}`);
     console.log(`[GLOBAL] Auth state:`, {
       isAuthenticated: client.account.currentAccount.isAuthenicated,
@@ -352,7 +352,7 @@ async function createDedicatedClient(appId) {
     try { await authLoginPromise; } catch (e) { /* ignore */ }
   }
   authLoginPromise = (async () => {
-    await client.account.login(sogniUsername, password);
+    await client.account.login(sogniUsername, password, false); // Don't use rememberMe for backend auth
   })();
   try {
     await authLoginPromise;
@@ -401,11 +401,6 @@ export async function generateImage(client, params, progressCallback, localProje
       sensitiveContentFilter: params.sensitiveContentFilter,
       // prompt: params.prompt?.substring(0, 50) + '...',
       //...Object.fromEntries(Object.entries(params).filter(([key]) => key !== 'prompt'))
-    });
-    console.log('[IMAGE][DEBUG] init', {
-      localProjectId,
-      clientAppId: params.clientAppId,
-      numberImages: params.numberImages || 1
     });
 
     // Prepare project options in the correct format for the Sogni SDK
@@ -569,11 +564,6 @@ export async function generateImage(client, params, progressCallback, localProje
 
       // Set up progress monitoring with comprehensive error handling using global client events
       const isExtensionClient = (projectDetails && params && typeof params.clientAppId === 'string' && params.clientAppId.startsWith('photobooth-extension-'));
-      console.log('[IMAGE][DEBUG] handler selection', {
-        sdkProjectId: project.id,
-        localProjectId,
-        isExtensionClient
-      });
 
       if (progressCallback && !isExtensionClient) {
         

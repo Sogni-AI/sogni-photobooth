@@ -554,9 +554,6 @@ function findProfileImages() {
   const seenUrls = new Set(); // Track URLs to prevent duplicates
   const seenElements = new Set(); // Track DOM elements to prevent duplicates
   
-  // Enhanced debugging for Netflix page
-  console.log('🔍 DEBUGGING: Starting profile image search...');
-  console.log('🔍 Current URL:', window.location.href);
   
   // Check for Netflix-specific patterns first
   const netflixHeadshotImages = document.querySelectorAll('img[class*="headshot" i], img[class*="Headshot" i]');

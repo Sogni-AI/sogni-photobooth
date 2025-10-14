@@ -52,7 +52,6 @@ export const enhancePhoto = async (options) => {
   let timeoutId; // Declare timeoutId in outer scope
 
   try {
-    console.log(`🚀 [ENHANCE-DEBUG] UPDATED PhotoEnhancer.js loaded! Starting enhancement for photo #${photoIndex}`, { photo, width, height, outputFormat });
     console.log(`[ENHANCE] Photo state:`, {
       enhanced: photo.enhanced,
       hasOriginalEnhancedImage: !!photo.originalEnhancedImage,

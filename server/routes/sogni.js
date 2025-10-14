@@ -171,13 +171,6 @@ router.get('/status', ensureSessionId, async (req, res) => {
   } catch (error) {
     console.error('Error getting Sogni client status:', error);
     
-    // Enhanced error logging
-    console.log('DEBUG - Error details:', {
-      message: error.message,
-      status: error.status,
-      payload: error.payload,
-      stack: error.stack
-    });
     
     // Check for proxy or timeout issues
     if (error.code === 'ECONNREFUSED') {
@@ -797,13 +790,11 @@ router.post('/generate', ensureSessionId, async (req, res) => {
     const client = await getSessionClient(req.sessionId, clientAppId);
     const params = { ...req.body, clientAppId };
 
-    // console.log(`DEBUG - ${new Date().toISOString()} - [${localProjectId}] Calling Sogni SDK (generateImage function) with params:`, Object.keys(params));
     
     // Helper function to attempt generation with retry on auth failure
     const attemptGeneration = async (clientToUse, isRetry = false) => {
       return generateImage(clientToUse, params, progressHandler, localProjectId)
         .then((sogniResult) => {
-          console.log(`DEBUG - ${new Date().toISOString()} - [${localProjectId}] Sogni SDK (generateImage function) promise resolved.`);
           // Redact potentially large result data from logs
           const redactedResult = redactProjectResult(sogniResult.result);
           console.log(`[${localProjectId}] Sogni generation process finished. Sogni Project ID: ${sogniResult.projectId}, Result:`, JSON.stringify(redactedResult));

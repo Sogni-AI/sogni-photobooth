@@ -292,7 +292,7 @@ const FriendlyErrorModal = ({ error, onClose, onRetry }) => {
         </div>
       </div>
 
-      <style jsx>{`
+      <style>{`
         @keyframes slideIn {
           from {
             opacity: 0;

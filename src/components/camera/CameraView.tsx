@@ -397,14 +397,6 @@ export const CameraView: React.FC<CameraViewProps> = (props) => {
           const buttonTopFromContainerBottom = containerRect.bottom - buttonRect.top;
           const relativeBottom = buttonTopFromContainerBottom + buttonRect.height + 8; // 8px gap above button
           
-          console.log('📍 Button positioning debug:', {
-            buttonRect: { left: buttonRect.left, top: buttonRect.top, width: buttonRect.width, height: buttonRect.height },
-            containerRect: { left: containerRect.left, top: containerRect.top, bottom: containerRect.bottom },
-            relativeLeft,
-            relativeBottom,
-            buttonTopFromContainerBottom
-          });
-          
           const newPosition = {
             bottom: `${relativeBottom}px`,
             left: `${relativeLeft}px`,

@@ -7,14 +7,28 @@
 - **Avoid "nuclear option" selectors** with excessive redundancy like `html body div * .class, html body #root * .class`
 - **One selector per rule** - if you need high specificity, use `html body #root .specific-class` (specificity: 112)
 
-## useEffect Critical Rules 🚨
-- **NEVER put functions in useEffect dependency arrays** - causes infinite loops
-- **NEVER put complex expressions in dependency arrays** (like `array.some()`, `object.method`)
-- **ALWAYS use functional state updates** to avoid stale closures: `setState(current => newValue)`
-- **ALWAYS use primitive values or stable references** in dependency arrays
-- **ALWAYS move complex logic inside useEffect**, not in the dependency array
-- **ALWAYS use useCallback** for functions that must be in dependencies
-- **ALWAYS use refs** for values that don't need to trigger re-renders
+## 🚨🚨🚨 useEffect CRITICAL RULES - READ BEFORE EVERY CHANGE 🚨🚨🚨
+### ❌ NEVER PUT THESE IN DEPENDENCY ARRAYS:
+- **Functions** (initializeSogni, handleClick, etc.) - causes infinite loops
+- **Complex expressions** (array.some(), object.method, calculations)
+- **Objects or arrays** (unless memoized with useMemo/useCallback)
+
+### ✅ ONLY PUT THESE IN DEPENDENCY ARRAYS:
+- **Primitive values** (strings, numbers, booleans)
+- **State variables** (from useState)
+- **Props** (primitive values only)
+- **Memoized values** (from useMemo/useCallback)
+
+### 🔧 MANDATORY CHECKS BEFORE EDITING useEffect:
+1. **Scan dependency array** - Are there any functions? REMOVE THEM!
+2. **Check for complex expressions** - Move them inside useEffect
+3. **Use functional state updates** - `setState(current => newValue)`
+4. **Use useCallback** only if function MUST be in dependencies
+
+### 🚨 COMMON VIOLATIONS TO AVOID:
+- `}, [someFunction, otherFunction])` ❌ 
+- `}, [array.length, object.property])` ❌
+- `}, [authState.isAuthenticated, initializeSogni])` ❌
 
 ## Development Environment Rules 🌐
 - **Local development URL**: Always use `https://photobooth-local.sogni.ai` (NOT localhost:5175)

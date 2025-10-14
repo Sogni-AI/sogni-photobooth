@@ -904,9 +904,6 @@ const PhotoGallery = ({
     // In prompt selector mode, just show selected state - don't immediately set style
     // The "Use this Style" button will handle the actual style selection
     
-    console.log('🚨 PHOTO CLICKED - DEBUGGING START');
-    console.log('🔍 isExtensionMode:', isExtensionMode);
-    console.log('🔍 window.extensionMode:', window.extensionMode);
     console.log('🔍 isPromptSelectorMode:', isPromptSelectorMode);
     
     // Reset scroll position to top in extension mode to prevent CSS layout issues
@@ -1711,9 +1708,6 @@ const PhotoGallery = ({
                 <button
                   className="action-button use-prompt-btn"
                   onClick={(e) => {
-                    console.log('🚨 USE THIS STYLE CLICKED - DEBUGGING START');
-                    console.log('🔍 isExtensionMode:', isExtensionMode);
-                    console.log('🔍 window.extensionMode:', window.extensionMode);
                     console.log('🔍 isPromptSelectorMode:', isPromptSelectorMode);
                     
                     // Reset scroll position to top in extension mode before style selection

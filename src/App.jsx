@@ -11,6 +11,9 @@ import { getDefaultThemeGroupState, getEnabledPrompts, getOneOfEachPrompts } fro
 import { getThemeGroupPreferences, saveThemeGroupPreferences } from './utils/cookies';
 import { initializeSogniClient } from './services/sogni';
 import { isNetworkError } from './services/api';
+import { AuthStatus } from './components/auth/AuthStatus';
+import { useSogniAuth } from './services/sogniAuth';
+import { createFrontendClientAdapter } from './services/frontendSogniAdapter';
 import { enhancePhoto, undoEnhancement, redoEnhancement } from './services/PhotoEnhancer';
 import { shareToTwitter } from './services/TwitterShare';
 import { themeConfigService } from './services/themeConfig';
@@ -97,6 +100,9 @@ const getHashtagForStyle = (styleKey) => {
 
 
 const App = () => {
+  // --- Authentication Hook ---
+  const authState = useSogniAuth();
+  
   // --- Immediate URL Check (runs before any useEffect) ---
   const immediateUrl = new URL(window.location.href);
   const immediatePageParam = immediateUrl.searchParams.get('page');
@@ -2085,22 +2091,97 @@ const App = () => {
       // Reset any previous errors
       setBackendError(null);
       
-      const client = await initializeSogniClient();
-      setSogniClient(client);
-      setIsSogniReady(true);
+      let client;
+      
+      if (authState.isAuthenticated && authState.authMode === 'frontend') {
+        // Use the frontend Sogni client with adapter for personal account credits
+        console.log('Using frontend authentication mode - direct SDK connection for personal credits');
+        const realClient = authState.getSogniClient();
+        
+        if (!realClient) {
+          throw new Error('Frontend authentication client not available');
+        }
+        
+        // Wrap the real client with our adapter to ensure compatibility with photobooth UI
+        client = createFrontendClientAdapter(realClient);
+        
+        
+        setSogniClient(client);
+        setIsSogniReady(true);
+        
+        console.log('✅ Frontend Sogni client initialized successfully with adapter - using personal account credits');
+        
+      } else {
+        // Use the backend client (demo mode - shared demo account credits)
+        console.log('Using backend authentication (demo mode - shared demo credits)');
+        client = await initializeSogniClient();
+        setSogniClient(client);
+        setIsSogniReady(true);
+        
+        console.log('✅ Backend Sogni client initialized successfully - using demo credits');
+      }
 
-      client.projects.on('swarmModels', (event) => {
-        console.log('Swarm models event payload:', event);
-      });
+      // Set up event listeners if we have a client
+      if (client && client.projects) {
+        client.projects.on('swarmModels', (event) => {
+          console.log('Swarm models event payload:', event);
+        });
 
-      client.projects.on('project', (event) => {
-        console.log('Project event full payload:', event);
-      });
+        client.projects.on('project', (event) => {
+          console.log('Project event full payload:', event);
+        });
 
-      client.projects.on('job', (event) => {
-        console.log('Job event full payload:', event);
-        // Only keep this for logging or other job events if needed
-      });
+        client.projects.on('job', (event) => {
+          console.log('Job event full payload:', event);
+          // Only keep this for logging - individual job progress is handled by the adapter
+        });
+      }
+
+
+      // Set up socket error handling for frontend clients
+      if (client && authState.authMode === 'frontend' && client.apiClient) {
+        client.apiClient.on('error', (error) => {
+          console.error('Socket error:', error);
+          
+          // Check for email verification error (code 4052)
+          if (error && typeof error === 'object' && 
+              (error.code === 4052 || (error.reason && error.reason.includes('verify your email')))) {
+            console.error('❌ Email verification required from socket error');
+            setBackendError({
+              type: 'auth_error',
+              title: '📧 Email Verification Required',
+              message: 'Your Sogni account email needs to be verified to generate images.',
+              details: 'Please check your email and click the verification link, then try again. You can also verify your email at app.sogni.ai.',
+              canRetry: true,
+              fallbackUrl: 'https://app.sogni.ai/profile',
+              fallbackText: 'Verify Email',
+              fallbackLabel: 'Go to Profile'
+            });
+            
+            // Clear any active generation
+            clearAllTimeouts();
+            activeProjectReference.current = null;
+            
+            // Mark all generating photos as failed
+            setRegularPhotos(prevPhotos => {
+              return prevPhotos.map(photo => {
+                if (photo.generating) {
+                  return {
+                    ...photo,
+                    generating: false,
+                    loading: false,
+                    error: 'EMAIL VERIFICATION REQUIRED',
+                    permanentError: true,
+                    statusText: 'Verify Email'
+                  };
+                }
+                return photo;
+              });
+            });
+          }
+        });
+      }
+      
     } catch (error) {
       console.error('Failed initializing Sogni client:', error);
       
@@ -2138,7 +2219,7 @@ const App = () => {
     } finally {
       setIsInitializingSogni(false);
     }
-  }, []); // Removed sogniClient dependency to prevent callback recreation loops
+  }, []); // Removed dependencies to prevent loops
 
   /**
    * Stop the camera stream and clean up resources
@@ -2510,7 +2591,7 @@ const App = () => {
         await new Promise(resolve => setTimeout(resolve, 500));
       }
       
-      // Initialize Sogni only - cameras will be loaded when needed
+      // Initialize Sogni (restored original behavior)
       try {
         await initializeSogni();
         console.log('✅ App initialization completed');
@@ -2521,6 +2602,76 @@ const App = () => {
     
     initializeAppOnMount();
   }, []); // Empty dependency array - only run on mount
+
+  // Update Sogni client when auth state changes (login/logout)
+  useEffect(() => {
+    if (authState.isAuthenticated && authState.authMode === 'frontend' && authState.getSogniClient()) {
+      console.log(`🔐 User logged in with frontend auth, switching to direct SDK connection for personal credits`);
+      const realClient = authState.getSogniClient();
+      
+      // CRITICAL FIX: Use the adapter instead of raw client
+      const adapterClient = createFrontendClientAdapter(realClient);
+      
+      setSogniClient(adapterClient);
+      setIsSogniReady(true);
+      
+      console.log('✅ Switched to frontend client with adapter - now using personal account credits');
+    } else if (!authState.isAuthenticated && authState.authMode === null) {
+      // User logged out - switch back to demo mode (backend client)
+      console.log('🔐 User logged out, switching back to demo mode (backend client)');
+      
+      // Clear the current client
+      setSogniClient(null);
+      setIsSogniReady(false);
+      
+      // Reinitialize with backend client
+      initializeSogni();
+    }
+  }, [authState.isAuthenticated, authState.authMode, initializeSogni]);
+
+  // Listen for email verification errors from frontend client
+  useEffect(() => {
+    const handleEmailVerificationRequired = () => {
+      console.error('❌ Email verification required event received');
+      setBackendError({
+        type: 'auth_error',
+        title: '📧 Email Verification Required',
+        message: 'Your Sogni account email needs to be verified to generate images.',
+        details: 'Please check your email and click the verification link, then try again. You can also verify your email at app.sogni.ai.',
+        canRetry: true,
+        fallbackUrl: 'https://app.sogni.ai/profile',
+        fallbackText: 'Verify Email',
+        fallbackLabel: 'Go to Profile'
+      });
+      
+      // Clear any active generation
+      clearAllTimeouts();
+      activeProjectReference.current = null;
+      
+      // Mark all generating photos as failed
+      setRegularPhotos(prevPhotos => {
+        return prevPhotos.map(photo => {
+          if (photo.generating) {
+            return {
+              ...photo,
+              generating: false,
+              loading: false,
+              error: 'EMAIL VERIFICATION REQUIRED',
+              permanentError: true,
+              statusText: 'Verify Email'
+            };
+          }
+          return photo;
+        });
+      });
+    };
+
+    window.addEventListener('sogni-email-verification-required', handleEmailVerificationRequired);
+    
+    return () => {
+      window.removeEventListener('sogni-email-verification-required', handleEmailVerificationRequired);
+    };
+  }, []);
 
   // Sync selectedCameraDeviceId with settings - ONLY when preferredCameraDeviceId changes
   useEffect(() => {
@@ -3172,6 +3323,13 @@ const App = () => {
   // -------------------------
   const generateFromBlob = async (photoBlob, newPhotoIndex, dataUrl, isMoreOperation = false, sourceType = 'upload') => {
     try {
+      // Ensure we have a working client (should already be initialized)
+      if (!sogniClient) {
+        console.error('🔐 No Sogni client available for generation');
+        setBackendError('Sogni client not initialized. Please refresh the page.');
+        return;
+      }
+
       // Clear any existing timeouts before starting new generation
       if (!isMoreOperation) {
         clearAllTimeouts();
@@ -3219,16 +3377,19 @@ const App = () => {
         finalPositivePrompt = stylePrompts[selectedStyle] || finalPositivePrompt || '';
       }
 
-      // Inject worker preferences into the prompt
+      // Inject worker preferences into the prompt (only for backend/demo mode)
+      // Frontend authentication uses user's personal credits and shouldn't have hardcoded worker preferences
       const workerPreferences = [];
-      if (settings.requiredWorkers && Array.isArray(settings.requiredWorkers) && settings.requiredWorkers.length > 0) {
-        workerPreferences.push(`--workers=${settings.requiredWorkers.join(',')}`);
-      }
-      if (settings.preferWorkers && settings.preferWorkers.length > 0) {
-        workerPreferences.push(`--preferred-workers=${settings.preferWorkers.join(',')}`);
-      }
-      if (settings.skipWorkers && settings.skipWorkers.length > 0) {
-        workerPreferences.push(`--skip-workers=${settings.skipWorkers.join(',')}`);
+      if (authState.authMode !== 'frontend') {
+        if (settings.requiredWorkers && Array.isArray(settings.requiredWorkers) && settings.requiredWorkers.length > 0) {
+          workerPreferences.push(`--workers=${settings.requiredWorkers.join(',')}`);
+        }
+        if (settings.preferWorkers && settings.preferWorkers.length > 0) {
+          workerPreferences.push(`--preferred-workers=${settings.preferWorkers.join(',')}`);
+        }
+        if (settings.skipWorkers && settings.skipWorkers.length > 0) {
+          workerPreferences.push(`--skip-workers=${settings.skipWorkers.join(',')}`);
+        }
       }
       if (workerPreferences.length > 0) {
         finalPositivePrompt = `${finalPositivePrompt}${workerPreferences.join(' ')}`;
@@ -3338,10 +3499,12 @@ const App = () => {
       
       const blobArrayBuffer = await processedBlob.arrayBuffer();
       
-      // Show upload progress
-      setShowUploadProgress(true);
-      setUploadProgress(0);
-      setUploadStatusText('Uploading your image...');
+      // Show upload progress (only for backend clients)
+      if (authState.authMode !== 'frontend') {
+        setShowUploadProgress(true);
+        setUploadProgress(0);
+        setUploadStatusText('Uploading your image...');
+      }
       
       // Create project using context state for settings
       const isFluxKontext = isFluxKontextModel(selectedModel);
@@ -3419,14 +3582,20 @@ const App = () => {
       });
 
       // Set up handlers for any jobs that exist immediately
-
-      
       if (project.jobs && project.jobs.length > 0) {
         project.jobs.forEach((job, index) => {
           projectStateReference.current.jobMap.set(job.id, index);
-
         });
       }
+
+      // For frontend clients, jobs are created dynamically - map them when they start
+      project.on('jobStarted', (job) => {
+        if (!projectStateReference.current.jobMap.has(job.id)) {
+          const nextIndex = projectStateReference.current.jobMap.size;
+          projectStateReference.current.jobMap.set(job.id, nextIndex);
+          console.log(`Mapped frontend job ${job.id} to index ${nextIndex}`);
+        }
+      });
       
 
 
@@ -3555,16 +3724,20 @@ const App = () => {
       project.on('progress', (progressEvent) => {
         console.log(`Progress event for project ${project.id}:`, progressEvent);
         
+        // Note: Individual job progress is now handled by the adapter for frontend clients
+        // The adapter converts project-level progress to individual job events
+        
         // Check if there's a mismatch between event project ID and current project ID
         if (progressEvent.projectId && progressEvent.projectId !== project.id) {
           console.warn(`Project ID mismatch! Event: ${progressEvent.projectId}, Current: ${project.id}`);
         }
-        
-        // Rest of progress handling
       });
 
       project.on('completed', () => {
         console.log('Project completed');
+        
+        // Note: Event processing is now handled by the adapter for frontend clients
+        // The adapter ensures all necessary events are emitted properly
         
         // Check if there are any outstanding jobs still generating (check both photos state and project jobs)
         const outstandingPhotoJobs = photos.filter(photo => 
@@ -3663,6 +3836,45 @@ const App = () => {
 
       project.on('failed', (error) => {
         console.error('Project failed:', error);
+        
+        // Check for email verification error (code 4052)
+        if (error && typeof error === 'object' && 
+            (error.code === 4052 || (error.message && error.message.includes('verify your email')))) {
+          console.error('❌ Email verification required');
+          setBackendError({
+            type: 'auth_error',
+            title: '📧 Email Verification Required',
+            message: 'Your Sogni account email needs to be verified to generate images.',
+            details: 'Please check your email and click the verification link, then try again. You can also verify your email at app.sogni.ai.',
+            canRetry: true,
+            fallbackUrl: 'https://app.sogni.ai/profile',
+            fallbackText: 'Verify Email',
+            fallbackLabel: 'Go to Profile'
+          });
+          
+          // Clear all timeouts when project fails
+          clearAllTimeouts();
+          activeProjectReference.current = null;
+          
+          // Mark all generating photos as failed
+          setRegularPhotos(prevPhotos => {
+            return prevPhotos.map(photo => {
+              if (photo.generating) {
+                return {
+                  ...photo,
+                  generating: false,
+                  loading: false,
+                  error: 'EMAIL VERIFICATION REQUIRED',
+                  permanentError: true,
+                  statusText: 'Verify Email'
+                };
+              }
+              return photo;
+            });
+          });
+          
+          return;
+        }
         
         // Clear all timeouts when project fails
         clearAllTimeouts();
@@ -3773,23 +3985,10 @@ const App = () => {
         
         // Handle preview vs final image loading
         if (isPreview) {
-          console.log(`[PREVIEW DEBUG] Processing preview for photo ${photoIndex}:`, {
-            jobId: job.id,
-            resultUrl: job.resultUrl,
-            previewUrl: job.previewUrl,
-            isPreview,
-            jobKeys: Object.keys(job)
-          });
           
           // PREVIEW IMAGE - load immediately without affecting status text
           fetch(job.resultUrl)
             .then(response => {
-              console.log(`[PREVIEW DEBUG] Fetch response for photo ${photoIndex}:`, {
-                status: response.status,
-                statusText: response.statusText,
-                headers: Object.fromEntries(response.headers.entries()),
-                url: response.url
-              });
               
               if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -3798,11 +3997,6 @@ const App = () => {
               return response.blob();
             })
             .then(blob => {
-              console.log(`[PREVIEW DEBUG] Blob created for photo ${photoIndex}:`, {
-                size: blob.size,
-                type: blob.type
-              });
-              
               const objectUrl = URL.createObjectURL(blob);
               
               setRegularPhotos(previous => {
@@ -3846,13 +4040,6 @@ const App = () => {
         // Handle hashtag generation for final jobs
         let hashtag = '';
         
-        // Debug logging to understand what we're working with
-        console.log('📸 Hashtag debug:', { 
-          positivePrompt, 
-          stylePrompt: stylePrompt?.trim(), 
-          selectedStyle,
-          jobIndex
-        });
         
         // Strategy 1: Try to match positivePrompt from job
         if (positivePrompt && !hashtag) {
@@ -4074,6 +4261,22 @@ const App = () => {
       // Hide upload progress on error
       setShowUploadProgress(false);
       setUploadProgress(0);
+      
+      // Handle WebSocket connection errors for frontend clients
+      if (error && error.message && error.message.includes('WebSocket not connected') && authState.authMode === 'frontend') {
+        console.error('Frontend client WebSocket disconnected - likely email verification required');
+        
+        setBackendError({
+          type: 'auth_error',
+          title: '📧 Email Verification Required',
+          message: 'Your Sogni account email needs to be verified to generate images.',
+          details: 'Please check your email and click the verification link, then try again. You can also verify your email at app.sogni.ai.',
+          canRetry: true,
+          fallbackUrl: 'https://app.sogni.ai/profile',
+          fallbackText: 'Verify Email',
+          fallbackLabel: 'Go to Profile'
+        });
+      }
       
       if (error && error.code === 4015) {
         console.warn("Socket error (4015). Re-initializing Sogni.");
@@ -5960,9 +6163,7 @@ const App = () => {
             }} 
           />
         </>
-      ) : (
-        console.log('🎬 NOT rendering SplashScreen - showSplashScreen is false')
-      )}
+      ) : null}
       
       {/* PWA Install Prompt - Always rendered, handles its own timing and visibility */}
       <PWAInstallPrompt 
@@ -6150,6 +6351,18 @@ const App = () => {
           onResetSettings={resetSettings} // Pass context reset function
           modelOptions={getModelOptions()} 
         />
+
+        {/* Authentication Status - top-left */}
+        {!showSplashScreen && (
+          <div style={{
+            position: 'fixed',
+            top: 24,
+            left: 24,
+            zIndex: 1000,
+          }}>
+            <AuthStatus />
+          </div>
+        )}
 
         {/* Help button - only show in camera view */}
         {!showPhotoGrid && !selectedPhotoIndex && (
