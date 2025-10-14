@@ -52,7 +52,9 @@ import TwitterShareModal from './components/shared/TwitterShareModal';
 import StyleDropdown from './components/shared/StyleDropdown';
 
 import FriendlyErrorModal from './components/shared/FriendlyErrorModal';
-import SuccessToast from './components/shared/SuccessToast';
+import { useToastContext } from './context/ToastContext';
+import { setupWebSocketErrorHandler, handleSpecificErrors } from './utils/websocketErrorHandler';
+import webSocketErrorTester from './utils/testWebSocketErrors';
 
 import SplashScreen from './components/shared/SplashScreen';
 // Import the ImageAdjuster component
@@ -102,6 +104,14 @@ const getHashtagForStyle = (styleKey) => {
 const App = () => {
   // --- Authentication Hook ---
   const authState = useSogniAuth();
+  
+  // --- Toast Context ---
+  const { showToast } = useToastContext();
+  
+  // Initialize WebSocket error tester for development/testing
+  useEffect(() => {
+    webSocketErrorTester.init(showToast);
+  }, [showToast]);
   
   // --- Immediate URL Check (runs before any useEffect) ---
   const immediateUrl = new URL(window.location.href);
@@ -937,8 +947,6 @@ const App = () => {
   const [showTwitterModal, setShowTwitterModal] = useState(false);
   const [twitterPhotoIndex, setTwitterPhotoIndex] = useState(null);
   const [lastTwitterMessage, setLastTwitterMessage] = useState(null);
-  const [showSuccessToast, setShowSuccessToast] = useState(false);
-  const [successMessage, setSuccessMessage] = useState('');
 
   // Add state for QR code modal (Kiosk Mode)
   const [qrCodeData, setQrCodeData] = useState(null);
@@ -2014,8 +2022,13 @@ const App = () => {
       sogniWatermarkSize: settings.sogniWatermarkSize,
       sogniWatermarkMargin: settings.sogniWatermarkMargin,
       onSuccess: async () => {
-        setSuccessMessage('Your photo has been shared to X/Twitter!');
-        setShowSuccessToast(true);
+        // Show success toast using the new toast system
+        showToast({
+          title: 'Success!',
+          message: 'Your photo has been shared to X/Twitter!',
+          type: 'success',
+          timeout: 4000
+        });
         setShowTwitterModal(false);
         
         // Track analytics for successful Twitter share
@@ -2157,6 +2170,10 @@ const App = () => {
           if (error && typeof error === 'object' && 
               (error.code === 4052 || (error.reason && error.reason.includes('verify your email')))) {
             console.error('❌ Email verification required from socket error');
+            
+            // Show toast notification for email verification
+            handleSpecificErrors.emailVerification(showToast);
+            
             setBackendError({
               type: 'auth_error',
               title: '📧 Email Verification Required',
@@ -2191,6 +2208,8 @@ const App = () => {
           }
         });
       }
+      
+      // WebSocket error handling is now set up in a separate useEffect
       
     } catch (error) {
       console.error('Failed initializing Sogni client:', error);
@@ -2638,6 +2657,23 @@ const App = () => {
       initializeSogni();
     }
   }, [authState.isAuthenticated, authState.authMode, initializeSogni]);
+
+  // Set up WebSocket error handling when sogniClient changes
+  useEffect(() => {
+    if (!sogniClient || !showToast) {
+      return;
+    }
+    
+    const cleanupWebSocketHandler = setupWebSocketErrorHandler(sogniClient, showToast, {
+      showDisconnectionToasts: true,
+      showReconnectionToasts: true,
+      showGeneralErrors: true,
+      autoCloseTimeout: 5000
+    });
+
+    // Return cleanup function
+    return cleanupWebSocketHandler;
+  }, [sogniClient, showToast]);
 
   // Listen for email verification errors from frontend client
   useEffect(() => {
@@ -4290,6 +4326,9 @@ const App = () => {
       if (error && error.message && error.message.includes('WebSocket not connected') && authState.authMode === 'frontend') {
         console.error('Frontend client WebSocket disconnected - likely email verification required');
         
+        // Show toast notification for WebSocket disconnection
+        handleSpecificErrors.emailVerification(showToast);
+        
         setBackendError({
           type: 'auth_error',
           title: '📧 Email Verification Required',
@@ -4304,6 +4343,10 @@ const App = () => {
       
       if (error && error.code === 4015) {
         console.warn("Socket error (4015). Re-initializing Sogni.");
+        
+        // Show toast notification for connection switch
+        handleSpecificErrors.connectionSwitched(showToast);
+        
         setIsSogniReady(false);
         initializeSogni();
       }
@@ -4976,12 +5019,7 @@ const App = () => {
         }}
       />
 
-      {/* Success Toast */}
-      <SuccessToast
-        message={successMessage}
-        isVisible={showSuccessToast}
-        onClose={() => setShowSuccessToast(false)}
-      />
+      {/* Toast notifications are now handled by ToastProvider */}
 
       {currentPage === 'prompts' ? (
         <>
