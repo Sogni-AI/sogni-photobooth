@@ -211,7 +211,7 @@ export class FrontendProjectAdapter extends BrowserEventEmitter implements Sogni
       
       // 1. Check our captured prompts map
       if (this.jobPrompts.has(job.id)) {
-        individualJobPrompt = this.jobPrompts.get(job.id);
+        individualJobPrompt = this.jobPrompts.get(job.id) || '';
       }
       // 2. Check job object itself
       else if (job.positivePrompt) {
