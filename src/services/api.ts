@@ -386,7 +386,9 @@ export async function createProject(params: Record<string, unknown>, progressCal
         sensitiveContentFilter: params.sensitiveContentFilter || false,
         startingImage: Array.isArray(imageData) || imageData instanceof Uint8Array ? imageData : [],
         startingImageStrength: params.startingImageStrength || 0.85,
-        sourceType: params.sourceType // Pass sourceType through for enhancement
+        sourceType: params.sourceType, // Pass sourceType through for enhancement
+        tokenType: params.tokenType, // Pass tokenType for payment method
+        isPremiumSpark: params.isPremiumSpark // Pass premium status
       };
     } else if (isContextImage) {
       // Generation parameters with contextImages (Flux.1 Kontext)
@@ -406,7 +408,9 @@ export async function createProject(params: Record<string, unknown>, progressCal
         sensitiveContentFilter: params.sensitiveContentFilter || false,
         contextImages: [Array.isArray(imageData) || imageData instanceof Uint8Array ? imageData : []],
         seed: params.seed || undefined,
-        sourceType: params.sourceType // Pass sourceType through for generation
+        sourceType: params.sourceType, // Pass sourceType through for generation
+        tokenType: params.tokenType, // Pass tokenType for payment method
+        isPremiumSpark: params.isPremiumSpark // Pass premium status
       };
     } else {
       // Generation parameters with controlNet
@@ -434,7 +438,9 @@ export async function createProject(params: Record<string, unknown>, progressCal
         controlNetGuidanceEnd,
         imageData: Array.isArray(imageData) || imageData instanceof Uint8Array ? imageData : [],
         seed: params.seed || undefined,
-        sourceType: params.sourceType // Pass sourceType through for generation
+        sourceType: params.sourceType, // Pass sourceType through for generation
+        tokenType: params.tokenType, // Pass tokenType for payment method
+        isPremiumSpark: params.isPremiumSpark // Pass premium status
       };
     }
     

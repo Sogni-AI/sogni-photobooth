@@ -281,6 +281,7 @@ async function handleImageConversion(imageUrl, imageSize) {
     const conversionParams = {
       testnet: false,
       tokenType: 'spark',
+      isPremiumSpark: false, // Extension uses non-premium Spark
       selectedModel: 'coreml-sogniXLturbo_alpha1_ad',
       positivePrompt: finalPositivePrompt,
       negativePrompt: 'lowres, worst quality, low quality',

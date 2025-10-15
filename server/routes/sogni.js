@@ -594,43 +594,55 @@ router.post('/generate', ensureSessionId, async (req, res) => {
       .replace(/\s+/g, ' ') // Normalize multiple spaces to single space
       .trim();
     
-    // Enforce hardcoded worker preferences
+    // Check payment method and premium status
+    const tokenType = req.body.tokenType || 'spark';
+    const isPremiumSpark = req.body.isPremiumSpark === true;
+    
+    // Only apply worker preferences if NOT using non-premium Spark
+    // Worker preferences are a Premium Spark feature
+    const shouldApplyWorkerPreferences = tokenType !== 'spark' || isPremiumSpark;
+    
+    // Enforce hardcoded worker preferences only if allowed
     const hardcodedWorkerPreferences = [];
     
-    // Hardcoded required workers (empty for now)
-    const requiredWorkers = [];
-    if (requiredWorkers.length > 0) {
-      hardcodedWorkerPreferences.push(`--workers=${requiredWorkers.join(',')}`);
-    }
-    
-    // Hardcoded preferred workers
-    const preferredWorkers = ['SPICE.MUST.FLOW'];
-    if (preferredWorkers.length > 0) {
-      hardcodedWorkerPreferences.push(`--preferred-workers=${preferredWorkers.join(',')}`);
-    }
-    
-    // Hardcoded skip workers (maximum 2 values allowed)
-    const skipWorkers = ['freeman123'];
-    // Enforce maximum of 2 skip workers
-    const limitedSkipWorkers = skipWorkers.slice(0, 2);
-    if (limitedSkipWorkers.length > 0) {
-      hardcodedWorkerPreferences.push(`--skip-workers=${limitedSkipWorkers.join(',')}`);
-    }
-    
-    // Log if skip workers were truncated
-    if (skipWorkers.length > 2) {
-      console.log(`[${localProjectId}] WARNING: Skip workers truncated from ${skipWorkers.length} to 2 values. Original: [${skipWorkers.join(', ')}], Limited: [${limitedSkipWorkers.join(', ')}]`);
-    }
-    
-    // Apply hardcoded worker preferences to the prompt
-    if (hardcodedWorkerPreferences.length > 0) {
-      positivePrompt = `${positivePrompt} ${hardcodedWorkerPreferences.join(' ')}`.trim();
+    if (shouldApplyWorkerPreferences) {
+      // Hardcoded required workers (empty for now)
+      const requiredWorkers = [];
+      if (requiredWorkers.length > 0) {
+        hardcodedWorkerPreferences.push(`--workers=${requiredWorkers.join(',')}`);
+      }
+      
+      // Hardcoded preferred workers
+      const preferredWorkers = ['SPICE.MUST.FLOW'];
+      if (preferredWorkers.length > 0) {
+        hardcodedWorkerPreferences.push(`--preferred-workers=${preferredWorkers.join(',')}`);
+      }
+      
+      // Hardcoded skip workers (maximum 2 values allowed)
+      const skipWorkers = ['freeman123'];
+      // Enforce maximum of 2 skip workers
+      const limitedSkipWorkers = skipWorkers.slice(0, 2);
+      if (limitedSkipWorkers.length > 0) {
+        hardcodedWorkerPreferences.push(`--skip-workers=${limitedSkipWorkers.join(',')}`);
+      }
+      
+      // Log if skip workers were truncated
+      if (skipWorkers.length > 2) {
+        console.log(`[${localProjectId}] WARNING: Skip workers truncated from ${skipWorkers.length} to 2 values. Original: [${skipWorkers.join(', ')}], Limited: [${limitedSkipWorkers.join(', ')}]`);
+      }
+      
+      // Apply hardcoded worker preferences to the prompt
+      if (hardcodedWorkerPreferences.length > 0) {
+        positivePrompt = `${positivePrompt} ${hardcodedWorkerPreferences.join(' ')}`.trim();
+      }
+      
+      console.log(`[${localProjectId}] Worker preferences enforced on server side:`, hardcodedWorkerPreferences);
+    } else {
+      console.log(`[${localProjectId}] Worker preferences SKIPPED - using non-premium Spark (Premium Spark required)`);
     }
     
     // Override the request body with the sanitized prompt
     req.body.positivePrompt = positivePrompt;
-    
-    console.log(`[${localProjectId}] Worker preferences enforced on server side:`, hardcodedWorkerPreferences);
     
     // Track a new batch being generated for metrics (both old and new systems)
     await incrementBatchesGenerated();

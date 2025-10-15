@@ -49,6 +49,7 @@ Object.values(promptsDataRaw).forEach(themeGroup => {
 import PhotoGallery from './components/shared/PhotoGallery';
 import { useApp } from './context/AppContext.tsx';
 import { useWallet } from './hooks/useWallet';
+import { isPremiumBoosted } from './services/walletService';
 import TwitterShareModal from './components/shared/TwitterShareModal';
 import StyleDropdown from './components/shared/StyleDropdown';
 
@@ -228,7 +229,7 @@ const App = () => {
   } = settings;
 
   // --- Use wallet for payment method ---
-  const { tokenType: walletTokenType } = useWallet();
+  const { tokenType: walletTokenType, balances } = useWallet();
   
   // Log when payment method changes
   useEffect(() => {
@@ -3468,6 +3469,9 @@ const App = () => {
   // -------------------------
   const generateFromBlob = async (photoBlob, newPhotoIndex, dataUrl, isMoreOperation = false, sourceType = 'upload') => {
     try {
+      // Check if user has Premium Spark (used multiple times in this function)
+      const hasPremiumSpark = isPremiumBoosted(balances, walletTokenType);
+      
       // Ensure we have a working client (should already be initialized)
       if (!sogniClient) {
         console.error('🔐 No Sogni client available for generation');
@@ -3523,34 +3527,45 @@ const App = () => {
       }
 
       // Inject worker preferences into the prompt
-      // For backend/demo mode: use hardcoded preferences from server
-      // For frontend auth mode: use user-configured preferences from settings
+      // Worker preferences are a Premium Spark feature - only add them if:
+      // 1. Using SOGNI tokens, OR
+      // 2. Using Spark with Premium status
+      // For backend/demo mode: server will enforce its own preferences
+      // For frontend auth mode: use user-configured preferences (if premium)
       const workerPreferences = [];
-      if (authState.authMode !== 'frontend') {
-        // Backend/demo mode - use hardcoded server preferences (kept for backward compatibility)
-        if (settings.requiredWorkers && Array.isArray(settings.requiredWorkers) && settings.requiredWorkers.length > 0) {
-          workerPreferences.push(`--workers=${settings.requiredWorkers.join(',')}`);
+      
+      // Check if user has Premium Spark to determine if worker preferences are allowed
+      const canUseWorkerPreferences = walletTokenType !== 'spark' || hasPremiumSpark;
+      
+      if (canUseWorkerPreferences) {
+        if (authState.authMode !== 'frontend') {
+          // Backend/demo mode - use hardcoded server preferences (kept for backward compatibility)
+          if (settings.requiredWorkers && Array.isArray(settings.requiredWorkers) && settings.requiredWorkers.length > 0) {
+            workerPreferences.push(`--workers=${settings.requiredWorkers.join(',')}`);
+          }
+          if (settings.preferWorkers && settings.preferWorkers.length > 0) {
+            workerPreferences.push(`--preferred-workers=${settings.preferWorkers.join(',')}`);
+          }
+          if (settings.skipWorkers && settings.skipWorkers.length > 0) {
+            workerPreferences.push(`--skip-workers=${settings.skipWorkers.join(',')}`);
+          }
+        } else {
+          // Frontend auth mode - use user-configured preferences
+          if (settings.requiredWorkers && Array.isArray(settings.requiredWorkers) && settings.requiredWorkers.length > 0) {
+            workerPreferences.push(`--workers=${settings.requiredWorkers.join(',')}`);
+          }
+          if (settings.preferWorkers && settings.preferWorkers.length > 0) {
+            workerPreferences.push(`--preferred-workers=${settings.preferWorkers.join(',')}`);
+          }
+          if (settings.skipWorkers && settings.skipWorkers.length > 0) {
+            workerPreferences.push(`--skip-workers=${settings.skipWorkers.join(',')}`);
+          }
         }
-        if (settings.preferWorkers && settings.preferWorkers.length > 0) {
-          workerPreferences.push(`--preferred-workers=${settings.preferWorkers.join(',')}`);
-        }
-        if (settings.skipWorkers && settings.skipWorkers.length > 0) {
-          workerPreferences.push(`--skip-workers=${settings.skipWorkers.join(',')}`);
+        if (workerPreferences.length > 0) {
+          finalPositivePrompt = `${finalPositivePrompt}${workerPreferences.join(' ')}`;
         }
       } else {
-        // Frontend auth mode - use user-configured preferences
-        if (settings.requiredWorkers && Array.isArray(settings.requiredWorkers) && settings.requiredWorkers.length > 0) {
-          workerPreferences.push(`--workers=${settings.requiredWorkers.join(',')}`);
-        }
-        if (settings.preferWorkers && settings.preferWorkers.length > 0) {
-          workerPreferences.push(`--preferred-workers=${settings.preferWorkers.join(',')}`);
-        }
-        if (settings.skipWorkers && settings.skipWorkers.length > 0) {
-          workerPreferences.push(`--skip-workers=${settings.skipWorkers.join(',')}`);
-        }
-      }
-      if (workerPreferences.length > 0) {
-        finalPositivePrompt = `${finalPositivePrompt}${workerPreferences.join(' ')}`;
+        console.log('⚠️ Worker preferences SKIPPED in frontend - Premium Spark required');
       }
 
       // Style prompt logic: use context state
@@ -3667,12 +3682,10 @@ const App = () => {
       // Create project using context state for settings
       const isFluxKontext = isFluxKontextModel(selectedModel);
       
-      // Log the payment method being used for this generation
-      console.log('💳 Generating with payment method:', walletTokenType);
-      
       const projectConfig = { 
         testnet: false,
         tokenType: walletTokenType, // Use selected payment method from wallet
+        isPremiumSpark: hasPremiumSpark, // Pass premium status to backend
         modelId: selectedModel,
         positivePrompt: finalPositivePrompt,
         negativePrompt: finalNegativePrompt,
