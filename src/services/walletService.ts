@@ -70,7 +70,7 @@ export function isPremiumBoosted(balances: Balances | null, tokenType: TokenType
  * Get the token label for display
  */
 export function getTokenLabel(tokenType: TokenType): string {
-  return tokenType === 'sogni' ? 'SOGNI Token' : 'Spark Points';
+  return tokenType === 'sogni' ? 'SOGNI' : 'Spark';
 }
 
 /**
