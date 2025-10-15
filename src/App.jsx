@@ -48,6 +48,7 @@ Object.values(promptsDataRaw).forEach(themeGroup => {
 });
 import PhotoGallery from './components/shared/PhotoGallery';
 import { useApp } from './context/AppContext.tsx';
+import { useWallet } from './hooks/useWallet';
 import TwitterShareModal from './components/shared/TwitterShareModal';
 import StyleDropdown from './components/shared/StyleDropdown';
 
@@ -225,6 +226,14 @@ const App = () => {
     showSplashOnInactivity,
     inactivityTimeout
   } = settings;
+
+  // --- Use wallet for payment method ---
+  const { tokenType: walletTokenType } = useWallet();
+  
+  // Log when payment method changes
+  useEffect(() => {
+    console.log('💳 Payment method updated:', walletTokenType);
+  }, [walletTokenType]);
 
   // Extract preferredCameraDeviceId for easier access
   const { preferredCameraDeviceId } = settings;
@@ -474,6 +483,11 @@ const App = () => {
   
   // Helper function to trigger promotional popup after batch completion
   const triggerPromoPopupIfNeeded = () => {
+    // Don't show promo popup if user is already logged in
+    if (authState.isAuthenticated) {
+      return;
+    }
+    
     if (shouldShowPromoPopup()) {
       // Add a small delay to let the UI settle after batch completion
       setTimeout(() => {
@@ -3652,9 +3666,13 @@ const App = () => {
       
       // Create project using context state for settings
       const isFluxKontext = isFluxKontextModel(selectedModel);
+      
+      // Log the payment method being used for this generation
+      console.log('💳 Generating with payment method:', walletTokenType);
+      
       const projectConfig = { 
         testnet: false,
-        tokenType: 'spark',
+        tokenType: walletTokenType, // Use selected payment method from wallet
         modelId: selectedModel,
         positivePrompt: finalPositivePrompt,
         negativePrompt: finalNegativePrompt,
@@ -6721,39 +6739,42 @@ const App = () => {
                     <a href="https://www.sogni.ai/sdk" target="_blank" rel="noopener noreferrer">
                       Vibe Coded with Sogni Client SDK<br/>Powered by Sogni Supernet ❤️
                     </a>
-                    <button
-                      onClick={() => {
-                        setShowInfoModal(false);
-                        setShowPromoPopup(true);
-                      }}
-                      className="signup-tip-button"
-                      style={{
-                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                        border: 'none',
-                        color: 'white',
-                        padding: '6px 12px',
-                        borderRadius: '12px',
-                        fontSize: '12px',
-                        fontWeight: '600',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease',
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-                        textShadow: '0 1px 2px rgba(0,0,0,0.2)',
-                        whiteSpace: 'nowrap',
-                        flexShrink: 0
-                      }}
-                      onMouseOver={(e) => {
-                        e.currentTarget.style.transform = 'scale(1.05)';
-                        e.currentTarget.style.boxShadow = '0 4px 8px rgba(0,0,0,0.2)';
-                      }}
-                      onMouseOut={(e) => {
-                        e.currentTarget.style.transform = 'scale(1)';
-                        e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
-                      }}
-                      title="Get 100 free credits with Sogni!"
-                    >
-                      Signup? ✨
-                    </button>
+                    {/* Only show signup button if user is not logged in */}
+                    {!authState.isAuthenticated && (
+                      <button
+                        onClick={() => {
+                          setShowInfoModal(false);
+                          setShowPromoPopup(true);
+                        }}
+                        className="signup-tip-button"
+                        style={{
+                          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                          border: 'none',
+                          color: 'white',
+                          padding: '6px 12px',
+                          borderRadius: '12px',
+                          fontSize: '12px',
+                          fontWeight: '600',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease',
+                          boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                          textShadow: '0 1px 2px rgba(0,0,0,0.2)',
+                          whiteSpace: 'nowrap',
+                          flexShrink: 0
+                        }}
+                        onMouseOver={(e) => {
+                          e.currentTarget.style.transform = 'scale(1.05)';
+                          e.currentTarget.style.boxShadow = '0 4px 8px rgba(0,0,0,0.2)';
+                        }}
+                        onMouseOut={(e) => {
+                          e.currentTarget.style.transform = 'scale(1)';
+                          e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+                        }}
+                        title="Get 100 free credits with Sogni!"
+                      >
+                        Signup? ✨
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
