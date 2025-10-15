@@ -92,8 +92,14 @@ export function useWallet(): UseWalletResult {
     // Subscribe to balance update events from the socket
     const subscribeToBalanceUpdates = () => {
       try {
-        // The SogniClient's socket emits balanceUpdate events
-        // We can listen directly on the socket, not the apiClient
+        // Access the socket via the client - use type assertion for TypeScript
+        const socket = (sogniClient as any).socket;
+        
+        if (!socket || typeof socket.on !== 'function') {
+          console.warn('Socket not available on SogniClient');
+          return () => {};
+        }
+
         const handleBalanceUpdate = (balances: any) => {
           console.log('💰 Balance update received via WebSocket:', {
             sparkNet: balances?.spark?.net,
@@ -107,14 +113,16 @@ export function useWallet(): UseWalletResult {
         };
 
         // Listen on the socket for balanceUpdate events
-        sogniClient.socket.on('balanceUpdate', handleBalanceUpdate);
+        socket.on('balanceUpdate', handleBalanceUpdate);
 
         console.log('💰 Subscribed to balance updates on socket');
 
         // Return cleanup function
         return () => {
-          sogniClient.socket.off('balanceUpdate', handleBalanceUpdate);
-          console.log('💰 Unsubscribed from balance updates');
+          if (socket && typeof socket.off === 'function') {
+            socket.off('balanceUpdate', handleBalanceUpdate);
+            console.log('💰 Unsubscribed from balance updates');
+          }
         };
       } catch (err) {
         console.warn('Failed to subscribe to balance updates:', err);
