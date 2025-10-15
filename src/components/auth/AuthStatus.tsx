@@ -148,6 +148,9 @@ export const AuthStatus: React.FC = () => {
                       borderRadius: '6px'
                     }}>
                       ✨ Premium Boosted!
+                      <div style={{ fontSize: '11px', marginTop: '4px', opacity: 0.9 }}>
+                        {formatTokenAmount(balances?.spark.premiumCredit || '0')} Left
+                      </div>
                     </div>
                   ) : (
                     <div style={{
