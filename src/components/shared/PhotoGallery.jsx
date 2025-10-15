@@ -14,6 +14,7 @@ import { isFluxKontextModel, SAMPLE_GALLERY_CONFIG, getQRWatermarkConfig } from 
 import { themeConfigService } from '../../services/themeConfig';
 import { useApp } from '../../context/AppContext';
 import { trackDownloadWithStyle } from '../../services/analyticsService';
+import { downloadImagesAsZip } from '../../utils/bulkDownload';
 
 // Memoized placeholder image component to prevent blob reloading
 const PlaceholderImage = memo(({ placeholderUrl }) => {
@@ -199,6 +200,27 @@ const PhotoGallery = ({
   const [showEnhanceDropdown, setShowEnhanceDropdown] = useState(false);
   const [showPromptModal, setShowPromptModal] = useState(false);
   const [customPrompt, setCustomPrompt] = useState('');
+
+  // State for bulk download functionality
+  const [isBulkDownloading, setIsBulkDownloading] = useState(false);
+  const [bulkDownloadProgress, setBulkDownloadProgress] = useState({ current: 0, total: 0, message: '' });
+
+  // State for Download All button dropdown
+  const [showMoreDropdown, setShowMoreDropdown] = useState(false);
+  
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (showMoreDropdown && !e.target.closest('.download-all-circular-btn') && !e.target.closest('.more-dropdown-menu')) {
+        setShowMoreDropdown(false);
+      }
+    };
+    
+    if (showMoreDropdown) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [showMoreDropdown]);
   
   // Refs for dropdown animation buttons to prevent re-triggering animations
   const enhanceButton1Ref = useRef(null);
@@ -315,6 +337,7 @@ const PhotoGallery = ({
       setShowMoreButtonDuringGeneration(false);
     }
   }, [isGenerating, selectedPhotoIndex]);
+
 
   // Handler for the "more" button that can either generate more or cancel current generation
   const handleMoreButtonClick = useCallback(async () => {
@@ -640,6 +663,308 @@ const PhotoGallery = ({
     return filtered;
   }, [isPromptSelectorMode, photos, themeGroupState, stylePrompts, selectedModel, searchTerm]);
 
+  // Get readable style display text for photo labels (no hashtags)
+  const getStyleDisplayText = useCallback((photo) => {
+    // Gallery images already have promptDisplay
+    if (photo.isGalleryImage && photo.promptDisplay) {
+      return photo.promptDisplay;
+    }
+    
+    // Skip for loading photos
+    if (photo.loading || photo.generating) {
+      return '';
+    }
+    
+    // Try stylePrompt first
+    if (photo.stylePrompt) {
+      const foundStyleKey = Object.entries(stylePrompts).find(
+        ([, value]) => value === photo.stylePrompt
+      )?.[0];
+      
+      if (foundStyleKey && foundStyleKey !== 'custom' && foundStyleKey !== 'random' && foundStyleKey !== 'randomMix' && foundStyleKey !== 'browseGallery') {
+        return styleIdToDisplay(foundStyleKey);
+      }
+    }
+    
+    // Try positivePrompt next
+    if (photo.positivePrompt) {
+      const foundStyleKey = Object.entries(stylePrompts).find(
+        ([, value]) => value === photo.positivePrompt
+      )?.[0];
+      
+      if (foundStyleKey && foundStyleKey !== 'custom' && foundStyleKey !== 'random' && foundStyleKey !== 'randomMix' && foundStyleKey !== 'browseGallery') {
+        return styleIdToDisplay(foundStyleKey);
+      }
+    }
+    
+    // Try selectedStyle as fallback
+    if (selectedStyle && selectedStyle !== 'custom' && selectedStyle !== 'random' && selectedStyle !== 'randomMix' && selectedStyle !== 'browseGallery') {
+      return styleIdToDisplay(selectedStyle);
+    }
+    
+    // Default empty
+    return '';
+  }, [photos, stylePrompts, selectedStyle]);
+
+  // Helper function to check if current theme supports the current aspect ratio
+  // MUST be called before any early returns to maintain hook order
+  const isThemeSupported = useCallback(() => {
+    if (tezdevTheme === 'off') return false;
+    
+    // Check hardcoded theme aspect ratio requirements
+    switch (tezdevTheme) {
+      case 'supercasual':
+      case 'tezoswebx':
+      case 'taipeiblockchain':
+      case 'showup': {
+        return aspectRatio === 'narrow';
+      }
+      default:
+        // For dynamic themes, assume they support all aspect ratios
+        // The actual validation happens in applyTezDevFrame() which checks
+        // themeConfigService.getFrameUrls() and gracefully handles unsupported combinations
+        return true;
+    }
+  }, [tezdevTheme, aspectRatio]);
+
+  // Handle download all photos as ZIP - uses exact same logic as individual downloads
+  const handleDownloadAll = useCallback(async (includeFrames = false) => {
+    if (isBulkDownloading) {
+      console.log('Bulk download already in progress');
+      return;
+    }
+
+    try {
+      setIsBulkDownloading(true);
+      setBulkDownloadProgress({ current: 0, total: 0, message: 'Preparing images...' });
+
+      // Get the correct photos array based on mode
+      const currentPhotosArray = isPromptSelectorMode ? filteredPhotos : photos;
+
+      // Count loaded photos
+      const loadedPhotos = currentPhotosArray.filter(
+        photo => !photo.loading && !photo.generating && !photo.error && photo.images && photo.images.length > 0
+      );
+
+      if (loadedPhotos.length === 0) {
+        console.warn('No loaded photos to download');
+        setBulkDownloadProgress({ current: 0, total: 0, message: 'No images available to download' });
+        setTimeout(() => {
+          setIsBulkDownloading(false);
+        }, 2000);
+        return;
+      }
+
+      // Ensure fonts are loaded for framed images
+      if (includeFrames && !document.querySelector('link[href*="Permanent+Marker"]')) {
+        const fontLink = document.createElement('link');
+        fontLink.href = 'https://fonts.googleapis.com/css2?family=Permanent+Marker&display=swap';
+        fontLink.rel = 'stylesheet';
+        document.head.appendChild(fontLink);
+        await document.fonts.ready;
+      }
+
+      // Prepare images array with proper processing
+      const imagesToDownload = [];
+      let filenameCounter = 1;
+
+      for (let i = 0; i < currentPhotosArray.length; i++) {
+        const photo = currentPhotosArray[i];
+
+        // Skip photos that are still loading or have errors
+        if (photo.loading || photo.generating || photo.error || !photo.images || photo.images.length === 0) {
+          continue;
+        }
+
+        setBulkDownloadProgress({ current: i, total: loadedPhotos.length, message: `Processing image ${i + 1} of ${loadedPhotos.length}...` });
+
+        // Get the image URL (handle enhanced images) - SAME AS INDIVIDUAL
+        const currentSubIndex = photo.enhanced && photo.enhancedImageUrl
+          ? -1
+          : (selectedSubIndex || 0);
+
+        const imageUrl = currentSubIndex === -1
+          ? photo.enhancedImageUrl
+          : photo.images[currentSubIndex];
+
+        if (!imageUrl) continue;
+
+        // Get style display text - SAME AS INDIVIDUAL
+        const styleDisplayText = getStyleDisplayText(photo);
+        const cleanStyleName = styleDisplayText ? styleDisplayText.toLowerCase().replace(/\s+/g, '-') : 'sogni';
+
+        // Process image based on frame type
+        let processedImageUrl = imageUrl;
+        let actualExtension = outputFormat === 'png' ? '.png' : '.jpg';
+
+        if (includeFrames) {
+          // FRAMED DOWNLOAD - USE EXACT SAME LOGIC AS handleDownloadPhoto
+          try {
+            const photoNumberLabel = photo?.statusText?.split('#')[0]?.trim() || '';
+            const photoLabel = photoNumberLabel || styleDisplayText || '';
+            
+            // Check if theme is supported - SAME AS INDIVIDUAL
+            const useTheme = isThemeSupported();
+            const isGalleryImage = photo.isGalleryImage;
+            const shouldUseTheme = useTheme && !isGalleryImage;
+            
+            // Truncate label for QR code space - SAME AS INDIVIDUAL
+            const maxLabelLength = 20;
+            const truncatedLabel = !shouldUseTheme && photoLabel.length > maxLabelLength 
+              ? photoLabel.substring(0, maxLabelLength) + '...' 
+              : photoLabel;
+
+            // Create polaroid image with EXACT same options as individual download
+            const polaroidUrl = await createPolaroidImage(imageUrl, !shouldUseTheme ? truncatedLabel : '', {
+              tezdevTheme: shouldUseTheme ? tezdevTheme : 'off',
+              aspectRatio,
+              frameWidth: !shouldUseTheme ? 56 : 0,
+              frameTopWidth: !shouldUseTheme ? 56 : 0,
+              frameBottomWidth: !shouldUseTheme ? 150 : 0,
+              frameColor: !shouldUseTheme ? 'white' : 'transparent',
+              outputFormat: outputFormat,
+              taipeiFrameNumber: shouldUseTheme && tezdevTheme === 'taipeiblockchain' ? photo.taipeiFrameNumber : undefined,
+              watermarkOptions: settings.sogniWatermark ? getQRWatermarkConfig(settings) : null
+            });
+
+            processedImageUrl = polaroidUrl;
+          } catch (error) {
+            console.error(`Error creating framed image for photo ${i}:`, error);
+            // Fall back to raw image if framing fails
+          }
+        } else {
+          // RAW DOWNLOAD - USE EXACT SAME LOGIC AS handleDownloadRawPhoto
+          try {
+            // Detect actual format from image - SAME AS INDIVIDUAL
+            if (imageUrl.startsWith('blob:') || imageUrl.startsWith('http')) {
+              const response = await fetch(imageUrl);
+              const contentType = response.headers.get('content-type');
+              if (contentType) {
+                if (contentType.includes('image/png')) {
+                  actualExtension = '.png';
+                } else if (contentType.includes('image/jpeg') || contentType.includes('image/jpg')) {
+                  actualExtension = '.jpg';
+                }
+              }
+            }
+
+            // Process raw image with QR watermark if enabled - SAME AS INDIVIDUAL
+            if (settings.sogniWatermark) {
+              processedImageUrl = await new Promise((resolve) => {
+                const img = new Image();
+                img.crossOrigin = 'anonymous';
+                
+                img.onload = async () => {
+                  try {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    const ctx = canvas.getContext('2d');
+                    
+                    ctx.imageSmoothingEnabled = true;
+                    ctx.imageSmoothingQuality = 'high';
+                    ctx.drawImage(img, 0, 0);
+                    
+                    // Add QR watermark - SAME AS INDIVIDUAL
+                    const { addQRWatermark } = await import('../../utils/imageProcessing.js');
+                    await addQRWatermark(ctx, canvas.width, canvas.height, getQRWatermarkConfig(settings));
+                    
+                    const dataUrl = canvas.toDataURL(actualExtension === '.png' ? 'image/png' : 'image/jpeg', 0.95);
+                    resolve(dataUrl);
+                  } catch (error) {
+                    console.error('Error processing raw image with watermark:', error);
+                    resolve(imageUrl);
+                  }
+                };
+                
+                img.onerror = () => {
+                  console.error('Error loading image for raw download processing');
+                  resolve(imageUrl);
+                };
+                
+                img.src = imageUrl;
+              });
+            }
+          } catch (error) {
+            console.error(`Error processing raw image for photo ${i}:`, error);
+            // Continue with unprocessed image
+          }
+        }
+
+        // Generate filename
+        const frameType = includeFrames ? '-framed' : '-raw';
+        const filename = `sogni-photobooth-${String(filenameCounter).padStart(3, '0')}-${cleanStyleName}${frameType}${actualExtension}`;
+
+        imagesToDownload.push({
+          url: processedImageUrl,
+          filename: filename,
+          photoIndex: i,
+          styleId: photo.styleId
+        });
+
+        filenameCounter++;
+      }
+
+      if (imagesToDownload.length === 0) {
+        console.warn('No images prepared for download');
+        setBulkDownloadProgress({ current: 0, total: 0, message: 'No images prepared for download' });
+        setTimeout(() => {
+          setIsBulkDownloading(false);
+        }, 2000);
+        return;
+      }
+
+      // Generate ZIP filename with timestamp
+      const timestamp = new Date().toISOString().split('T')[0];
+      const frameTypeLabel = includeFrames ? 'framed' : 'raw';
+      const zipFilename = `sogni-photobooth-${frameTypeLabel}-${timestamp}.zip`;
+
+      // Download as ZIP with progress callback
+      const success = await downloadImagesAsZip(
+        imagesToDownload,
+        zipFilename,
+        (current, total, message) => {
+          setBulkDownloadProgress({ current, total, message });
+        }
+      );
+
+      if (success) {
+        setBulkDownloadProgress({
+          current: imagesToDownload.length,
+          total: imagesToDownload.length,
+          message: 'Download complete!'
+        });
+
+        console.log(`Successfully downloaded ${imagesToDownload.length} images as ${zipFilename}`);
+      } else {
+        setBulkDownloadProgress({
+          current: 0,
+          total: 0,
+          message: 'Download failed. Please try again.'
+        });
+      }
+
+      // Reset after a delay
+      setTimeout(() => {
+        setIsBulkDownloading(false);
+        setBulkDownloadProgress({ current: 0, total: 0, message: '' });
+      }, 3000);
+
+    } catch (error) {
+      console.error('Error in bulk download:', error);
+      setBulkDownloadProgress({
+        current: 0,
+        total: 0,
+        message: `Error: ${error.message}`
+      });
+
+      setTimeout(() => {
+        setIsBulkDownloading(false);
+        setBulkDownloadProgress({ current: 0, total: 0, message: '' });
+      }, 3000);
+    }
+  }, [isBulkDownloading, isPromptSelectorMode, filteredPhotos, photos, selectedSubIndex, getStyleDisplayText, outputFormat, settings, tezdevTheme, aspectRatio, isThemeSupported]);
+
   // Close dropdown when clicking outside (but allow clicks inside the portal dropdown)
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -676,27 +1001,6 @@ const PhotoGallery = ({
       document.removeEventListener('click', handleClickOutside);
     };
   }, [showSearchInput]);
-
-  // Helper function to check if current theme supports the current aspect ratio
-  // MUST be called before any early returns to maintain hook order
-  const isThemeSupported = useCallback(() => {
-    if (tezdevTheme === 'off') return false;
-    
-    // Check hardcoded theme aspect ratio requirements
-    switch (tezdevTheme) {
-      case 'supercasual':
-      case 'tezoswebx':
-      case 'taipeiblockchain':
-      case 'showup': {
-        return aspectRatio === 'narrow';
-      }
-      default:
-        // For dynamic themes, assume they support all aspect ratios
-        // The actual validation happens in applyTezDevFrame() which checks
-        // themeConfigService.getFrameUrls() and gracefully handles unsupported combinations
-        return true;
-    }
-  }, [tezdevTheme, aspectRatio]);
 
   // Ensure all photos have a Taipei frame number and frame padding assigned (migration for existing photos)
   // Use a ref to track if migration has been done to avoid repeated migrations
@@ -974,49 +1278,6 @@ const PhotoGallery = ({
            window.navigator.standalone ||
            document.referrer.includes('android-app://');
   }, []);
-
-  // Get readable style display text for photo labels (no hashtags)
-  const getStyleDisplayText = useCallback((photo) => {
-    // Gallery images already have promptDisplay
-    if (photo.isGalleryImage && photo.promptDisplay) {
-      return photo.promptDisplay;
-    }
-    
-    // Skip for loading photos
-    if (photo.loading || photo.generating) {
-      return '';
-    }
-    
-    // Try stylePrompt first
-    if (photo.stylePrompt) {
-      const foundStyleKey = Object.entries(stylePrompts).find(
-        ([, value]) => value === photo.stylePrompt
-      )?.[0];
-      
-      if (foundStyleKey && foundStyleKey !== 'custom' && foundStyleKey !== 'random' && foundStyleKey !== 'randomMix' && foundStyleKey !== 'browseGallery') {
-        return styleIdToDisplay(foundStyleKey);
-      }
-    }
-    
-    // Try positivePrompt next
-    if (photo.positivePrompt) {
-      const foundStyleKey = Object.entries(stylePrompts).find(
-        ([, value]) => value === photo.positivePrompt
-      )?.[0];
-      
-      if (foundStyleKey && foundStyleKey !== 'custom' && foundStyleKey !== 'random' && foundStyleKey !== 'randomMix' && foundStyleKey !== 'browseGallery') {
-        return styleIdToDisplay(foundStyleKey);
-      }
-    }
-    
-    // Try selectedStyle as fallback
-    if (selectedStyle && selectedStyle !== 'custom' && selectedStyle !== 'random' && selectedStyle !== 'randomMix' && selectedStyle !== 'browseGallery') {
-      return styleIdToDisplay(selectedStyle);
-    }
-    
-    // Default empty
-    return '';
-  }, [photos, stylePrompts, selectedStyle]);
 
   useEffect(() => {
     if (selectedPhotoIndex !== null) {
@@ -1550,6 +1811,148 @@ const PhotoGallery = ({
           ⚙️
         </button>
       )}
+      {/* Download All button - circular button to the left of More button */}
+      {!isPromptSelectorMode && selectedPhotoIndex === null && photos && photos.length > 0 && photos.every(p => !p.loading && !p.generating) && photos.filter(p => !p.error && p.images && p.images.length > 0).length > 0 && (
+        <div style={{ position: 'fixed', right: '145px', bottom: '22px', zIndex: 9999 }}>
+          <button
+            className="download-all-circular-btn"
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowMoreDropdown(!showMoreDropdown);
+            }}
+            disabled={isBulkDownloading}
+            style={{
+              background: '#ff5252',
+              border: 'none',
+              color: 'white',
+              width: '46px',
+              height: '46px',
+              borderRadius: '50%',
+              cursor: isBulkDownloading ? 'not-allowed' : 'pointer',
+              opacity: isBulkDownloading ? 0.6 : 1,
+              fontSize: '18px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+              transition: 'all 0.2s ease'
+            }}
+            title="Download all images"
+            onMouseOver={(e) => {
+              if (!isBulkDownloading) {
+                e.currentTarget.style.transform = 'scale(1.05)';
+                e.currentTarget.style.boxShadow = '0 6px 16px rgba(0,0,0,0.4)';
+              }
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.transform = 'scale(1)';
+              e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)';
+            }}
+          >
+            ⬇️
+          </button>
+              
+              {/* Dropdown menu as popup */}
+              {showMoreDropdown && !isBulkDownloading && (
+                <div
+                  className="more-dropdown-menu"
+                  style={{
+                    position: 'absolute',
+                    bottom: '60px',
+                    right: '0',
+                    background: 'rgba(255, 255, 255, 0.98)',
+                    borderRadius: '8px',
+                    boxShadow: '0 4px 16px rgba(0,0,0,0.2)',
+                    overflow: 'hidden',
+                    minWidth: '200px',
+                    animation: 'fadeIn 0.2s ease-out'
+                  }}
+                >
+                  <button
+                    className="more-dropdown-option"
+                    onClick={() => {
+                      handleDownloadAll(false);
+                      setShowMoreDropdown(false);
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '12px 16px',
+                      border: 'none',
+                      background: 'transparent',
+                      color: '#333',
+                      fontSize: '14px',
+                      fontWeight: 'normal',
+                      textAlign: 'left',
+                      cursor: 'pointer',
+                      transition: 'background 0.2s ease',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px'
+                    }}
+                    onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255, 82, 82, 0.1)'}
+                    onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
+                  >
+                    <span>⬇️</span> Download All Raw
+                  </button>
+                  <button
+                    className="more-dropdown-option"
+                    onClick={() => {
+                      handleDownloadAll(true);
+                      setShowMoreDropdown(false);
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '12px 16px',
+                      border: 'none',
+                      background: 'transparent',
+                      color: '#333',
+                      fontSize: '14px',
+                      fontWeight: 'normal',
+                      textAlign: 'left',
+                      cursor: 'pointer',
+                      transition: 'background 0.2s ease',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px'
+                    }}
+                    onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255, 82, 82, 0.1)'}
+                    onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
+                  >
+                    <span>🖼️</span> Download All Framed
+                  </button>
+                </div>
+              )}
+              
+          {/* Progress indicator for downloads */}
+          {isBulkDownloading && bulkDownloadProgress.message && (
+            <div
+              className="bulk-download-progress"
+              style={{
+                position: 'absolute',
+                bottom: '60px',
+                right: '0',
+                background: 'rgba(0, 0, 0, 0.85)',
+                color: 'white',
+                padding: '8px 12px',
+                borderRadius: '8px',
+                fontSize: '12px',
+                fontWeight: 600,
+                boxShadow: '0 2px 10px rgba(0,0,0,0.2)',
+                minWidth: '150px',
+                textAlign: 'right',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              <div>{bulkDownloadProgress.message}</div>
+              {bulkDownloadProgress.total > 0 && (
+                <div style={{ marginTop: '4px', fontSize: '11px', opacity: 0.9 }}>
+                  {bulkDownloadProgress.current} / {bulkDownloadProgress.total}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
       {/* More button - positioned on the right side - hidden in Sample Gallery mode */}
       {!isPromptSelectorMode && ((!isGenerating && selectedPhotoIndex === null) || (isGenerating && showMoreButtonDuringGeneration && selectedPhotoIndex === null)) && (
         <button
@@ -1564,7 +1967,7 @@ const PhotoGallery = ({
             cursor: (!isGenerating && (activeProjectReference.current !== null || !isSogniReady || !lastPhotoData.blob)) ? 'not-allowed' : 'pointer',
             zIndex: 9999,
             opacity: (!isGenerating && (activeProjectReference.current !== null || !isSogniReady || !lastPhotoData.blob)) ? 0.6 : 1,
-            backgroundColor: isGenerating ? '#ff6b6b' : undefined, // Red background when in cancel mode
+            backgroundColor: isGenerating ? '#ff6b6b' : undefined,
             borderColor: isGenerating ? '#ff6b6b' : undefined,
           }}
           title={isGenerating ? 'Cancel current generation and start new batch' : 'Generate more photos'}

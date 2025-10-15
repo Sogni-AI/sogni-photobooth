@@ -80,7 +80,7 @@ export const getModelRanges = (modelValue: string, isLoggedInWithFrontendAuth: b
   
   // Ranges for Stable Diffusion models (SDXL-based)
   // When user is logged in with frontend auth and spending own credits, allow up to 512 images
-  const maxImages = isLoggedInWithFrontendAuth ? 512 : 16;
+  const maxImages = isLoggedInWithFrontendAuth ? 256 : 16;
   
   return {
     promptGuidance: { min: 1.8, max: 3, step: 0.1, default: 2 },

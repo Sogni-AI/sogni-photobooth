@@ -766,3 +766,110 @@ html body .photo-action-buttons .action-button,
     pointer-events: auto !important;
   }
 }
+
+/* Download All button styling */
+.download-all-btn {
+  background: linear-gradient(135deg, #FF9800 0%, #F57C00 100%);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-weight: bold;
+  font-size: 16px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.download-all-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #F57C00 0%, #E65100 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.3);
+}
+
+.download-all-btn:active:not(:disabled) {
+  transform: translateY(0px);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+.download-all-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Bulk download progress indicator */
+.bulk-download-progress {
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  0% {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* More button styling */
+.more-photos-btn:hover:not(:disabled) {
+  transform: scale(1.05);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+}
+
+.more-photos-btn:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+/* Circular download button styling */
+.download-all-circular-btn:active:not(:disabled) {
+  transform: scale(0.95) !important;
+}
+
+/* More button dropdown caret styling */
+.more-dropdown-caret:hover:not(:disabled) {
+  background: rgba(255, 82, 82, 0.9) !important;
+}
+
+.more-dropdown-caret:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+/* More dropdown menu styling */
+.more-dropdown-menu {
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.more-dropdown-option {
+  font-family: "Permanent Marker", cursive;
+}
+
+/* Mobile responsiveness for download all button and dropdown */
+@media (max-width: 768px) {
+  .download-all-btn {
+    padding: 8px 12px;
+    font-size: 14px;
+    min-height: 44px; /* Ensure adequate touch target size */
+    min-width: 60px; /* Ensure adequate touch target width */
+  }
+
+  .more-dropdown-caret {
+    min-height: 44px; /* Ensure adequate touch target size */
+  }
+
+  .more-dropdown-menu {
+    min-width: 160px !important;
+    font-size: 13px !important;
+  }
+
+  .more-dropdown-option {
+    padding: 10px 14px !important;
+  }
+}
