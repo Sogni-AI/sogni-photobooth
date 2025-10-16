@@ -640,7 +640,7 @@ export async function generateImage(client, params, progressCallback, localProje
                     type: event.type,
                     jobId: event.jobId,
                     projectId: capturedLocalProjectId || event.projectId,
-                    workerName: event.workerName || 'unknown',
+                    workerName: event.workerName || 'Worker',
                     positivePrompt: event.positivePrompt || projectDetails.positivePrompt,
                     jobIndex: jobIndex !== undefined ? jobIndex : 0
                   };
@@ -663,7 +663,7 @@ export async function generateImage(client, params, progressCallback, localProje
                   
                   // Get cached worker name for this job
                   const cachedWorkerName = event.jobId ? projectCompletionTracker.workerNameCache.get(event.jobId) : null;
-                  const workerName = event.workerName || cachedWorkerName || 'unknown';
+                  const workerName = event.workerName || cachedWorkerName || 'Worker';
                   
                   progressEvent = {
                     type: 'progress',
@@ -744,7 +744,7 @@ export async function generateImage(client, params, progressCallback, localProje
                   {
                     // Get cached worker name for this job
                     const cachedWorkerName = event.jobId ? projectCompletionTracker.workerNameCache.get(event.jobId) : null;
-                    const workerName = event.workerName || cachedWorkerName || 'unknown';
+                    const workerName = event.workerName || cachedWorkerName || 'Worker';
                     
                     progressEvent = {
                       type: 'progress',
@@ -896,7 +896,7 @@ export async function generateImage(client, params, progressCallback, localProje
             type: 'started',
             projectId: capturedLocalProjectId || project.id,
             jobId: job.id,
-            workerName: job.workerName || 'unknown',
+            workerName: job.workerName || 'Worker',
             positivePrompt: projectDetails.positivePrompt,
             jobIndex
           });

@@ -717,7 +717,7 @@ router.post('/generate', ensureSessionId, async (req, res) => {
       const sseEvent = {
         ...eventDataWithoutJobId,
         projectId: localProjectId, // Standardize on the localProjectId for client-side tracking
-        workerName: eventData.workerName || 'unknown', // Ensure workerName is present
+        workerName: eventData.workerName || 'Worker', // Ensure workerName is present
         progress: typeof eventData.progress === 'number' ? 
                   (eventData.progress > 1 ? eventData.progress / 100 : eventData.progress) : 
                   eventData.progress, // Normalize progress 0-1

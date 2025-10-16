@@ -66,6 +66,7 @@ export class FrontendProjectAdapter extends BrowserEventEmitter implements Sogni
   private isCompleted: boolean = false;
   private uploadProgressEmitted: boolean = false;
   private jobPrompts: Map<string, string> = new Map(); // Store individual job prompts from global events
+  private workerNameCache: Map<string, string> = new Map(); // Store worker names from early events (like backend)
   private completionTracker = {
     expectedJobs: 0,
     sentJobCompletions: 0,
@@ -156,6 +157,11 @@ export class FrontendProjectAdapter extends BrowserEventEmitter implements Sogni
           console.log(`🔧 Captured job prompt from jobStarted object:`, { jobId: job.id, positivePrompt: jobPrompt });
           this.jobPrompts.set(job.id, jobPrompt);
         }
+        
+        // Cache worker name if provided (matches backend logic)
+        if (job.workerName) {
+          this.workerNameCache.set(job.id, job.workerName);
+        }
       }
       
       // Assign job index
@@ -171,12 +177,16 @@ export class FrontendProjectAdapter extends BrowserEventEmitter implements Sogni
       // Use the individual job prompt from captured prompts (working approach)
       const individualJobPrompt = this.jobPrompts.get(job.id) || this.realProject.params?.positivePrompt || '';
       
+      // Get cached worker name or use default (matches backend logic)
+      const cachedWorkerName = this.workerNameCache.get(job.id);
+      const workerName = job.workerName || cachedWorkerName || 'Worker';
+      
       // Also emit the job started event that the UI expects for status updates
       this.emit('job', {
         type: 'started',
         jobId: job.id,
         projectId: this.realProject.id,
-        workerName: job.workerName || 'Art Robot',
+        workerName: workerName,
         jobIndex,
         positivePrompt: individualJobPrompt // Use the individual job prompt from captured prompts
       });
@@ -228,6 +238,15 @@ export class FrontendProjectAdapter extends BrowserEventEmitter implements Sogni
         console.error(`[FrontendAdapter] Event details:`, JSON.stringify(job, null, 2));
       }
       
+      // Get cached worker name or use default (matches backend logic)
+      const cachedWorkerName = this.workerNameCache.get(job.id);
+      const workerName = job.workerName || cachedWorkerName || 'Worker';
+      
+      // Cache worker name if provided (for future reference)
+      if (job.workerName && job.id) {
+        this.workerNameCache.set(job.id, job.workerName);
+      }
+      
       // Prepare the jobCompleted event (matches backend - always send jobCompleted, never convert to jobFailed)
       const completedEvent: any = {
         id: job.id,
@@ -235,7 +254,7 @@ export class FrontendProjectAdapter extends BrowserEventEmitter implements Sogni
         previewUrl: job.previewUrl,
         isPreview: job.isPreview || false,
         positivePrompt: individualJobPrompt,
-        workerName: job.workerName || 'Art Robot',
+        workerName: workerName,
         isNSFW: job.isNSFW || false,
         seed: job.seed,
         steps: job.steps
@@ -310,6 +329,15 @@ export class FrontendProjectAdapter extends BrowserEventEmitter implements Sogni
         switch (event.type) {
           case 'progress': {
             if (event.step && event.stepCount) {
+              // Cache worker name if provided (matches backend logic)
+              if (event.workerName && event.jobId) {
+                this.workerNameCache.set(event.jobId, event.workerName);
+              }
+              
+              // Get cached worker name or use default
+              const cachedWorkerName = event.jobId ? this.workerNameCache.get(event.jobId) : null;
+              const workerName = event.workerName || cachedWorkerName || 'Worker';
+              
               // Emit progress event for the UI
               this.emit('job', {
                 type: 'progress',
@@ -318,13 +346,17 @@ export class FrontendProjectAdapter extends BrowserEventEmitter implements Sogni
                 stepCount: event.stepCount,
                 jobId: event.jobId,
                 projectId: this.realProject.id,
-                workerName: event.workerName || 'unknown'
+                workerName: workerName
               });
               
               // Set up fallback completion detection like backend
               if (event.jobId && event.step / event.stepCount >= 0.85) {
                 if (!this.completionTracker.jobCompletionTimeouts.has(event.jobId)) {
                   const timeoutId = setTimeout(() => {
+                    // Get cached worker name or use default
+                    const cachedWorkerName = this.workerNameCache.get(event.jobId);
+                    const workerName = event.workerName || cachedWorkerName || 'Worker';
+                    
                     // Send fallback completion like backend does
                     this.emit('jobCompleted', {
                       id: event.jobId,
@@ -332,7 +364,7 @@ export class FrontendProjectAdapter extends BrowserEventEmitter implements Sogni
                       previewUrl: null,
                       isPreview: false,
                       positivePrompt: this.jobPrompts.get(event.jobId) || this.realProject.params?.positivePrompt || '',
-                      workerName: event.workerName || 'Art Robot',
+                      workerName: workerName,
                       fallback: true
                     });
 
@@ -356,12 +388,21 @@ export class FrontendProjectAdapter extends BrowserEventEmitter implements Sogni
           case 'started':
             // Emit job started events from global handler too for completeness
             if (event.jobId) {
+              // Cache worker name if provided (matches backend logic)
+              if (event.workerName) {
+                this.workerNameCache.set(event.jobId, event.workerName);
+              }
+              
+              // Get cached worker name or use default
+              const cachedWorkerName = this.workerNameCache.get(event.jobId);
+              const workerName = event.workerName || cachedWorkerName || 'Worker';
+              
               const jobIndex = this.jobIndexMap.get(event.jobId);
               this.emit('job', {
                 type: event.type,
                 jobId: event.jobId,
                 projectId: this.realProject.id,
-                workerName: event.workerName || 'unknown',
+                workerName: workerName,
                 positivePrompt: this.jobPrompts.get(event.jobId) || this.realProject.params?.positivePrompt || '',
                 jobIndex: jobIndex !== undefined ? jobIndex : 0
               });

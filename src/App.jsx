@@ -2191,15 +2191,15 @@ const App = () => {
       // Set up event listeners if we have a client
       if (client && client.projects) {
         client.projects.on('swarmModels', (event) => {
-          console.log('Swarm models event payload:', event);
+          //console.log('Swarm models event payload:', event);
         });
 
         client.projects.on('project', (event) => {
-          console.log('Project event full payload:', event);
+          // console.log('Project event full payload:', event);
         });
 
         client.projects.on('job', (event) => {
-          console.log('Job event full payload:', event);
+          //console.log('Job event full payload:', event);
           
           // For frontend clients, capture individual job prompts and pass them to the active project adapter
           if (authState.authMode === 'frontend' && activeProjectObjectReference.current && event.positivePrompt) {
@@ -3770,7 +3770,7 @@ const App = () => {
         if (!projectStateReference.current.jobMap.has(job.id)) {
           const nextIndex = projectStateReference.current.jobMap.size;
           projectStateReference.current.jobMap.set(job.id, nextIndex);
-          console.log(`Mapped frontend job ${job.id} to index ${nextIndex}`);
+          // console.log(`Mapped frontend job ${job.id} to index ${nextIndex}`);
         }
       });
       
@@ -3807,9 +3807,9 @@ const App = () => {
             setRegularPhotos(prev => {
               const updated = [...prev];
               if (updated[photoIndex] && !updated[photoIndex].permanentError) {
-                // Use workerName from current event if available and not "unknown", otherwise fall back to cached value
-                const cachedWorkerName = updated[photoIndex].workerName || 'unknown';
-                const currentWorkerName = (workerName && workerName !== 'unknown') ? workerName : cachedWorkerName;
+                // Use workerName from current event if available and not "Worker", otherwise fall back to cached value
+                const cachedWorkerName = updated[photoIndex].workerName || 'Worker';
+                const currentWorkerName = (workerName && workerName !== 'Worker') ? workerName : cachedWorkerName;
                 const displayProgress = Math.round((progress ?? 0) * 100);
                 
                 updated[photoIndex] = {
@@ -3861,8 +3861,8 @@ const App = () => {
                   ...updated[photoIndex],
                   generating: true,
                   loading: true,
-                  statusText: workerName ? `${workerName} starting...` : 'Art Robot starting...',
-                  workerName: workerName || 'unknown',
+                  statusText: workerName ? `${workerName} starting...` : 'Worker starting...',
+                  workerName: workerName || 'Worker',
                   jobId,
                   jobIndex,
                   positivePrompt,

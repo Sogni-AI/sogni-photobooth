@@ -87,7 +87,7 @@ export class BackendProject implements SogniEventEmitter {
   
   // Add a job to the project
   addJob(jobId: string, resultUrl?: string, index?: number, workerName?: string) {
-    console.log(`Adding job ${jobId} with workerName "${workerName || 'unknown'}"`);
+    // console.log(`Adding job ${jobId} with workerName "${workerName || 'Worker'}"`);
     const job: {
       id: string;
       resultUrl?: string;
