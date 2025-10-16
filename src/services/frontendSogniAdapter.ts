@@ -209,15 +209,45 @@ export class FrontendProjectAdapter extends BrowserEventEmitter implements Sogni
         individualJobPrompt = this.realProject.params?.positivePrompt || '';
       }
       
-      // Emit the jobCompleted event that the UI expects
-      this.emit('jobCompleted', {
+      // CRITICAL ERROR HANDLING: Check for missing resultUrl (matches backend logic)
+      let resultUrl = job.resultUrl;
+      
+      // RACE CONDITION FIX: If resultUrl is missing from event, try to get it from project.jobs array
+      // The SDK sometimes emits jobCompleted before the job object is fully updated
+      if (!resultUrl && !job.fallback && this.realProject.jobs) {
+        const projectJob = this.realProject.jobs.find((j: any) => j.id === job.id);
+        if (projectJob && projectJob.resultUrl) {
+          console.warn(`[FrontendAdapter] Job ${job.id} resultUrl missing from event but found in project.jobs array`);
+          resultUrl = projectJob.resultUrl;
+        }
+      }
+      
+      // Log when resultUrl is still missing after checking project.jobs
+      if (!resultUrl && !job.fallback) {
+        console.error(`[FrontendAdapter] Job ${job.id} completed but resultUrl is null in both event and project.jobs`);
+        console.error(`[FrontendAdapter] Event details:`, JSON.stringify(job, null, 2));
+      }
+      
+      // Prepare the jobCompleted event (matches backend - always send jobCompleted, never convert to jobFailed)
+      const completedEvent: any = {
         id: job.id,
-        resultUrl: job.resultUrl,
+        resultUrl: resultUrl, // Send null if missing - let App.jsx handle it
         previewUrl: job.previewUrl,
         isPreview: job.isPreview || false,
-        positivePrompt: individualJobPrompt, // Use the individual job prompt
-        workerName: job.workerName || 'Art Robot'
-      });
+        positivePrompt: individualJobPrompt,
+        workerName: job.workerName || 'Art Robot',
+        isNSFW: job.isNSFW || false,
+        seed: job.seed,
+        steps: job.steps
+      };
+      
+      // Handle NSFW filtering (matches backend logic - add flag but still send as jobCompleted)
+      if (job.isNSFW && !resultUrl) {
+        completedEvent.nsfwFiltered = true;
+      }
+      
+      // Emit the jobCompleted event (matches backend - always jobCompleted, never jobFailed)
+      this.emit('jobCompleted', completedEvent);
 
       // Track job completion for proper project completion handling
       this.completionTracker.sentJobCompletions++;

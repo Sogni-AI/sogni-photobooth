@@ -3699,7 +3699,8 @@ const App = () => {
         scheduler: scheduler,
         timeStepSpacing: timeStepSpacing,
         outputFormat: outputFormat, // Add output format setting
-        sensitiveContentFilter: sensitiveContentFilter, // Add sensitive content filter setting
+        disableNSFWFilter: sensitiveContentFilter ? false : true, // Translate to SDK parameter (matches backend logic)
+        sensitiveContentFilter: sensitiveContentFilter, // Keep for backend compatibility
         sourceType: sourceType, // Add sourceType for analytics tracking
         ...(seedParam !== undefined ? { seed: seedParam } : {})
       };
@@ -4205,9 +4206,68 @@ const App = () => {
           clearJobTimeout(job.id);
         }
         
+        // CRITICAL ERROR HANDLING: Check for missing resultUrl (matches backend logic)
         if (!job.resultUrl) {
           console.error('Missing resultUrl for job:', job.id);
-          return;
+          
+          // Get job index for error handling
+          const jobIndex = projectStateReference.current.jobMap.get(job.id);
+          if (jobIndex === undefined) {
+            console.error('Unknown job completed with missing resultUrl:', job.id);
+            return;
+          }
+          
+          const offset = keepOriginalPhoto ? 1 : 0;
+          const photoIndex = jobIndex + offset;
+          
+          // Determine error type based on job properties (use explicit nsfwFiltered flag from adapter)
+          let errorMessage = 'GENERATION FAILED: result missing';
+          let errorType = 'missing_result';
+          
+          // Check for NSFW filtering (use explicit flag, not inference)
+          if (job.nsfwFiltered === true) {
+            console.warn(`Job ${job.id} was flagged as NSFW by the AI detection system`);
+            console.warn(`Current NSFW filter setting: ${sensitiveContentFilter ? 'ENABLED' : 'DISABLED'}`);
+            errorMessage = sensitiveContentFilter 
+              ? 'GENERATION FAILED: content filtered (NSFW detected)'
+              : 'GENERATION FAILED: NSFW detected (check filter settings)';
+            errorType = 'nsfw_filtered';
+          }
+          
+          // Update photo state with error
+          setRegularPhotos(previous => {
+            const updated = [...previous];
+            if (!updated[photoIndex]) {
+              console.error(`No photo box found at index ${photoIndex}`);
+              return previous;
+            }
+            
+            updated[photoIndex] = {
+              ...updated[photoIndex],
+              generating: false,
+              loading: false,
+              error: errorMessage,
+              permanentError: true, // Mark as permanent so it won't be overwritten
+              statusText: 'Failed',
+              errorType: errorType
+            };
+            
+            // Check if all photos are done generating
+            const stillGenerating = updated.some(photo => photo.generating);
+            if (!stillGenerating && activeProjectReference.current) {
+              // All photos are done, clear the active project and timeouts
+              console.log('All jobs completed or failed (missing resultUrl), clearing active project');
+              clearAllTimeouts();
+              activeProjectReference.current = null;
+              
+              // Trigger promotional popup after batch completion
+              triggerPromoPopupIfNeeded();
+            }
+            
+            return updated;
+          });
+          
+          return; // Don't process further
         }
         
         const jobIndex = projectStateReference.current.jobMap.get(job.id);
@@ -4426,7 +4486,12 @@ const App = () => {
           if (job.error) {
             if (typeof job.error === 'object') {
               // Handle error object case
-              if (job.error.isInsufficientFunds || job.error.errorCode === 'insufficient_funds') {
+              // Check for NSFW filtering first (new error scenario)
+              if (job.error.isNSFW || job.error.nsfwFiltered) {
+                errorMessage = 'GENERATION FAILED: content filtered';
+              } else if (job.error.missingResult) {
+                errorMessage = 'GENERATION FAILED: result missing';
+              } else if (job.error.isInsufficientFunds || job.error.errorCode === 'insufficient_funds') {
                 errorMessage = 'GENERATION FAILED: replenish tokens';
               } else if (job.error.isAuthError || job.error.errorCode === 'auth_error') {
                 errorMessage = 'GENERATION FAILED: authentication failed';
@@ -4436,6 +4501,8 @@ const App = () => {
                   errorMessage = 'GENERATION FAILED: replenish tokens';
                 } else if (job.error.message.includes('NSFW') || job.error.message.includes('filtered')) {
                   errorMessage = 'GENERATION FAILED: content filtered';
+                } else if (job.error.message.includes('missing') || job.error.message.includes('result')) {
+                  errorMessage = 'GENERATION FAILED: result missing';
                 } else if (job.error.message.includes('timeout') || job.error.message.includes('worker')) {
                   errorMessage = 'GENERATION FAILED: processing timeout';
                 } else if (job.error.message.includes('network') || job.error.message.includes('connection')) {
@@ -4452,6 +4519,8 @@ const App = () => {
                 errorMessage = 'GENERATION FAILED: replenish tokens';
               } else if (job.error.includes('NSFW') || job.error.includes('filtered')) {
                 errorMessage = 'GENERATION FAILED: content filtered';
+              } else if (job.error.includes('missing') || job.error.includes('result')) {
+                errorMessage = 'GENERATION FAILED: result missing';
               } else if (job.error.includes('timeout') || job.error.includes('worker')) {
                 errorMessage = 'GENERATION FAILED: processing timeout';
               } else if (job.error.includes('network') || job.error.includes('connection')) {
