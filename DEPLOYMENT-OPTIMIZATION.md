@@ -34,9 +34,9 @@ rsync -ar --progress --ignore-existing --size-only dist/gallery/prompts/ $REMOTE
 ## File Structure
 ```
 public/gallery/prompts/
-├── sogni-photobooth-crowndrip-raw.jpg
+├── sogni-photobooth-crown-drip-raw.jpg
 ├── sogni-photobooth-vaporwave-raw.jpg
-└── ... (100+ other prompt examples)
+└── ... (200+ other prompt examples)
 ```
 
 ## Manual Gallery Update

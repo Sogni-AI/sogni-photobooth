@@ -1,16 +1,25 @@
 import { styleIdToDisplay } from './index';
 
 /**
- * Converts camelCase prompt key to lowercase filename (no hyphens)
+ * Converts camelCase prompt key to kebab-case filename
  * @param {string} promptKey - The camelCase prompt key
- * @returns {string} The lowercase filename part
+ * @returns {string} The kebab-case filename part
+ * 
+ * Examples:
+ *   darkFantasyBerserker -> dark-fantasy-berserker
+ *   anime1990s -> anime1990s
+ *   nftBoredApe -> nft-bored-ape
  */
 const promptKeyToFilename = (promptKey) => {
   return promptKey
+    // Insert a hyphen before uppercase letters (except at start)
+    .replace(/([A-Z])/g, '-$1')
     // Convert to lowercase
     .toLowerCase()
-    // Remove any special characters
-    .replace(/[^a-z0-9]/g, '');
+    // Remove leading hyphen if present
+    .replace(/^-/, '')
+    // Clean up any double hyphens
+    .replace(/--+/g, '-');
 };
 
 /**
