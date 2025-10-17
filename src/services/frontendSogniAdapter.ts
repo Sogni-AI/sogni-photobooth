@@ -112,7 +112,6 @@ export class FrontendProjectAdapter extends BrowserEventEmitter implements Sogni
     const captureJobPrompt = (event: any, source: string) => {
       const jobId = event.jobId || event.id;
       if (jobId && event.positivePrompt) {
-        console.log(`🔧 Captured job prompt from ${source}:`, { jobId, positivePrompt: event.positivePrompt });
         this.jobPrompts.set(jobId, event.positivePrompt);
       }
     };
@@ -154,7 +153,6 @@ export class FrontendProjectAdapter extends BrowserEventEmitter implements Sogni
         }
         
         if (jobPrompt) {
-          console.log(`🔧 Captured job prompt from jobStarted object:`, { jobId: job.id, positivePrompt: jobPrompt });
           this.jobPrompts.set(job.id, jobPrompt);
         }
         

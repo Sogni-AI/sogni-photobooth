@@ -271,6 +271,20 @@
       "apocalypseRooftop": "zombie portrait, solo survivor-turned-undead on rooftop, city smoke plumes, helicopter silhouette, dusk gradient sky, tattered clothes"
     }
   },
+  "halloween": {
+    "name": "Halloween",
+    "prompts": {
+      "midsommarBloom": "Sweden eerie midsummer folk beautiy queen portrait, (blood dripping down face), painful strained sad expression, frown, furrowed eyebrows, super grand thick colorful floral crown headdress, elaborate flower garlands, grimacing expression, elaborate Sweden nordic white linen folk dress, overexposed sunlit meadow, creepy white robed villagers in background, lens-flare halo, hash sun shadows, professional teal and orange, arri alexa film grade look, blood splatter, midsommer, cinematic bokeh, warm golden sunlight, soft pastel tones, subtle desaturation, high dynamic range, fine film grain",
+      "hauntedPromQueen": "all red figured covered in blood, 1970s prom setting, bloody tiara, hands up in the air, completely drenched in blood, sparkly sequin dress, disco lights through fog, frozen smile, slow-motion horror glam moment",
+      "revengeBride": "blood-stained wedding gown, covered in blood, holding gleaming sword, bouquet, rain pouring, cinematic lens flare, gothic romance tone, horror movie cover composition",
+      "clownFromHell": "creepy clown makeup dripping with blood tears, neon circus tent behind, deflated balloons, dark carnival fog, twisted smile, horror fashion editorial lighting",
+      "burningWitch": "burning witch, cross, salem witch trials, witchcraft, colonial, Daguerreotype, high-contrast chiaroscuro lighting, cinematic renaissance horror tone",
+      "hellraiserPriest": "sinister ceremonial figure with polished black leather robe, pinhead, needles in bald head, glowing grid of pins, holding puzzle box, crimson lighting from below, infernal geometry aesthetic",
+      "dreamStalker": "(nightmare terror claw hands), striped sweater villain emerging from wall of smoke, long blades for hands, sharp glove claws glinting under red light, surreal nightmare haze, cinematic dream horror glow",
+      "ghostInTheTV": "ghost emerging from television screen, flickering static, eerie blue glow, cinematic bokeh, ghostly figure, haunted mirror selfie, vintage horror aesthetic",
+      "addamsElegance": "morticia addams, addams family, macabre aristocrat family portrait, ornate mansion, deadpan expressions, Victorian gothic fashion, candlelit parlor, porcelain skin, pale, timeless black-and-white glamour"
+    }
+  },
   "videos": {
     "name": "Videos",
     "prompts": {
