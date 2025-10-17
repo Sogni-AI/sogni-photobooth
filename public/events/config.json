@@ -28,7 +28,7 @@
     "RIT 3": {
       "label": "RIT X Sogni 3",
       "defaultAspectRatio": "narrow",
-      "framePadding": { "top": 0, "left": 0, "right": 0, "bottom": 0 },
+      "framePadding": { "top": 0, "left": 0, "right": 0, "bottom": 159 },
       "tweetTemplate": "Just took my AI photo at RIT Creative Collisions Design and AI Workshop via @sogni_protocol https://photobooth.sogni.ai",
       "frames": {
         "narrow": [
