@@ -109,7 +109,7 @@ export class FrontendProjectAdapter extends BrowserEventEmitter implements Sogni
 
     // CRITICAL FIX: Set up comprehensive job prompt capture to handle RandomMix race condition
     // Listen for ALL possible events that might contain individual job prompts
-    const captureJobPrompt = (event: any, source: string) => {
+    const captureJobPrompt = (event: any) => {
       const jobId = event.jobId || event.id;
       if (jobId && event.positivePrompt) {
         this.jobPrompts.set(jobId, event.positivePrompt);
@@ -118,16 +118,16 @@ export class FrontendProjectAdapter extends BrowserEventEmitter implements Sogni
 
     // Listen for individual project events for prompt capture (better accuracy)
     this.realProject.on('jobStarted', (event: any) => {
-      captureJobPrompt(event, 'jobStarted');
+      captureJobPrompt(event);
     });
 
     // Also listen for any other events that might contain individual job prompts
     this.realProject.on('progress', (event: any) => {
-      captureJobPrompt(event, 'progress');
+      captureJobPrompt(event);
     });
 
     this.realProject.on('jobCompleted', (event: any) => {
-      captureJobPrompt(event, 'jobCompleted');
+      captureJobPrompt(event);
     });
 
     // ADDITIONAL: Listen for job events directly from the real client if available
@@ -135,7 +135,7 @@ export class FrontendProjectAdapter extends BrowserEventEmitter implements Sogni
       this.realClient.projects.on('job', (event: any) => {
         // Only process events for this specific project
         if (event.projectId === this.realProject.id) {
-          captureJobPrompt(event, 'client.projects.job');
+          captureJobPrompt(event);
         }
       });
     }
