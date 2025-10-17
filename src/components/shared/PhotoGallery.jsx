@@ -112,7 +112,8 @@ const PhotoGallery = ({
   onBackToPhotos = null,
   initialThemeGroupState = null,
   onSearchChange = null,
-  initialSearchTerm = ''
+  initialSearchTerm = '',
+  numImages = 1
 }) => {
   // Get settings from context
   const { settings } = useApp();
@@ -1972,7 +1973,7 @@ const PhotoGallery = ({
           }}
           title={isGenerating ? 'Cancel current generation and start new batch' : 'Generate more photos'}
         >
-          {isGenerating ? 'Cancel & More ✨' : 'More ✨'}
+          {isGenerating ? `CANCEL + NEXT ${numImages}x` : `NEXT ${numImages}x`}
         </button>
       )}
       {/* Generate button - only show in prompt selector mode when reference photo exists */}
@@ -1996,7 +1997,7 @@ const PhotoGallery = ({
           }}
           title="Generate fresh batch with current settings"
         >
-          <span className="view-photos-label">Generate ✨</span>
+          <span className="view-photos-label">IMAGINE {numImages}x</span>
         </button>
       )}
       {/* Navigation buttons - only show when a photo is selected */}
@@ -4128,7 +4129,8 @@ PhotoGallery.propTypes = {
   onBackToPhotos: PropTypes.func,
   initialThemeGroupState: PropTypes.object,
   onSearchChange: PropTypes.func,
-  initialSearchTerm: PropTypes.string
+  initialSearchTerm: PropTypes.string,
+  numImages: PropTypes.number
 };
 
 export default PhotoGallery; 

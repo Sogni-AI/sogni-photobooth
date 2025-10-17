@@ -15,7 +15,8 @@ const ImageAdjuster = ({
   onConfirm,
   onCancel,
   initialPosition = { x: 0, y: 0 },
-  defaultScale = 1
+  defaultScale = 1,
+  numImages = 1
 }) => {
 
   
@@ -679,7 +680,7 @@ const ImageAdjuster = ({
             className="confirm-button" 
             onClick={handleConfirm}
           >
-            Confirm
+            Imagine {numImages}x
           </button>
         </div>
       </div>
@@ -695,7 +696,8 @@ ImageAdjuster.propTypes = {
     x: PropTypes.number,
     y: PropTypes.number
   }),
-  defaultScale: PropTypes.number
+  defaultScale: PropTypes.number,
+  numImages: PropTypes.number
 };
 
 export default ImageAdjuster; 

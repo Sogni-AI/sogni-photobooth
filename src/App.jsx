@@ -5314,6 +5314,7 @@ const App = () => {
                 handlePhotoViewerClick={handlePhotoViewerClick}
                 handleGenerateMorePhotos={handleGenerateMorePhotos}
                 handleShowControlOverlay={() => setShowControlOverlay(!showControlOverlay)}
+                numImages={numImages}
                 isGenerating={photos.some(photo => photo.generating)}
                 keepOriginalPhoto={keepOriginalPhoto}
                 lastPhotoData={lastPhotoData}
@@ -6925,6 +6926,7 @@ const App = () => {
           }}
           qrCodeData={qrCodeData}
           onCloseQR={() => setQrCodeData(null)}
+          numImages={numImages}
         />
           </div>
         )}
@@ -7038,6 +7040,7 @@ const App = () => {
           defaultScale={
             lastEditablePhoto?.adjustments?.scale || defaultScaleValue
           }
+          numImages={numImages}
         />
       )}
 
