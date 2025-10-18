@@ -496,7 +496,12 @@ const App = () => {
     // First reset the context settings
     contextResetSettings();
 
+    // Clear any saved photo data from localStorage to ensure clean reset
+    localStorage.removeItem('sogni-lastEditablePhoto');
+    console.log('🗑️ Cleared saved photo data from localStorage');
+
     // Then reset both photo states to the default Einstein photo
+    // These functions will unconditionally load and set the Einstein photo
     await loadDefaultEinsteinPhoto();
     await loadDefaultEinsteinEditablePhoto();
   }, [contextResetSettings, loadDefaultEinsteinPhoto, loadDefaultEinsteinEditablePhoto]);
