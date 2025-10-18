@@ -199,7 +199,7 @@ const App = () => {
   }, []);
 
   // --- Use AppContext for settings ---
-  const { settings, updateSetting, switchToModel, resetSettings, registerCacheClearingCallback } = useApp();
+  const { settings, updateSetting, switchToModel, resetSettings: contextResetSettings, registerCacheClearingCallback } = useApp();
   const { 
     selectedStyle, 
     selectedModel, 
@@ -228,6 +228,32 @@ const App = () => {
     showSplashOnInactivity,
     inactivityTimeout
   } = settings;
+
+  // Add state to store the last used photo blob and data URL for "More" button
+  const [lastPhotoData, setLastPhotoData] = useState({ blob: null, dataUrl: null }); // Keep this
+
+  // Helper function to load default Einstein photo
+  const loadDefaultEinsteinPhoto = useCallback(async () => {
+    try {
+      const response = await fetch('/albert-einstein-sticks-out-his-tongue.jpg');
+      if (!response.ok) throw new Error('Failed to load default photo');
+
+      const blob = await response.blob();
+      const dataUrl = URL.createObjectURL(blob);
+
+      setLastPhotoData({
+        blob,
+        dataUrl,
+        sourceType: 'upload'
+      });
+
+      console.log('✅ Loaded default Einstein photo as lastPhotoData');
+      return { blob, dataUrl };
+    } catch (error) {
+      console.warn('Failed to load default photo:', error);
+      return null;
+    }
+  }, []);
 
   // --- Use wallet for payment method ---
   const { tokenType: walletTokenType, balances } = useWallet();
@@ -440,17 +466,59 @@ const App = () => {
     }
   };
 
+  // Helper function to load default Einstein photo for lastEditablePhoto
+  const loadDefaultEinsteinEditablePhoto = useCallback(async () => {
+    try {
+      const response = await fetch('/albert-einstein-sticks-out-his-tongue.jpg');
+      if (!response.ok) throw new Error('Failed to load default photo');
+
+      const blob = await response.blob();
+      const dataUrl = URL.createObjectURL(blob);
+
+      const defaultPhotoData = {
+        blob,
+        dataUrl,
+        source: 'upload',
+        adjustments: null
+      };
+
+      setLastEditablePhoto(defaultPhotoData);
+      console.log('✅ Loaded default Einstein photo as lastEditablePhoto');
+      return defaultPhotoData;
+    } catch (error) {
+      console.warn('Failed to load default Einstein photo for lastEditablePhoto:', error);
+      return null;
+    }
+  }, []);
+
+  // Wrapper function to reset settings and lastPhotoData
+  const resetSettings = useCallback(async () => {
+    // First reset the context settings
+    contextResetSettings();
+
+    // Then reset both photo states to the default Einstein photo
+    await loadDefaultEinsteinPhoto();
+    await loadDefaultEinsteinEditablePhoto();
+  }, [contextResetSettings, loadDefaultEinsteinPhoto, loadDefaultEinsteinEditablePhoto]);
+
 
 
   // Load lastEditablePhoto from localStorage on app mount
   useEffect(() => {
-    const storedPhotoData = loadLastEditablePhotoFromStorage();
+    const loadEditablePhoto = async () => {
+      const storedPhotoData = loadLastEditablePhotoFromStorage();
 
-    if (storedPhotoData) {
-      // We don't have the blob anymore, but we have the adjustments
-      setLastEditablePhotoState(storedPhotoData);
-    }
-  }, []);
+      if (storedPhotoData) {
+        // We don't have the blob anymore, but we have the adjustments
+        setLastEditablePhotoState(storedPhotoData);
+      } else {
+        // If no stored photo, load the default Einstein photo
+        await loadDefaultEinsteinEditablePhoto();
+      }
+    };
+
+    loadEditablePhoto();
+  }, [loadDefaultEinsteinEditablePhoto]);
 
   
   
@@ -629,8 +697,16 @@ const App = () => {
   // Drag-and-drop state
   const [dragActive, setDragActive] = useState(false); // Keep this
 
-  // Add state to store the last used photo blob and data URL for "More" button
-  const [lastPhotoData, setLastPhotoData] = useState({ blob: null, dataUrl: null }); // Keep this
+  // Load default Einstein photo when lastPhotoData is empty
+  useEffect(() => {
+    const loadDefaultPhoto = async () => {
+      // Only load if lastPhotoData is empty
+      if (lastPhotoData.blob) return;
+      await loadDefaultEinsteinPhoto();
+    };
+
+    loadDefaultPhoto();
+  }, [lastPhotoData.blob, loadDefaultEinsteinPhoto]); // Watch for changes to lastPhotoData
 
   // Add cleanup for orientation handler when component unmounts
   useEffect(() => {
