@@ -758,9 +758,23 @@ html body .photo-action-buttons .action-button,
   cursor: pointer !important;
 }
 
-/* Show hide button on photo hover - only for grid photos (not selected) and only on non-touch devices */
+.photo-refresh-btn {
+  opacity: 0 !important;
+  transform: scale(0.8) !important;
+  transition: all 0.2s ease !important;
+  pointer-events: auto !important;
+  cursor: pointer !important;
+}
+
+/* Show hide button and refresh button on photo hover - only for grid photos (not selected) and only on non-touch devices */
 @media (hover: hover) and (pointer: fine) {
   .film-frame:not(.selected):hover .photo-hide-btn {
+    opacity: 1 !important;
+    transform: scale(1) !important;
+    pointer-events: auto !important;
+  }
+
+  .film-frame:not(.selected):hover .photo-refresh-btn {
     opacity: 1 !important;
     transform: scale(1) !important;
     pointer-events: auto !important;

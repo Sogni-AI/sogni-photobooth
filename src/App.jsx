@@ -15,6 +15,7 @@ import { AuthStatus } from './components/auth/AuthStatus';
 import { useSogniAuth } from './services/sogniAuth';
 import { createFrontendClientAdapter } from './services/frontendSogniAdapter';
 import { enhancePhoto, undoEnhancement, redoEnhancement } from './services/PhotoEnhancer';
+import { refreshPhoto } from './services/PhotoRefresher';
 import { shareToTwitter } from './services/TwitterShare';
 import { themeConfigService } from './services/themeConfig';
 import { trackPageView, initializeGA, trackEvent } from './utils/analytics';
@@ -5339,6 +5340,7 @@ const App = () => {
                 tezdevTheme={tezdevTheme}
                 aspectRatio={aspectRatio}
                 handleRetryPhoto={handleRetryPhoto}
+                handleRefreshPhoto={handleRefreshPhoto}
                 onUseGalleryPrompt={handleUseGalleryPrompt}
                 onPreGenerateFrame={handlePreGenerateFrameCallback}
                 onFramedImageCacheUpdate={handleFramedImageCacheUpdate}
@@ -5370,6 +5372,7 @@ const App = () => {
                 initialThemeGroupState={currentThemeState}
                 onSearchChange={handleSearchChange}
                 initialSearchTerm={urlSearchTerm}
+                authState={authState}
               />
             </div>
           )}
@@ -5966,6 +5969,42 @@ const App = () => {
         }
         return updated;
       });
+    }
+  };
+
+  // Handle refreshing a photo - regenerate a single photo with its original prompt
+  const handleRefreshPhoto = async (photoIndex, authState, refreshingPhotos) => {
+    console.log(`Refreshing photo at index ${photoIndex}`);
+    
+    const photo = photos[photoIndex];
+    if (!photo || photo.isOriginal || photo.isGalleryImage) {
+      console.error('Cannot refresh: invalid photo type');
+      return;
+    }
+    
+    // Check if user is manually logged in
+    const isManualAuth = authState && authState.authMode === 'frontend';
+    
+    // Check concurrent refresh limit for manual auth users
+    if (isManualAuth && refreshingPhotos.size >= 2) {
+      console.log('Maximum concurrent refreshes reached (2 for manual auth users)');
+      return;
+    }
+    
+    try {
+      // Use the refreshPhoto service (similar to enhancePhoto)
+      await refreshPhoto({
+        photo,
+        photoIndex,
+        sogniClient,
+        setPhotos: setRegularPhotos,
+        settings,
+        lastPhotoData,
+        stylePrompts
+      });
+    } catch (error) {
+      console.error('Refresh failed:', error);
+      // Error handling is done inside refreshPhoto service
     }
   };
 
@@ -6908,6 +6947,7 @@ const App = () => {
           tezdevTheme={tezdevTheme}
           aspectRatio={aspectRatio}
           handleRetryPhoto={handleRetryPhoto}
+          handleRefreshPhoto={handleRefreshPhoto}
           onUseGalleryPrompt={handleUseGalleryPrompt}
           onPreGenerateFrame={handlePreGenerateFrameCallback}
           onFramedImageCacheUpdate={handleFramedImageCacheUpdate}
@@ -6927,6 +6967,7 @@ const App = () => {
           qrCodeData={qrCodeData}
           onCloseQR={() => setQrCodeData(null)}
           numImages={numImages}
+          authState={authState}
         />
           </div>
         )}

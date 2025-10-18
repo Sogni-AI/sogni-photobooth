@@ -113,7 +113,9 @@ const PhotoGallery = ({
   initialThemeGroupState = null,
   onSearchChange = null,
   initialSearchTerm = '',
-  numImages = 1
+  numImages = 1,
+  authState = null,
+  handleRefreshPhoto = null
 }) => {
   // Get settings from context
   const { settings } = useApp();
@@ -121,6 +123,9 @@ const PhotoGallery = ({
   
   // State to track when to show the "more" button during generation
   const [showMoreButtonDuringGeneration, setShowMoreButtonDuringGeneration] = useState(false);
+
+  // State to track concurrent refresh operations
+  const [refreshingPhotos, setRefreshingPhotos] = useState(new Set());
   
   // State to track composite framed images for right-click save compatibility
   const [framedImageUrls, setFramedImageUrls] = useState({});
@@ -457,6 +462,30 @@ const PhotoGallery = ({
       return {};
     });
   }, []);
+
+  // Handler to refresh a single photo - wrapper for the prop function
+  const onRefreshPhoto = useCallback(async (photoIndex) => {
+    if (!handleRefreshPhoto) {
+      console.error('handleRefreshPhoto prop not provided');
+      return;
+    }
+
+    // Mark this photo as refreshing
+    setRefreshingPhotos(prev => new Set(prev).add(photoIndex));
+
+    try {
+      await handleRefreshPhoto(photoIndex, authState, refreshingPhotos);
+    } finally {
+      // Remove from refreshing set after completion (or failure)
+      setTimeout(() => {
+        setRefreshingPhotos(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(photoIndex);
+          return newSet;
+        });
+      }, 1000); // Delay to allow state updates to complete
+    }
+  }, [handleRefreshPhoto, authState, refreshingPhotos]);
   
   // Register frame cache clearing function with parent
   useEffect(() => {
@@ -3168,55 +3197,100 @@ const PhotoGallery = ({
                   
                   {/* Hide button for loading/error state - only show on hover for grid photos */}
                   {!isSelected && !photo.isOriginal && !photo.isGalleryImage && (
-                    <button
-                      className="photo-hide-btn"
-                      onMouseDown={(e) => {
-                        e.stopPropagation();
-                        setPhotos(prev => {
-                          const updated = [...prev];
-                          if (updated[index]) {
-                            updated[index] = {
-                              ...updated[index],
-                              hidden: true
-                            };
-                          }
-                          return updated;
-                        });
-                      }}
-                      style={{
-                        position: 'absolute',
-                        top: '4px',
-                        right: '4px',
-                        background: 'rgba(0, 0, 0, 0.7)',
-                        color: 'white',
-                        border: 'none',
-                        width: '20px',
-                        height: '20px',
-                        borderRadius: '50%',
-                        fontSize: '12px',
-                        fontWeight: 'bold',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        zIndex: 999,
-                        boxShadow: '0 1px 3px rgba(0,0,0,0.5)',
-                        transition: 'all 0.2s ease',
-                        opacity: '0',
-                        transform: 'scale(0.8)'
-                      }}
-                      onMouseOver={(e) => {
-                        e.currentTarget.style.background = 'rgba(0, 0, 0, 0.9)';
-                        e.currentTarget.style.transform = 'scale(1)';
-                      }}
-                      onMouseOut={(e) => {
-                        e.currentTarget.style.background = 'rgba(0, 0, 0, 0.7)';
-                        e.currentTarget.style.transform = 'scale(0.8)';
-                      }}
-                      title="Hide this image"
-                    >
-                      ×
-                    </button>
+                    <>
+                      {/* Refresh button - only show if not already refreshing or generating */}
+                      {!photo.generating && !photo.loading && (photo.positivePrompt || photo.stylePrompt) && (
+                        <button
+                          className="photo-refresh-btn"
+                          onMouseDown={(e) => {
+                            e.stopPropagation();
+                            onRefreshPhoto(index);
+                          }}
+                          style={{
+                            position: 'absolute',
+                            top: '4px',
+                            right: '28px',
+                            background: 'rgba(0, 0, 0, 0.7)',
+                            color: 'white',
+                            border: 'none',
+                            width: '20px',
+                            height: '20px',
+                            borderRadius: '50%',
+                            fontSize: '11px',
+                            fontWeight: 'bold',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            zIndex: 999,
+                            boxShadow: '0 1px 3px rgba(0,0,0,0.5)',
+                            transition: 'all 0.2s ease',
+                            opacity: '0',
+                            transform: 'scale(0.8)'
+                          }}
+                          onMouseOver={(e) => {
+                            e.currentTarget.style.background = 'rgba(52, 152, 219, 0.9)';
+                            e.currentTarget.style.transform = 'scale(1)';
+                          }}
+                          onMouseOut={(e) => {
+                            e.currentTarget.style.background = 'rgba(0, 0, 0, 0.7)';
+                            e.currentTarget.style.transform = 'scale(0.8)';
+                          }}
+                          title="Refresh this image"
+                        >
+                          🔄
+                        </button>
+                      )}
+                      <button
+                        className="photo-hide-btn"
+                        onMouseDown={(e) => {
+                          e.stopPropagation();
+                          setPhotos(prev => {
+                            const updated = [...prev];
+                            if (updated[index]) {
+                              updated[index] = {
+                                ...updated[index],
+                                hidden: true
+                              };
+                            }
+                            return updated;
+                          });
+                        }}
+                        style={{
+                          position: 'absolute',
+                          top: '4px',
+                          right: '4px',
+                          background: 'rgba(0, 0, 0, 0.7)',
+                          color: 'white',
+                          border: 'none',
+                          width: '20px',
+                          height: '20px',
+                          borderRadius: '50%',
+                          fontSize: '12px',
+                          fontWeight: 'bold',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          zIndex: 999,
+                          boxShadow: '0 1px 3px rgba(0,0,0,0.5)',
+                          transition: 'all 0.2s ease',
+                          opacity: '0',
+                          transform: 'scale(0.8)'
+                        }}
+                        onMouseOver={(e) => {
+                          e.currentTarget.style.background = 'rgba(0, 0, 0, 0.9)';
+                          e.currentTarget.style.transform = 'scale(1)';
+                        }}
+                        onMouseOut={(e) => {
+                          e.currentTarget.style.background = 'rgba(0, 0, 0, 0.7)';
+                          e.currentTarget.style.transform = 'scale(0.8)';
+                        }}
+                        title="Hide this image"
+                      >
+                        ×
+                      </button>
+                    </>
                   )}
                 </div>
                 <div className="photo-label">
@@ -3811,57 +3885,102 @@ const PhotoGallery = ({
                   </div>
                 )}
 
-                {/* Hide button - only show on hover for grid photos (not popup) and when image is loaded */}
+                {/* Hide button and refresh button - only show on hover for grid photos (not popup) and when image is loaded */}
                 {!isSelected && isLoaded && !photo.isOriginal && !photo.isGalleryImage && (
-                  <button
-                    className="photo-hide-btn"
-                    onMouseDown={(e) => {
-                      e.stopPropagation();
-                      setPhotos(prev => {
-                        const updated = [...prev];
-                        if (updated[index]) {
-                          updated[index] = {
-                            ...updated[index],
-                            hidden: true
-                          };
-                        }
-                        return updated;
-                      });
-                    }}
-                    style={{
-                      position: 'absolute',
-                      top: '4px',
-                      right: '4px',
-                      background: 'rgba(0, 0, 0, 0.7)',
-                      color: 'white',
-                      border: 'none',
-                      width: '20px',
-                      height: '20px',
-                      borderRadius: '50%',
-                      fontSize: '12px',
-                      fontWeight: 'bold',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      zIndex: 999,
-                      boxShadow: '0 1px 3px rgba(0,0,0,0.5)',
-                      transition: 'all 0.2s ease',
-                      opacity: '0',
-                      transform: 'scale(0.8)'
-                    }}
-                    onMouseOver={(e) => {
-                      e.currentTarget.style.background = 'rgba(0, 0, 0, 0.9)';
-                      e.currentTarget.style.transform = 'scale(1)';
-                    }}
-                    onMouseOut={(e) => {
-                      e.currentTarget.style.background = 'rgba(0, 0, 0, 0.7)';
-                      e.currentTarget.style.transform = 'scale(0.8)';
-                    }}
-                    title="Hide this image"
-                  >
-                    ×
-                  </button>
+                  <>
+                    {/* Refresh button - only show if photo has a prompt */}
+                    {(photo.positivePrompt || photo.stylePrompt) && (
+                      <button
+                        className="photo-refresh-btn"
+                        onMouseDown={(e) => {
+                          e.stopPropagation();
+                          onRefreshPhoto(index);
+                        }}
+                        style={{
+                          position: 'absolute',
+                          top: '4px',
+                          right: '28px',
+                          background: 'rgba(0, 0, 0, 0.7)',
+                          color: 'white',
+                          border: 'none',
+                          width: '20px',
+                          height: '20px',
+                          borderRadius: '50%',
+                          fontSize: '11px',
+                          fontWeight: 'bold',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          zIndex: 999,
+                          boxShadow: '0 1px 3px rgba(0,0,0,0.5)',
+                          transition: 'all 0.2s ease',
+                          opacity: '0',
+                          transform: 'scale(0.8)'
+                        }}
+                        onMouseOver={(e) => {
+                          e.currentTarget.style.background = 'rgba(52, 152, 219, 0.9)';
+                          e.currentTarget.style.transform = 'scale(1)';
+                        }}
+                        onMouseOut={(e) => {
+                          e.currentTarget.style.background = 'rgba(0, 0, 0, 0.7)';
+                          e.currentTarget.style.transform = 'scale(0.8)';
+                        }}
+                        title="Refresh this image"
+                      >
+                        🔄
+                      </button>
+                    )}
+                    <button
+                      className="photo-hide-btn"
+                      onMouseDown={(e) => {
+                        e.stopPropagation();
+                        setPhotos(prev => {
+                          const updated = [...prev];
+                          if (updated[index]) {
+                            updated[index] = {
+                              ...updated[index],
+                              hidden: true
+                            };
+                          }
+                          return updated;
+                        });
+                      }}
+                      style={{
+                        position: 'absolute',
+                        top: '4px',
+                        right: '4px',
+                        background: 'rgba(0, 0, 0, 0.7)',
+                        color: 'white',
+                        border: 'none',
+                        width: '20px',
+                        height: '20px',
+                        borderRadius: '50%',
+                        fontSize: '12px',
+                        fontWeight: 'bold',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        zIndex: 999,
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.5)',
+                        transition: 'all 0.2s ease',
+                        opacity: '0',
+                        transform: 'scale(0.8)'
+                      }}
+                      onMouseOver={(e) => {
+                        e.currentTarget.style.background = 'rgba(0, 0, 0, 0.9)';
+                        e.currentTarget.style.transform = 'scale(1)';
+                      }}
+                      onMouseOut={(e) => {
+                        e.currentTarget.style.background = 'rgba(0, 0, 0, 0.7)';
+                        e.currentTarget.style.transform = 'scale(0.8)';
+                      }}
+                      title="Hide this image"
+                    >
+                      ×
+                    </button>
+                  </>
                 )}
               </div>
               {/* No special label for selected view - use standard grid label below */}
@@ -4130,7 +4249,9 @@ PhotoGallery.propTypes = {
   initialThemeGroupState: PropTypes.object,
   onSearchChange: PropTypes.func,
   initialSearchTerm: PropTypes.string,
-  numImages: PropTypes.number
+  numImages: PropTypes.number,
+  authState: PropTypes.object,
+  handleRefreshPhoto: PropTypes.func
 };
 
 export default PhotoGallery; 
