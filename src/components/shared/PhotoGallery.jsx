@@ -565,32 +565,32 @@ const PhotoGallery = ({
   const handleEnhanceWithKrea = useCallback(() => {
     setShowEnhanceDropdown(false);
     
-    // Use the functional form of setPhotos to get the latest state
-    setPhotos(currentPhotos => {
-      const currentPhotoIndex = selectedPhotoIndex;
-      if (currentPhotoIndex !== null && currentPhotos[currentPhotoIndex] && !currentPhotos[currentPhotoIndex].enhancing) {
-        // Call enhance photo in the next tick to ensure we have the latest state
-        setTimeout(() => {
-          enhancePhoto({
-            photo: currentPhotos[currentPhotoIndex],
-            photoIndex: currentPhotoIndex,
-            subIndex: selectedSubIndex || 0,
-            width: desiredWidth,
-            height: desiredHeight,
-            sogniClient,
-            setPhotos,
-            outputFormat: outputFormat,
-            clearFrameCache: clearFrameCacheForPhoto,
-            clearQrCode: onClearQrCode, // Pass QR clearing function
-            onSetActiveProject: (projectId) => {
-              activeProjectReference.current = projectId;
-            }
-          });
-        }, 0);
+    // Check if we can enhance
+    if (selectedPhotoIndex === null) return;
+    
+    const photo = photos[selectedPhotoIndex];
+    if (!photo || photo.enhancing) {
+      console.log('[ENHANCE] Already enhancing or no photo, ignoring click');
+      return;
+    }
+    
+    // Call enhancePhoto directly without setTimeout - it will handle all state management
+    enhancePhoto({
+      photo: photo,
+      photoIndex: selectedPhotoIndex,
+      subIndex: selectedSubIndex || 0,
+      width: desiredWidth,
+      height: desiredHeight,
+      sogniClient,
+      setPhotos,
+      outputFormat: outputFormat,
+      clearFrameCache: clearFrameCacheForPhoto,
+      clearQrCode: onClearQrCode, // Pass QR clearing function
+      onSetActiveProject: (projectId) => {
+        activeProjectReference.current = projectId;
       }
-      return currentPhotos; // Don't modify photos array here
     });
-  }, [selectedPhotoIndex, selectedSubIndex, desiredWidth, desiredHeight, sogniClient, setPhotos, outputFormat, clearFrameCacheForPhoto, activeProjectReference, enhancePhoto]);
+  }, [selectedPhotoIndex, selectedSubIndex, desiredWidth, desiredHeight, sogniClient, setPhotos, outputFormat, clearFrameCacheForPhoto, activeProjectReference, enhancePhoto, photos, onClearQrCode]);
 
   // Handle enhancement with Kontext (with custom prompt)
   const handleEnhanceWithKontext = useCallback(() => {
@@ -606,35 +606,35 @@ const PhotoGallery = ({
 
     setShowPromptModal(false);
 
-    // Use the functional form of setPhotos to get the latest state
-    setPhotos(currentPhotos => {
-      const currentPhotoIndex = selectedPhotoIndex;
-      if (currentPhotoIndex !== null && currentPhotos[currentPhotoIndex] && !currentPhotos[currentPhotoIndex].enhancing) {
-        // Call enhance photo with Kontext in the next tick to ensure we have the latest state
-        setTimeout(() => {
-          enhancePhoto({
-            photo: currentPhotos[currentPhotoIndex],
-            photoIndex: currentPhotoIndex,
-            subIndex: selectedSubIndex || 0,
-            width: desiredWidth,
-            height: desiredHeight,
-            sogniClient,
-            setPhotos,
-            outputFormat: outputFormat,
-            clearFrameCache: clearFrameCacheForPhoto,
-            clearQrCode: onClearQrCode, // Pass QR clearing function
-            onSetActiveProject: (projectId) => {
-              activeProjectReference.current = projectId;
-            },
-            // Kontext-specific parameters
-            useKontext: true,
-            customPrompt: trimmed
-          });
-        }, 0);
-      }
-      return currentPhotos; // Don't modify photos array here
+    // Check if we can enhance
+    if (selectedPhotoIndex === null) return;
+    
+    const photo = photos[selectedPhotoIndex];
+    if (!photo || photo.enhancing) {
+      console.log('[ENHANCE] Already enhancing or no photo, ignoring Kontext enhance');
+      return;
+    }
+
+    // Call enhancePhoto directly without setTimeout - it will handle all state management
+    enhancePhoto({
+      photo: photo,
+      photoIndex: selectedPhotoIndex,
+      subIndex: selectedSubIndex || 0,
+      width: desiredWidth,
+      height: desiredHeight,
+      sogniClient,
+      setPhotos,
+      outputFormat: outputFormat,
+      clearFrameCache: clearFrameCacheForPhoto,
+      clearQrCode: onClearQrCode, // Pass QR clearing function
+      onSetActiveProject: (projectId) => {
+        activeProjectReference.current = projectId;
+      },
+      // Kontext-specific parameters
+      useKontext: true,
+      customPrompt: trimmed
     });
-  }, [selectedPhotoIndex, selectedSubIndex, desiredWidth, desiredHeight, sogniClient, setPhotos, outputFormat, clearFrameCacheForPhoto, activeProjectReference, enhancePhoto]);
+  }, [selectedPhotoIndex, selectedSubIndex, desiredWidth, desiredHeight, sogniClient, setPhotos, outputFormat, clearFrameCacheForPhoto, activeProjectReference, enhancePhoto, onClearQrCode, photos]);
 
   // Handle prompt modal submission
   const handlePromptSubmit = useCallback(() => {

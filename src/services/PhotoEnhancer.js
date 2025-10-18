@@ -49,6 +49,12 @@ export const enhancePhoto = async (options) => {
     return;
   }
 
+  // CRITICAL: Check if photo is already enhancing to prevent duplicate calls
+  if (photo.enhancing) {
+    console.warn(`[ENHANCE] Photo #${photoIndex} is already enhancing, ignoring duplicate call`);
+    return;
+  }
+
   let timeoutId; // Declare timeoutId in outer scope
 
   try {
@@ -262,23 +268,19 @@ export const enhancePhoto = async (options) => {
         
         console.log(`[ENHANCE] Job event received:`, { type, jobId, progress, projectId: project.id });
         
-        // Store job ID when we first see it (on started or progress events)
-        if (jobId && ['started', 'progress'].includes(type)) {
+        // Single state update for started events (store job ID)
+        if (type === 'started' && jobId) {
           setPhotos(prev => {
-            const updated = [...prev];
-            const current = updated[photoIndex];
-            if (!current || !current.enhancing) return prev;
+            const current = prev[photoIndex];
+            if (!current || !current.enhancing || current.currentEnhancementJobId) return prev;
             
-            // Only update if we don't have a job ID yet, or if this is a newer project
-            if (!current.currentEnhancementJobId || current.projectId === project.id) {
-              console.log(`[ENHANCE] Setting job ID for photo #${photoIndex}: ${jobId}`);
-              updated[photoIndex] = {
-                ...current,
-                currentEnhancementJobId: jobId
-              };
-              return updated;
-            }
-            return prev;
+            console.log(`[ENHANCE] Setting job ID for photo #${photoIndex}: ${jobId}`);
+            const updated = [...prev];
+            updated[photoIndex] = {
+              ...current,
+              currentEnhancementJobId: jobId
+            };
+            return updated;
           });
         }
         
@@ -289,18 +291,20 @@ export const enhancePhoto = async (options) => {
           console.log(`[ENHANCE] Job progress: ${progressPercent}%`);
           
           setPhotos(prev => {
-            const updated = [...prev];
-            const current = updated[photoIndex];
-            if (!current) return prev;
+            const current = prev[photoIndex];
+            if (!current || !current.enhancing) return prev;
             
-            // Debug job ID comparison
-            console.log(`[ENHANCE] Job progress check: current.jobId=${current.currentEnhancementJobId}, event.jobId=${jobId}, match=${current.currentEnhancementJobId === jobId}, enhancing=${current.enhancing}`);
-            
-            // Only accept progress updates for the correct job ID and enhancing photo
-            if (!current.enhancing || (current.currentEnhancementJobId && current.currentEnhancementJobId !== jobId)) {
-              console.log(`[ENHANCE] Ignoring progress update - wrong job ID or not enhancing`);
+            // Only accept progress updates for the correct job ID
+            if (current.currentEnhancementJobId && current.currentEnhancementJobId !== jobId) {
               return prev;
             }
+            
+            // Check if progress actually changed to avoid unnecessary updates
+            if (current.enhancementProgress === progressValue) {
+              return prev;
+            }
+            
+            const updated = [...prev];
             updated[photoIndex] = {
               ...current,
               progress: progressValue,
@@ -317,23 +321,27 @@ export const enhancePhoto = async (options) => {
         const progressValue = typeof progress === 'number' ? progress : 
           (typeof progress === 'object' && progress.progress !== undefined) ? progress.progress : 0;
         
-        console.log('[ENHANCE] Project progress full payload:', { projectId: project.id, progress: progressValue });
         const progressPercent = Math.floor(progressValue * 100);
         console.log(`[ENHANCE] Project progress: ${progressPercent}%`);
         
         setPhotos(prev => {
-          const updated = [...prev];
-          const current = updated[photoIndex];
-          if (!current) return prev;
+          const current = prev[photoIndex];
+          if (!current || !current.enhancing) return prev;
           
-          // Debug project comparison
-          console.log(`[ENHANCE] Project-level progress - Project ID check: current.projectId=${current.projectId}, project.id=${project.id}, match=${current.projectId === project.id}, enhancing=${current.enhancing}`);
+          // Only use project-level progress if we don't have a job ID yet (fallback)
+          if (current.currentEnhancementJobId) return prev;
           
-          // Only accept project-level progress if photo is enhancing and project ID matches (fallback when no job ID)
-          if (!current.enhancing || (current.projectId && current.projectId !== project.id)) {
-            console.log(`[ENHANCE] Ignoring project-level progress update - wrong project or not enhancing`);
+          // Check if progress actually changed to avoid unnecessary updates
+          if (current.enhancementProgress === progressValue) {
             return prev;
           }
+          
+          // Only accept project-level progress if project ID matches
+          if (current.projectId && current.projectId !== project.id) {
+            return prev;
+          }
+          
+          const updated = [...prev];
           updated[photoIndex] = {
             ...current,
             progress: progressValue,
@@ -365,16 +373,22 @@ export const enhancePhoto = async (options) => {
             }
             
             setPhotos(prev => {
-              const updated = [...prev];
-              const current = updated[photoIndex];
+              const current = prev[photoIndex];
               if (!current) return prev;
               
               // Check if this completion is for the current enhancement job
-              console.log(`[ENHANCE] Completion job ID check: current.jobId=${current.currentEnhancementJobId}, job.id=${job.id}, match=${current.currentEnhancementJobId === job.id}`);
               if (current.currentEnhancementJobId && current.currentEnhancementJobId !== job.id) {
-                console.log(`[ENHANCE] Ignoring completion - wrong job ID`);
+                console.log(`[ENHANCE] Ignoring completion - wrong job ID (current: ${current.currentEnhancementJobId}, event: ${job.id})`);
                 return prev;
               }
+              
+              // Prevent duplicate completion updates
+              if (!current.enhancing) {
+                console.log(`[ENHANCE] Ignoring completion - photo is not enhancing anymore`);
+                return prev;
+              }
+              
+              const updated = [...prev];
               const updatedImages = [...current.images];
               const indexToReplace = subIndex < updatedImages.length ? subIndex : updatedImages.length - 1;
               if (indexToReplace >= 0) {
@@ -408,11 +422,16 @@ export const enhancePhoto = async (options) => {
             }
             
             setPhotos(prev => {
-              const updated = [...prev];
-              const current = updated[photoIndex];
+              const current = prev[photoIndex];
               if (!current) return prev;
+              
               // Ignore completion from stale projects
               if (current.projectId && current.projectId !== project.id) return prev;
+              
+              // Prevent duplicate completion updates
+              if (!current.enhancing) return prev;
+              
+              const updated = [...prev];
               const updatedImages = [...current.images];
               const indexToReplace = subIndex < updatedImages.length ? subIndex : updatedImages.length - 1;
               if (indexToReplace >= 0) {
@@ -445,11 +464,16 @@ export const enhancePhoto = async (options) => {
           clearTimeout(timeoutId);
           
           setPhotos(prev => {
-            const updated = [...prev];
-            const current = updated[photoIndex];
+            const current = prev[photoIndex];
             if (!current) return prev;
+            
             // Ignore completion from stale projects
             if (current.projectId && current.projectId !== project.id) return prev;
+            
+            // Prevent duplicate error updates
+            if (!current.enhancing) return prev;
+            
+            const updated = [...prev];
             updated[photoIndex] = {
               ...current,
               loading: false,
@@ -470,11 +494,16 @@ export const enhancePhoto = async (options) => {
         // Don't clear activeProjectReference since we didn't set it for enhancement
         // onSetActiveProject(null); // Commented out since we don't set it
         setPhotos(prev => {
-          const updated = [...prev];
-          const current = updated[photoIndex];
+          const current = prev[photoIndex];
           if (!current) return prev;
+          
           // Ignore failures from stale projects
           if (current.projectId && current.projectId !== project.id) return prev;
+          
+          // Prevent duplicate failure updates
+          if (!current.enhancing) return prev;
+          
+          const updated = [...prev];
           updated[photoIndex] = {
             ...current,
             loading: false,
