@@ -145,7 +145,7 @@ export const enhancePhoto = async (options) => {
             ...current,
             loading: false,
             enhancing: false,
-            error: 'ENHANCEMENT FAILED: timeout',
+            error: 'ENHANCEMENT TIMEOUT',
             enhancementError: 'Enhancement timed out. Please try again.',
             enhanceTimeoutId: null
           };
@@ -508,7 +508,7 @@ export const enhancePhoto = async (options) => {
             ...current,
             loading: false,
             enhancing: false,
-            error: 'ENHANCEMENT FAILED: processing error',
+            error: 'ENHANCEMENT FAILED',
             enhancementError: 'Enhancement failed during processing. Please try again.',
             enhanceTimeoutId: null
           };
@@ -529,7 +529,7 @@ export const enhancePhoto = async (options) => {
         ...updated[photoIndex],
         loading: false,
         enhancing: false,
-        error: error?.message && error.message.includes('Insufficient') ? 'ENHANCEMENT FAILED: replenish tokens' : 'ENHANCEMENT FAILED: processing error',
+        error: error?.message && error.message.includes('Insufficient') ? 'INSUFFICIENT TOKENS' : 'ENHANCEMENT FAILED',
         enhancementError: error?.message && error.message.includes('Insufficient') ? 'Insufficient tokens. Please replenish your account.' : `Enhancement failed: ${error?.message || 'Unknown error'}`
       };
       return updated;

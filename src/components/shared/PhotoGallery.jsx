@@ -3297,7 +3297,15 @@ const PhotoGallery = ({
                   {photo.error ? 
                     <div>
                       <div style={{ marginBottom: '8px' }}>
-                        {typeof photo.error === 'object' ? 'GENERATION FAILED: unknown error' : photo.error}
+                        {(() => {
+                          if (typeof photo.error === 'object') {
+                            return 'GENERATION FAILED';
+                          }
+                          // Extract just the title part (before colon if present)
+                          const errorStr = String(photo.error);
+                          const colonIndex = errorStr.indexOf(':');
+                          return colonIndex > 0 ? errorStr.substring(0, colonIndex).trim() : errorStr;
+                        })()}
                       </div>
                       {photo.retryable && handleRetryPhoto && (
                         <button

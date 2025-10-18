@@ -3523,8 +3523,9 @@ const App = () => {
             ...photo,
             generating: false,
             loading: false,
-            error: `PROJECT TIMEOUT: ${reason}`,
-            permanentError: true,
+            error: `PROJECT TIMEOUT`,
+            permanentError: false, // Make timeout errors retryable
+            retryable: true, // Allow retry for timeout errors
             statusText: 'Timed Out',
             timedOut: true
           };

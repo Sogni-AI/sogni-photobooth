@@ -170,7 +170,8 @@ export const refreshPhoto = async (options) => {
       negativePrompt,
       seed,
       outputFormat,
-      sensitiveContentFilter
+      sensitiveContentFilter,
+      aspectRatio
     } = settings;
 
     // Check if model is Flux Kontext
@@ -185,8 +186,15 @@ export const refreshPhoto = async (options) => {
       }
     }
 
-    // Use the original image dimensions instead of aspectRatio settings
-    const { width, height } = imageDimensions;
+    // Import getCustomDimensions to get proper dimensions based on aspect ratio
+    const { getCustomDimensions } = await import('../utils/imageProcessing.js');
+    
+    // Use the aspect ratio settings to get proper dimensions (stays within 2048 limit)
+    // This ensures we don't exceed API limits while maintaining the correct aspect ratio
+    const targetDimensions = getCustomDimensions(aspectRatio);
+    const { width, height } = targetDimensions;
+    
+    console.log(`[REFRESH] Using dimensions from aspect ratio '${aspectRatio}': ${width}x${height} (original was ${imageDimensions.width}x${imageDimensions.height})`);
 
     // Create project configuration for a single image refresh
     const projectConfig = {
