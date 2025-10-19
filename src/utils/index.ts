@@ -156,11 +156,15 @@ export function styleIdToDisplay(styleId: string): string {
   }
   
   return styleId
-    .replace(/([a-z])([A-Z])/g, '$1 $2')  // Add space between lowercase and uppercase (but not between consecutive capitals)
-    .replace(/([a-zA-Z])(\d)/g, '$1 $2')  // Add space between letters and numbers
+    // Split ALL consecutive uppercase letters (VHS -> V H S, DJ -> D J, BW -> B W, TV -> T V, etc.)
+    .replace(/([A-Z])(?=[A-Z])/g, '$1 ')
+    // Add space between lowercase and uppercase
+    .replace(/([a-z])([A-Z])/g, '$1 $2')
+    // Add space between letters and numbers
+    .replace(/([a-zA-Z])(\d)/g, '$1 $2')
     .replace(/(\d+)([a-zA-Z])/g, (match, numbers, letters) => {
-      // Don't separate common patterns like F1, 1990s, 90s, 3D, etc.
-      const commonPatterns = /^(f1|1990s|90s|3d|2d|8k|4k|24x24|128x112)$/i;
+      // Don't separate common patterns like F1, 1990s, 90s, 70s, 3D, etc.
+      const commonPatterns = /^(f1|1990s|90s|80s|70s|60s|50s|3d|2d|8k|4k|24x24|128x112)$/i;
       if (commonPatterns.test(numbers + letters)) {
         return match; // Keep as-is
       }

@@ -2806,7 +2806,7 @@ const PhotoGallery = ({
                   textDecorationColor: '#a855f7',
                   textDecorationThickness: '2px',
                   textUnderlineOffset: '3px'
-                }}>Medium Portrait</span>
+                }}>Half Body</span>
               </button>
               
               <button 
@@ -2842,7 +2842,7 @@ const PhotoGallery = ({
                 }}>
                   <img 
                     src="/gallery/sample-gallery-full-body-mark.jpg"
-                    alt="Full body portrait example"
+                    alt="Wide portrait example"
                     style={{
                       width: '100%',
                       height: '100%',
@@ -2859,7 +2859,7 @@ const PhotoGallery = ({
                   textDecorationColor: '#a855f7',
                   textDecorationThickness: '2px',
                   textUnderlineOffset: '3px'
-                }}>Full Body Portrait</span>
+                }}>Full Body</span>
               </button>
             </div>
           </div>

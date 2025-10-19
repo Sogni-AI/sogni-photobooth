@@ -326,6 +326,12 @@ const App = () => {
 
   // Handler for portrait type changes
   const handlePortraitTypeChange = useCallback((newPortraitType) => {
+    // Only change if it's actually different
+    if (newPortraitType === portraitType) {
+      console.log(`Portrait type ${newPortraitType} already selected, ignoring`);
+      return;
+    }
+    
     console.log(`Changing portrait type from ${portraitType} to ${newPortraitType}`);
     setPortraitType(newPortraitType);
     // Clear gallery photos to force reload with new portrait type
@@ -864,6 +870,25 @@ const App = () => {
   useEffect(() => {
     const loadGalleryForPromptSelector = async () => {
       if (currentPage === 'prompts' && stylePrompts && Object.keys(stylePrompts).length > 0) {
+        const promptCount = Object.keys(stylePrompts).length;
+        
+        // Validate that stylePrompts is fully loaded (should have 200+ styles)
+        // If we have fewer than 50 prompts, it's likely still loading/filtering
+        if (promptCount < 50) {
+          console.log(`StylePrompts not fully loaded yet (${promptCount} prompts), waiting...`);
+          return;
+        }
+        
+        // Prevent loading more than once per session - check this FIRST before any async operations
+        if (galleryImagesLoadedThisSession.current) {
+          console.log('Gallery images already loaded this session (ref check), skipping reload');
+          return;
+        }
+        
+        // Set the flag immediately to prevent race conditions from multiple renders
+        console.log(`Setting galleryImagesLoadedThisSession flag with ${promptCount} prompts loaded`);
+        galleryImagesLoadedThisSession.current = true;
+        
         // Check if all theme groups are deselected and auto-reselect them
         const currentThemePrefs = getThemeGroupPreferences();
         const allDeselected = Object.keys(currentThemePrefs).length > 0 && 
@@ -877,24 +902,8 @@ const App = () => {
           setCurrentThemeState(allSelected);
         }
         
-        // Prevent loading more than once per session
-        if (galleryImagesLoadedThisSession.current) {
-          console.log('Gallery images already loaded this session, skipping reload');
-          return;
-        }
-        
-        // Also check if we already have gallery images loaded
-        if (galleryPhotos.length > 0 && galleryPhotos[0]?.isGalleryImage) {
-          console.log('Gallery images already loaded in state, skipping reload');
-          // Ensure photos state is synced with gallery photos to prevent race condition
-          setPhotos(galleryPhotos);
-          console.log(`Synced photos state with ${galleryPhotos.length} existing gallery images`);
-          galleryImagesLoadedThisSession.current = true;
-          return;
-        }
-        
         try {
-          console.log('Loading gallery images for prompt selector...');
+          console.log(`Loading gallery images for prompt selector with ${promptCount} prompts...`);
 
           // Import the loadGalleryImages function
           const { loadGalleryImages } = await import('./utils/galleryLoader');
@@ -907,12 +916,15 @@ const App = () => {
             // This prevents a race condition where photos might be empty when PhotoGallery renders
             setPhotos(loadedGalleryPhotos);
             console.log(`Updated photos state with ${loadedGalleryPhotos.length} gallery images to prevent race condition`);
-            galleryImagesLoadedThisSession.current = true; // Mark as loaded
           } else {
             console.warn('No gallery images found for prompt selector');
+            // Reset the flag if loading failed so it can be retried
+            galleryImagesLoadedThisSession.current = false;
           }
         } catch (error) {
           console.error('Error loading gallery images for prompt selector:', error);
+          // Reset the flag if loading failed so it can be retried
+          galleryImagesLoadedThisSession.current = false;
         }
       }
     };

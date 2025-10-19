@@ -4,22 +4,77 @@ import { styleIdToDisplay } from './index';
  * Converts camelCase prompt key to kebab-case filename
  * @param {string} promptKey - The camelCase prompt key
  * @returns {string} The kebab-case filename part
- * 
+ *
  * Examples:
  *   darkFantasyBerserker -> dark-fantasy-berserker
- *   anime1990s -> anime1990s
+ *   anime1990s -> anime-1990s
+ *   rockPoster70s -> rock-poster-70s
+ *   mallGlamour90s -> mall-glamour-90s
  *   nftBoredApe -> nft-bored-ape
+ *   celShade3D -> cel-shade-3d
+ *   y2kRaverKid -> y2k-raver-kid
+ *   1990sHouseParty -> 1990s-house-party
+ *   f1Driver -> f-1-driver
+ *   fingers4am -> fingers-4-am
+ *   classicZombieBW -> classic-zombie-b-w
+ *   clubDJ -> club-d-j
+ *   rnBSoulSinger -> rn-b-soul-singer
+ *   retroVHS -> retro-v-h-s
+ *   filmGrainB&W -> film-grain-b&-w
  */
 const promptKeyToFilename = (promptKey) => {
-  return promptKey
-    // Insert a hyphen before uppercase letters (except at start)
-    .replace(/([A-Z])/g, '-$1')
-    // Convert to lowercase
-    .toLowerCase()
-    // Remove leading hyphen if present
-    .replace(/^-/, '')
-    // Clean up any double hyphens
-    .replace(/--+/g, '-');
+  let result = promptKey;
+  
+  // First handle capital D at end (for 3D -> 3d, keep together)
+  result = result.replace(/([0-9])D$/g, '$1d');
+  
+  // Split ALL consecutive uppercase letters (VHS -> V-H-S, DJ -> D-J, BW -> B-W, TV -> T-V, etc.)
+  result = result.replace(/([A-Z])(?=[A-Z])/g, '$1-');
+  
+  // Insert a hyphen before uppercase letters (not at start)
+  result = result.replace(/([a-z])([A-Z])/g, '$1-$2');
+  
+  // Handle special character & followed by uppercase W -> add hyphen after &
+  result = result.replace(/&([A-Z])/g, '&-$1');
+  
+  // Convert to lowercase
+  result = result.toLowerCase();
+  
+  // Insert hyphens at letter-number boundaries (e.g., anime1990s -> anime-1990s)
+  // BUT preserve y2k as special case
+  result = result.replace(/([a-z])([0-9])/g, (match, p1, p2, offset, string) => {
+    // Check if this is the y in y2k
+    if (p1 === 'y' && string.substr(offset, 3) === 'y2k') {
+      return match; // keep y2k together
+    }
+    return p1 + '-' + p2;
+  });
+  
+  // Insert hyphens at number-letter boundaries (e.g., f1driver -> f-1-driver)
+  // BUT preserve y2k, 3d, and number+s patterns (1990s, 70s, etc.)
+  result = result.replace(/([0-9])([a-z])/g, (match, p1, p2, offset, string) => {
+    // Check if this creates y2k pattern (2k)
+    if (offset > 0 && string[offset - 1] === 'y' && p1 === '2' && p2 === 'k') {
+      return match; // keep y2k together
+    }
+    // Check if this is just 's' after a number (1990s, 70s, etc.)
+    if (p2 === 's' && (offset + 2 >= string.length || string[offset + 2] === '-' || /[A-Z]/.test(string[offset + 2]))) {
+      return match; // keep number+s together
+    }
+    // Check if this is 3d pattern
+    if (p1 === '3' && p2 === 'd' && (offset + 2 >= string.length || string[offset + 2] === '-')) {
+      return match; // keep 3d together
+    }
+    return p1 + '-' + p2;
+  });
+  
+  // Remove leading hyphen if present
+  result = result.replace(/^-/, '');
+  
+  // Clean up double hyphens
+  result = result.replace(/--+/g, '-');
+  
+  return result;
 };
 
 /**
