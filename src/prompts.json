@@ -1,4 +1,8 @@
 {
+  "favorites": {
+    "name": "Favorites",
+    "prompts": {}
+  },
   "anime-manga-chibi": {
     "name": "Anime / Manga / Chibi",
     "prompts": {

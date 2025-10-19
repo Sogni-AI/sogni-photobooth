@@ -147,6 +147,55 @@ export function saveThemeGroupPreferences(preferences: Record<string, boolean>):
   }
 }
 
+// Favorite images utilities
+export function getFavoriteImages(): string[] {
+  try {
+    const favorites = localStorage.getItem('sogni_favorite_images');
+    if (favorites) {
+      return JSON.parse(favorites) as string[];
+    }
+  } catch (e) {
+    console.warn('Error reading favorite images:', e);
+  }
+  return [];
+}
+
+export function saveFavoriteImages(favorites: string[]): void {
+  try {
+    localStorage.setItem('sogni_favorite_images', JSON.stringify(favorites));
+  } catch (e) {
+    console.warn('Error saving favorite images:', e);
+  }
+}
+
+export function toggleFavoriteImage(photoId: string): boolean {
+  try {
+    const favorites = getFavoriteImages();
+    const index = favorites.indexOf(photoId);
+    let newFavorites: string[];
+    
+    if (index > -1) {
+      // Remove from favorites
+      newFavorites = favorites.filter(id => id !== photoId);
+      saveFavoriteImages(newFavorites);
+      return false;
+    } else {
+      // Add to favorites
+      newFavorites = [...favorites, photoId];
+      saveFavoriteImages(newFavorites);
+      return true;
+    }
+  } catch (e) {
+    console.warn('Error toggling favorite image:', e);
+    return false;
+  }
+}
+
+export function isFavoriteImage(photoId: string): boolean {
+  const favorites = getFavoriteImages();
+  return favorites.includes(photoId);
+}
+
 // Utility function to clean up corrupted localStorage values
 export function cleanupCorruptedSettings(): void {
   try {

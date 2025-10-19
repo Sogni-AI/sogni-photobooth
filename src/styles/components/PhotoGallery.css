@@ -779,6 +779,19 @@ html body .photo-action-buttons .action-button,
     transform: scale(1) !important;
     pointer-events: auto !important;
   }
+
+  .film-frame:not(.selected):hover .photo-favorite-btn {
+    opacity: 1 !important;
+    transform: scale(1) !important;
+    pointer-events: auto !important;
+  }
+}
+
+/* Favorite button styles - only visible on hover (unless favorited) */
+.photo-favorite-btn {
+  transition: all 0.2s ease !important;
+  pointer-events: auto !important;
+  cursor: pointer !important;
 }
 
 /* Download All button styling */

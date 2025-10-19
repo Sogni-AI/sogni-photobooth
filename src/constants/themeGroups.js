@@ -12,11 +12,12 @@ Object.entries(promptsData).forEach(([groupId, group]) => {
   };
 });
 
-// Default state - all groups enabled
+// Default state - favorites starts unchecked, all other groups enabled
 export const getDefaultThemeGroupState = () => {
   const defaultState = {};
   Object.keys(THEME_GROUPS).forEach(groupId => {
-    defaultState[groupId] = true;
+    // Favorites starts unchecked, all other groups start enabled
+    defaultState[groupId] = groupId === 'favorites' ? false : true;
   });
   return defaultState;
 };

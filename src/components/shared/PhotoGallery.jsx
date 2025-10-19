@@ -9,7 +9,7 @@ import { createPolaroidImage } from '../../utils/imageProcessing';
 import { downloadImageMobile, enableMobileImageDownload } from '../../utils/mobileDownload';
 import { isMobile, styleIdToDisplay } from '../../utils/index';
 import { THEME_GROUPS, getDefaultThemeGroupState, getEnabledPrompts } from '../../constants/themeGroups';
-import { getThemeGroupPreferences, saveThemeGroupPreferences } from '../../utils/cookies';
+import { getThemeGroupPreferences, saveThemeGroupPreferences, getFavoriteImages, toggleFavoriteImage } from '../../utils/cookies';
 import { isFluxKontextModel, SAMPLE_GALLERY_CONFIG, getQRWatermarkConfig } from '../../constants/settings';
 import { themeConfigService } from '../../services/themeConfig';
 import { useApp } from '../../context/AppContext';
@@ -159,7 +159,10 @@ const PhotoGallery = ({
   const [showThemeFilters, setShowThemeFilters] = useState(false);
   const [showSearchInput, setShowSearchInput] = useState(false);
   const [searchTerm, setSearchTerm] = useState(initialSearchTerm);
-  
+
+  // State for favorites
+  const [favoriteImageIds, setFavoriteImageIds] = useState(() => getFavoriteImages());
+
   // State for video overlay
   const [showVideo, setShowVideo] = useState(false);
   const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
@@ -652,36 +655,87 @@ const PhotoGallery = ({
   // Handle theme group toggle for prompt selector mode
   const handleThemeGroupToggle = useCallback((groupId) => {
     if (!isPromptSelectorMode) return;
-    
+
     const newState = {
       ...themeGroupState,
       [groupId]: !themeGroupState[groupId]
     };
     setThemeGroupState(newState);
     saveThemeGroupPreferences(newState);
-    
+
     // Notify parent component about theme changes
     if (onThemeChange) {
       onThemeChange(newState);
     }
   }, [isPromptSelectorMode, themeGroupState, onThemeChange]);
 
+  // Handle favorite toggle
+  const handleFavoriteToggle = useCallback((photoId, e) => {
+    if (e) {
+      e.stopPropagation(); // Prevent photo selection when clicking heart
+    }
+    const isFavorite = toggleFavoriteImage(photoId);
+    setFavoriteImageIds(getFavoriteImages());
+    return isFavorite;
+  }, []);
+
   // Filter photos based on enabled theme groups and search term in prompt selector mode
   const filteredPhotos = useMemo(() => {
     if (!isPromptSelectorMode || !photos) return photos;
-    
+
     const isFluxKontext = selectedModel && isFluxKontextModel(selectedModel);
     let filtered = photos;
+
+    // Build a list of all photos that should be shown based on enabled filters (OR logic)
+    const shouldShowPhoto = (photo) => {
+      // Track if any filter is enabled
+      const enabledFilters = [];
+      
+      // Check if favorites filter is enabled
+      if (themeGroupState['favorites']) {
+        enabledFilters.push('favorites');
+      }
+      
+      // Check if any theme group filters are enabled (for non-Flux models)
+      if (!isFluxKontext) {
+        const enabledThemeGroups = Object.entries(themeGroupState)
+          .filter(([groupId, enabled]) => enabled && groupId !== 'favorites')
+          .map(([groupId]) => groupId);
+        
+        if (enabledThemeGroups.length > 0) {
+          enabledFilters.push('themes');
+        }
+      }
+      
+      // If no filters are enabled, show all photos
+      if (enabledFilters.length === 0) {
+        return true;
+      }
+      
+      // Check if photo matches any enabled filter (OR logic)
+      let matchesAnyFilter = false;
+      
+      // Check favorites filter
+      if (themeGroupState['favorites']) {
+        const photoId = photo.id || (photo.images && photo.images[0]) || photo.promptKey;
+        if (favoriteImageIds.includes(photoId)) {
+          matchesAnyFilter = true;
+        }
+      }
+      
+      // Check theme group filters
+      if (!isFluxKontext && !matchesAnyFilter) {
+        const enabledPrompts = getEnabledPrompts(themeGroupState, stylePrompts || {});
+        if (photo.promptKey && Object.prototype.hasOwnProperty.call(enabledPrompts, photo.promptKey)) {
+          matchesAnyFilter = true;
+        }
+      }
+      
+      return matchesAnyFilter;
+    };
     
-    // Apply theme group filtering for non-Flux models
-    if (!isFluxKontext) {
-      const enabledPrompts = getEnabledPrompts(themeGroupState, stylePrompts || {});
-      filtered = photos.filter(photo => {
-        if (!photo.promptKey) return false;
-        return Object.prototype.hasOwnProperty.call(enabledPrompts, photo.promptKey);
-      });
-    }
-    
+    filtered = photos.filter(shouldShowPhoto);
+
     // Apply search term filtering if search term exists
     if (searchTerm.trim()) {
       const searchLower = searchTerm.toLowerCase().trim();
@@ -691,9 +745,9 @@ const PhotoGallery = ({
         return displayText.includes(searchLower);
       });
     }
-    
+
     return filtered;
-  }, [isPromptSelectorMode, photos, themeGroupState, stylePrompts, selectedModel, searchTerm]);
+  }, [isPromptSelectorMode, photos, themeGroupState, stylePrompts, selectedModel, searchTerm, favoriteImageIds]);
 
   // Get readable style display text for photo labels (no hashtags)
   const getStyleDisplayText = useCallback((photo) => {
@@ -1245,7 +1299,23 @@ const PhotoGallery = ({
   }, [onFramedImageCacheUpdate, framedImageUrls]);
 
   const handlePhotoSelect = useCallback(async (index, e) => {
-    const element = e.currentTarget;
+    // Ignore clicks on the favorite button or its children
+    const target = e.target;
+    const currentTarget = e.currentTarget;
+    
+    // Check if click is on favorite button or any of its descendants
+    if (target.classList.contains('photo-favorite-btn') || 
+        target.closest('.photo-favorite-btn') ||
+        target.tagName === 'svg' ||
+        target.tagName === 'path' ||
+        (target.parentElement && target.parentElement.classList.contains('photo-favorite-btn'))) {
+      console.log('Click blocked - favorite button detected');
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+    
+    const element = currentTarget;
     
     // In prompt selector mode, just show selected state - don't immediately set style
     // The "Use this Style" button will handle the actual style selection
@@ -2721,16 +2791,16 @@ const PhotoGallery = ({
               >
                 {/* Polaroid frame with label inside - 2:3 aspect ratio */}
                 <div style={{
-                  width: '72px',
+                  width: '87px',
                   background: 'white',
-                  padding: '6px',
-                  paddingBottom: '22px',
+                  padding: '7px',
+                  paddingBottom: '24px',
                   boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
                   position: 'relative'
                 }}>
                   <div style={{
-                    width: '60px',
-                    height: '90px',
+                    width: '72px',
+                    height: '108px',
                     overflow: 'hidden',
                     background: '#f0f0f0'
                   }}>
@@ -2742,15 +2812,18 @@ const PhotoGallery = ({
                         height: '100%',
                         objectFit: 'cover',
                         objectPosition: 'center center',
-                        display: 'block'
+                        display: 'block',
+                        imageRendering: 'high-quality',
+                        WebkitFontSmoothing: 'antialiased',
+                        MozOsxFontSmoothing: 'grayscale'
                       }}
                     />
                   </div>
                   <div style={{
                     position: 'absolute',
-                    bottom: '6px',
-                    left: '6px',
-                    right: '6px',
+                    bottom: '7px',
+                    left: '7px',
+                    right: '7px',
                     textAlign: 'center',
                     fontSize: '10px',
                     fontFamily: '"Permanent Marker", cursive',
@@ -2785,16 +2858,16 @@ const PhotoGallery = ({
               >
                 {/* Polaroid frame with label inside - 2:3 aspect ratio */}
                 <div style={{
-                  width: '72px',
+                  width: '87px',
                   background: 'white',
-                  padding: '6px',
-                  paddingBottom: '22px',
+                  padding: '7px',
+                  paddingBottom: '24px',
                   boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
                   position: 'relative'
                 }}>
                   <div style={{
-                    width: '60px',
-                    height: '90px',
+                    width: '72px',
+                    height: '108px',
                     overflow: 'hidden',
                     background: '#f0f0f0'
                   }}>
@@ -2806,15 +2879,18 @@ const PhotoGallery = ({
                         height: '100%',
                         objectFit: 'cover',
                         objectPosition: 'center center',
-                        display: 'block'
+                        display: 'block',
+                        imageRendering: 'high-quality',
+                        WebkitFontSmoothing: 'antialiased',
+                        MozOsxFontSmoothing: 'grayscale'
                       }}
                     />
                   </div>
                   <div style={{
                     position: 'absolute',
-                    bottom: '6px',
-                    left: '6px',
-                    right: '6px',
+                    bottom: '7px',
+                    left: '7px',
+                    right: '7px',
                     textAlign: 'center',
                     fontSize: '10px',
                     fontFamily: '"Permanent Marker", cursive',
@@ -2849,16 +2925,16 @@ const PhotoGallery = ({
               >
                 {/* Polaroid frame with label inside - 2:3 aspect ratio */}
                 <div style={{
-                  width: '72px',
+                  width: '87px',
                   background: 'white',
-                  padding: '6px',
-                  paddingBottom: '22px',
+                  padding: '7px',
+                  paddingBottom: '24px',
                   boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
                   position: 'relative'
                 }}>
                   <div style={{
-                    width: '60px',
-                    height: '90px',
+                    width: '72px',
+                    height: '108px',
                     overflow: 'hidden',
                     background: '#f0f0f0'
                   }}>
@@ -2870,15 +2946,18 @@ const PhotoGallery = ({
                         height: '100%',
                         objectFit: 'cover',
                         objectPosition: 'center center',
-                        display: 'block'
+                        display: 'block',
+                        imageRendering: 'high-quality',
+                        WebkitFontSmoothing: 'antialiased',
+                        MozOsxFontSmoothing: 'grayscale'
                       }}
                     />
                   </div>
                   <div style={{
                     position: 'absolute',
-                    bottom: '6px',
-                    left: '6px',
-                    right: '6px',
+                    bottom: '7px',
+                    left: '7px',
+                    right: '7px',
                     textAlign: 'center',
                     fontSize: '10px',
                     fontFamily: '"Permanent Marker", cursive',
@@ -3340,7 +3419,15 @@ const PhotoGallery = ({
                 data-error={photo.error ? 'true' : undefined}
                 data-enhanced={photo.enhanced ? 'true' : undefined}
   
-                onClick={() => {
+                onClick={(e) => {
+                  // Don't open photo if clicking the favorite button
+                  let el = e.target;
+                  while (el && el !== e.currentTarget) {
+                    if (el.classList && el.classList.contains('photo-favorite-btn')) {
+                      return;
+                    }
+                    el = el.parentElement;
+                  }
                   // In prompt selector mode, just show selected state - don't immediately set style
                   isSelected ? setSelectedPhotoIndex(null) : setSelectedPhotoIndex(index);
                 }}
@@ -3421,7 +3508,7 @@ const PhotoGallery = ({
                   overflow: 'hidden'
                 }}>
                   <PlaceholderImage placeholderUrl={placeholderUrl} />
-                  
+
                   {/* Hide button for loading/error state - only show on hover for grid photos */}
                   {!isSelected && !photo.isOriginal && !photo.isGalleryImage && (
                     <>
@@ -3520,6 +3607,68 @@ const PhotoGallery = ({
                     </>
                   )}
                 </div>
+
+                {/* Favorite heart button - show in prompt selector mode for desktop */}
+                {isPromptSelectorMode && !isMobile() && (
+                  <div
+                    className="photo-favorite-btn"
+                    onClickCapture={(e) => {
+                      e.stopPropagation();
+                      const photoId = photo.id || (photo.images && photo.images[0]) || photo.promptKey;
+                      handleFavoriteToggle(photoId, e);
+                    }}
+                    onMouseDownCapture={(e) => {
+                      e.stopPropagation();
+                    }}
+                    style={{
+                      position: 'absolute',
+                      top: '10px',
+                      right: '10px',
+                      width: '40px',
+                      height: '40px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      zIndex: 99999,
+                      opacity: favoriteImageIds.includes(photo.id || (photo.images && photo.images[0]) || photo.promptKey) ? '1' : '0',
+                      transition: 'opacity 0.2s ease',
+                      pointerEvents: 'all'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.opacity = '1';
+                    }}
+                    onMouseLeave={(e) => {
+                      const isFavorited = favoriteImageIds.includes(photo.id || (photo.images && photo.images[0]) || photo.promptKey);
+                      e.currentTarget.style.opacity = isFavorited ? '1' : '0';
+                    }}
+                    title={favoriteImageIds.includes(photo.id || (photo.images && photo.images[0]) || photo.promptKey) ? "Remove from favorites" : "Add to favorites"}
+                  >
+                    <div style={{
+                      width: '20px',
+                      height: '20px',
+                      borderRadius: '50%',
+                      background: favoriteImageIds.includes(photo.id || (photo.images && photo.images[0]) || photo.promptKey) ? 'rgba(255, 71, 87, 0.9)' : 'rgba(0, 0, 0, 0.7)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.5)',
+                      transition: 'background 0.2s ease',
+                      pointerEvents: 'none'
+                    }}>
+                      {favoriteImageIds.includes(photo.id || (photo.images && photo.images[0]) || photo.promptKey) ? (
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg" style={{ pointerEvents: 'none' }}>
+                          <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                        </svg>
+                      ) : (
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" xmlns="http://www.w3.org/2000/svg" style={{ pointerEvents: 'none' }}>
+                          <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                        </svg>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 <div className="photo-label">
                   {photo.error ? 
                     <div>
@@ -3581,7 +3730,17 @@ const PhotoGallery = ({
             <div 
               key={photo.id}
               className={`film-frame ${isSelected ? 'selected' : ''} ${isCurrentStyle ? 'current-style' : ''} ${photo.loading ? 'loading' : ''} ${isLoaded ? 'loaded' : ''} ${photo.newlyArrived ? 'newly-arrived' : ''} ${photo.hidden ? 'hidden' : ''} ${isSelected && isThemeSupported() && !photo.isGalleryImage && tezdevTheme === 'supercasual' ? 'super-casual-theme' : ''} ${isSelected && isThemeSupported() && !photo.isGalleryImage && tezdevTheme === 'tezoswebx' ? 'tezos-webx-theme' : ''} ${isSelected && isThemeSupported() && !photo.isGalleryImage && tezdevTheme === 'taipeiblockchain' ? 'taipei-blockchain-theme' : ''} ${isSelected && isThemeSupported() && !photo.isGalleryImage && tezdevTheme === 'showup' ? 'showup-theme' : ''} ${isSelected && isThemeSupported() && !photo.isGalleryImage ? `${tezdevTheme}-theme` : ''}`}
-              onClick={e => isSelected ? handlePhotoViewerClick(e) : handlePhotoSelect(index, e)}
+              onClick={e => {
+                // Don't open photo if clicking the favorite button
+                let el = e.target;
+                while (el && el !== e.currentTarget) {
+                  if (el.classList && el.classList.contains('photo-favorite-btn')) {
+                    return;
+                  }
+                  el = el.parentElement;
+                }
+                isSelected ? handlePhotoViewerClick(e) : handlePhotoSelect(index, e);
+              }}
               data-enhancing={photo.enhancing ? 'true' : undefined}
               data-error={photo.error ? 'true' : undefined}
               data-enhanced={photo.enhanced ? 'true' : undefined}
@@ -3870,7 +4029,7 @@ const PhotoGallery = ({
                     };
                   })()}
                 />
-                
+
                 {/* Video Overlay - Only show for styles with video easter eggs when video is enabled */}
                 {isSelected && hasVideoEasterEgg(photo.promptKey) && showVideo && (
                   <video
@@ -4218,6 +4377,68 @@ const PhotoGallery = ({
                   </>
                 )}
               </div>
+
+              {/* Favorite heart button - show in prompt selector mode for desktop */}
+              {isPromptSelectorMode && !isMobile() && (
+                <div
+                  className="photo-favorite-btn"
+                  onClickCapture={(e) => {
+                    e.stopPropagation();
+                    const photoId = photo.id || (photo.images && photo.images[0]) || photo.promptKey;
+                    handleFavoriteToggle(photoId, e);
+                  }}
+                  onMouseDownCapture={(e) => {
+                    e.stopPropagation();
+                  }}
+                  style={{
+                    position: 'absolute',
+                    top: '10px',
+                    right: '10px',
+                    width: '40px',
+                    height: '40px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    zIndex: 99999,
+                    opacity: favoriteImageIds.includes(photo.id || (photo.images && photo.images[0]) || photo.promptKey) ? '1' : '0',
+                    transition: 'opacity 0.2s ease',
+                    pointerEvents: 'all'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.opacity = '1';
+                  }}
+                  onMouseLeave={(e) => {
+                    const isFavorited = favoriteImageIds.includes(photo.id || (photo.images && photo.images[0]) || photo.promptKey);
+                    e.currentTarget.style.opacity = isFavorited ? '1' : '0';
+                  }}
+                  title={favoriteImageIds.includes(photo.id || (photo.images && photo.images[0]) || photo.promptKey) ? "Remove from favorites" : "Add to favorites"}
+                >
+                  <div style={{
+                    width: '20px',
+                    height: '20px',
+                    borderRadius: '50%',
+                    background: favoriteImageIds.includes(photo.id || (photo.images && photo.images[0]) || photo.promptKey) ? 'rgba(255, 71, 87, 0.9)' : 'rgba(0, 0, 0, 0.7)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.5)',
+                    transition: 'background 0.2s ease',
+                    pointerEvents: 'none'
+                  }}>
+                    {favoriteImageIds.includes(photo.id || (photo.images && photo.images[0]) || photo.promptKey) ? (
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg" style={{ pointerEvents: 'none' }}>
+                        <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                      </svg>
+                    ) : (
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" xmlns="http://www.w3.org/2000/svg" style={{ pointerEvents: 'none' }}>
+                        <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                      </svg>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* No special label for selected view - use standard grid label below */}
               <div className="photo-label">
                 {photo.loading || photo.generating ? 
