@@ -2698,9 +2698,9 @@ const PhotoGallery = ({
             {/* Portrait Type Buttons */}
             <div style={{
               display: 'flex',
-              gap: '16px',
+              gap: '12px',
               marginBottom: '20px',
-              flexWrap: 'wrap',
+              flexWrap: 'nowrap',
               justifyContent: 'center'
             }}>
               <button 
@@ -2721,16 +2721,16 @@ const PhotoGallery = ({
               >
                 {/* Polaroid frame with label inside - 2:3 aspect ratio */}
                 <div style={{
-                  width: '96px',
+                  width: '72px',
                   background: 'white',
-                  padding: '8px',
-                  paddingBottom: '32px',
+                  padding: '6px',
+                  paddingBottom: '22px',
                   boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
                   position: 'relative'
                 }}>
                   <div style={{
-                    width: '80px',
-                    height: '120px',
+                    width: '60px',
+                    height: '90px',
                     overflow: 'hidden',
                     background: '#f0f0f0'
                   }}>
@@ -2748,11 +2748,11 @@ const PhotoGallery = ({
                   </div>
                   <div style={{
                     position: 'absolute',
-                    bottom: '8px',
-                    left: '8px',
-                    right: '8px',
+                    bottom: '6px',
+                    left: '6px',
+                    right: '6px',
                     textAlign: 'center',
-                    fontSize: '11px',
+                    fontSize: '10px',
                     fontFamily: '"Permanent Marker", cursive',
                     color: '#333',
                     lineHeight: '1.2',
@@ -2785,16 +2785,16 @@ const PhotoGallery = ({
               >
                 {/* Polaroid frame with label inside - 2:3 aspect ratio */}
                 <div style={{
-                  width: '96px',
+                  width: '72px',
                   background: 'white',
-                  padding: '8px',
-                  paddingBottom: '32px',
+                  padding: '6px',
+                  paddingBottom: '22px',
                   boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
                   position: 'relative'
                 }}>
                   <div style={{
-                    width: '80px',
-                    height: '120px',
+                    width: '60px',
+                    height: '90px',
                     overflow: 'hidden',
                     background: '#f0f0f0'
                   }}>
@@ -2812,11 +2812,11 @@ const PhotoGallery = ({
                   </div>
                   <div style={{
                     position: 'absolute',
-                    bottom: '8px',
-                    left: '8px',
-                    right: '8px',
+                    bottom: '6px',
+                    left: '6px',
+                    right: '6px',
                     textAlign: 'center',
-                    fontSize: '11px',
+                    fontSize: '10px',
                     fontFamily: '"Permanent Marker", cursive',
                     color: '#333',
                     lineHeight: '1.2',
@@ -2849,16 +2849,16 @@ const PhotoGallery = ({
               >
                 {/* Polaroid frame with label inside - 2:3 aspect ratio */}
                 <div style={{
-                  width: '96px',
+                  width: '72px',
                   background: 'white',
-                  padding: '8px',
-                  paddingBottom: '32px',
+                  padding: '6px',
+                  paddingBottom: '22px',
                   boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
                   position: 'relative'
                 }}>
                   <div style={{
-                    width: '80px',
-                    height: '120px',
+                    width: '60px',
+                    height: '90px',
                     overflow: 'hidden',
                     background: '#f0f0f0'
                   }}>
@@ -2876,11 +2876,11 @@ const PhotoGallery = ({
                   </div>
                   <div style={{
                     position: 'absolute',
-                    bottom: '8px',
-                    left: '8px',
-                    right: '8px',
+                    bottom: '6px',
+                    left: '6px',
+                    right: '6px',
                     textAlign: 'center',
-                    fontSize: '11px',
+                    fontSize: '10px',
                     fontFamily: '"Permanent Marker", cursive',
                     color: '#333',
                     lineHeight: '1.2',
