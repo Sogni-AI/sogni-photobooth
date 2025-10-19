@@ -2692,13 +2692,13 @@ const PhotoGallery = ({
               margin: '0 0 12px 0',
               textAlign: 'center'
             }}>
-              What type of composition to shoot?
+              Pick your photo layout
             </h2>
             
             {/* Portrait Type Buttons */}
             <div style={{
               display: 'flex',
-              gap: '8px',
+              gap: '16px',
               marginBottom: '20px',
               flexWrap: 'wrap',
               justifyContent: 'center'
@@ -2706,27 +2706,21 @@ const PhotoGallery = ({
               <button 
                 onClick={() => onPortraitTypeChange && onPortraitTypeChange('headshot')}
                 style={{
-                  background: portraitType === 'headshot' ? 'rgba(168, 85, 247, 0.9)' : (isExtensionMode ? 'rgba(255, 255, 255, 0.85)' : 'rgba(255, 255, 255, 0.9)'),
-                  border: portraitType === 'headshot' ? '3px solid #a855f7' : '3px solid transparent',
-                  borderRadius: '20px',
-                  padding: '10px 16px',
+                  background: 'transparent',
+                  border: 'none',
+                  padding: '4px',
                   display: 'flex',
+                  flexDirection: 'column',
                   alignItems: 'center',
                   gap: '6px',
                   cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  boxShadow: portraitType === 'headshot' ? '0 4px 12px rgba(168, 85, 247, 0.4)' : '0 2px 8px rgba(0, 0, 0, 0.1)',
-                  color: portraitType === 'headshot' ? 'white' : '#333',
-                  fontSize: '12px',
-                  fontFamily: '"Permanent Marker", cursive'
+                  transition: 'all 0.2s ease'
                 }}
                 onMouseOver={e => {
                   e.currentTarget.style.transform = 'scale(1.05)';
-                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
                 }}
                 onMouseOut={e => {
                   e.currentTarget.style.transform = 'scale(1)';
-                  e.currentTarget.style.boxShadow = portraitType === 'headshot' ? '0 4px 12px rgba(168, 85, 247, 0.4)' : '0 2px 8px rgba(0, 0, 0, 0.1)';
                 }}
               >
                 {/* Mini polaroid frame - 2:3 aspect ratio */}
@@ -2751,33 +2745,35 @@ const PhotoGallery = ({
                     }}
                   />
                 </div>
-                <span>Headshot</span>
+                <span style={{
+                  fontSize: '12px',
+                  fontFamily: '"Permanent Marker", cursive',
+                  color: '#333',
+                  textDecoration: portraitType === 'headshot' ? 'underline' : 'none',
+                  textDecorationColor: '#a855f7',
+                  textDecorationThickness: '2px',
+                  textUnderlineOffset: '3px'
+                }}>Up Close</span>
               </button>
               
               <button 
                 onClick={() => onPortraitTypeChange && onPortraitTypeChange('medium')}
                 style={{
-                  background: portraitType === 'medium' ? 'rgba(168, 85, 247, 0.9)' : (isExtensionMode ? 'rgba(255, 255, 255, 0.85)' : 'rgba(255, 255, 255, 0.9)'),
-                  border: portraitType === 'medium' ? '3px solid #a855f7' : '3px solid transparent',
-                  borderRadius: '20px',
-                  padding: '10px 16px',
+                  background: 'transparent',
+                  border: 'none',
+                  padding: '4px',
                   display: 'flex',
+                  flexDirection: 'column',
                   alignItems: 'center',
                   gap: '6px',
                   cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  boxShadow: portraitType === 'medium' ? '0 4px 12px rgba(168, 85, 247, 0.4)' : '0 2px 8px rgba(0, 0, 0, 0.1)',
-                  color: portraitType === 'medium' ? 'white' : '#333',
-                  fontSize: '12px',
-                  fontFamily: '"Permanent Marker", cursive'
+                  transition: 'all 0.2s ease'
                 }}
                 onMouseOver={e => {
                   e.currentTarget.style.transform = 'scale(1.05)';
-                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
                 }}
                 onMouseOut={e => {
                   e.currentTarget.style.transform = 'scale(1)';
-                  e.currentTarget.style.boxShadow = portraitType === 'medium' ? '0 4px 12px rgba(168, 85, 247, 0.4)' : '0 2px 8px rgba(0, 0, 0, 0.1)';
                 }}
               >
                 {/* Mini polaroid frame - 2:3 aspect ratio */}
@@ -2802,33 +2798,35 @@ const PhotoGallery = ({
                     }}
                   />
                 </div>
-                <span>Medium Portrait</span>
+                <span style={{
+                  fontSize: '12px',
+                  fontFamily: '"Permanent Marker", cursive',
+                  color: '#333',
+                  textDecoration: portraitType === 'medium' ? 'underline' : 'none',
+                  textDecorationColor: '#a855f7',
+                  textDecorationThickness: '2px',
+                  textUnderlineOffset: '3px'
+                }}>Medium Portrait</span>
               </button>
               
               <button 
                 onClick={() => onPortraitTypeChange && onPortraitTypeChange('fullbody')}
                 style={{
-                  background: portraitType === 'fullbody' ? 'rgba(168, 85, 247, 0.9)' : (isExtensionMode ? 'rgba(255, 255, 255, 0.85)' : 'rgba(255, 255, 255, 0.9)'),
-                  border: portraitType === 'fullbody' ? '3px solid #a855f7' : '3px solid transparent',
-                  borderRadius: '20px',
-                  padding: '10px 16px',
+                  background: 'transparent',
+                  border: 'none',
+                  padding: '4px',
                   display: 'flex',
+                  flexDirection: 'column',
                   alignItems: 'center',
                   gap: '6px',
                   cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  boxShadow: portraitType === 'fullbody' ? '0 4px 12px rgba(168, 85, 247, 0.4)' : '0 2px 8px rgba(0, 0, 0, 0.1)',
-                  color: portraitType === 'fullbody' ? 'white' : '#333',
-                  fontSize: '12px',
-                  fontFamily: '"Permanent Marker", cursive'
+                  transition: 'all 0.2s ease'
                 }}
                 onMouseOver={e => {
                   e.currentTarget.style.transform = 'scale(1.05)';
-                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
                 }}
                 onMouseOut={e => {
                   e.currentTarget.style.transform = 'scale(1)';
-                  e.currentTarget.style.boxShadow = portraitType === 'fullbody' ? '0 4px 12px rgba(168, 85, 247, 0.4)' : '0 2px 8px rgba(0, 0, 0, 0.1)';
                 }}
               >
                 {/* Mini polaroid frame - 2:3 aspect ratio */}
@@ -2853,7 +2851,15 @@ const PhotoGallery = ({
                     }}
                   />
                 </div>
-                <span>Full Body Portrait</span>
+                <span style={{
+                  fontSize: '12px',
+                  fontFamily: '"Permanent Marker", cursive',
+                  color: '#333',
+                  textDecoration: portraitType === 'fullbody' ? 'underline' : 'none',
+                  textDecorationColor: '#a855f7',
+                  textDecorationThickness: '2px',
+                  textUnderlineOffset: '3px'
+                }}>Full Body Portrait</span>
               </button>
             </div>
           </div>
@@ -2869,7 +2875,7 @@ const PhotoGallery = ({
               margin: '0 0 12px 0',
               textAlign: 'center'
             }}>
-              How should we pick your image style?
+              Pick a style preset
             </h2>
             
             {/* Random Style Buttons */}
