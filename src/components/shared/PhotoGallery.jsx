@@ -2682,10 +2682,9 @@ const PhotoGallery = ({
             </h1>
           </div>
 
-          {/* Workflow Options */}
+          {/* Portrait Type Selector */}
           <div style={{
-            marginBottom: '16px',
-            marginTop: '20px'
+            marginBottom: '16px'
           }}>
             <h2 style={{
               fontFamily: '"Permanent Marker", cursive',
@@ -2693,155 +2692,7 @@ const PhotoGallery = ({
               margin: '0 0 12px 0',
               textAlign: 'center'
             }}>
-              How should we pick your image style?
-            </h2>
-            
-            {/* Random Style Buttons */}
-            <div style={{
-              display: 'flex',
-              gap: '8px',
-              marginBottom: '30px',
-              flexWrap: 'wrap',
-              justifyContent: 'center'
-            }}>
-              <button 
-                onClick={onRandomMixSelect}
-                style={{
-                  background: selectedStyle === 'randomMix' ? 'rgba(114, 227, 242, 0.9)' : (isExtensionMode ? 'rgba(255, 255, 255, 0.85)' : 'rgba(255, 255, 255, 0.9)'),
-                  border: selectedStyle === 'randomMix' ? '3px solid #72e3f2' : '3px solid transparent',
-                  borderRadius: '20px',
-                  padding: '10px 16px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  boxShadow: selectedStyle === 'randomMix' ? '0 4px 12px rgba(114, 227, 242, 0.4)' : '0 2px 8px rgba(0, 0, 0, 0.1)',
-                  color: selectedStyle === 'randomMix' ? 'white' : '#333',
-                  fontSize: '12px',
-                  fontFamily: '"Permanent Marker", cursive'
-                }}
-                onMouseOver={e => {
-                  e.currentTarget.style.transform = 'scale(1.05)';
-                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
-                }}
-                onMouseOut={e => {
-                  e.currentTarget.style.transform = 'scale(1)';
-                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.1)';
-                }}
-              >
-                <span>🎲</span>
-                <span>Random Mix</span>
-              </button>
-              
-              {!isFluxKontextModel(selectedModel) && (
-                <button 
-                  onClick={onRandomSingleSelect}
-                  style={{
-                    background: selectedStyle === 'random' ? 'rgba(114, 227, 242, 0.9)' : (isExtensionMode ? 'rgba(255, 255, 255, 0.85)' : 'rgba(255, 255, 255, 0.9)'),
-                    border: selectedStyle === 'random' ? '3px solid #72e3f2' : '3px solid transparent',
-                    borderRadius: '20px',
-                    padding: '10px 16px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease',
-                    boxShadow: selectedStyle === 'random' ? '0 4px 12px rgba(114, 227, 242, 0.4)' : '0 2px 8px rgba(0, 0, 0, 0.1)',
-                    color: selectedStyle === 'random' ? 'white' : '#333',
-                    fontSize: '12px',
-                    fontFamily: '"Permanent Marker", cursive'
-                  }}
-                  onMouseOver={e => {
-                    e.currentTarget.style.transform = 'scale(1.05)';
-                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
-                  }}
-                  onMouseOut={e => {
-                    e.currentTarget.style.transform = 'scale(1)';
-                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.1)';
-                  }}
-                >
-                  <span>🔀</span>
-                  <span>Random Single</span>
-                </button>
-              )}
-              
-              <button 
-                onClick={onOneOfEachSelect}
-                style={{
-                  background: selectedStyle === 'oneOfEach' ? 'rgba(114, 227, 242, 0.9)' : (isExtensionMode ? 'rgba(255, 255, 255, 0.85)' : 'rgba(255, 255, 255, 0.9)'),
-                  border: selectedStyle === 'oneOfEach' ? '3px solid #72e3f2' : '3px solid transparent',
-                  borderRadius: '20px',
-                  padding: '10px 16px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  boxShadow: selectedStyle === 'oneOfEach' ? '0 4px 12px rgba(114, 227, 242, 0.4)' : '0 2px 8px rgba(0, 0, 0, 0.1)',
-                  color: selectedStyle === 'oneOfEach' ? 'white' : '#333',
-                  fontSize: '12px',
-                  fontFamily: '"Permanent Marker", cursive'
-                }}
-                onMouseOver={e => {
-                  e.currentTarget.style.transform = 'scale(1.05)';
-                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
-                }}
-                onMouseOut={e => {
-                  e.currentTarget.style.transform = 'scale(1)';
-                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.1)';
-                }}
-              >
-                <span>🙏</span>
-                <span>One of Each</span>
-              </button>
-              
-              <button 
-                onClick={onCustomSelect}
-                style={{
-                  background: selectedStyle === 'custom' ? 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)' : 'linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%)',
-                  border: selectedStyle === 'custom' ? '3px solid #3b82f6' : '3px solid transparent',
-                  borderRadius: '20px',
-                  padding: '10px 16px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  boxShadow: selectedStyle === 'custom' ? '0 4px 15px rgba(59, 130, 246, 0.5)' : '0 3px 10px rgba(59, 130, 246, 0.3)',
-                  color: 'white',
-                  fontSize: '12px',
-                  fontFamily: '"Permanent Marker", cursive',
-                  fontWeight: '600'
-                }}
-                onMouseOver={e => {
-                  e.currentTarget.style.transform = 'scale(1.05)';
-                  e.currentTarget.style.boxShadow = '0 5px 15px rgba(59, 130, 246, 0.4)';
-                  e.currentTarget.style.background = 'linear-gradient(135deg, #2563eb 0%, #1e40af 100%)';
-                }}
-                onMouseOut={e => {
-                  e.currentTarget.style.transform = 'scale(1)';
-                  e.currentTarget.style.boxShadow = '0 3px 10px rgba(59, 130, 246, 0.3)';
-                  e.currentTarget.style.background = selectedStyle === 'custom' ? 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)' : 'linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%)';
-                }}
-              >
-                <span>✏️</span>
-                <span>Custom...</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Portrait Type Selector */}
-          <div style={{
-            marginBottom: '16px'
-          }}>
-            <h2 style={{
-              fontFamily: '"Permanent Marker", cursive',
-              fontSize: '18px',
-              margin: '0 0 12px 0',
-              textAlign: 'center'
-            }}>
-              Sample Image Type
+              What type of composition to shoot?
             </h2>
             
             {/* Portrait Type Buttons */}
@@ -3003,6 +2854,155 @@ const PhotoGallery = ({
                   />
                 </div>
                 <span>Full Body Portrait</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Workflow Options */}
+          <div style={{
+            marginBottom: '16px',
+            marginTop: '20px'
+          }}>
+            <h2 style={{
+              fontFamily: '"Permanent Marker", cursive',
+              fontSize: '20px',
+              margin: '0 0 12px 0',
+              textAlign: 'center'
+            }}>
+              How should we pick your image style?
+            </h2>
+            
+            {/* Random Style Buttons */}
+            <div style={{
+              display: 'flex',
+              gap: '8px',
+              marginBottom: '30px',
+              flexWrap: 'wrap',
+              justifyContent: 'center'
+            }}>
+              <button 
+                onClick={onRandomMixSelect}
+                style={{
+                  background: selectedStyle === 'randomMix' ? 'rgba(114, 227, 242, 0.9)' : (isExtensionMode ? 'rgba(255, 255, 255, 0.85)' : 'rgba(255, 255, 255, 0.9)'),
+                  border: selectedStyle === 'randomMix' ? '3px solid #72e3f2' : '3px solid transparent',
+                  borderRadius: '20px',
+                  padding: '10px 16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  boxShadow: selectedStyle === 'randomMix' ? '0 4px 12px rgba(114, 227, 242, 0.4)' : '0 2px 8px rgba(0, 0, 0, 0.1)',
+                  color: selectedStyle === 'randomMix' ? 'white' : '#333',
+                  fontSize: '12px',
+                  fontFamily: '"Permanent Marker", cursive'
+                }}
+                onMouseOver={e => {
+                  e.currentTarget.style.transform = 'scale(1.05)';
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+                }}
+                onMouseOut={e => {
+                  e.currentTarget.style.transform = 'scale(1)';
+                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.1)';
+                }}
+              >
+                <span>🎲</span>
+                <span>Random Mix</span>
+              </button>
+              
+              {!isFluxKontextModel(selectedModel) && (
+                <button 
+                  onClick={onRandomSingleSelect}
+                  style={{
+                    background: selectedStyle === 'random' ? 'rgba(114, 227, 242, 0.9)' : (isExtensionMode ? 'rgba(255, 255, 255, 0.85)' : 'rgba(255, 255, 255, 0.9)'),
+                    border: selectedStyle === 'random' ? '3px solid #72e3f2' : '3px solid transparent',
+                    borderRadius: '20px',
+                    padding: '10px 16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    boxShadow: selectedStyle === 'random' ? '0 4px 12px rgba(114, 227, 242, 0.4)' : '0 2px 8px rgba(0, 0, 0, 0.1)',
+                    color: selectedStyle === 'random' ? 'white' : '#333',
+                    fontSize: '12px',
+                    fontFamily: '"Permanent Marker", cursive'
+                  }}
+                  onMouseOver={e => {
+                    e.currentTarget.style.transform = 'scale(1.05)';
+                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+                  }}
+                  onMouseOut={e => {
+                    e.currentTarget.style.transform = 'scale(1)';
+                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.1)';
+                  }}
+                >
+                  <span>🔀</span>
+                  <span>Random Single</span>
+                </button>
+              )}
+              
+              <button 
+                onClick={onOneOfEachSelect}
+                style={{
+                  background: selectedStyle === 'oneOfEach' ? 'rgba(114, 227, 242, 0.9)' : (isExtensionMode ? 'rgba(255, 255, 255, 0.85)' : 'rgba(255, 255, 255, 0.9)'),
+                  border: selectedStyle === 'oneOfEach' ? '3px solid #72e3f2' : '3px solid transparent',
+                  borderRadius: '20px',
+                  padding: '10px 16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  boxShadow: selectedStyle === 'oneOfEach' ? '0 4px 12px rgba(114, 227, 242, 0.4)' : '0 2px 8px rgba(0, 0, 0, 0.1)',
+                  color: selectedStyle === 'oneOfEach' ? 'white' : '#333',
+                  fontSize: '12px',
+                  fontFamily: '"Permanent Marker", cursive'
+                }}
+                onMouseOver={e => {
+                  e.currentTarget.style.transform = 'scale(1.05)';
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+                }}
+                onMouseOut={e => {
+                  e.currentTarget.style.transform = 'scale(1)';
+                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.1)';
+                }}
+              >
+                <span>🙏</span>
+                <span>One of Each</span>
+              </button>
+              
+              <button 
+                onClick={onCustomSelect}
+                style={{
+                  background: selectedStyle === 'custom' ? 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)' : 'linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%)',
+                  border: selectedStyle === 'custom' ? '3px solid #3b82f6' : '3px solid transparent',
+                  borderRadius: '20px',
+                  padding: '10px 16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  boxShadow: selectedStyle === 'custom' ? '0 4px 15px rgba(59, 130, 246, 0.5)' : '0 3px 10px rgba(59, 130, 246, 0.3)',
+                  color: 'white',
+                  fontSize: '12px',
+                  fontFamily: '"Permanent Marker", cursive',
+                  fontWeight: '600'
+                }}
+                onMouseOver={e => {
+                  e.currentTarget.style.transform = 'scale(1.05)';
+                  e.currentTarget.style.boxShadow = '0 5px 15px rgba(59, 130, 246, 0.4)';
+                  e.currentTarget.style.background = 'linear-gradient(135deg, #2563eb 0%, #1e40af 100%)';
+                }}
+                onMouseOut={e => {
+                  e.currentTarget.style.transform = 'scale(1)';
+                  e.currentTarget.style.boxShadow = '0 3px 10px rgba(59, 130, 246, 0.3)';
+                  e.currentTarget.style.background = selectedStyle === 'custom' ? 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)' : 'linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%)';
+                }}
+              >
+                <span>✏️</span>
+                <span>Custom...</span>
               </button>
             </div>
           </div>
