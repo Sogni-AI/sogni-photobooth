@@ -137,7 +137,7 @@ export function preparePhotosForBulkDownload(
   outputFormat = 'jpg'
 ) {
   const images = [];
-  let filenameCounter = 1;
+  const filenameCount = {}; // Track how many times each base filename is used
 
   for (let i = 0; i < photos.length; i++) {
     const photo = photos[i];
@@ -174,7 +174,19 @@ export function preparePhotosForBulkDownload(
 
     const fileExtension = outputFormat === 'png' ? '.png' : '.jpg';
     const frameType = includeFrames ? '-framed' : '';
-    const filename = `sogni-photobooth-${String(filenameCounter).padStart(3, '0')}-${cleanStyleName}${frameType}${fileExtension}`;
+    const baseFilename = `sogni-photobooth-${cleanStyleName}${frameType}`;
+    
+    // Track duplicate filenames and append counter if needed
+    if (!filenameCount[baseFilename]) {
+      filenameCount[baseFilename] = 1;
+    } else {
+      filenameCount[baseFilename]++;
+    }
+    
+    // Only add counter if there are duplicates
+    const filename = filenameCount[baseFilename] > 1
+      ? `${baseFilename}-${filenameCount[baseFilename]}${fileExtension}`
+      : `${baseFilename}${fileExtension}`;
 
     images.push({
       url: imageUrl,
@@ -182,8 +194,6 @@ export function preparePhotosForBulkDownload(
       photoIndex: i,
       styleId: photo.styleId
     });
-
-    filenameCounter++;
   }
 
   return images;

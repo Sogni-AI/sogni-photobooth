@@ -35,25 +35,30 @@ const generateGalleryFilename = (promptKey) => {
 /**
  * Loads all gallery images and converts them to photo objects
  * @param {Object} stylePrompts - The available style prompts
+ * @param {string} portraitType - The type of portrait: 'headshot', 'medium', or 'fullbody'
  * @returns {Promise<Array>} Array of photo objects for the gallery
  */
-export const loadGalleryImages = async (stylePrompts) => {
+export const loadGalleryImages = async (stylePrompts, portraitType = 'medium') => {
   try {
     const galleryPhotos = [];
-    
+
+    // Map portrait type to subdirectory
+    // 'fullbody' uses 'medium' for now until we have actual full body images
+    const subdirectory = portraitType === 'fullbody' ? 'medium' : portraitType;
+
     // Create gallery photos for all prompts
     let photoIndex = 0;
-    
+
     Object.keys(stylePrompts).forEach(promptKey => {
       // Skip special prompts
       if (['custom', 'random', 'randomMix', 'oneOfEach'].includes(promptKey)) {
         return;
       }
-      
+
       // Generate the expected filename using strict naming convention
       const expectedFilename = generateGalleryFilename(promptKey);
-      const imagePath = `/gallery/prompts/${expectedFilename}`;
-      
+      const imagePath = `/gallery/prompts/${subdirectory}/${expectedFilename}`;
+
       // Create photo object - will show placeholder if file doesn't exist
       const galleryPhoto = {
         id: `gallery-${promptKey}-${Date.now()}-${photoIndex}`,
@@ -76,14 +81,14 @@ export const loadGalleryImages = async (stylePrompts) => {
         // Add expected filename for debugging
         expectedFilename: expectedFilename
       };
-      
+
       galleryPhotos.push(galleryPhoto);
       photoIndex++;
     });
 
-    console.log(`Created ${galleryPhotos.length} gallery photo objects using strict naming convention`);
+    console.log(`Created ${galleryPhotos.length} gallery photo objects using strict naming convention for ${subdirectory} portraits`);
     return galleryPhotos;
-    
+
   } catch (error) {
     console.error('Error loading gallery images:', error);
     return [];

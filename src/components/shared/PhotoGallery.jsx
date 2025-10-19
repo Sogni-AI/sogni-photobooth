@@ -113,6 +113,8 @@ const PhotoGallery = ({
   initialThemeGroupState = null,
   onSearchChange = null,
   initialSearchTerm = '',
+  portraitType = 'medium',
+  onPortraitTypeChange = null,
   numImages = 1,
   authState = null,
   handleRefreshPhoto = null
@@ -796,7 +798,7 @@ const PhotoGallery = ({
 
       // Prepare images array with proper processing
       const imagesToDownload = [];
-      let filenameCounter = 1;
+      const filenameCount = {}; // Track how many times each base filename is used
 
       for (let i = 0; i < currentPhotosArray.length; i++) {
         const photo = currentPhotosArray[i];
@@ -923,7 +925,19 @@ const PhotoGallery = ({
 
         // Generate filename
         const frameType = includeFrames ? '-framed' : '-raw';
-        const filename = `sogni-photobooth-${String(filenameCounter).padStart(3, '0')}-${cleanStyleName}${frameType}${actualExtension}`;
+        const baseFilename = `sogni-photobooth-${cleanStyleName}${frameType}`;
+        
+        // Track duplicate filenames and append counter if needed
+        if (!filenameCount[baseFilename]) {
+          filenameCount[baseFilename] = 1;
+        } else {
+          filenameCount[baseFilename]++;
+        }
+        
+        // Only add counter if there are duplicates
+        const filename = filenameCount[baseFilename] > 1
+          ? `${baseFilename}-${filenameCount[baseFilename]}${actualExtension}`
+          : `${baseFilename}${actualExtension}`;
 
         imagesToDownload.push({
           url: processedImageUrl,
@@ -931,8 +945,6 @@ const PhotoGallery = ({
           photoIndex: i,
           styleId: photo.styleId
         });
-
-        filenameCounter++;
       }
 
       if (imagesToDownload.length === 0) {
@@ -2819,6 +2831,119 @@ const PhotoGallery = ({
             </div>
           </div>
 
+          {/* Portrait Type Selector */}
+          <div style={{
+            marginBottom: '16px'
+          }}>
+            <h2 style={{
+              fontFamily: '"Permanent Marker", cursive',
+              fontSize: '18px',
+              margin: '0 0 12px 0',
+              textAlign: 'center'
+            }}>
+              Sample Image Type
+            </h2>
+            
+            {/* Portrait Type Buttons */}
+            <div style={{
+              display: 'flex',
+              gap: '8px',
+              marginBottom: '20px',
+              flexWrap: 'wrap',
+              justifyContent: 'center'
+            }}>
+              <button 
+                onClick={() => onPortraitTypeChange && onPortraitTypeChange('headshot')}
+                style={{
+                  background: portraitType === 'headshot' ? 'rgba(168, 85, 247, 0.9)' : (isExtensionMode ? 'rgba(255, 255, 255, 0.85)' : 'rgba(255, 255, 255, 0.9)'),
+                  border: portraitType === 'headshot' ? '3px solid #a855f7' : '3px solid transparent',
+                  borderRadius: '20px',
+                  padding: '10px 16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  boxShadow: portraitType === 'headshot' ? '0 4px 12px rgba(168, 85, 247, 0.4)' : '0 2px 8px rgba(0, 0, 0, 0.1)',
+                  color: portraitType === 'headshot' ? 'white' : '#333',
+                  fontSize: '12px',
+                  fontFamily: '"Permanent Marker", cursive'
+                }}
+                onMouseOver={e => {
+                  e.currentTarget.style.transform = 'scale(1.05)';
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+                }}
+                onMouseOut={e => {
+                  e.currentTarget.style.transform = 'scale(1)';
+                  e.currentTarget.style.boxShadow = portraitType === 'headshot' ? '0 4px 12px rgba(168, 85, 247, 0.4)' : '0 2px 8px rgba(0, 0, 0, 0.1)';
+                }}
+              >
+                <span>👤</span>
+                <span>Headshot</span>
+              </button>
+              
+              <button 
+                onClick={() => onPortraitTypeChange && onPortraitTypeChange('medium')}
+                style={{
+                  background: portraitType === 'medium' ? 'rgba(168, 85, 247, 0.9)' : (isExtensionMode ? 'rgba(255, 255, 255, 0.85)' : 'rgba(255, 255, 255, 0.9)'),
+                  border: portraitType === 'medium' ? '3px solid #a855f7' : '3px solid transparent',
+                  borderRadius: '20px',
+                  padding: '10px 16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  boxShadow: portraitType === 'medium' ? '0 4px 12px rgba(168, 85, 247, 0.4)' : '0 2px 8px rgba(0, 0, 0, 0.1)',
+                  color: portraitType === 'medium' ? 'white' : '#333',
+                  fontSize: '12px',
+                  fontFamily: '"Permanent Marker", cursive'
+                }}
+                onMouseOver={e => {
+                  e.currentTarget.style.transform = 'scale(1.05)';
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+                }}
+                onMouseOut={e => {
+                  e.currentTarget.style.transform = 'scale(1)';
+                  e.currentTarget.style.boxShadow = portraitType === 'medium' ? '0 4px 12px rgba(168, 85, 247, 0.4)' : '0 2px 8px rgba(0, 0, 0, 0.1)';
+                }}
+              >
+                <span>🧍</span>
+                <span>Medium Portrait</span>
+              </button>
+              
+              <button 
+                onClick={() => onPortraitTypeChange && onPortraitTypeChange('fullbody')}
+                style={{
+                  background: portraitType === 'fullbody' ? 'rgba(168, 85, 247, 0.9)' : (isExtensionMode ? 'rgba(255, 255, 255, 0.85)' : 'rgba(255, 255, 255, 0.9)'),
+                  border: portraitType === 'fullbody' ? '3px solid #a855f7' : '3px solid transparent',
+                  borderRadius: '20px',
+                  padding: '10px 16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  boxShadow: portraitType === 'fullbody' ? '0 4px 12px rgba(168, 85, 247, 0.4)' : '0 2px 8px rgba(0, 0, 0, 0.1)',
+                  color: portraitType === 'fullbody' ? 'white' : '#333',
+                  fontSize: '12px',
+                  fontFamily: '"Permanent Marker", cursive'
+                }}
+                onMouseOver={e => {
+                  e.currentTarget.style.transform = 'scale(1.05)';
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+                }}
+                onMouseOut={e => {
+                  e.currentTarget.style.transform = 'scale(1)';
+                  e.currentTarget.style.boxShadow = portraitType === 'fullbody' ? '0 4px 12px rgba(168, 85, 247, 0.4)' : '0 2px 8px rgba(0, 0, 0, 0.1)';
+                }}
+              >
+                <span>🚶</span>
+                <span>Full Body Portrait</span>
+              </button>
+            </div>
+          </div>
+
           {/* Theme Filters - Only show for non-Flux models */}
           {!isFluxKontextModel(selectedModel) && showThemeFilters && (
             <div style={{
@@ -4257,6 +4382,8 @@ PhotoGallery.propTypes = {
   initialThemeGroupState: PropTypes.object,
   onSearchChange: PropTypes.func,
   initialSearchTerm: PropTypes.string,
+  portraitType: PropTypes.string,
+  onPortraitTypeChange: PropTypes.func,
   numImages: PropTypes.number,
   authState: PropTypes.object,
   handleRefreshPhoto: PropTypes.func

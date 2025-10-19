@@ -289,8 +289,10 @@ const App = () => {
   
   // State for tracking gallery prompt application
   const [pendingGalleryPrompt, setPendingGalleryPrompt] = useState(null);
-  
-  
+
+  // State for portrait type in Style Explorer
+  const [portraitType, setPortraitType] = useState('medium'); // 'headshot', 'medium', or 'fullbody'
+
   // State for current page routing
   const [currentPage, setCurrentPage] = useState(() => {
     return immediatePageParam === 'prompts' ? 'prompts' : 'camera';
@@ -321,6 +323,16 @@ const App = () => {
       updateUrlParams({ search: searchTerm || null });
     }
   }, [currentPage]);
+
+  // Handler for portrait type changes
+  const handlePortraitTypeChange = useCallback((newPortraitType) => {
+    console.log(`Changing portrait type from ${portraitType} to ${newPortraitType}`);
+    setPortraitType(newPortraitType);
+    // Clear gallery photos to force reload with new portrait type
+    setGalleryPhotos([]);
+    // Reset gallery loaded flag to force reload with new portrait type
+    galleryImagesLoadedThisSession.current = false;
+  }, [portraitType]);
   
   // PWA install prompt state - for manual testing only
   const [showPWAPromptManually, setShowPWAPromptManually] = useState(false);
@@ -883,11 +895,11 @@ const App = () => {
         
         try {
           console.log('Loading gallery images for prompt selector...');
-          
+
           // Import the loadGalleryImages function
           const { loadGalleryImages } = await import('./utils/galleryLoader');
-          const loadedGalleryPhotos = await loadGalleryImages(stylePrompts);
-          
+          const loadedGalleryPhotos = await loadGalleryImages(stylePrompts, portraitType);
+
           if (loadedGalleryPhotos.length > 0) {
             console.log(`Loaded ${loadedGalleryPhotos.length} gallery images for prompt selector`);
             setGalleryPhotos(loadedGalleryPhotos);
@@ -906,7 +918,7 @@ const App = () => {
     };
 
     loadGalleryForPromptSelector();
-  }, [currentPage, stylePrompts]);
+  }, [currentPage, stylePrompts, portraitType]);
 
   // Manage polaroid border CSS variables for sample gallery mode
   useEffect(() => {
@@ -5454,6 +5466,8 @@ const App = () => {
                 initialThemeGroupState={currentThemeState}
                 onSearchChange={handleSearchChange}
                 initialSearchTerm={urlSearchTerm}
+                portraitType={portraitType}
+                onPortraitTypeChange={handlePortraitTypeChange}
                 authState={authState}
               />
             </div>
