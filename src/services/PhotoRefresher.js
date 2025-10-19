@@ -25,7 +25,9 @@ export const refreshPhoto = async (options) => {
     setPhotos,
     settings,
     lastPhotoData,
-    stylePrompts
+    stylePrompts,
+    tokenType, // Payment method (for frontend auth)
+    isPremiumSpark // Premium status (for frontend auth)
   } = options;
 
   // Input validation
@@ -156,6 +158,16 @@ export const refreshPhoto = async (options) => {
       throw new Error('Sogni client is not properly initialized');
     }
     
+    // Check WebSocket connection for frontend clients before creating project
+    if (sogniClient.apiClient && sogniClient.apiClient.websocket) {
+      const wsState = sogniClient.apiClient.websocket.readyState;
+      if (wsState !== 1) { // 1 = WebSocket.OPEN
+        console.error(`[REFRESH] WebSocket not connected (readyState: ${wsState})`);
+        throw new Error('WebSocket not connected - please verify your email at app.sogni.ai');
+      }
+      console.log('[REFRESH] WebSocket connection verified');
+    }
+    
     // Get settings
     const { 
       selectedModel, 
@@ -199,6 +211,8 @@ export const refreshPhoto = async (options) => {
     // Create project configuration for a single image refresh
     const projectConfig = {
       testnet: false,
+      tokenType, // Use selected payment method from wallet (for frontend auth)
+      isPremiumSpark, // Pass premium status (for frontend auth)
       modelId: selectedModel,
       positivePrompt: promptToUse, // Use the photo's original prompt
       negativePrompt: negativePrompt?.trim() || 'lowres, worst quality, low quality',
@@ -233,32 +247,6 @@ export const refreshPhoto = async (options) => {
     }
     
     const project = await sogniClient.projects.create(projectConfig);
-    
-    // Wait for upload completion
-    await new Promise((resolve) => {
-      let uploadCompleted = false;
-      
-      const uploadCompleteHandler = () => {
-        if (!uploadCompleted) {
-          uploadCompleted = true;
-          console.log(`[REFRESH] Image upload completed`);
-          project.off('uploadComplete', uploadCompleteHandler);
-          resolve();
-        }
-      };
-      
-      project.on('uploadComplete', uploadCompleteHandler);
-      
-      // Fallback timeout
-      setTimeout(() => {
-        if (!uploadCompleted) {
-          uploadCompleted = true;
-          console.log(`[REFRESH] Upload timeout reached, proceeding`);
-          project.off('uploadComplete', uploadCompleteHandler);
-          resolve();
-        }
-      }, 5000);
-    });
     
     console.log(`[REFRESH] Refresh project created with ID: ${project.id}`);
     
@@ -501,6 +489,86 @@ export const refreshPhoto = async (options) => {
         return updated;
       });
     });
+
+    // Listen for project-level failure (SDK errors, auth errors, etc.)
+    project.on('failed', (error) => {
+      console.error('[REFRESH] Project failed event received:', error);
+      clearTimeout(timeoutId);
+      
+      setPhotos(prev => {
+        const updated = [...prev];
+        const current = updated[photoIndex];
+        if (!current) return prev;
+        if (current.projectId && current.projectId !== project.id) return prev;
+        
+        // Determine error message based on error type
+        let errorMessage = 'GENERATION FAILED: processing error';
+        if (error?.message) {
+          if (error.message.includes('not found') || error.message.includes('404')) {
+            errorMessage = 'GENERATION FAILED: project not found';
+          } else if (error.message.includes('Insufficient') || error.message.includes('credits') || error.message.includes('funds')) {
+            errorMessage = 'GENERATION FAILED: replenish tokens';
+          } else if (error.message.includes('network') || error.message.includes('connection') || error.message.includes('WebSocket')) {
+            errorMessage = 'GENERATION FAILED: connection error';
+          } else if (error.message.includes('timeout')) {
+            errorMessage = 'GENERATION FAILED: timeout error';
+          } else if (error.message.includes('verify') || error.message.includes('verification')) {
+            errorMessage = 'GENERATION FAILED: verify email';
+          }
+        }
+        
+        updated[photoIndex] = {
+          ...current,
+          loading: false,
+          generating: false,
+          error: errorMessage,
+          permanentError: true,
+          statusText: 'Failed',
+          refreshTimeoutId: null,
+          currentRefreshJobId: null
+        };
+        return updated;
+      });
+    });
+
+    // Listen for general project errors (e.g., 404, API errors, sync failures)
+    project.on('error', (error) => {
+      console.error('[REFRESH] Project error event received:', error);
+      clearTimeout(timeoutId);
+      
+      setPhotos(prev => {
+        const updated = [...prev];
+        const current = updated[photoIndex];
+        if (!current) return prev;
+        if (current.projectId && current.projectId !== project.id) return prev;
+        
+        // Determine error message based on error type
+        let errorMessage = 'GENERATION FAILED: processing error';
+        if (error?.message) {
+          if (error.message.includes('not found') || error.message.includes('404')) {
+            errorMessage = 'GENERATION FAILED: project not found';
+          } else if (error.message.includes('Insufficient') || error.message.includes('credits') || error.message.includes('funds')) {
+            errorMessage = 'GENERATION FAILED: replenish tokens';
+          } else if (error.message.includes('network') || error.message.includes('connection')) {
+            errorMessage = 'GENERATION FAILED: connection error';
+          } else if (error.message.includes('timeout')) {
+            errorMessage = 'GENERATION FAILED: timeout error';
+          }
+        }
+        
+        updated[photoIndex] = {
+          ...current,
+          loading: false,
+          generating: false,
+          error: errorMessage,
+          permanentError: true,
+          statusText: 'Failed',
+          refreshTimeoutId: null,
+          currentRefreshJobId: null
+        };
+        return updated;
+      });
+    });
       
   } catch (error) {
     console.error(`[REFRESH] Error refreshing image:`, error);
@@ -513,12 +581,16 @@ export const refreshPhoto = async (options) => {
       // Determine error message based on error type
       let errorMessage = 'GENERATION FAILED: processing error';
       if (error?.message) {
-        if (error.message.includes('Insufficient') || error.message.includes('credits') || error.message.includes('funds')) {
+        if (error.message.includes('WebSocket not connected')) {
+          errorMessage = 'GENERATION FAILED: verify email';
+        } else if (error.message.includes('Insufficient') || error.message.includes('credits') || error.message.includes('funds')) {
           errorMessage = 'GENERATION FAILED: replenish tokens';
         } else if (error.message.includes('network') || error.message.includes('connection')) {
           errorMessage = 'GENERATION FAILED: connection error';
         } else if (error.message.includes('timeout')) {
           errorMessage = 'GENERATION FAILED: timeout error';
+        } else if (error.message.includes('verify') || error.message.includes('verification')) {
+          errorMessage = 'GENERATION FAILED: verify email';
         }
       }
       
@@ -528,7 +600,8 @@ export const refreshPhoto = async (options) => {
         generating: false,
         error: errorMessage,
         permanentError: true,
-        statusText: 'Failed'
+        statusText: 'Failed',
+        refreshTimeoutId: null
       };
       return updated;
     });

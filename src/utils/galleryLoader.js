@@ -43,8 +43,7 @@ export const loadGalleryImages = async (stylePrompts, portraitType = 'medium') =
     const galleryPhotos = [];
 
     // Map portrait type to subdirectory
-    // 'fullbody' uses 'medium' for now until we have actual full body images
-    const subdirectory = portraitType === 'fullbody' ? 'medium' : portraitType;
+    const subdirectory = portraitType;
 
     // Create gallery photos for all prompts
     let photoIndex = 0;

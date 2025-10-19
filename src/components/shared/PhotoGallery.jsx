@@ -2693,7 +2693,7 @@ const PhotoGallery = ({
               margin: '0 0 12px 0',
               textAlign: 'center'
             }}>
-              Choose a Random Style Mode
+              How should we pick your image style?
             </h2>
             
             {/* Random Style Buttons */}
@@ -2878,7 +2878,28 @@ const PhotoGallery = ({
                   e.currentTarget.style.boxShadow = portraitType === 'headshot' ? '0 4px 12px rgba(168, 85, 247, 0.4)' : '0 2px 8px rgba(0, 0, 0, 0.1)';
                 }}
               >
-                <span>👤</span>
+                {/* Mini polaroid frame - 2:3 aspect ratio */}
+                <div style={{
+                  width: '32px',
+                  height: '48px',
+                  background: 'white',
+                  padding: '3px 3px 8px 3px',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                  borderRadius: '2px',
+                  display: 'flex',
+                  flexDirection: 'column'
+                }}>
+                  <img 
+                    src="/gallery/sample-gallery-headshot-einstein.jpg"
+                    alt="Headshot example"
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover',
+                      display: 'block'
+                    }}
+                  />
+                </div>
                 <span>Headshot</span>
               </button>
               
@@ -2908,7 +2929,28 @@ const PhotoGallery = ({
                   e.currentTarget.style.boxShadow = portraitType === 'medium' ? '0 4px 12px rgba(168, 85, 247, 0.4)' : '0 2px 8px rgba(0, 0, 0, 0.1)';
                 }}
               >
-                <span>🧍</span>
+                {/* Mini polaroid frame - 2:3 aspect ratio */}
+                <div style={{
+                  width: '32px',
+                  height: '48px',
+                  background: 'white',
+                  padding: '3px 3px 8px 3px',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                  borderRadius: '2px',
+                  display: 'flex',
+                  flexDirection: 'column'
+                }}>
+                  <img 
+                    src="/gallery/sample-gallery-medium-body-jen.jpg"
+                    alt="Medium portrait example"
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover',
+                      display: 'block'
+                    }}
+                  />
+                </div>
                 <span>Medium Portrait</span>
               </button>
               
@@ -2938,7 +2980,28 @@ const PhotoGallery = ({
                   e.currentTarget.style.boxShadow = portraitType === 'fullbody' ? '0 4px 12px rgba(168, 85, 247, 0.4)' : '0 2px 8px rgba(0, 0, 0, 0.1)';
                 }}
               >
-                <span>🚶</span>
+                {/* Mini polaroid frame - 2:3 aspect ratio */}
+                <div style={{
+                  width: '32px',
+                  height: '48px',
+                  background: 'white',
+                  padding: '3px 3px 8px 3px',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                  borderRadius: '2px',
+                  display: 'flex',
+                  flexDirection: 'column'
+                }}>
+                  <img 
+                    src="/gallery/sample-gallery-full-body-mark.jpg"
+                    alt="Full body portrait example"
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover',
+                      display: 'block'
+                    }}
+                  />
+                </div>
                 <span>Full Body Portrait</span>
               </button>
             </div>

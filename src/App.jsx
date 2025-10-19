@@ -2284,11 +2284,11 @@ const App = () => {
 
       // Set up event listeners if we have a client
       if (client && client.projects) {
-        client.projects.on('swarmModels', (event) => {
+        client.projects.on('swarmModels', () => {
           //console.log('Swarm models event payload:', event);
         });
 
-        client.projects.on('project', (event) => {
+        client.projects.on('project', () => {
           // console.log('Project event full payload:', event);
         });
 
@@ -6087,6 +6087,9 @@ const App = () => {
       return;
     }
     
+    // Check if user has Premium Spark (for frontend auth payment)
+    const hasPremiumSpark = isPremiumBoosted(balances, walletTokenType);
+    
     try {
       // Use the refreshPhoto service (similar to enhancePhoto)
       await refreshPhoto({
@@ -6096,7 +6099,9 @@ const App = () => {
         setPhotos: setRegularPhotos,
         settings,
         lastPhotoData,
-        stylePrompts
+        stylePrompts,
+        tokenType: walletTokenType, // Pass payment method for frontend auth
+        isPremiumSpark: hasPremiumSpark // Pass premium status for frontend auth
       });
     } catch (error) {
       console.error('Refresh failed:', error);

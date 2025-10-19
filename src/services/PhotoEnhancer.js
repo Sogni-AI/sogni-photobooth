@@ -219,33 +219,6 @@ export const enhancePhoto = async (options) => {
     // Use the same API path as regular generation to get proper upload handling
     const project = await sogniClient.projects.create(projectConfig);
       
-      // Wait for upload completion like regular generation does
-      await new Promise((resolve) => {
-        let uploadCompleted = false;
-        
-        const uploadCompleteHandler = () => {
-          if (!uploadCompleted) {
-            uploadCompleted = true;
-            console.log(`[ENHANCE] Starting image upload completed, enhancement can proceed`);
-            project.off('uploadComplete', uploadCompleteHandler);
-            resolve();
-          }
-        };
-        
-        // Listen for upload completion
-        project.on('uploadComplete', uploadCompleteHandler);
-        
-        // Fallback timeout in case upload complete event doesn't fire
-        setTimeout(() => {
-          if (!uploadCompleted) {
-            uploadCompleted = true;
-            console.log(`[ENHANCE] Upload timeout reached, proceeding with enhancement`);
-            project.off('uploadComplete', uploadCompleteHandler);
-            resolve();
-          }
-        }, 5000); // 5 second timeout
-      });
-      
       // Don't set activeProjectReference for enhancement to avoid interfering with main generation
       // onSetActiveProject(project.id); // Commented out to prevent interference
       console.log(`[ENHANCE] Enhancement project created with ID: ${project.id} (not setting as active to avoid interference)`);
