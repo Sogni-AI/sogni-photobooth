@@ -2709,10 +2709,6 @@ const PhotoGallery = ({
                   background: 'transparent',
                   border: 'none',
                   padding: '4px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: '6px',
                   cursor: 'pointer',
                   transition: 'all 0.2s ease'
                 }}
@@ -2723,37 +2719,52 @@ const PhotoGallery = ({
                   e.currentTarget.style.transform = 'scale(1)';
                 }}
               >
-                {/* Mini polaroid frame - 2:3 aspect ratio */}
+                {/* Polaroid frame with label inside - 2:3 aspect ratio */}
                 <div style={{
-                  width: '32px',
-                  height: '48px',
+                  width: '96px',
                   background: 'white',
-                  padding: '3px 3px 8px 3px',
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
-                  borderRadius: '2px',
-                  display: 'flex',
-                  flexDirection: 'column'
+                  padding: '8px',
+                  paddingBottom: '32px',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                  position: 'relative'
                 }}>
-                  <img 
-                    src="/gallery/sample-gallery-headshot-einstein.jpg"
-                    alt="Headshot example"
-                    style={{
-                      width: '100%',
-                      height: '100%',
-                      objectFit: 'cover',
-                      display: 'block'
-                    }}
-                  />
+                  <div style={{
+                    width: '80px',
+                    height: '120px',
+                    overflow: 'hidden',
+                    background: '#f0f0f0'
+                  }}>
+                    <img 
+                      src="/gallery/sample-gallery-headshot-einstein.jpg"
+                      alt="Headshot example"
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                        objectPosition: 'center center',
+                        display: 'block'
+                      }}
+                    />
+                  </div>
+                  <div style={{
+                    position: 'absolute',
+                    bottom: '8px',
+                    left: '8px',
+                    right: '8px',
+                    textAlign: 'center',
+                    fontSize: '11px',
+                    fontFamily: '"Permanent Marker", cursive',
+                    color: '#333',
+                    lineHeight: '1.2',
+                    textDecorationLine: portraitType === 'headshot' ? 'underline' : 'none',
+                    textDecorationColor: '#a855f7',
+                    textDecorationStyle: 'solid',
+                    textDecorationThickness: '2px',
+                    textUnderlineOffset: '2px'
+                  }}>
+                    Up Close
+                  </div>
                 </div>
-                <span style={{
-                  fontSize: '12px',
-                  fontFamily: '"Permanent Marker", cursive',
-                  color: '#333',
-                  textDecoration: portraitType === 'headshot' ? 'underline' : 'none',
-                  textDecorationColor: '#a855f7',
-                  textDecorationThickness: '2px',
-                  textUnderlineOffset: '3px'
-                }}>Up Close</span>
               </button>
               
               <button 
@@ -2762,10 +2773,6 @@ const PhotoGallery = ({
                   background: 'transparent',
                   border: 'none',
                   padding: '4px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: '6px',
                   cursor: 'pointer',
                   transition: 'all 0.2s ease'
                 }}
@@ -2776,37 +2783,52 @@ const PhotoGallery = ({
                   e.currentTarget.style.transform = 'scale(1)';
                 }}
               >
-                {/* Mini polaroid frame - 2:3 aspect ratio */}
+                {/* Polaroid frame with label inside - 2:3 aspect ratio */}
                 <div style={{
-                  width: '32px',
-                  height: '48px',
+                  width: '96px',
                   background: 'white',
-                  padding: '3px 3px 8px 3px',
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
-                  borderRadius: '2px',
-                  display: 'flex',
-                  flexDirection: 'column'
+                  padding: '8px',
+                  paddingBottom: '32px',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                  position: 'relative'
                 }}>
-                  <img 
-                    src="/gallery/sample-gallery-medium-body-jen.jpg"
-                    alt="Medium portrait example"
-                    style={{
-                      width: '100%',
-                      height: '100%',
-                      objectFit: 'cover',
-                      display: 'block'
-                    }}
-                  />
+                  <div style={{
+                    width: '80px',
+                    height: '120px',
+                    overflow: 'hidden',
+                    background: '#f0f0f0'
+                  }}>
+                    <img 
+                      src="/gallery/sample-gallery-medium-body-jen.jpg"
+                      alt="Medium portrait example"
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                        objectPosition: 'center center',
+                        display: 'block'
+                      }}
+                    />
+                  </div>
+                  <div style={{
+                    position: 'absolute',
+                    bottom: '8px',
+                    left: '8px',
+                    right: '8px',
+                    textAlign: 'center',
+                    fontSize: '11px',
+                    fontFamily: '"Permanent Marker", cursive',
+                    color: '#333',
+                    lineHeight: '1.2',
+                    textDecorationLine: portraitType === 'medium' ? 'underline' : 'none',
+                    textDecorationColor: '#a855f7',
+                    textDecorationStyle: 'solid',
+                    textDecorationThickness: '2px',
+                    textUnderlineOffset: '2px'
+                  }}>
+                    Half Body
+                  </div>
                 </div>
-                <span style={{
-                  fontSize: '12px',
-                  fontFamily: '"Permanent Marker", cursive',
-                  color: '#333',
-                  textDecoration: portraitType === 'medium' ? 'underline' : 'none',
-                  textDecorationColor: '#a855f7',
-                  textDecorationThickness: '2px',
-                  textUnderlineOffset: '3px'
-                }}>Half Body</span>
               </button>
               
               <button 
@@ -2815,10 +2837,6 @@ const PhotoGallery = ({
                   background: 'transparent',
                   border: 'none',
                   padding: '4px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: '6px',
                   cursor: 'pointer',
                   transition: 'all 0.2s ease'
                 }}
@@ -2829,37 +2847,52 @@ const PhotoGallery = ({
                   e.currentTarget.style.transform = 'scale(1)';
                 }}
               >
-                {/* Mini polaroid frame - 2:3 aspect ratio */}
+                {/* Polaroid frame with label inside - 2:3 aspect ratio */}
                 <div style={{
-                  width: '32px',
-                  height: '48px',
+                  width: '96px',
                   background: 'white',
-                  padding: '3px 3px 8px 3px',
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
-                  borderRadius: '2px',
-                  display: 'flex',
-                  flexDirection: 'column'
+                  padding: '8px',
+                  paddingBottom: '32px',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                  position: 'relative'
                 }}>
-                  <img 
-                    src="/gallery/sample-gallery-full-body-mark.jpg"
-                    alt="Wide portrait example"
-                    style={{
-                      width: '100%',
-                      height: '100%',
-                      objectFit: 'cover',
-                      display: 'block'
-                    }}
-                  />
+                  <div style={{
+                    width: '80px',
+                    height: '120px',
+                    overflow: 'hidden',
+                    background: '#f0f0f0'
+                  }}>
+                    <img 
+                      src="/gallery/sample-gallery-full-body-mark.jpg"
+                      alt="Full body portrait example"
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                        objectPosition: 'center center',
+                        display: 'block'
+                      }}
+                    />
+                  </div>
+                  <div style={{
+                    position: 'absolute',
+                    bottom: '8px',
+                    left: '8px',
+                    right: '8px',
+                    textAlign: 'center',
+                    fontSize: '11px',
+                    fontFamily: '"Permanent Marker", cursive',
+                    color: '#333',
+                    lineHeight: '1.2',
+                    textDecorationLine: portraitType === 'fullbody' ? 'underline' : 'none',
+                    textDecorationColor: '#a855f7',
+                    textDecorationStyle: 'solid',
+                    textDecorationThickness: '2px',
+                    textUnderlineOffset: '2px'
+                  }}>
+                    Full Body
+                  </div>
                 </div>
-                <span style={{
-                  fontSize: '12px',
-                  fontFamily: '"Permanent Marker", cursive',
-                  color: '#333',
-                  textDecoration: portraitType === 'fullbody' ? 'underline' : 'none',
-                  textDecorationColor: '#a855f7',
-                  textDecorationThickness: '2px',
-                  textUnderlineOffset: '3px'
-                }}>Full Body</span>
               </button>
             </div>
           </div>
