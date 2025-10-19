@@ -23,19 +23,39 @@ export const getDefaultThemeGroupState = () => {
 };
 
 // Get all prompts that are enabled based on theme group selections
+// Note: Favorites are stored as promptKeys (e.g., 'animeKawaii') for gallery images,
+// allowing them to be used with Random Mix and One of Each generation
 export const getEnabledPrompts = (themeGroupState, allPrompts) => {
   const enabledPromptNames = [];
   
   Object.entries(THEME_GROUPS).forEach(([groupId, group]) => {
     if (themeGroupState[groupId]) {
-      enabledPromptNames.push(...group.prompts);
+      if (groupId === 'favorites') {
+        // For favorites, get the prompt keys from localStorage
+        try {
+          const favorites = localStorage.getItem('sogni_favorite_images');
+          if (favorites) {
+            const favoriteIds = JSON.parse(favorites);
+            enabledPromptNames.push(...favoriteIds);
+          }
+        } catch (e) {
+          console.warn('Error reading favorite images:', e);
+        }
+      } else {
+        enabledPromptNames.push(...group.prompts);
+      }
     }
   });
   
   // Filter the allPrompts object to only include enabled prompts
   const enabledPrompts = {};
   Object.entries(allPrompts).forEach(([key, value]) => {
-    if (key === 'custom' || key === 'random' || key === 'randomMix' || key === 'oneOfEach' || enabledPromptNames.includes(key)) {
+    // Always include custom and random workflow options if they exist
+    if (key === 'custom' || key === 'random') {
+      enabledPrompts[key] = value;
+    }
+    // Include other prompts only if they're in the enabled list
+    else if (enabledPromptNames.includes(key)) {
       enabledPrompts[key] = value;
     }
   });
@@ -44,18 +64,38 @@ export const getEnabledPrompts = (themeGroupState, allPrompts) => {
 };
 
 // Get prompts in sequential order for "One of each plz" mode
+// Note: Favorites in localStorage are stored as promptKeys (e.g., 'animeKawaii'),
+// which allows them to be looked up in allPrompts for generation
 export const getOneOfEachPrompts = (themeGroupState, allPrompts, count) => {
   const enabledGroups = [];
   
   // Get enabled groups in their defined order
   Object.entries(THEME_GROUPS).forEach(([groupId, group]) => {
     if (themeGroupState[groupId]) {
-      enabledGroups.push(group);
+      if (groupId === 'favorites') {
+        // For favorites, get the prompt keys from localStorage dynamically
+        try {
+          const favorites = localStorage.getItem('sogni_favorite_images');
+          if (favorites) {
+            const favoriteIds = JSON.parse(favorites);
+            if (favoriteIds.length > 0) {
+              enabledGroups.push({
+                name: group.name,
+                prompts: favoriteIds
+              });
+            }
+          }
+        } catch (e) {
+          console.warn('Error reading favorite images for oneOfEach:', e);
+        }
+      } else {
+        enabledGroups.push(group);
+      }
     }
   });
   
-  // If no themes are checked or all themes are checked, use alphabetical order from full list
-  if (enabledGroups.length === 0 || enabledGroups.length === Object.keys(THEME_GROUPS).length) {
+  // If no themes are checked, use alphabetical order from full list
+  if (enabledGroups.length === 0) {
     const allPromptKeys = Object.keys(allPrompts)
       .filter(key => key !== 'custom' && key !== 'random' && key !== 'randomMix' && key !== 'oneOfEach')
       .sort();
@@ -85,6 +125,8 @@ export const getOneOfEachPrompts = (themeGroupState, allPrompts, count) => {
     
     if (allPrompts[promptKey]) {
       selectedPrompts.push(allPrompts[promptKey]);
+    } else {
+      console.warn(`Prompt key "${promptKey}" not found in allPrompts`);
     }
     
     groupIndex = (groupIndex + 1) % enabledGroups.length;
