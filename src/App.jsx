@@ -3763,6 +3763,7 @@ const App = () => {
                 newlyArrived: false,
                 statusText: 'Calling Art Robot...',
                 sourceType, // Include sourceType in generated photos
+                promptKey: (selectedStyle && selectedStyle !== 'custom' && selectedStyle !== 'random' && selectedStyle !== 'randomMix' && selectedStyle !== 'oneOfEach') ? selectedStyle : undefined, // Track which style is being used
                 // Assign Taipei frame number based on photo index for equal distribution (1-6)
                 taipeiFrameNumber: (globalPhotoIndex % 6) + 1,
                 framePadding: 0 // Will be updated by migration effect in PhotoGallery
@@ -4569,6 +4570,10 @@ const App = () => {
                 }
               }
               
+              // Extract promptKey from hashtag or selectedStyle
+              const extractedPromptKey = hashtag ? hashtag.replace('#', '') : 
+                (selectedStyle && selectedStyle !== 'custom' && selectedStyle !== 'random' && selectedStyle !== 'randomMix' && selectedStyle !== 'oneOfEach') ? selectedStyle : undefined;
+              
               updated[photoIndex] = {
                 ...updated[photoIndex],
                 images: [loadedImageUrl], // Replace preview with final image
@@ -4579,6 +4584,7 @@ const App = () => {
                 isPreview: false, // Clear preview flag so final image shows at full opacity
                 positivePrompt,
                 stylePrompt: positivePrompt, // Use the actual prompt that was used for generation
+                promptKey: extractedPromptKey, // Track which style was used for favoriting
                 statusText: hashtag ? styleIdToDisplay(hashtag.replace('#', '')) : (selectedStyle && selectedStyle !== 'custom' && selectedStyle !== 'random' && selectedStyle !== 'randomMix' ? styleIdToDisplay(selectedStyle) : '#SogniPhotobooth')
               };
             }

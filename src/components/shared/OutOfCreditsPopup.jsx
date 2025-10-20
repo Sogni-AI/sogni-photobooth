@@ -112,7 +112,7 @@ const OutOfCreditsPopup = ({ isOpen, onClose }) => {
         <div className="out-of-credits-modal-content">
           <div className="out-of-credits-message">
             <p className="message-main">
-              Don't worry! You can get back to creating in no time.
+              You can get back to creating in no time.
             </p>
             <div className="credits-info">
               <div className="info-item" onClick={handleInfoItemClick}>

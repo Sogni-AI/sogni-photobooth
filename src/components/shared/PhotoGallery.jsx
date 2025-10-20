@@ -671,13 +671,16 @@ const PhotoGallery = ({
 
   // Handle favorite toggle
   // For gallery images (Style Explorer), we store promptKey so favorites can be used for generation
-  // For user photos, we store photo.id to reference the specific image
-  const handleFavoriteToggle = useCallback((photoId, e) => {
-    if (e) {
-      e.stopPropagation(); // Prevent photo selection when clicking heart
+  // For user photos, we store promptKey (only photos with a reusable style can be favorited)
+  const handleFavoriteToggle = useCallback((photoId) => {
+    if (!photoId) {
+      console.log('🔥 FAVORITE TOGGLE - Skipped: No promptKey available');
+      return; // Don't allow favoriting photos without a promptKey
     }
+    // Don't accept event parameter - all event handling done at button level
     toggleFavoriteImage(photoId);
-    setFavoriteImageIds(getFavoriteImages());
+    const newFavorites = getFavoriteImages();
+    setFavoriteImageIds(newFavorites);
   }, []);
 
   // Handle clear all favorites
@@ -688,6 +691,22 @@ const PhotoGallery = ({
     saveFavoriteImages([]);
     setFavoriteImageIds([]);
   }, []);
+
+  // Get consistent photoId for favorites
+  // Only use promptKey - this allows favoriting styles that can be reused for generation
+  // Returns null if no promptKey (custom/random styles can't be favorited)
+  const getPhotoId = useCallback((photo) => {
+    const photoId = photo.promptKey || null;
+    console.log('🆔 getPhotoId:', { promptKey: photo.promptKey, result: photoId });
+    return photoId;
+  }, []);
+
+  // Check if a photo is favorited
+  // Only checks promptKey - photos without a style can't be favorited
+  const isPhotoFavorited = useCallback((photo) => {
+    if (!photo.promptKey) return false;
+    return favoriteImageIds.includes(photo.promptKey);
+  }, [favoriteImageIds]);
 
   // Filter photos based on enabled theme groups and search term in prompt selector mode
   const filteredPhotos = useMemo(() => {
@@ -727,10 +746,7 @@ const PhotoGallery = ({
       
       // Check favorites filter
       if (themeGroupState['favorites']) {
-        // For gallery images, prioritize promptKey (the reusable style identifier)
-        // For user photos, use photo.id or image URL
-        const photoId = photo.promptKey || photo.id || (photo.images && photo.images[0]);
-        if (favoriteImageIds.includes(photoId)) {
+        if (isPhotoFavorited(photo)) {
           matchesAnyFilter = true;
         }
       }
@@ -1314,14 +1330,16 @@ const PhotoGallery = ({
     // Ignore clicks on the favorite button or its children
     const target = e.target;
     const currentTarget = e.currentTarget;
-    
+
     // Check if click is on favorite button or any of its descendants
-    if (target.classList.contains('photo-favorite-btn') || 
+    if (target.classList.contains('photo-favorite-btn') ||
+        target.classList.contains('photo-favorite-btn-batch') ||
         target.closest('.photo-favorite-btn') ||
+        target.closest('.photo-favorite-btn-batch') ||
         target.tagName === 'svg' ||
         target.tagName === 'path' ||
-        (target.parentElement && target.parentElement.classList.contains('photo-favorite-btn'))) {
-      console.log('Click blocked - favorite button detected');
+        (target.parentElement && target.parentElement.classList.contains('photo-favorite-btn')) ||
+        (target.parentElement && target.parentElement.classList.contains('photo-favorite-btn-batch'))) {
       e.preventDefault();
       e.stopPropagation();
       return;
@@ -3374,7 +3392,7 @@ const PhotoGallery = ({
                   // Don't open photo if clicking the favorite button
                   let el = e.target;
                   while (el && el !== e.currentTarget) {
-                    if (el.classList && el.classList.contains('photo-favorite-btn')) {
+                    if (el.classList && (el.classList.contains('photo-favorite-btn') || el.classList.contains('photo-favorite-btn-batch'))) {
                       return;
                     }
                     el = el.parentElement;
@@ -3460,9 +3478,50 @@ const PhotoGallery = ({
                 }}>
                   <PlaceholderImage placeholderUrl={placeholderUrl} />
 
-                  {/* Hide button for loading/error state - only show on hover for grid photos */}
+                  {/* Hide button, refresh button, and favorite button for loading/error state - only show on hover for grid photos */}
                   {!isSelected && !photo.isOriginal && !photo.isGalleryImage && (
                     <>
+                      {/* Favorite heart button - show for batch-generated images on desktop */}
+                      {!isMobile() && !photo.generating && !photo.loading && photo.promptKey && (photo.stylePrompt || photo.positivePrompt) && (
+                        <button
+                          className="photo-favorite-btn-batch"
+                        onMouseDown={(e) => {
+                          e.stopPropagation();
+                          handleFavoriteToggle(getPhotoId(photo));
+                        }}
+                        style={{
+                          position: 'absolute',
+                          top: '4px',
+                          right: '52px',
+                          background: isPhotoFavorited(photo) ? 'rgba(255, 71, 87, 0.9)' : 'rgba(0, 0, 0, 0.7)',
+                          color: 'white',
+                          border: 'none',
+                            width: '20px',
+                            height: '20px',
+                            borderRadius: '50%',
+                            fontSize: '11px',
+                            fontWeight: 'bold',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            zIndex: 999,
+                            boxShadow: '0 1px 3px rgba(0,0,0,0.5)',
+                            opacity: '0'
+                          }}
+                          onMouseOver={(e) => {
+                            e.currentTarget.style.transform = 'scale(1)';
+                            e.currentTarget.style.opacity = '1';
+                          }}
+                          onMouseOut={(e) => {
+                            e.currentTarget.style.transform = 'scale(0.95)';
+                            e.currentTarget.style.opacity = isPhotoFavorited(photo) ? '1' : '0';
+                          }}
+                          title={isPhotoFavorited(photo) ? 'Remove from favorites' : 'Add to favorites'}
+                        >
+                          {isPhotoFavorited(photo) ? '❤️' : '🤍'}
+                        </button>
+                      )}
                       {/* Refresh button - only show if not already refreshing or generating */}
                       {!photo.generating && !photo.loading && (photo.positivePrompt || photo.stylePrompt) && (
                         <button
@@ -3559,14 +3618,13 @@ const PhotoGallery = ({
                   )}
                 </div>
 
-                {/* Favorite heart button - show in prompt selector mode for desktop */}
-                {isPromptSelectorMode && !isMobile() && (
+                {/* Favorite heart button - show in prompt selector mode for desktop (only if photo has promptKey) */}
+                {isPromptSelectorMode && !isMobile() && photo.promptKey && (
                   <div
                     className="photo-favorite-btn"
                     onClickCapture={(e) => {
                       e.stopPropagation();
-                      const photoId = photo.promptKey || photo.id || (photo.images && photo.images[0]);
-                      handleFavoriteToggle(photoId, e);
+                      handleFavoriteToggle(getPhotoId(photo));
                     }}
                     onMouseDownCapture={(e) => {
                       e.stopPropagation();
@@ -3582,7 +3640,7 @@ const PhotoGallery = ({
                       justifyContent: 'center',
                       cursor: 'pointer',
                       zIndex: 99999,
-                      opacity: favoriteImageIds.includes(photo.promptKey || photo.id || (photo.images && photo.images[0])) ? '1' : '0',
+                      opacity: isPhotoFavorited(photo) ? '1' : '0',
                       transition: 'opacity 0.2s ease',
                       pointerEvents: 'all'
                     }}
@@ -3590,17 +3648,15 @@ const PhotoGallery = ({
                       e.currentTarget.style.opacity = '1';
                     }}
                     onMouseLeave={(e) => {
-                      const photoId = photo.promptKey || photo.id || (photo.images && photo.images[0]);
-                      const currentlyFavorited = favoriteImageIds.includes(photoId);
-                      e.currentTarget.style.opacity = currentlyFavorited ? '1' : '0';
+                      e.currentTarget.style.opacity = isPhotoFavorited(photo) ? '1' : '0';
                     }}
-                    title={favoriteImageIds.includes(photo.promptKey || photo.id || (photo.images && photo.images[0])) ? "Remove from favorites" : "Add to favorites"}
+                    title={isPhotoFavorited(photo) ? "Remove from favorites" : "Add to favorites"}
                   >
                     <div style={{
                       width: '20px',
                       height: '20px',
                       borderRadius: '50%',
-                      background: favoriteImageIds.includes(photo.promptKey || photo.id || (photo.images && photo.images[0])) ? 'rgba(255, 71, 87, 0.9)' : 'rgba(0, 0, 0, 0.7)',
+                      background: isPhotoFavorited(photo) ? 'rgba(255, 71, 87, 0.9)' : 'rgba(0, 0, 0, 0.7)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -3608,7 +3664,7 @@ const PhotoGallery = ({
                       transition: 'background 0.2s ease',
                       pointerEvents: 'none'
                     }}>
-                      {favoriteImageIds.includes(photo.promptKey || photo.id || (photo.images && photo.images[0])) ? (
+                      {isPhotoFavorited(photo) ? (
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg" style={{ pointerEvents: 'none' }}>
                           <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
                         </svg>
@@ -3683,14 +3739,42 @@ const PhotoGallery = ({
               key={photo.id}
               className={`film-frame ${isSelected ? 'selected' : ''} ${isCurrentStyle ? 'current-style' : ''} ${photo.loading ? 'loading' : ''} ${isLoaded ? 'loaded' : ''} ${photo.newlyArrived ? 'newly-arrived' : ''} ${photo.hidden ? 'hidden' : ''} ${isSelected && isThemeSupported() && !photo.isGalleryImage && tezdevTheme === 'supercasual' ? 'super-casual-theme' : ''} ${isSelected && isThemeSupported() && !photo.isGalleryImage && tezdevTheme === 'tezoswebx' ? 'tezos-webx-theme' : ''} ${isSelected && isThemeSupported() && !photo.isGalleryImage && tezdevTheme === 'taipeiblockchain' ? 'taipei-blockchain-theme' : ''} ${isSelected && isThemeSupported() && !photo.isGalleryImage && tezdevTheme === 'showup' ? 'showup-theme' : ''} ${isSelected && isThemeSupported() && !photo.isGalleryImage ? `${tezdevTheme}-theme` : ''}`}
               onClick={e => {
-                // Don't open photo if clicking the favorite button
-                let el = e.target;
+                // Don't open photo if clicking on action buttons
+                const target = e.target;
+                
+                // Check if click target or any parent is an action button
+                let el = target;
                 while (el && el !== e.currentTarget) {
-                  if (el.classList && el.classList.contains('photo-favorite-btn')) {
+                  if (el.classList && (
+                    el.classList.contains('photo-favorite-btn') || 
+                    el.classList.contains('photo-favorite-btn-batch') ||
+                    el.classList.contains('photo-refresh-btn') ||
+                    el.classList.contains('photo-hide-btn')
+                  )) {
                     return;
                   }
                   el = el.parentElement;
                 }
+                
+                // Check if click coordinates are within any button's bounding box with tolerance
+                // This handles clicks in padding areas around small buttons
+                const buttons = e.currentTarget.querySelectorAll('.photo-favorite-btn-batch, .photo-refresh-btn, .photo-hide-btn');
+                const clickX = e.clientX;
+                const clickY = e.clientY;
+                
+                for (const button of buttons) {
+                  const rect = button.getBoundingClientRect();
+                  const verticalTolerance = 15;
+                  const horizontalTolerance = 10;
+                  
+                  if (clickX >= (rect.left - horizontalTolerance) && 
+                      clickX <= (rect.right + horizontalTolerance) && 
+                      clickY >= (rect.top - verticalTolerance) && 
+                      clickY <= (rect.bottom + verticalTolerance)) {
+                    return;
+                  }
+                }
+                
                 isSelected ? handlePhotoViewerClick(e) : handlePhotoSelect(index, e);
               }}
               data-enhancing={photo.enhancing ? 'true' : undefined}
@@ -4231,9 +4315,50 @@ const PhotoGallery = ({
                   </div>
                 )}
 
-                {/* Hide button and refresh button - only show on hover for grid photos (not popup) and when image is loaded */}
+                {/* Hide button, refresh button, and favorite button - only show on hover for grid photos (not popup) and when image is loaded */}
                 {!isSelected && isLoaded && !photo.isOriginal && !photo.isGalleryImage && (
                   <>
+                    {/* Favorite heart button - show for batch-generated images on desktop */}
+                    {!isMobile() && photo.promptKey && (photo.stylePrompt || photo.positivePrompt) && (
+                      <button
+                        className="photo-favorite-btn-batch"
+                        onMouseDown={(e) => {
+                          e.stopPropagation();
+                          handleFavoriteToggle(getPhotoId(photo));
+                        }}
+                        style={{
+                          position: 'absolute',
+                          top: '4px',
+                          right: '52px',
+                          background: isPhotoFavorited(photo) ? 'rgba(255, 71, 87, 0.9)' : 'rgba(0, 0, 0, 0.7)',
+                          color: 'white',
+                          border: 'none',
+                          width: '20px',
+                          height: '20px',
+                          borderRadius: '50%',
+                          fontSize: '11px',
+                          fontWeight: 'bold',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          zIndex: 999,
+                          boxShadow: '0 1px 3px rgba(0,0,0,0.5)',
+                          opacity: '0'
+                        }}
+                        onMouseOver={(e) => {
+                          e.currentTarget.style.opacity = '1';
+                        }}
+                        onMouseOut={(e) => {
+                          const photoId = photo.promptKey || photo.id || (photo.images && photo.images[0]);
+                          const currentlyFavorited = favoriteImageIds.includes(photoId);
+                          e.currentTarget.style.opacity = currentlyFavorited ? '1' : '0';
+                        }}
+                        title={isPhotoFavorited(photo) ? "Remove from favorites" : "Add to favorites"}
+                      >
+                        {isPhotoFavorited(photo) ? '❤️' : '🤍'}
+                      </button>
+                    )}
                     {/* Refresh button - only show if photo has a prompt */}
                     {(photo.positivePrompt || photo.stylePrompt) && (
                       <button
@@ -4337,11 +4462,11 @@ const PhotoGallery = ({
                 onClickCapture={(e) => {
                   e.stopPropagation();
                   const photoId = photo.promptKey || photo.id || (photo.images && photo.images[0]);
-                  handleFavoriteToggle(photoId, e);
+                  handleFavoriteToggle(photoId);
                 }}
-                  onMouseDownCapture={(e) => {
-                    e.stopPropagation();
-                  }}
+                onMouseDownCapture={(e) => {
+                  e.stopPropagation();
+                }}
                   style={{
                     position: 'absolute',
                     top: '10px',
@@ -4353,7 +4478,7 @@ const PhotoGallery = ({
                     justifyContent: 'center',
                     cursor: 'pointer',
                     zIndex: 99999,
-                    opacity: favoriteImageIds.includes(photo.promptKey || photo.id || (photo.images && photo.images[0])) ? '1' : '0',
+                    opacity: isPhotoFavorited(photo) ? '1' : '0',
                     transition: 'opacity 0.2s ease',
                     pointerEvents: 'all'
                   }}
@@ -4365,13 +4490,13 @@ const PhotoGallery = ({
                     const currentlyFavorited = favoriteImageIds.includes(photoId);
                     e.currentTarget.style.opacity = currentlyFavorited ? '1' : '0';
                   }}
-                  title={favoriteImageIds.includes(photo.promptKey || photo.id || (photo.images && photo.images[0])) ? "Remove from favorites" : "Add to favorites"}
+                  title={isPhotoFavorited(photo) ? "Remove from favorites" : "Add to favorites"}
                 >
                   <div style={{
                     width: '20px',
                     height: '20px',
                     borderRadius: '50%',
-                    background: favoriteImageIds.includes(photo.promptKey || photo.id || (photo.images && photo.images[0])) ? 'rgba(255, 71, 87, 0.9)' : 'rgba(0, 0, 0, 0.7)',
+                    background: isPhotoFavorited(photo) ? 'rgba(255, 71, 87, 0.9)' : 'rgba(0, 0, 0, 0.7)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -4379,7 +4504,7 @@ const PhotoGallery = ({
                     transition: 'background 0.2s ease',
                     pointerEvents: 'none'
                   }}>
-                    {favoriteImageIds.includes(photo.promptKey || photo.id || (photo.images && photo.images[0])) ? (
+                    {isPhotoFavorited(photo) ? (
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg" style={{ pointerEvents: 'none' }}>
                         <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
                       </svg>

@@ -170,19 +170,25 @@ export function saveFavoriteImages(favorites: string[]): void {
 
 export function toggleFavoriteImage(photoId: string): boolean {
   try {
+    console.log('🍪 COOKIE toggleFavoriteImage - photoId:', photoId);
     const favorites = getFavoriteImages();
+    console.log('🍪 Current favorites from localStorage:', favorites);
     const index = favorites.indexOf(photoId);
     let newFavorites: string[];
     
     if (index > -1) {
       // Remove from favorites
+      console.log('🍪 Removing from favorites at index:', index);
       newFavorites = favorites.filter(id => id !== photoId);
       saveFavoriteImages(newFavorites);
+      console.log('🍪 After removal:', newFavorites);
       return false;
     } else {
       // Add to favorites
+      console.log('🍪 Adding to favorites');
       newFavorites = [...favorites, photoId];
       saveFavoriteImages(newFavorites);
+      console.log('🍪 After adding:', newFavorites);
       return true;
     }
   } catch (e) {

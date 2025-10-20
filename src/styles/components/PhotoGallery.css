@@ -766,7 +766,7 @@ html body .photo-action-buttons .action-button,
   cursor: pointer !important;
 }
 
-/* Show hide button and refresh button on photo hover - only for grid photos (not selected) and only on non-touch devices */
+/* Show hide button, refresh button, and favorite button on photo hover - only for grid photos (not selected) and only on non-touch devices */
 @media (hover: hover) and (pointer: fine) {
   .film-frame:not(.selected):hover .photo-hide-btn {
     opacity: 1 !important;
@@ -785,13 +785,46 @@ html body .photo-action-buttons .action-button,
     transform: scale(1) !important;
     pointer-events: auto !important;
   }
+
+  .film-frame:not(.selected):hover .photo-favorite-btn-batch {
+    opacity: 1 !important;
+    transform: scale(1) !important;
+    pointer-events: auto !important;
+  }
 }
 
 /* Favorite button styles - only visible on hover (unless favorited) */
 .photo-favorite-btn {
-  transition: all 0.2s ease !important;
   pointer-events: auto !important;
   cursor: pointer !important;
+}
+
+.photo-favorite-btn-batch {
+  pointer-events: auto !important;
+  cursor: pointer !important;
+  transition: none !important;
+  transform: none !important;
+}
+
+/* When not hovering, move favorite button to top-right corner (where X button is) */
+.film-frame:not(:hover) .photo-favorite-btn-batch {
+  right: 4px !important;
+  transition: none !important;
+  transform: none !important;
+}
+
+/* When hovering, position third from right with proper spacing */
+.film-frame:hover .photo-favorite-btn-batch {
+  right: 52px !important;
+  transition: none !important; /* no tween between positions */
+  transform: none !important;
+}
+
+/* Keep heart stationary under cursor: prevent right shift while hovered */
+.photo-favorite-btn-batch:hover {
+  right: 52px !important;
+  transition: none !important;
+  transform: none !important;
 }
 
 /* Download All button styling */
