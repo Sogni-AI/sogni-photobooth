@@ -3136,145 +3136,6 @@ const PhotoGallery = ({
               </button>
             </div>
           </div>
-
-          {/* Theme Filters - Only show for non-Flux models */}
-          {!isFluxKontextModel(selectedModel) && showThemeFilters && (
-            <div style={{
-              background: 'transparent',
-              borderRadius: '12px',
-              overflow: 'hidden',
-              marginBottom: '8px',
-              padding: '0 8px'
-            }}>
-              {/* Theme filter content - only show when expanded */}
-              {showThemeFilters && (
-                <div style={{
-                  padding: '8px 0',
-                  borderTop: 'none'
-                }}>                 
-                  {/* Select All/Deselect All buttons */}
-                  <div style={{
-                    display: 'flex',
-                    gap: '8px',
-                    marginTop: '4px',
-                    marginBottom: '8px'
-                  }}>
-                    <button
-                      onClick={() => {
-                        const allSelected = Object.fromEntries(
-                          Object.keys(THEME_GROUPS).map(groupId => [groupId, true])
-                        );
-                        setThemeGroupState(allSelected);
-                        saveThemeGroupPreferences(allSelected);
-                        if (onThemeChange) {
-                          onThemeChange(allSelected);
-                        }
-                      }}
-                      style={{
-                        border: 'none',
-                        borderRadius: '8px',
-                        padding: '6px 10px',
-                        fontSize: '11px',
-                        fontWeight: 600,
-                        color: 'white',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease'
-                      }}
-                    >
-                      Select All
-                    </button>
-                    <button
-                      onClick={() => {
-                        const allDeselected = Object.fromEntries(
-                          Object.keys(THEME_GROUPS).map(groupId => [groupId, false])
-                        );
-                        setThemeGroupState(allDeselected);
-                        saveThemeGroupPreferences(allDeselected);
-                        if (onThemeChange) {
-                          onThemeChange(allDeselected);
-                        }
-                      }}
-                      style={{
-                        borderRadius: '8px',
-                        padding: '6px 10px',
-                        fontSize: '11px',
-                        fontWeight: 600,
-                        color: 'white',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease'
-                      }}
-                    >
-                      Deselect All
-                    </button>
-                  </div>
-                  
-                  <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                    gap: '8px'
-                  }}>
-                    {Object.entries(THEME_GROUPS).map(([groupId, group]) => (
-                      <label key={groupId} style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        padding: '8px 12px',
-                        background: isExtensionMode ? 'rgba(255, 255, 255, 0.15)' : 'rgba(255, 255, 255, 0.2)',
-                        borderRadius: '8px',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease',
-                        color: 'white'
-                      }}>
-                        <input
-                          type="checkbox"
-                          checked={themeGroupState[groupId]}
-                          onChange={() => handleThemeGroupToggle(groupId)}
-                          style={{
-                            width: '16px',
-                            height: '16px',
-                            accentColor: '#72e3f2'
-                          }}
-                        />
-                        <span style={{ flex: 1, fontWeight: 600, fontSize: '12px' }}>{group.name}</span>
-                        <span style={{ fontSize: '10px', opacity: 0.7 }}>
-                          ({groupId === 'favorites' ? favoriteImageIds.length : group.prompts.length})
-                        </span>
-                        {groupId === 'favorites' && favoriteImageIds.length > 0 && (
-                          <button
-                            onClick={handleClearFavorites}
-                            onMouseDown={(e) => e.stopPropagation()}
-                            style={{
-                              background: 'rgba(255, 71, 87, 0.8)',
-                              border: 'none',
-                              borderRadius: '4px',
-                              padding: '2px 6px',
-                              fontSize: '10px',
-                              fontWeight: 600,
-                              color: 'white',
-                              cursor: 'pointer',
-                              transition: 'all 0.2s ease',
-                              marginLeft: '4px'
-                            }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.background = 'rgba(255, 71, 87, 1)';
-                              e.currentTarget.style.transform = 'scale(1.05)';
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.background = 'rgba(255, 71, 87, 0.8)';
-                              e.currentTarget.style.transform = 'scale(1)';
-                            }}
-                            title="Clear all favorites"
-                          >
-                            Clear
-                          </button>
-                        )}
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
         </div>
       )}
 
@@ -3406,7 +3267,9 @@ const PhotoGallery = ({
               paddingTop: '8px',
               fontSize: '14px',
               fontWeight: 500,
-              display: 'inline-block',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
               cursor: 'pointer',
               transition: 'all 0.2s ease',
               background: 'none',
@@ -3416,7 +3279,155 @@ const PhotoGallery = ({
             }}
           >
             Filter ({filteredPhotos.length})
+            <span style={{
+              display: 'inline-block',
+              transform: showThemeFilters ? 'rotate(0deg)' : 'rotate(-90deg)',
+              transition: 'transform 0.3s ease',
+              fontSize: '16px',
+              lineHeight: '1'
+            }}>
+              ▼
+            </span>
           </button>
+        </div>
+      )}
+
+      {/* Theme Filters - Show when filter is toggled */}
+      {isPromptSelectorMode && showThemeFilters && (
+        <div style={{
+          background: 'rgba(255, 255, 255, 0.1)',
+          borderRadius: '12px',
+          marginBottom: '16px',
+          padding: '16px 32px',
+          border: '1px solid rgba(255, 255, 255, 0.2)'
+        }}>
+          {/* Theme filter content */}
+          <div style={{
+            width: '100%'
+          }}>
+              {/* Select All/Deselect All buttons */}
+              <div style={{
+                display: 'flex',
+                gap: '8px',
+                marginBottom: '16px',
+                justifyContent: 'flex-start'
+              }}>
+                <button
+                  onClick={() => {
+                    const allSelected = Object.fromEntries(
+                      Object.keys(THEME_GROUPS).map(groupId => [groupId, true])
+                    );
+                    setThemeGroupState(allSelected);
+                    saveThemeGroupPreferences(allSelected);
+                    if (onThemeChange) {
+                      onThemeChange(allSelected);
+                    }
+                  }}
+                  style={{
+                    background: 'linear-gradient(135deg, #72e3f2 0%, #5ccfe0 100%)',
+                    border: 'none',
+                    borderRadius: '8px',
+                    padding: '6px 10px',
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    color: 'white',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  Select All
+                </button>
+                <button
+                  onClick={() => {
+                    const allDeselected = Object.fromEntries(
+                      Object.keys(THEME_GROUPS).map(groupId => [groupId, false])
+                    );
+                    setThemeGroupState(allDeselected);
+                    saveThemeGroupPreferences(allDeselected);
+                    if (onThemeChange) {
+                      onThemeChange(allDeselected);
+                    }
+                  }}
+                  style={{
+                    background: 'linear-gradient(135deg, #9ca3af 0%, #6b7280 100%)',
+                    border: 'none',
+                    borderRadius: '8px',
+                    padding: '6px 10px',
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    color: 'white',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  Deselect All
+                </button>
+              </div>
+
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                gap: '8px'
+              }}>
+                {Object.entries(THEME_GROUPS).map(([groupId, group]) => (
+                  <label key={groupId} style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '8px 12px',
+                    background: isExtensionMode ? 'rgba(255, 255, 255, 0.15)' : 'rgba(255, 255, 255, 0.2)',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    color: 'white'
+                  }}>
+                    <input
+                      type="checkbox"
+                      checked={themeGroupState[groupId]}
+                      onChange={() => handleThemeGroupToggle(groupId)}
+                      style={{
+                        width: '16px',
+                        height: '16px',
+                        accentColor: '#72e3f2'
+                      }}
+                    />
+                    <span style={{ flex: 1, fontWeight: 600, fontSize: '12px' }}>{group.name}</span>
+                    <span style={{ fontSize: '10px', opacity: 0.7 }}>
+                      ({groupId === 'favorites' ? favoriteImageIds.length : group.prompts.length})
+                    </span>
+                    {groupId === 'favorites' && favoriteImageIds.length > 0 && (
+                      <button
+                        onClick={handleClearFavorites}
+                        onMouseDown={(e) => e.stopPropagation()}
+                        style={{
+                          background: 'rgba(255, 71, 87, 0.8)',
+                          border: 'none',
+                          borderRadius: '4px',
+                          padding: '2px 6px',
+                          fontSize: '10px',
+                          fontWeight: 600,
+                          color: 'white',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease',
+                          marginLeft: '4px'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = 'rgba(255, 71, 87, 1)';
+                          e.currentTarget.style.transform = 'scale(1.05)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = 'rgba(255, 71, 87, 0.8)';
+                          e.currentTarget.style.transform = 'scale(1)';
+                        }}
+                        title="Clear all favorites"
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </label>
+                ))}
+              </div>
+            </div>
         </div>
       )}
 
