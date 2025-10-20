@@ -15,6 +15,11 @@ import { themeConfigService } from '../../services/themeConfig';
 import { useApp } from '../../context/AppContext';
 import { trackDownloadWithStyle } from '../../services/analyticsService';
 import { downloadImagesAsZip } from '../../utils/bulkDownload';
+import CustomPromptPopup from './CustomPromptPopup';
+import { useSogniAuth } from '../../services/sogniAuth';
+import { useWallet } from '../../hooks/useWallet';
+import { useCostEstimation } from '../../hooks/useCostEstimation.ts';
+import { getTokenLabel } from '../../services/walletService';
 
 // Memoized placeholder image component to prevent blob reloading
 const PlaceholderImage = memo(({ placeholderUrl }) => {
@@ -120,9 +125,59 @@ const PhotoGallery = ({
   handleRefreshPhoto = null
 }) => {
   // Get settings from context
-  const { settings } = useApp();
+  const { settings, updateSetting } = useApp();
+  const { isAuthenticated } = useSogniAuth();
+  const { tokenType } = useWallet();
+  const tokenLabel = getTokenLabel(tokenType);
 
+  // Cost estimation for "More" button (generates more photos with same reference)
+  // Uses InstantID ControlNet like ImageAdjuster
+  const { loading: moreButtonCostLoading, formattedCost: moreButtonCost } = useCostEstimation({
+    model: settings.selectedModel,
+    imageCount: numImages,
+    stepCount: settings.inferenceSteps,
+    guidance: settings.promptGuidance,
+    scheduler: settings.scheduler,
+    network: 'fast',
+    previewCount: 10,
+    contextImages: 0, // Not using Flux Kontext
+    cnEnabled: true // Using InstantID ControlNet
+  });
+
+  // Cost estimation for Krea enhancement (one-click image enhance)
+  // Krea uses the image as a guide/starting image for enhancement
+  const { loading: kreaLoading, formattedCost: kreaCost } = useCostEstimation({
+    model: 'flux1-krea-dev_fp8_scaled',
+    imageCount: 1,
+    stepCount: 24, // Krea uses 24 steps (from PhotoEnhancer)
+    guidance: 5.5, // Krea uses 5.5 guidance (from PhotoEnhancer)
+    scheduler: 'DPM++ SDE',
+    network: 'fast',
+    previewCount: 0, // Krea typically has no previews
+    contextImages: 0, // Not using Flux Kontext
+    cnEnabled: false, // Not using ControlNet
+    guideImage: true, // Using guide/starting image for enhancement
+    denoiseStrength: 0.75 // Starting image strength (1 - 0.75 = 0.25 denoise)
+  });
+
+  // Cost estimation for Kontext enhancement (AI-guided enhancement)
+  // Kontext uses the image as a context/reference image
+  const { loading: kontextLoading, formattedCost: kontextCost } = useCostEstimation({
+    model: 'flux1-dev-kontext_fp8_scaled',
+    imageCount: 1,
+    stepCount: 24, // Kontext uses 24 steps (from PhotoEnhancer)
+    guidance: 5.5, // Kontext uses 5.5 guidance (from PhotoEnhancer)
+    scheduler: 'DPM++ SDE',
+    network: 'fast',
+    previewCount: 10,
+    contextImages: 1, // Using 1 Flux Kontext reference image
+    cnEnabled: false, // Not using ControlNet
+    guideImage: false // Not using guide image (uses contextImages instead)
+  });
   
+  // State for custom prompt popup in Sample Gallery mode
+  const [showCustomPromptPopup, setShowCustomPromptPopup] = useState(false);
+
   // State to track when to show the "more" button during generation
   const [showMoreButtonDuringGeneration, setShowMoreButtonDuringGeneration] = useState(false);
 
@@ -268,6 +323,17 @@ const PhotoGallery = ({
     }
   }, [showEnhanceDropdown]);
   
+  // Handler for applying custom prompt from popup
+  const handleApplyCustomPrompt = useCallback((promptText) => {
+    // Call the onCustomSelect callback with no args - it will set style to custom
+    if (onCustomSelect) {
+      onCustomSelect();
+    }
+    
+    // Then update the positive prompt separately via App's updateSetting
+    updateSetting('positivePrompt', promptText);
+  }, [onCustomSelect, updateSetting]);
+
   // Clear framed image cache when new photos are generated or theme changes
   // Use a ref to track previous length to avoid effect dependency on photos.length
   const previousPhotosLengthRef = useRef(0);
@@ -2114,7 +2180,16 @@ const PhotoGallery = ({
           }}
           title={isGenerating ? 'Cancel current generation and start new batch' : 'Generate more photos'}
         >
-          {isGenerating ? `CANCEL + NEXT ${numImages}x` : `NEXT ${numImages}x`}
+          {isGenerating ? `CANCEL + NEXT ${numImages}x` : (
+            <>
+              NEXT {numImages}x
+              {isAuthenticated && !moreButtonCostLoading && moreButtonCost && moreButtonCost !== '—' && (
+                <span style={{ fontSize: '0.85em', opacity: 0.95, marginLeft: '6px' }}>
+                  • {moreButtonCost} {tokenLabel}
+                </span>
+              )}
+            </>
+          )}
         </button>
       )}
       {/* Generate button - only show in prompt selector mode when reference photo exists */}
@@ -2138,7 +2213,14 @@ const PhotoGallery = ({
           }}
           title="Generate fresh batch with current settings"
         >
-          <span className="view-photos-label">IMAGINE {numImages}x</span>
+          <span className="view-photos-label">
+            IMAGINE {numImages}x
+            {isAuthenticated && !moreButtonCostLoading && moreButtonCost && moreButtonCost !== '—' && (
+              <span style={{ fontSize: '0.85em', opacity: 0.95, marginLeft: '6px' }}>
+                • {moreButtonCost} {tokenLabel}
+              </span>
+            )}
+          </span>
         </button>
       )}
       {/* Navigation buttons - only show when a photo is selected */}
@@ -2576,6 +2658,11 @@ const PhotoGallery = ({
                     }}
                   >
                     ✨ One-click image enhance
+                    {isAuthenticated && !kreaLoading && kreaCost && kreaCost !== '—' && (
+                      <div style={{ fontSize: '13px', opacity: 0.9, marginTop: '4px' }}>
+                        {kreaCost} {tokenLabel}
+                      </div>
+                    )}
                   </button>
                   <button
                     className="dropdown-option rainbow-option"
@@ -2625,6 +2712,11 @@ const PhotoGallery = ({
                     }}
                   >
                     🎨 Transform image with words
+                    {isAuthenticated && !kontextLoading && kontextCost && kontextCost !== '—' && (
+                      <div style={{ fontSize: '13px', opacity: 0.9, marginTop: '4px' }}>
+                        {kontextCost} {tokenLabel}
+                      </div>
+                    )}
                   </button>
                 </div>
               ),
@@ -2898,7 +2990,7 @@ const PhotoGallery = ({
               </button>
               
               <button 
-                onClick={onCustomSelect}
+                onClick={() => setShowCustomPromptPopup(true)}
                 style={{
                   background: selectedStyle === 'custom' ? 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)' : 'linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%)',
                   border: selectedStyle === 'custom' ? '3px solid #3b82f6' : '3px solid transparent',
@@ -4718,12 +4810,20 @@ const PhotoGallery = ({
                   e.target.style.boxShadow = 'none';
                 }}
               >
-                🎨 Change It!
-              </button>
-            </div>
+              🎨 Change It!
+            </button>
           </div>
         </div>
+      </div>
       )}
+
+      {/* Custom Prompt Popup for Sample Gallery mode */}
+      <CustomPromptPopup
+        isOpen={showCustomPromptPopup}
+        onClose={() => setShowCustomPromptPopup(false)}
+        onApply={handleApplyCustomPrompt}
+        currentPrompt={settings.positivePrompt || ''}
+      />
     </div>
   );
 };

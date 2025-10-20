@@ -504,6 +504,13 @@ export class FrontendSogniClientAdapter {
         
         return adaptedProject;
       },
+      estimateCost: async (params: any) => {
+        // Forward cost estimation to the real client
+        if (this.realClient.projects && typeof (this.realClient.projects as any).estimateCost === 'function') {
+          return (this.realClient.projects as any).estimateCost(params);
+        }
+        throw new Error('Cost estimation not available on this client');
+      },
       on: (event: string, callback: (...args: any[]) => void) => {
         // Forward to the real client's projects if it has an 'on' method
         if (this.realClient.projects && typeof (this.realClient.projects as any).on === 'function') {

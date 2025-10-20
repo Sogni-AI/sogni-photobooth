@@ -4,6 +4,7 @@ import { styleIdToDisplay } from '../../utils';
 import { THEME_GROUPS, getDefaultThemeGroupState, getEnabledPrompts } from '../../constants/themeGroups';
 import { getThemeGroupPreferences, saveThemeGroupPreferences } from '../../utils/cookies';
 import { isFluxKontextModel } from '../../constants/settings';
+import CustomPromptPopup from './CustomPromptPopup';
 import '../../styles/style-dropdown.css';
 import PropTypes from 'prop-types';
 
@@ -19,7 +20,9 @@ const StyleDropdown = ({
   triggerButtonClass = '.bottom-style-select', // Default class for the main toolbar
   onThemeChange = null, // Callback when theme preferences change
   selectedModel = null, // Current selected model to determine UI behavior
-  onGallerySelect = null // Callback for gallery selection
+  onGallerySelect = null, // Callback for gallery selection
+  onCustomPromptChange = null, // Callback for custom prompt changes
+  currentCustomPrompt = '' // Current custom prompt value
 }) => {
   const [position, setPosition] = useState({ top: 0, left: 0, width: 0 });
   const [mounted, setMounted] = useState(false);
@@ -31,6 +34,7 @@ const StyleDropdown = ({
     const defaultState = getDefaultThemeGroupState();
     return { ...defaultState, ...saved };
   });
+  const [showCustomPromptPopup, setShowCustomPromptPopup] = useState(false);
   
   useEffect(() => {
     if (isOpen) {
@@ -200,6 +204,17 @@ const StyleDropdown = ({
     }
   };
 
+  // Handle custom prompt application
+  const handleApplyCustomPrompt = (promptText) => {
+    // First update the style to custom
+    updateStyle('custom');
+    
+    // Then update the custom prompt if callback is provided
+    if (onCustomPromptChange) {
+      onCustomPromptChange(promptText);
+    }
+  };
+
   // Check if we're using Flux.1 Kontext
   const isFluxKontext = selectedModel && isFluxKontextModel(selectedModel);
   
@@ -209,21 +224,33 @@ const StyleDropdown = ({
     : getEnabledPrompts(themeGroupState, defaultStylePrompts);
 
   // If not mounted or not open, don't render anything
-  if (!mounted || !isOpen) return null;
+  if (!mounted || !isOpen) return (
+    <>
+      {/* Still render the CustomPromptPopup even when dropdown is closed */}
+      <CustomPromptPopup
+        isOpen={showCustomPromptPopup}
+        onClose={() => setShowCustomPromptPopup(false)}
+        onApply={handleApplyCustomPrompt}
+        currentPrompt={currentCustomPrompt}
+      />
+    </>
+  );
 
   // Create portal to render the dropdown at the document root
-  return ReactDOM.createPortal(
-    <div 
-      ref={dropdownReference}
-      className={`style-dropdown ${actualPosition}-position ${position.isMobilePortrait ? 'mobile-portrait' : ''}`}
-      style={{
-        ...(actualPosition === 'top' 
-          ? { bottom: position.bottom } 
-          : { top: position.top }),
-        left: position.isMobilePortrait ? 10 : position.left,
-        width: position.width,
-      }}
-    >
+  return (
+    <>
+      {ReactDOM.createPortal(
+        <div 
+          ref={dropdownReference}
+          className={`style-dropdown ${actualPosition}-position ${position.isMobilePortrait ? 'mobile-portrait' : ''}`}
+          style={{
+            ...(actualPosition === 'top' 
+              ? { bottom: position.bottom } 
+              : { top: position.top }),
+            left: position.isMobilePortrait ? 10 : position.left,
+            width: position.width,
+          }}
+        >
       <div className="style-section featured">      
         {/* Featured options */}
         {/* Browse Gallery option - only show for non-Flux models */}
@@ -278,9 +305,7 @@ const StyleDropdown = ({
         <div 
           className={`style-option ${selectedStyle === 'custom' ? 'selected' : ''}`} 
           onClick={() => { 
-            updateStyle('custom');
-            onClose();
-            setShowControlOverlay(true);
+            setShowCustomPromptPopup(true);
           }}
         >
           <span>✏️</span>
@@ -349,7 +374,20 @@ const StyleDropdown = ({
           ))}
       </div>
     </div>,
-    document.body
+        document.body
+      )}
+      
+      {/* Custom Prompt Popup */}
+      <CustomPromptPopup
+        isOpen={showCustomPromptPopup}
+        onClose={() => {
+          setShowCustomPromptPopup(false);
+          onClose(); // Also close the dropdown when custom prompt popup closes
+        }}
+        onApply={handleApplyCustomPrompt}
+        currentPrompt={currentCustomPrompt}
+      />
+    </>
   );
 };
 
@@ -365,6 +403,8 @@ StyleDropdown.propTypes = {
   onThemeChange: PropTypes.func,
   selectedModel: PropTypes.string,
   onGallerySelect: PropTypes.func,
+  onCustomPromptChange: PropTypes.func,
+  currentCustomPrompt: PropTypes.string,
 };
 
 export default StyleDropdown; 

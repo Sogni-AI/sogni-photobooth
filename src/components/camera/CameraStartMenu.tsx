@@ -18,6 +18,8 @@ interface CameraStartMenuProps {
   onNavigateToGallery?: () => void;
   onShowControlOverlay?: () => void;
   onThemeChange?: (themeState: Record<string, boolean>) => void;
+  onCustomPromptChange?: (prompt: string) => void;
+  currentCustomPrompt?: string;
 }
 
 const CameraStartMenu: React.FC<CameraStartMenuProps> = ({ 
@@ -30,7 +32,9 @@ const CameraStartMenu: React.FC<CameraStartMenuProps> = ({
   selectedModel = '',
   onNavigateToGallery,
   onShowControlOverlay,
-  onThemeChange
+  onThemeChange,
+  onCustomPromptChange,
+  currentCustomPrompt = ''
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showStyleDropdown, setShowStyleDropdown] = useState(false);
@@ -178,6 +182,8 @@ const CameraStartMenu: React.FC<CameraStartMenuProps> = ({
           onThemeChange={onThemeChange as any}
           selectedModel={selectedModel as any}
           onGallerySelect={undefined}
+          onCustomPromptChange={onCustomPromptChange as any}
+          currentCustomPrompt={currentCustomPrompt}
         />
       )}
     </div>

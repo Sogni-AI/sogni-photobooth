@@ -4,6 +4,10 @@ import PropTypes from 'prop-types';
 import { getCustomDimensions } from '../../utils/imageProcessing';
 import { useApp } from '../../context/AppContext.tsx';
 import { themeConfigService } from '../../services/themeConfig';
+import { useSogniAuth } from '../../services/sogniAuth';
+import { useWallet } from '../../hooks/useWallet';
+import { useCostEstimation } from '../../hooks/useCostEstimation.ts';
+import { getTokenLabel } from '../../services/walletService';
 import '../../styles/components/ImageAdjuster.css';
 
 /**
@@ -21,16 +25,39 @@ const ImageAdjuster = ({
 
   
   const { settings } = useApp();
-  const { aspectRatio, tezdevTheme } = settings;
+  const { aspectRatio, tezdevTheme, selectedModel, inferenceSteps, promptGuidance, scheduler, numImages: contextNumImages } = settings;
+  const { isAuthenticated } = useSogniAuth();
+  const { tokenType } = useWallet();
+  const tokenLabel = getTokenLabel(tokenType);
   
-  // Calculate frame size based on aspect ratio
-  // Use 75% for 1:1 or wider ratios, 100% for portrait ratios
-  const getFrameSize = () => {
-    const wideAspectRatios = ['square', 'landscape', 'wide', 'ultrawide'];
-    return wideAspectRatios.includes(aspectRatio) ? '50%' : '100%';
-  };
+  // Use the number of images passed as prop, or fallback to context
+  const effectiveNumImages = numImages || contextNumImages;
   
-  const frameSize = getFrameSize();
+  // Estimate cost for this generation
+  // ImageAdjuster uses InstantID ControlNet, not Flux Kontext
+  const { loading: costLoading, formattedCost } = useCostEstimation({
+    model: selectedModel,
+    imageCount: effectiveNumImages,
+    stepCount: inferenceSteps,
+    guidance: promptGuidance,
+    scheduler: scheduler,
+    network: 'fast',
+    previewCount: 10,
+    contextImages: 0, // Not using Flux Kontext reference images
+    cnEnabled: true // Using InstantID ControlNet
+  });
+  
+  // Debug logging
+  console.log('[ImageAdjuster] Cost estimation:', {
+    isAuthenticated,
+    costLoading,
+    formattedCost,
+    selectedModel,
+    effectiveNumImages,
+    tokenType,
+    tokenLabel
+  });
+  
   
   const containerRef = useRef(null);
   const imageRef = useRef(null);
@@ -680,7 +707,20 @@ const ImageAdjuster = ({
             className="confirm-button" 
             onClick={handleConfirm}
           >
-            Imagine {numImages}x
+            Imagine {effectiveNumImages}x
+            {(() => {
+              console.log('[ImageAdjuster Button] Render check:', {
+                isAuthenticated,
+                costLoading,
+                formattedCost,
+                tokenLabel,
+                shouldShow: isAuthenticated && !costLoading && formattedCost && formattedCost !== '—'
+              });
+              return null;
+            })()}
+            {isAuthenticated && !costLoading && formattedCost && formattedCost !== '—' && (
+              <span className="cost-estimate"> • {formattedCost} {tokenLabel}</span>
+            )}
           </button>
         </div>
       </div>

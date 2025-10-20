@@ -1541,16 +1541,14 @@ const App = () => {
   };
 
   const handleCustomFromSampleGallery = () => {
-    // For Sample Gallery mode - just open settings without leaving the page
+    // For Sample Gallery mode - just switch to custom style
     updateSetting('selectedStyle', 'custom');
     updateSetting('positivePrompt', '');
     setCurrentHashtag(null);
     // Update URL (custom will clear the prompt parameter)
     updateUrlWithPrompt('custom');
-    // Show control overlay for custom prompt editing - stay in Sample Gallery mode
-    setShowControlOverlay(true);
-    // Set flag to auto-focus positive prompt
-    setAutoFocusPositivePrompt(true);
+    // Note: User can now edit custom prompt via the popup in StyleDropdown
+    // or through the settings overlay if they choose to open it manually
   };
 
   // Update handlePositivePromptChange to use updateSetting
@@ -5549,6 +5547,8 @@ const App = () => {
             onNavigateToGallery={handleNavigateToPromptSelector}
             onShowControlOverlay={() => setShowControlOverlay(true)}
             onThemeChange={handleThemeChange}
+            onCustomPromptChange={(prompt) => updateSetting('positivePrompt', prompt)}
+            currentCustomPrompt={positivePrompt}
           />
           
 
@@ -6735,6 +6735,8 @@ const App = () => {
           onThemeChange={handleThemeChange}
           selectedModel={selectedModel}
           onGallerySelect={handleNavigateToPromptSelector}
+          onCustomPromptChange={(prompt) => updateSetting('positivePrompt', prompt)}
+          currentCustomPrompt={positivePrompt}
         />
       )}
 

@@ -530,6 +530,49 @@ router.post('/cancel/:projectId', ensureSessionId, async (req, res) => {
   }
 });
 
+// Cost estimation endpoint
+router.post('/estimate-cost', ensureSessionId, async (req, res) => {
+  try {
+    const {
+      network = 'fast',
+      model,
+      imageCount = 1,
+      previewCount = 10,
+      stepCount = 7,
+      scheduler = 'DPM++ SDE',
+      guidance = 2,
+      contextImages = 0,
+      tokenType = 'spark'
+    } = req.body;
+
+    if (!model) {
+      return res.status(400).json({ error: 'Model is required for cost estimation' });
+    }
+
+    // Get client for this session
+    const clientAppId = req.headers['x-client-app-id'] || req.body.clientAppId || req.query.clientAppId || `user-${req.sessionId}-${Date.now()}`;
+    const client = await getSessionClient(req.sessionId, clientAppId);
+
+    // Call the SDK's estimateCost method
+    const result = await client.projects.estimateCost({
+      network,
+      model,
+      imageCount,
+      previewCount,
+      stepCount,
+      scheduler,
+      guidance,
+      contextImages,
+      tokenType
+    });
+
+    res.json(result);
+  } catch (error) {
+    console.error('Error estimating cost:', error);
+    res.status(500).json({ error: 'Failed to estimate cost', message: error.message });
+  }
+});
+
 // Add OPTIONS handler for the /generate endpoint
 router.options('/generate', (req, res) => {
   // CORS headers are now handled by Nginx

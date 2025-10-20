@@ -6,6 +6,10 @@
  */
 
 import { createProject as apiCreateProject, checkSogniStatus, cancelProject, clientAppId, disconnectSession } from './api';
+import urls from '../config/urls';
+
+// Get API base URL from config
+const API_BASE_URL = urls.apiUrl;
 
 // Shared interface for events
 interface SogniEventEmitter {
@@ -205,6 +209,7 @@ export class BackendSogniClient {
   public account: BackendAccount;
   public projects: {
     create: (params: Record<string, unknown>) => Promise<BackendProject>;
+    estimateCost: (params: Record<string, unknown>) => Promise<{ token: number } | null>;
     on: (event: string, callback: (...args: unknown[]) => void) => void;
   };
   private activeProjects: Map<string, BackendProject> = new Map();
@@ -238,6 +243,7 @@ export class BackendSogniClient {
     // Mock projects methods
     this.projects = {
       create: this.createProject.bind(this),
+      estimateCost: this.estimateCost.bind(this),
       on: () => {
         // This would handle global project events if needed
       }
@@ -952,6 +958,33 @@ export class BackendSogniClient {
     }
     
     return Promise.resolve(project);
+  }
+
+  /**
+   * Estimate the cost of a project before creating it
+   */
+  private async estimateCost(params: Record<string, unknown>): Promise<{ token: number } | null> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/sogni/estimate-cost`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Client-App-ID': this.appId
+        },
+        body: JSON.stringify(params)
+      });
+
+      if (!response.ok) {
+        throw new Error(`Cost estimation failed: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      return result;
+    } catch (error) {
+      console.warn('Cost estimation failed:', error);
+      return null;
+    }
   }
 }
 

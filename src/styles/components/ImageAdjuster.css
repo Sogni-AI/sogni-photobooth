@@ -233,6 +233,13 @@
   box-shadow: 0 4px 8px rgba(255, 94, 138, 0.3);
 }
 
+.confirm-button .cost-estimate {
+  font-size: 0.85em;
+  opacity: 0.95;
+  font-weight: 500;
+  margin-left: 4px;
+}
+
 /* iPad responsiveness - make Image Adjuster larger */
 @media (min-width: 768px) and (max-width: 1366px) {
   .image-adjuster-container {
