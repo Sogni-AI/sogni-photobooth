@@ -65,6 +65,7 @@ import ImageAdjuster from './components/shared/ImageAdjuster';
 // Import the UploadProgress component
 import UploadProgress from './components/shared/UploadProgress';
 import PromoPopup from './components/shared/PromoPopup';
+import OutOfCreditsPopup from './components/shared/OutOfCreditsPopup';
 import NetworkStatus from './components/shared/NetworkStatus';
 import ConfettiCelebration from './components/shared/ConfettiCelebration';
 // import AnalyticsDashboard from './components/admin/AnalyticsDashboard';
@@ -555,6 +556,9 @@ const App = () => {
   
   // Add state for promotional popup
   const [showPromoPopup, setShowPromoPopup] = useState(false);
+
+  // Add state for out of credits popup
+  const [showOutOfCreditsPopup, setShowOutOfCreditsPopup] = useState(false);
   
   // Connection state management
   const [connectionState, setConnectionState] = useState(getCurrentConnectionState());
@@ -636,6 +640,10 @@ const App = () => {
   const handlePromoPopupClose = () => {
     setShowPromoPopup(false);
     markPromoPopupShown();
+  };
+
+  const handleOutOfCreditsPopupClose = () => {
+    setShowOutOfCreditsPopup(false);
   };
 
   // Photos array - this will hold either regular photos or gallery photos depending on mode
@@ -4160,6 +4168,39 @@ const App = () => {
           return;
         }
 
+        // Check for insufficient funds error (code 4024)
+        if (error && typeof error === 'object' &&
+            (error.code === 4024 || (error.message && error.message.toLowerCase().includes('insufficient funds')))) {
+          console.error('❌ Insufficient funds - user is out of credits');
+
+          // Clear all timeouts when project fails
+          clearAllTimeouts();
+          activeProjectReference.current = null;
+
+          // Mark all generating photos as cancelled
+          setRegularPhotos(prevPhotos => {
+            return prevPhotos.map(photo => {
+              if (photo.generating) {
+                return {
+                  ...photo,
+                  generating: false,
+                  loading: false,
+                  error: 'INSUFFICIENT CREDITS',
+                  permanentError: true,
+                  statusText: 'Out of Credits',
+                  cancelled: true
+                };
+              }
+              return photo;
+            });
+          });
+
+          // Show the out of credits popup
+          setShowOutOfCreditsPopup(true);
+
+          return;
+        }
+
         // Check if this is a batch-cancelling error (like code 4007)
         if (error && typeof error === 'object') {
           // Import the shouldCancelBatchForError function logic here
@@ -7169,9 +7210,15 @@ const App = () => {
 
 
       {/* Promotional Popup */}
-      <PromoPopup 
+      <PromoPopup
         isOpen={showPromoPopup}
         onClose={handlePromoPopupClose}
+      />
+
+      {/* Out of Credits Popup */}
+      <OutOfCreditsPopup
+        isOpen={showOutOfCreditsPopup}
+        onClose={handleOutOfCreditsPopupClose}
       />
 
       {/* Network Status Notification */}

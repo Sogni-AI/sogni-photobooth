@@ -1,0 +1,321 @@
+/* Out of Credits Popup Styles */
+
+.out-of-credits-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100000;
+  padding: 20px;
+  backdrop-filter: blur(8px);
+}
+
+.out-of-credits-modal {
+  background: linear-gradient(135deg, #ff6b6b 0%, #ff8e53 100%);
+  border-radius: 28px;
+  max-width: 520px;
+  width: 100%;
+  padding: 48px 40px 40px;
+  box-shadow: 0 25px 70px rgba(0, 0, 0, 0.4);
+  position: relative;
+  animation: slideInBounce 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes slideInBounce {
+  0% {
+    opacity: 0;
+    transform: translateY(-40px) scale(0.9);
+  }
+  70% {
+    transform: translateY(5px) scale(1.02);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.out-of-credits-modal-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: rgba(255, 255, 255, 0.25);
+  border: none;
+  color: white;
+  font-size: 24px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  line-height: 1;
+  padding: 0;
+  font-weight: 300;
+  backdrop-filter: blur(10px);
+}
+
+.out-of-credits-modal-close:hover {
+  background: rgba(255, 255, 255, 0.35);
+  transform: scale(1.15) rotate(90deg);
+}
+
+.out-of-credits-modal-close:active {
+  transform: scale(0.95) rotate(90deg);
+}
+
+.out-of-credits-modal-header {
+  text-align: center;
+  margin-bottom: 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.out-of-credits-mascot {
+  margin-bottom: 24px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+}
+
+.out-of-credits-mascot .sloth-mascot {
+  width: 140px;
+  height: 140px;
+  object-fit: contain;
+  filter: drop-shadow(0 6px 20px rgba(0, 0, 0, 0.2));
+  animation: sadFloat 3s ease-in-out infinite;
+}
+
+@keyframes sadFloat {
+  0%, 100% {
+    transform: translateY(0) rotate(-2deg);
+  }
+  50% {
+    transform: translateY(-15px) rotate(2deg);
+  }
+}
+
+.out-of-credits-modal-header h2 {
+  color: white;
+  font-size: 32px;
+  font-weight: 800;
+  margin: 0;
+  text-shadow: 0 3px 12px rgba(0, 0, 0, 0.2);
+  letter-spacing: -0.5px;
+  line-height: 1.2;
+  max-width: 420px;
+}
+
+.out-of-credits-modal-content {
+  margin-bottom: 32px;
+}
+
+.out-of-credits-message {
+  background: white;
+  padding: 32px 28px;
+  border-radius: 20px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+.message-main {
+  color: #333;
+  font-size: 16px;
+  line-height: 1.5;
+  margin: 0 0 24px 0;
+  font-weight: 500;
+  text-align: center;
+  max-width: 380px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.credits-info {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.info-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: linear-gradient(135deg, #fff5f5 0%, #fff 100%);
+  border-radius: 14px;
+  border: 2px solid #ffe0e0;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  cursor: pointer;
+}
+
+.info-item:hover {
+  border-color: #ffc7c7;
+  transform: translateX(4px);
+  box-shadow: 0 4px 12px rgba(255, 107, 107, 0.15);
+}
+
+.info-icon {
+  font-size: 28px;
+  flex-shrink: 0;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+}
+
+.info-text {
+  color: #444;
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+.info-text strong {
+  color: #ff6b6b;
+  font-weight: 700;
+}
+
+.out-of-credits-modal-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+}
+
+.out-of-credits-get-credits-btn {
+  background: white;
+  color: #ff6b6b;
+  border: none;
+  padding: 18px 36px;
+  border-radius: 16px;
+  font-size: 19px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+  width: 100%;
+  justify-content: center;
+  letter-spacing: -0.3px;
+}
+
+.out-of-credits-get-credits-btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  background: #fff;
+}
+
+.out-of-credits-get-credits-btn:active {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+}
+
+.get-credits-arrow {
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  font-size: 22px;
+  font-weight: bold;
+}
+
+.out-of-credits-get-credits-btn:hover .get-credits-arrow {
+  transform: translateX(6px);
+}
+
+.out-of-credits-close-btn {
+  background: transparent;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  color: white;
+  padding: 14px 32px;
+  border-radius: 14px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+}
+
+.out-of-credits-close-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.7);
+  transform: scale(1.05);
+}
+
+.out-of-credits-close-btn:active {
+  transform: scale(0.98);
+}
+
+/* Mobile responsiveness */
+@media (max-width: 600px) {
+  .out-of-credits-modal {
+    padding: 36px 24px 32px;
+    max-width: 95%;
+    border-radius: 24px;
+  }
+
+  .out-of-credits-modal-header h2 {
+    font-size: 28px;
+  }
+
+  .out-of-credits-mascot .sloth-mascot {
+    width: 110px;
+    height: 110px;
+  }
+
+  .out-of-credits-message {
+    padding: 24px 20px;
+    border-radius: 16px;
+  }
+
+  .message-main {
+    font-size: 16px;
+    margin-bottom: 20px;
+  }
+
+  .info-item {
+    padding: 14px;
+    gap: 10px;
+  }
+
+  .info-icon {
+    font-size: 24px;
+  }
+
+  .info-text {
+    font-size: 15px;
+  }
+
+  .out-of-credits-get-credits-btn {
+    font-size: 17px;
+    padding: 16px 28px;
+  }
+
+  .out-of-credits-modal-close {
+    width: 36px;
+    height: 36px;
+    font-size: 20px;
+  }
+}
+
+/* Reduced motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .out-of-credits-modal {
+    animation: none;
+  }
+
+  .out-of-credits-mascot .sloth-mascot {
+    animation: none;
+  }
+
+  .info-item:hover {
+    transform: none;
+  }
+
+  .out-of-credits-get-credits-btn:hover {
+    transform: none;
+  }
+}
