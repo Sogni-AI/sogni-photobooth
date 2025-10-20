@@ -2764,229 +2764,6 @@ const PhotoGallery = ({
             </h1>
           </div>
 
-          {/* Portrait Type Selector */}
-          <div style={{
-            marginBottom: '16px'
-          }}>
-            <h2 style={{
-              fontFamily: '"Permanent Marker", cursive',
-              fontSize: '20px',
-              margin: '0 0 12px 0',
-              textAlign: 'center'
-            }}>
-              Pick your photo layout
-            </h2>
-            
-            {/* Portrait Type Buttons */}
-            <div style={{
-              display: 'flex',
-              gap: '12px',
-              marginBottom: '20px',
-              flexWrap: 'nowrap',
-              justifyContent: 'center'
-            }}>
-              <button 
-                onClick={() => onPortraitTypeChange && onPortraitTypeChange('headshot')}
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  padding: '4px',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease'
-                }}
-                onMouseOver={e => {
-                  e.currentTarget.style.transform = 'scale(1.05)';
-                }}
-                onMouseOut={e => {
-                  e.currentTarget.style.transform = 'scale(1)';
-                }}
-              >
-                {/* Polaroid frame with label inside - 2:3 aspect ratio */}
-                <div style={{
-                  width: '140px',
-                  background: 'white',
-                  padding: '12px',
-                  paddingBottom: '40px',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-                  position: 'relative'
-                }}>
-                  <div style={{
-                    width: '116px',
-                    height: '174px',
-                    overflow: 'hidden',
-                    background: '#f0f0f0'
-                  }}>
-                    <img 
-                      src="/gallery/sample-gallery-headshot-einstein.jpg"
-                      alt="Headshot example"
-                      style={{
-                        width: '100%',
-                        height: '100%',
-                        objectFit: 'cover',
-                        objectPosition: 'center center',
-                        display: 'block',
-                        imageRendering: 'high-quality',
-                        WebkitFontSmoothing: 'antialiased',
-                        MozOsxFontSmoothing: 'grayscale'
-                      }}
-                    />
-                  </div>
-                  <div style={{
-                    position: 'absolute',
-                    bottom: '12px',
-                    left: '12px',
-                    right: '12px',
-                    textAlign: 'center',
-                    fontSize: '14px',
-                    fontFamily: '"Permanent Marker", cursive',
-                    color: '#333',
-                    lineHeight: '1.2',
-                    textDecorationLine: portraitType === 'headshot' ? 'underline' : 'none',
-                    textDecorationColor: '#a855f7',
-                    textDecorationStyle: 'solid',
-                    textDecorationThickness: '2px',
-                    textUnderlineOffset: '2px'
-                  }}>
-                    Up Close
-                  </div>
-                </div>
-              </button>
-              
-              <button 
-                onClick={() => onPortraitTypeChange && onPortraitTypeChange('medium')}
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  padding: '4px',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease'
-                }}
-                onMouseOver={e => {
-                  e.currentTarget.style.transform = 'scale(1.05)';
-                }}
-                onMouseOut={e => {
-                  e.currentTarget.style.transform = 'scale(1)';
-                }}
-              >
-                {/* Polaroid frame with label inside - 2:3 aspect ratio */}
-                <div style={{
-                  width: '140px',
-                  background: 'white',
-                  padding: '12px',
-                  paddingBottom: '40px',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-                  position: 'relative'
-                }}>
-                  <div style={{
-                    width: '116px',
-                    height: '174px',
-                    overflow: 'hidden',
-                    background: '#f0f0f0'
-                  }}>
-                    <img 
-                      src="/gallery/sample-gallery-medium-body-jen.jpg"
-                      alt="Medium portrait example"
-                      style={{
-                        width: '100%',
-                        height: '100%',
-                        objectFit: 'cover',
-                        objectPosition: 'center center',
-                        display: 'block',
-                        imageRendering: 'high-quality',
-                        WebkitFontSmoothing: 'antialiased',
-                        MozOsxFontSmoothing: 'grayscale'
-                      }}
-                    />
-                  </div>
-                  <div style={{
-                    position: 'absolute',
-                    bottom: '12px',
-                    left: '12px',
-                    right: '12px',
-                    textAlign: 'center',
-                    fontSize: '14px',
-                    fontFamily: '"Permanent Marker", cursive',
-                    color: '#333',
-                    lineHeight: '1.2',
-                    textDecorationLine: portraitType === 'medium' ? 'underline' : 'none',
-                    textDecorationColor: '#a855f7',
-                    textDecorationStyle: 'solid',
-                    textDecorationThickness: '2px',
-                    textUnderlineOffset: '2px'
-                  }}>
-                    Waist-Up
-                  </div>
-                </div>
-              </button>
-              
-              <button 
-                onClick={() => onPortraitTypeChange && onPortraitTypeChange('fullbody')}
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  padding: '4px',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease'
-                }}
-                onMouseOver={e => {
-                  e.currentTarget.style.transform = 'scale(1.05)';
-                }}
-                onMouseOut={e => {
-                  e.currentTarget.style.transform = 'scale(1)';
-                }}
-              >
-                {/* Polaroid frame with label inside - 2:3 aspect ratio */}
-                <div style={{
-                  width: '140px',
-                  background: 'white',
-                  padding: '12px',
-                  paddingBottom: '40px',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-                  position: 'relative'
-                }}>
-                  <div style={{
-                    width: '116px',
-                    height: '174px',
-                    overflow: 'hidden',
-                    background: '#f0f0f0'
-                  }}>
-                    <img 
-                      src="/gallery/sample-gallery-full-body-mark.jpg"
-                      alt="Full body portrait example"
-                      style={{
-                        width: '100%',
-                        height: '100%',
-                        objectFit: 'cover',
-                        objectPosition: 'center center',
-                        display: 'block',
-                        imageRendering: 'high-quality',
-                        WebkitFontSmoothing: 'antialiased',
-                        MozOsxFontSmoothing: 'grayscale'
-                      }}
-                    />
-                  </div>
-                  <div style={{
-                    position: 'absolute',
-                    bottom: '12px',
-                    left: '12px',
-                    right: '12px',
-                    textAlign: 'center',
-                    fontSize: '14px',
-                    fontFamily: '"Permanent Marker", cursive',
-                    color: '#333',
-                    lineHeight: '1.2',
-                    textDecorationLine: portraitType === 'fullbody' ? 'underline' : 'none',
-                    textDecorationColor: '#a855f7',
-                    textDecorationStyle: 'solid',
-                    textDecorationThickness: '2px',
-                    textUnderlineOffset: '2px'
-                  }}>
-                    Wide Portrait
-                  </div>
-                </div>
-              </button>
-            </div>
-          </div>
 
           {/* Workflow Options */}
           <div style={{
@@ -3140,6 +2917,24 @@ const PhotoGallery = ({
       )}
 
 
+      {/* "Or select a style" text row - centered */}
+      {isPromptSelectorMode && (
+        <div style={{
+          display: 'flex',
+          justifyContent: 'center',
+          paddingBottom: '12px',
+          marginBottom: '0px'
+        }}>
+          <span style={{
+            fontSize: '20px',
+            fontFamily: '"Permanent Marker", cursive',
+            color: 'white'
+          }}>
+            Or select a style ↓
+          </span>
+        </div>
+      )}
+
       {/* Filter Styles Button and text - aligned on same line for prompt selector mode */}
       {isPromptSelectorMode && (
         <div style={{
@@ -3250,15 +3045,117 @@ const PhotoGallery = ({
             )}
           </div>
           
-          <span style={{
-            fontSize: '20px',
-            fontFamily: '"Permanent Marker", cursive',
-            opacity: showSearchInput ? 0 : 1,
-            visibility: showSearchInput ? 'hidden' : 'visible',
-            transition: 'opacity 0.2s ease, visibility 0.2s ease'
+          {/* Portrait Type Icons - Circular in center */}
+          <div style={{
+            display: 'flex',
+            gap: '12px',
+            alignItems: 'center',
+            justifyContent: 'center'
           }}>
-            Or select a style ↓
-          </span>
+            <button 
+              onClick={() => onPortraitTypeChange && onPortraitTypeChange('headshot')}
+              style={{
+                background: 'transparent',
+                border: portraitType === 'headshot' ? '3px solid #72e3f2' : 'none',
+                borderRadius: '50%',
+                padding: '0',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                width: '60px',
+                height: '60px',
+                overflow: 'hidden',
+                boxShadow: portraitType === 'headshot' ? '0 0 12px rgba(114, 227, 242, 0.6)' : '0 2px 8px rgba(0,0,0,0.2)'
+              }}
+              onMouseOver={e => {
+                e.currentTarget.style.transform = 'scale(1.1)';
+              }}
+              onMouseOut={e => {
+                e.currentTarget.style.transform = 'scale(1)';
+              }}
+              title="Up Close"
+            >
+              <img 
+                src="/gallery/sample-gallery-headshot-einstein.jpg"
+                alt="Up Close"
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                  display: 'block'
+                }}
+              />
+            </button>
+            
+            <button 
+              onClick={() => onPortraitTypeChange && onPortraitTypeChange('medium')}
+              style={{
+                background: 'transparent',
+                border: portraitType === 'medium' ? '3px solid #72e3f2' : 'none',
+                borderRadius: '50%',
+                padding: '0',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                width: '60px',
+                height: '60px',
+                overflow: 'hidden',
+                boxShadow: portraitType === 'medium' ? '0 0 12px rgba(114, 227, 242, 0.6)' : '0 2px 8px rgba(0,0,0,0.2)'
+              }}
+              onMouseOver={e => {
+                e.currentTarget.style.transform = 'scale(1.1)';
+              }}
+              onMouseOut={e => {
+                e.currentTarget.style.transform = 'scale(1)';
+              }}
+              title="Waist-Up"
+            >
+              <img 
+                src="/gallery/sample-gallery-medium-body-jen.jpg"
+                alt="Waist-Up"
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                  display: 'block'
+                }}
+              />
+            </button>
+            
+            <button 
+              onClick={() => onPortraitTypeChange && onPortraitTypeChange('fullbody')}
+              style={{
+                background: 'transparent',
+                border: portraitType === 'fullbody' ? '3px solid #72e3f2' : 'none',
+                borderRadius: '50%',
+                padding: '0',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                width: '60px',
+                height: '60px',
+                overflow: 'hidden',
+                boxShadow: portraitType === 'fullbody' ? '0 0 12px rgba(114, 227, 242, 0.6)' : '0 2px 8px rgba(0,0,0,0.2)'
+              }}
+              onMouseOver={e => {
+                e.currentTarget.style.transform = 'scale(1.1)';
+              }}
+              onMouseOut={e => {
+                e.currentTarget.style.transform = 'scale(1)';
+              }}
+              title="Wide Portrait"
+            >
+              <img 
+                src="/gallery/sample-gallery-full-body-mark.jpg"
+                alt="Wide Portrait"
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                  display: 'block'
+                }}
+              />
+            </button>
+          </div>
+
+          {/* Filter button on the right */}
           <button 
             onClick={() => setShowThemeFilters(!showThemeFilters)}
             style={{
