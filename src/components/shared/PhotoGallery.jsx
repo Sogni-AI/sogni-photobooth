@@ -2803,16 +2803,16 @@ const PhotoGallery = ({
               >
                 {/* Polaroid frame with label inside - 2:3 aspect ratio */}
                 <div style={{
-                  width: '87px',
+                  width: '140px',
                   background: 'white',
-                  padding: '7px',
-                  paddingBottom: '24px',
+                  padding: '12px',
+                  paddingBottom: '40px',
                   boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
                   position: 'relative'
                 }}>
                   <div style={{
-                    width: '72px',
-                    height: '108px',
+                    width: '116px',
+                    height: '174px',
                     overflow: 'hidden',
                     background: '#f0f0f0'
                   }}>
@@ -2833,11 +2833,11 @@ const PhotoGallery = ({
                   </div>
                   <div style={{
                     position: 'absolute',
-                    bottom: '7px',
-                    left: '7px',
-                    right: '7px',
+                    bottom: '12px',
+                    left: '12px',
+                    right: '12px',
                     textAlign: 'center',
-                    fontSize: '10px',
+                    fontSize: '14px',
                     fontFamily: '"Permanent Marker", cursive',
                     color: '#333',
                     lineHeight: '1.2',
@@ -2870,16 +2870,16 @@ const PhotoGallery = ({
               >
                 {/* Polaroid frame with label inside - 2:3 aspect ratio */}
                 <div style={{
-                  width: '87px',
+                  width: '140px',
                   background: 'white',
-                  padding: '7px',
-                  paddingBottom: '24px',
+                  padding: '12px',
+                  paddingBottom: '40px',
                   boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
                   position: 'relative'
                 }}>
                   <div style={{
-                    width: '72px',
-                    height: '108px',
+                    width: '116px',
+                    height: '174px',
                     overflow: 'hidden',
                     background: '#f0f0f0'
                   }}>
@@ -2900,11 +2900,11 @@ const PhotoGallery = ({
                   </div>
                   <div style={{
                     position: 'absolute',
-                    bottom: '7px',
-                    left: '7px',
-                    right: '7px',
+                    bottom: '12px',
+                    left: '12px',
+                    right: '12px',
                     textAlign: 'center',
-                    fontSize: '10px',
+                    fontSize: '14px',
                     fontFamily: '"Permanent Marker", cursive',
                     color: '#333',
                     lineHeight: '1.2',
@@ -2914,7 +2914,7 @@ const PhotoGallery = ({
                     textDecorationThickness: '2px',
                     textUnderlineOffset: '2px'
                   }}>
-                    Half Body
+                    Waist-Up
                   </div>
                 </div>
               </button>
@@ -2937,16 +2937,16 @@ const PhotoGallery = ({
               >
                 {/* Polaroid frame with label inside - 2:3 aspect ratio */}
                 <div style={{
-                  width: '87px',
+                  width: '140px',
                   background: 'white',
-                  padding: '7px',
-                  paddingBottom: '24px',
+                  padding: '12px',
+                  paddingBottom: '40px',
                   boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
                   position: 'relative'
                 }}>
                   <div style={{
-                    width: '72px',
-                    height: '108px',
+                    width: '116px',
+                    height: '174px',
                     overflow: 'hidden',
                     background: '#f0f0f0'
                   }}>
@@ -2967,11 +2967,11 @@ const PhotoGallery = ({
                   </div>
                   <div style={{
                     position: 'absolute',
-                    bottom: '7px',
-                    left: '7px',
-                    right: '7px',
+                    bottom: '12px',
+                    left: '12px',
+                    right: '12px',
                     textAlign: 'center',
-                    fontSize: '10px',
+                    fontSize: '14px',
                     fontFamily: '"Permanent Marker", cursive',
                     color: '#333',
                     lineHeight: '1.2',
@@ -2981,7 +2981,7 @@ const PhotoGallery = ({
                     textDecorationThickness: '2px',
                     textUnderlineOffset: '2px'
                   }}>
-                    Full Body
+                    Wide Portrait
                   </div>
                 </div>
               </button>
