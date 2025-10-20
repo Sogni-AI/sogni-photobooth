@@ -141,19 +141,10 @@ echo "✅ Production environment file (.env.production) deployed successfully to
 
 # Setup and start services on remote server
 show_step "Setting up and starting services on remote server"
-ssh $REMOTE_HOST << EOF
-  # Fix any shell issues by setting up a proper BASH environment
-  export BASH_ENV=/dev/null
-  export ENV=/dev/null
-  
-  # Ensure shell works properly with extglob patterns
-  shopt -s extglob 2>/dev/null || true
-  
-  # Bypass problematic .functions file if it exists and contains the error
-  if grep -q "rm -i -v !(*.gz)" ~/.functions 2>/dev/null; then
-    echo "🔧 Detected problematic shell function, bypassing..."
-    BASH_ENV=/dev/null bash -l || true
-  fi
+ssh $REMOTE_HOST /bin/bash --noprofile --norc << 'EOF'
+  # Use a clean bash environment without loading any profile files
+  # This prevents the problematic .functions file from being sourced
+  set -e  # Exit on error
 
   # Check if port 3001 is already in use and kill the process if needed
   if lsof -i:3001 > /dev/null 2>&1; then
@@ -170,15 +161,30 @@ ssh $REMOTE_HOST << EOF
   # Install backend dependencies
   cd /var/www/photobooth.sogni.ai-server
   echo "📦 Installing backend dependencies..."
-  npm install --omit=dev
+  # Use --no-fund and --no-audit to prevent interactive prompts
+  # Use --loglevel=error to reduce output noise
+  npm install --omit=dev --no-fund --no-audit --prefer-offline --loglevel=error
+  
+  if [ $? -ne 0 ]; then
+    echo "❌ npm install failed! Check network connectivity and package.json"
+    exit 1
+  fi
+  echo "✅ Backend dependencies installed successfully"
   
   # Ensure correct permissions for environment file
   chmod 600 .env
   
   # Install PM2 if not already installed
   if ! command -v pm2 &> /dev/null; then
-    echo "Installing PM2 process manager..."
-    npm install -g pm2
+    echo "📦 Installing PM2 process manager..."
+    npm install -g pm2 --no-fund --no-audit --loglevel=error
+    if [ $? -ne 0 ]; then
+      echo "❌ PM2 installation failed!"
+      exit 1
+    fi
+    echo "✅ PM2 installed successfully"
+  else
+    echo "✅ PM2 is already installed"
   fi
   
   # Start or restart the backend using PM2
