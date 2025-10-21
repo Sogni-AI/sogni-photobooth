@@ -47,6 +47,7 @@ export const getPhotoHashtag = (photo) => {
  * @param {string} [params.prompt] - User's prompt (for contest entries)
  * @param {string} [params.username] - User's username (for contest entries)
  * @param {string} [params.address] - User's wallet address (for contest entries)
+ * @param {Object} [params.metadata] - Additional metadata (model, steps, seed, etc.)
  * @returns {Promise<void>}
  */
 export const shareToTwitter = async ({
@@ -67,6 +68,7 @@ export const shareToTwitter = async ({
   prompt = null,
   username = null,
   address = null,
+  metadata = null,
 }) => {
   if (photoIndex === null || !photos[photoIndex] || !photos[photoIndex].images || !photos[photoIndex].images[0]) {
     console.error('No image selected or image URL is missing for sharing.');
@@ -240,7 +242,8 @@ export const shareToTwitter = async ({
             halloweenContext, // Include Halloween context flag
             prompt, // Include user's prompt for contest
             username, // Include username for contest
-            address // Include wallet address for contest
+            address, // Include wallet address for contest
+            metadata // Include additional metadata for contest
           }),
         });
 

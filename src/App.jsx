@@ -2240,6 +2240,13 @@ const App = () => {
       prompt: settings.positivePrompt || null,
       username: authState.user?.username || null,
       address: authState.user?.email || null, // Using email as identifier for now
+      metadata: {
+        model: selectedModel,
+        inferenceSteps,
+        seed: photos[twitterPhotoIndex]?.seed || null,
+        guidance: isFluxKontextModel(selectedModel) ? guidance : promptGuidance,
+        aspectRatio
+      },
       onSuccess: async () => {
         // Show success toast using the new toast system - special message for Halloween contest
         if (settings.halloweenContext) {

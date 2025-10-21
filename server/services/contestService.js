@@ -8,7 +8,8 @@ import {
   storeContestEntry as redisStoreEntry,
   getContestEntries as redisGetEntries,
   getContestEntry as redisGetEntry,
-  getContestStats as redisGetStats
+  getContestStats as redisGetStats,
+  deleteContestEntry as redisDeleteEntry
 } from './redisService.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -290,6 +291,25 @@ export async function getContestStats(contestId) {
       oldestEntry: null,
       newestEntry: null
     };
+  }
+}
+
+/**
+ * Delete a contest entry
+ * @param {string} contestId - Contest identifier
+ * @param {string} entryId - Entry ID
+ * @returns {Promise<boolean>} - Success status
+ */
+export async function deleteContestEntry(contestId, entryId) {
+  try {
+    if (redisReady()) {
+      return await redisDeleteEntry(contestId, entryId);
+    }
+    // No filesystem-only delete needed as the route handles file deletion
+    return true;
+  } catch (error) {
+    console.error('[Contest] Error deleting contest entry from Redis:', error);
+    return false;
   }
 }
 

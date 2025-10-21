@@ -592,4 +592,34 @@ export const getContestStats = async (contestId) => {
       newestEntry: null
     };
   }
+};
+
+/**
+ * Delete a contest entry from Redis
+ * @param {string} contestId - Contest identifier
+ * @param {string} entryId - Entry ID
+ * @returns {Promise<boolean>} - Success status
+ */
+export const deleteContestEntry = async (contestId, entryId) => {
+  if (!redisClient.isOpen) {
+    console.warn('[Redis] Not connected, cannot delete contest entry');
+    return false;
+  }
+
+  try {
+    const entryKey = `${CONTEST_ENTRY_PREFIX}${contestId}:${entryId}`;
+    const indexKey = `${CONTEST_INDEX_PREFIX}${contestId}`;
+
+    // Delete the entry data
+    await redisClient.del(entryKey);
+
+    // Remove from sorted set
+    await redisClient.zRem(indexKey, entryId);
+
+    console.log(`[Redis] Deleted contest entry ${contestId}:${entryId}`);
+    return true;
+  } catch (error) {
+    console.error('[Redis] Error deleting contest entry:', error);
+    return false;
+  }
 }; 

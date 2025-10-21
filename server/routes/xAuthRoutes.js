@@ -172,7 +172,7 @@ const getSessionId = (req, res, next) => {
 router.post('/start', getSessionId, async (req, res) => {
   try {
     // Check for required data
-    const { imageUrl, message, shareUrl, halloweenContext, prompt, username, address } = req.body;
+    const { imageUrl, message, shareUrl, halloweenContext, prompt, username, address, metadata } = req.body;
     if (!imageUrl) {
       return res.status(400).json({ message: 'No image URL provided' });
     }
@@ -277,6 +277,7 @@ router.post('/start', getSessionId, async (req, res) => {
                 tweetId: tweetResult.data.id,
                 tweetUrl,
                 metadata: {
+                  ...(metadata || {}),
                   message: message || '',
                   shareUrl: shareUrl || '',
                   timestamp: Date.now(),
@@ -330,7 +331,8 @@ router.post('/start', getSessionId, async (req, res) => {
       halloweenContext: halloweenContext || false,
       prompt: prompt || null,
       username: username || null,
-      address: address || null
+      address: address || null,
+      metadata: metadata || null
     };
     
     if (redisReady()) {
@@ -501,6 +503,7 @@ router.get('/callback', async (req, res) => {
             tweetId: tweetResult.data.id,
             tweetUrl,
             metadata: {
+              ...(oauthData.metadata || {}),
               message: message || '',
               shareUrl: shareUrl || '',
               timestamp: Date.now(),

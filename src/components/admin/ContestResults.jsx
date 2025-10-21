@@ -75,6 +75,33 @@ const ContestResults = () => {
     fetchStats();
   };
 
+  const handleDelete = async (entryId) => {
+    if (!confirm('Are you sure you want to delete this contest entry?')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/contest/${contestId}/entry/${entryId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete entry');
+      }
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Refresh the list
+        fetchEntries();
+        fetchStats();
+      }
+    } catch (err) {
+      console.error('Error deleting entry:', err);
+      alert('Failed to delete entry: ' + err.message);
+    }
+  };
+
   return (
     <div className="contest-results">
       <header className="contest-results-header">
@@ -170,6 +197,26 @@ const ContestResults = () => {
                     <div className="entry-timestamp">
                       <strong>Submitted:</strong> {formatDate(entry.timestamp)}
                     </div>
+                    {entry.metadata?.model && (
+                      <div className="entry-model">
+                        <strong>Model:</strong> {entry.metadata.model.replace('coreml-', '').replace('flux1-dev-kontext_fp8_scaled', 'Flux.1 Kontext')}
+                      </div>
+                    )}
+                    {entry.metadata?.inferenceSteps && (
+                      <div className="entry-steps">
+                        <strong>Steps:</strong> {entry.metadata.inferenceSteps}
+                      </div>
+                    )}
+                    {entry.metadata?.seed && (
+                      <div className="entry-seed">
+                        <strong>Seed:</strong> {entry.metadata.seed}
+                      </div>
+                    )}
+                    {entry.metadata?.guidance && (
+                      <div className="entry-guidance">
+                        <strong>Guidance:</strong> {entry.metadata.guidance}
+                      </div>
+                    )}
                     {entry.tweetUrl && (
                       <div className="entry-tweet">
                         <a
@@ -187,6 +234,15 @@ const ContestResults = () => {
                         <strong>Email:</strong> {entry.address}
                       </div>
                     )}
+                  </div>
+                  <div className="entry-actions">
+                    <button
+                      onClick={() => handleDelete(entry.id)}
+                      className="delete-btn"
+                      title="Delete this entry"
+                    >
+                      🗑️ Delete
+                    </button>
                   </div>
                 </div>
               </div>

@@ -6,7 +6,8 @@ import {
   saveContestEntry,
   getContestEntries,
   getContestEntry,
-  getContestStats
+  getContestStats,
+  deleteContestEntry
 } from '../services/contestService.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -184,6 +185,63 @@ router.get('/:contestId/image/:filename', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to serve image',
+      error: error.message
+    });
+  }
+});
+
+// DELETE /api/contest/:contestId/entry/:entryId - Delete a contest entry
+router.delete('/:contestId/entry/:entryId', async (req, res) => {
+  try {
+    const { contestId, entryId } = req.params;
+
+    // Get the entry first to find the image filename
+    const entry = await getContestEntry(contestId, entryId);
+
+    if (!entry) {
+      return res.status(404).json({
+        success: false,
+        message: 'Contest entry not found'
+      });
+    }
+
+    // Delete the image file if it exists
+    if (entry.imageFilename) {
+      const uploadsDir = path.join(process.cwd(), 'uploads');
+      const imagePath = path.join(uploadsDir, 'contest', contestId, entry.imageFilename);
+      
+      try {
+        await fs.unlink(imagePath);
+        console.log(`[Contest] Deleted image file: ${imagePath}`);
+      } catch (err) {
+        console.warn(`[Contest] Could not delete image file: ${imagePath}`, err);
+      }
+    }
+
+    // Delete metadata JSON file
+    const uploadsDir = path.join(process.cwd(), 'uploads');
+    const metadataPath = path.join(uploadsDir, 'contest', contestId, `${entryId}.json`);
+    try {
+      await fs.unlink(metadataPath);
+      console.log(`[Contest] Deleted metadata file: ${metadataPath}`);
+    } catch (err) {
+      console.warn(`[Contest] Could not delete metadata file: ${metadataPath}`, err);
+    }
+
+    // Delete from Redis if available
+    if (redisReady()) {
+      await deleteContestEntry(contestId, entryId);
+    }
+
+    res.json({
+      success: true,
+      message: 'Contest entry deleted successfully'
+    });
+  } catch (error) {
+    console.error('[Contest] Error deleting entry:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete contest entry',
       error: error.message
     });
   }
