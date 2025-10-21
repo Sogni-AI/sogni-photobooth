@@ -91,6 +91,12 @@ export async function saveContestEntry({
       }
     }
 
+    // Determine the API base URL based on environment
+    const isDev = process.env.NODE_ENV !== 'production';
+    const apiBaseUrl = isDev 
+      ? 'http://localhost:3001' 
+      : 'https://photobooth-api.sogni.ai';
+
     // Create contest entry object
     const entry = {
       id: entryId,
@@ -103,7 +109,7 @@ export async function saveContestEntry({
       tweetUrl: tweetUrl || null,
       imageFilename,
       imagePath: savedImagePath,
-      imageUrl: imageFilename ? `/api/contest/${contestId}/image/${imageFilename}` : null,
+      imageUrl: imageFilename ? `${apiBaseUrl}/api/contest/${contestId}/image/${imageFilename}` : null,
       metadata: {
         ...metadata,
         submittedAt: new Date(timestamp).toISOString()
