@@ -573,9 +573,24 @@ export const getContestStats = async (contestId) => {
       }
     }
 
-    // Get unique users count (approximate - would need to iterate all entries for exact count)
-    // For now, we'll estimate based on a sample
-    const uniqueUsers = totalEntries; // Placeholder - can be improved with SET tracking
+    // Count unique users by iterating through all entries
+    let uniqueUsers = 0;
+    if (totalEntries > 0) {
+      const allEntryIds = await redisClient.zRange(indexKey, 0, -1);
+      const uniqueUserSet = new Set();
+      
+      for (const entryId of allEntryIds) {
+        const entryKey = `${CONTEST_ENTRY_PREFIX}${contestId}:${entryId}`;
+        const data = await redisClient.get(entryKey);
+        if (data) {
+          const entry = JSON.parse(data);
+          const userIdentifier = entry.address || entry.username || 'anonymous';
+          uniqueUserSet.add(userIdentifier);
+        }
+      }
+      
+      uniqueUsers = uniqueUserSet.size;
+    }
 
     return {
       totalEntries,
