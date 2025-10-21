@@ -524,6 +524,10 @@ const App = () => {
     localStorage.removeItem('sogni-lastEditablePhoto');
     console.log('🗑️ Cleared saved photo data from localStorage');
 
+    // Clear blocked prompts
+    localStorage.removeItem('sogni_blocked_prompts');
+    console.log('🗑️ Cleared blocked prompts from localStorage');
+
     // Then reset both photo states to the default Einstein photo
     // These functions will unconditionally load and set the Einstein photo
     await loadDefaultEinsteinPhoto();
@@ -3724,6 +3728,17 @@ const App = () => {
         return isFluxKontext ? stylePrompts : getEnabledPrompts(currentThemeState, stylePrompts);
       };
 
+      // Get blocked prompts from localStorage to filter them out
+      let blockedPrompts = [];
+      try {
+        const blocked = localStorage.getItem('sogni_blocked_prompts');
+        if (blocked) {
+          blockedPrompts = JSON.parse(blocked);
+        }
+      } catch (e) {
+        console.warn('Error reading blocked prompts:', e);
+      }
+
       // Prompt logic: use context state
       let finalPositivePrompt = positivePrompt.trim();
       
@@ -3743,8 +3758,17 @@ const App = () => {
         // Use one prompt from each enabled theme group in order
         finalPositivePrompt = getOneOfEachPrompts(currentThemeState, stylePrompts, numImages);
       } else {
-        // Use the selected style prompt, or fallback to user's custom text
-        finalPositivePrompt = stylePrompts[selectedStyle] || finalPositivePrompt || '';
+        // Use the selected style prompt, but skip if it's blocked
+        if (blockedPrompts.includes(selectedStyle)) {
+          console.log(`🚫 Selected style "${selectedStyle}" is blocked, falling back to random style`);
+          // Fall back to random style from enabled prompts
+          const filteredPrompts = getFilteredPromptsForRandom();
+          const randomStyle = getRandomStyle(filteredPrompts);
+          finalPositivePrompt = filteredPrompts[randomStyle] || finalPositivePrompt || '';
+        } else {
+          // Use the selected style prompt, or fallback to user's custom text
+          finalPositivePrompt = stylePrompts[selectedStyle] || finalPositivePrompt || '';
+        }
       }
 
       // Inject worker preferences into the prompt

@@ -766,7 +766,15 @@ html body .photo-action-buttons .action-button,
   cursor: pointer !important;
 }
 
-/* Show hide button, refresh button, and favorite button on photo hover - only for grid photos (not selected) and only on non-touch devices */
+.photo-block-btn-batch {
+  opacity: 0 !important;
+  transform: scale(0.8) !important;
+  transition: all 0.2s ease !important;
+  pointer-events: auto !important;
+  cursor: pointer !important;
+}
+
+/* Show hide button, refresh button, block button, and favorite button on photo hover - only for grid photos (not selected) and only on non-touch devices */
 @media (hover: hover) and (pointer: fine) {
   .film-frame:not(.selected):hover .photo-hide-btn {
     opacity: 1 !important;
@@ -775,6 +783,12 @@ html body .photo-action-buttons .action-button,
   }
 
   .film-frame:not(.selected):hover .photo-refresh-btn {
+    opacity: 1 !important;
+    transform: scale(1) !important;
+    pointer-events: auto !important;
+  }
+
+  .film-frame:not(.selected):hover .photo-block-btn-batch {
     opacity: 1 !important;
     transform: scale(1) !important;
     pointer-events: auto !important;
@@ -789,6 +803,11 @@ html body .photo-action-buttons .action-button,
   .film-frame:not(.selected):hover .photo-favorite-btn-batch {
     opacity: 1 !important;
     transform: scale(1) !important;
+    pointer-events: auto !important;
+  }
+
+  .film-frame:not(.selected):hover .photo-block-btn {
+    opacity: 1 !important;
     pointer-events: auto !important;
   }
 }

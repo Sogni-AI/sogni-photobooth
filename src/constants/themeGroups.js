@@ -28,6 +28,17 @@ export const getDefaultThemeGroupState = () => {
 export const getEnabledPrompts = (themeGroupState, allPrompts) => {
   const enabledPromptNames = [];
   
+  // Get blocked prompts from localStorage
+  let blockedPrompts = [];
+  try {
+    const blocked = localStorage.getItem('sogni_blocked_prompts');
+    if (blocked) {
+      blockedPrompts = JSON.parse(blocked);
+    }
+  } catch (e) {
+    console.warn('Error reading blocked prompts:', e);
+  }
+  
   Object.entries(THEME_GROUPS).forEach(([groupId, group]) => {
     if (themeGroupState[groupId]) {
       if (groupId === 'favorites') {
@@ -47,15 +58,15 @@ export const getEnabledPrompts = (themeGroupState, allPrompts) => {
     }
   });
   
-  // Filter the allPrompts object to only include enabled prompts
+  // Filter the allPrompts object to only include enabled prompts (and exclude blocked prompts)
   const enabledPrompts = {};
   Object.entries(allPrompts).forEach(([key, value]) => {
     // Always include custom and random workflow options if they exist
     if (key === 'custom' || key === 'random') {
       enabledPrompts[key] = value;
     }
-    // Include other prompts only if they're in the enabled list
-    else if (enabledPromptNames.includes(key)) {
+    // Include other prompts only if they're in the enabled list AND not blocked
+    else if (enabledPromptNames.includes(key) && !blockedPrompts.includes(key)) {
       enabledPrompts[key] = value;
     }
   });
@@ -69,6 +80,17 @@ export const getEnabledPrompts = (themeGroupState, allPrompts) => {
 export const getOneOfEachPrompts = (themeGroupState, allPrompts, count) => {
   const enabledGroups = [];
   
+  // Get blocked prompts from localStorage
+  let blockedPrompts = [];
+  try {
+    const blocked = localStorage.getItem('sogni_blocked_prompts');
+    if (blocked) {
+      blockedPrompts = JSON.parse(blocked);
+    }
+  } catch (e) {
+    console.warn('Error reading blocked prompts:', e);
+  }
+  
   // Get enabled groups in their defined order
   Object.entries(THEME_GROUPS).forEach(([groupId, group]) => {
     if (themeGroupState[groupId]) {
@@ -78,10 +100,12 @@ export const getOneOfEachPrompts = (themeGroupState, allPrompts, count) => {
           const favorites = localStorage.getItem('sogni_favorite_images');
           if (favorites) {
             const favoriteIds = JSON.parse(favorites);
-            if (favoriteIds.length > 0) {
+            // Filter out blocked prompts from favorites
+            const unblocked = favoriteIds.filter(id => !blockedPrompts.includes(id));
+            if (unblocked.length > 0) {
               enabledGroups.push({
                 name: group.name,
-                prompts: favoriteIds
+                prompts: unblocked
               });
             }
           }
@@ -89,7 +113,14 @@ export const getOneOfEachPrompts = (themeGroupState, allPrompts, count) => {
           console.warn('Error reading favorite images for oneOfEach:', e);
         }
       } else {
-        enabledGroups.push(group);
+        // Filter out blocked prompts from group prompts
+        const unblockedPrompts = group.prompts.filter(p => !blockedPrompts.includes(p));
+        if (unblockedPrompts.length > 0) {
+          enabledGroups.push({
+            name: group.name,
+            prompts: unblockedPrompts
+          });
+        }
       }
     }
   });
@@ -98,6 +129,7 @@ export const getOneOfEachPrompts = (themeGroupState, allPrompts, count) => {
   if (enabledGroups.length === 0) {
     const allPromptKeys = Object.keys(allPrompts)
       .filter(key => key !== 'custom' && key !== 'random' && key !== 'randomMix' && key !== 'oneOfEach')
+      .filter(key => !blockedPrompts.includes(key)) // Filter out blocked prompts
       .sort();
     
     const selectedPrompts = [];

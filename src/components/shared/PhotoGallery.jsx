@@ -9,7 +9,7 @@ import { createPolaroidImage } from '../../utils/imageProcessing';
 import { downloadImageMobile, enableMobileImageDownload } from '../../utils/mobileDownload';
 import { isMobile, styleIdToDisplay } from '../../utils/index';
 import { THEME_GROUPS, getDefaultThemeGroupState, getEnabledPrompts } from '../../constants/themeGroups';
-import { getThemeGroupPreferences, saveThemeGroupPreferences, getFavoriteImages, toggleFavoriteImage, saveFavoriteImages } from '../../utils/cookies';
+import { getThemeGroupPreferences, saveThemeGroupPreferences, getFavoriteImages, toggleFavoriteImage, saveFavoriteImages, getBlockedPrompts, blockPrompt } from '../../utils/cookies';
 import { isFluxKontextModel, SAMPLE_GALLERY_CONFIG, getQRWatermarkConfig } from '../../constants/settings';
 import { themeConfigService } from '../../services/themeConfig';
 import { useApp } from '../../context/AppContext';
@@ -221,6 +221,9 @@ const PhotoGallery = ({
 
   // State for favorites
   const [favoriteImageIds, setFavoriteImageIds] = useState(() => getFavoriteImages());
+
+  // State for blocked prompts
+  const [blockedPromptIds, setBlockedPromptIds] = useState(() => getBlockedPrompts());
 
   // State for video overlay
   const [showVideo, setShowVideo] = useState(false);
@@ -782,6 +785,33 @@ const PhotoGallery = ({
     setFavoriteImageIds([]);
   }, []);
 
+  // Handle block prompt - prevents NSFW-prone prompts from being used
+  const handleBlockPrompt = useCallback((promptKey, photoIndex) => {
+    if (!promptKey) {
+      console.log('🚫 BLOCK PROMPT - Skipped: No promptKey available');
+      return;
+    }
+    
+    console.log('🚫 Blocking prompt:', promptKey);
+    
+    // Add to blocked list
+    blockPrompt(promptKey);
+    const newBlocked = getBlockedPrompts();
+    setBlockedPromptIds(newBlocked);
+    
+    // Remove from favorites if it's there
+    if (favoriteImageIds.includes(promptKey)) {
+      toggleFavoriteImage(promptKey);
+      const newFavorites = getFavoriteImages();
+      setFavoriteImageIds(newFavorites);
+    }
+    
+    // Hide the photo immediately (like clicking X button)
+    if (photoIndex !== undefined && photoIndex !== null) {
+      setPhotos(currentPhotos => currentPhotos.filter((_, index) => index !== photoIndex));
+    }
+  }, [favoriteImageIds, setPhotos]);
+
   // Get consistent photoId for favorites
   // Only use promptKey - this allows favoriting styles that can be reused for generation
   // Returns null if no promptKey (custom/random styles can't be favorited)
@@ -807,6 +837,11 @@ const PhotoGallery = ({
 
     // Build a list of all photos that should be shown based on enabled filters (OR logic)
     const shouldShowPhoto = (photo) => {
+      // First, filter out blocked prompts
+      if (photo.promptKey && blockedPromptIds.includes(photo.promptKey)) {
+        return false;
+      }
+      
       // Track if any filter is enabled
       const enabledFilters = [];
       
@@ -865,7 +900,7 @@ const PhotoGallery = ({
     }
 
     return filtered;
-  }, [isPromptSelectorMode, photos, themeGroupState, stylePrompts, selectedModel, searchTerm, favoriteImageIds]);
+  }, [isPromptSelectorMode, photos, themeGroupState, stylePrompts, selectedModel, searchTerm, favoriteImageIds, blockedPromptIds]);
 
   // Get readable style display text for photo labels (no hashtags)
   const getStyleDisplayText = useCallback((photo) => {
@@ -3662,6 +3697,46 @@ const PhotoGallery = ({
                   {/* Hide button, refresh button, and favorite button for loading/error state - only show on hover for grid photos */}
                   {!isSelected && !photo.isOriginal && !photo.isGalleryImage && (
                     <>
+                      {/* Block prompt button - show for batch-generated images on desktop */}
+                      {!isMobile() && !photo.generating && !photo.loading && photo.promptKey && (photo.stylePrompt || photo.positivePrompt) && (
+                        <button
+                          className="photo-block-btn-batch"
+                        onMouseDown={(e) => {
+                          e.stopPropagation();
+                          handleBlockPrompt(photo.promptKey, index);
+                        }}
+                        onMouseOver={(e) => {
+                          e.currentTarget.style.background = 'rgba(220, 53, 69, 0.9)';
+                        }}
+                        onMouseOut={(e) => {
+                          e.currentTarget.style.background = 'rgba(0, 0, 0, 0.7)';
+                        }}
+                        style={{
+                          position: 'absolute',
+                          top: '4px',
+                          right: '80px',
+                          background: 'rgba(0, 0, 0, 0.7)',
+                          color: 'white',
+                          border: 'none',
+                            width: '20px',
+                            height: '20px',
+                            borderRadius: '50%',
+                            fontSize: '11px',
+                            fontWeight: 'bold',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            zIndex: 999,
+                            boxShadow: '0 1px 3px rgba(0,0,0,0.5)',
+                            opacity: '0',
+                            transform: 'scale(0.8)'
+                          }}
+                          title="Never use this prompt"
+                        >
+                          ⚠️
+                        </button>
+                      )}
                       {/* Favorite heart button - show for batch-generated images on desktop */}
                       {!isMobile() && !photo.generating && !photo.loading && photo.promptKey && (photo.stylePrompt || photo.positivePrompt) && (
                         <button
@@ -3798,6 +3873,61 @@ const PhotoGallery = ({
                     </>
                   )}
                 </div>
+
+                {/* Block prompt button - show in prompt selector mode for desktop (only if photo has promptKey) */}
+                {isPromptSelectorMode && !isMobile() && photo.promptKey && (
+                  <div
+                    className="photo-block-btn"
+                    onClickCapture={(e) => {
+                      e.stopPropagation();
+                      handleBlockPrompt(photo.promptKey, index);
+                    }}
+                    onMouseDownCapture={(e) => {
+                      e.stopPropagation();
+                    }}
+                    style={{
+                      position: 'absolute',
+                      top: '10px',
+                      right: '35px',
+                      width: '40px',
+                      height: '40px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      zIndex: 99999,
+                      opacity: '0',
+                      transition: 'opacity 0.2s ease',
+                      pointerEvents: 'all'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.opacity = '1';
+                      const innerDiv = e.currentTarget.querySelector('div');
+                      if (innerDiv) innerDiv.style.background = 'rgba(220, 53, 69, 0.9)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.opacity = '0';
+                      const innerDiv = e.currentTarget.querySelector('div');
+                      if (innerDiv) innerDiv.style.background = 'rgba(0, 0, 0, 0.7)';
+                    }}
+                    title="Never use this prompt"
+                  >
+                    <div style={{
+                      width: '20px',
+                      height: '20px',
+                      borderRadius: '50%',
+                      background: 'rgba(0, 0, 0, 0.7)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '11px',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                      transition: 'background 0.2s ease'
+                    }}>
+                      ⚠️
+                    </div>
+                  </div>
+                )}
 
                 {/* Favorite heart button - show in prompt selector mode for desktop (only if photo has promptKey) */}
                 {isPromptSelectorMode && !isMobile() && photo.promptKey && (
@@ -4499,6 +4629,46 @@ const PhotoGallery = ({
                 {/* Hide button, refresh button, and favorite button - only show on hover for grid photos (not popup) and when image is loaded */}
                 {!isSelected && isLoaded && !photo.isOriginal && !photo.isGalleryImage && (
                   <>
+                    {/* Block prompt button - show for batch-generated images on desktop */}
+                    {!isMobile() && photo.promptKey && (photo.stylePrompt || photo.positivePrompt) && (
+                      <button
+                        className="photo-block-btn-batch"
+                        onMouseDown={(e) => {
+                          e.stopPropagation();
+                          handleBlockPrompt(photo.promptKey, index);
+                        }}
+                        onMouseOver={(e) => {
+                          e.currentTarget.style.background = 'rgba(220, 53, 69, 0.9)';
+                        }}
+                        onMouseOut={(e) => {
+                          e.currentTarget.style.background = 'rgba(0, 0, 0, 0.7)';
+                        }}
+                        style={{
+                          position: 'absolute',
+                          top: '4px',
+                          right: '80px',
+                          background: 'rgba(0, 0, 0, 0.7)',
+                          color: 'white',
+                          border: 'none',
+                          width: '20px',
+                          height: '20px',
+                          borderRadius: '50%',
+                          fontSize: '11px',
+                          fontWeight: 'bold',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          zIndex: 999,
+                          boxShadow: '0 1px 3px rgba(0,0,0,0.5)',
+                          opacity: '0',
+                          transform: 'scale(0.8)'
+                        }}
+                        title="Never use this prompt"
+                      >
+                        ⚠️
+                      </button>
+                    )}
                     {/* Favorite heart button - show for batch-generated images on desktop */}
                     {!isMobile() && photo.promptKey && (photo.stylePrompt || photo.positivePrompt) && (
                       <button
@@ -4635,6 +4805,61 @@ const PhotoGallery = ({
                   </>
                 )}
               </div>
+
+              {/* Block prompt button - show in prompt selector mode for desktop */}
+              {isPromptSelectorMode && !isMobile() && photo.promptKey && (
+              <div
+                className="photo-block-btn"
+                onClickCapture={(e) => {
+                  e.stopPropagation();
+                  handleBlockPrompt(photo.promptKey, index);
+                }}
+                onMouseDownCapture={(e) => {
+                  e.stopPropagation();
+                }}
+                style={{
+                  position: 'absolute',
+                  top: '10px',
+                  right: '35px',
+                  width: '40px',
+                  height: '40px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  zIndex: 99999,
+                  opacity: '0',
+                  transition: 'opacity 0.2s ease',
+                  pointerEvents: 'all'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.opacity = '1';
+                  const innerDiv = e.currentTarget.querySelector('div');
+                  if (innerDiv) innerDiv.style.background = 'rgba(220, 53, 69, 0.9)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.opacity = '0';
+                  const innerDiv = e.currentTarget.querySelector('div');
+                  if (innerDiv) innerDiv.style.background = 'rgba(0, 0, 0, 0.7)';
+                }}
+                title="Never use this prompt"
+              >
+                <div style={{
+                  width: '20px',
+                  height: '20px',
+                  borderRadius: '50%',
+                  background: 'rgba(0, 0, 0, 0.7)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '11px',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                  transition: 'background 0.2s ease'
+                }}>
+                  ⚠️
+                </div>
+              </div>
+              )}
 
               {/* Favorite heart button - show in prompt selector mode for desktop */}
               {isPromptSelectorMode && !isMobile() && (

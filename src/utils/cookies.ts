@@ -202,6 +202,78 @@ export function isFavoriteImage(photoId: string): boolean {
   return favorites.includes(photoId);
 }
 
+// Blocked prompts utilities
+export function getBlockedPrompts(): string[] {
+  try {
+    const blocked = localStorage.getItem('sogni_blocked_prompts');
+    if (blocked) {
+      return JSON.parse(blocked) as string[];
+    }
+  } catch (e) {
+    console.warn('Error reading blocked prompts:', e);
+  }
+  return [];
+}
+
+export function saveBlockedPrompts(blocked: string[]): void {
+  try {
+    localStorage.setItem('sogni_blocked_prompts', JSON.stringify(blocked));
+  } catch (e) {
+    console.warn('Error saving blocked prompts:', e);
+  }
+}
+
+export function toggleBlockedPrompt(promptKey: string): boolean {
+  try {
+    console.log('🚫 COOKIE toggleBlockedPrompt - promptKey:', promptKey);
+    const blocked = getBlockedPrompts();
+    console.log('🚫 Current blocked from localStorage:', blocked);
+    const index = blocked.indexOf(promptKey);
+    let newBlocked: string[];
+    
+    if (index > -1) {
+      // Remove from blocked
+      console.log('🚫 Removing from blocked at index:', index);
+      newBlocked = blocked.filter(id => id !== promptKey);
+      saveBlockedPrompts(newBlocked);
+      console.log('🚫 After removal:', newBlocked);
+      return false;
+    } else {
+      // Add to blocked
+      console.log('🚫 Adding to blocked');
+      newBlocked = [...blocked, promptKey];
+      saveBlockedPrompts(newBlocked);
+      console.log('🚫 After adding:', newBlocked);
+      return true;
+    }
+  } catch (e) {
+    console.warn('Error toggling blocked prompt:', e);
+    return false;
+  }
+}
+
+export function isBlockedPrompt(promptKey: string): boolean {
+  const blocked = getBlockedPrompts();
+  return blocked.includes(promptKey);
+}
+
+export function blockPrompt(promptKey: string): void {
+  const blocked = getBlockedPrompts();
+  if (!blocked.includes(promptKey)) {
+    saveBlockedPrompts([...blocked, promptKey]);
+    console.log('🚫 Blocked prompt:', promptKey);
+  }
+}
+
+export function clearBlockedPrompts(): void {
+  try {
+    localStorage.removeItem('sogni_blocked_prompts');
+    console.log('🧹 Cleared all blocked prompts');
+  } catch (e) {
+    console.warn('Error clearing blocked prompts:', e);
+  }
+}
+
 // Demo render tracking utilities for non-authenticated users
 export function hasDoneDemoRender(): boolean {
   try {
