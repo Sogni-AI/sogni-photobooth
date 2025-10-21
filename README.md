@@ -169,13 +169,17 @@ If you prefer not to keep terminals open, you can use the script runner. This wi
 | `configs/local/*.conf` | Nginx local SSL reverse-proxy |
 | `scripts/nginx/local.conf` | Main Nginx configuration for local development, defining frontend and backend subdomains. Expects SSL certs at `/opt/homebrew/etc/nginx/ssl/`. |
 
-### Analytics Configuration
+### Frontend Environment Variables
 
-The application supports Google Analytics for basic page tracking. To enable it:
+The application uses environment-specific configuration files for frontend settings:
 
-1. Create a `.env.local` file in the project root with the following variables:
+1. Create a `.env.local` file in the project root for local development:
    ```
-   # Google Analytics Configuration
+   # Contest Results Password (Required)
+   # Used to protect the /admin/contest/results page
+   VITE_CONTEST_RESULTS_PASSWORD=your_secure_password_here
+
+   # Google Analytics Configuration (Optional)
    # Set to 'false' to disable GA completely
    VITE_GA_ENABLED=true
    # Your Google Analytics measurement ID (e.g., G-XXXXXXXXXX)
@@ -184,12 +188,14 @@ The application supports Google Analytics for basic page tracking. To enable it:
    VITE_GA_DOMAIN=sogni.ai
    ```
 
-2. The analytics implementation:
-   - Respects user privacy by making it easy to disable
-   - Supports cross-subdomain tracking for sogni.ai domains
-   - Only records basic page views by default (camera view, photo gallery, individual photos)
-   - Provides infrastructure for future event tracking if needed
-   - Includes version tracking for better data segmentation
+2. For production builds, create a `.env.production` file with the same variables
+
+3. Important notes:
+   - **Never commit `.env.local` or `.env.production` to Git** - they're in `.gitignore`
+   - All frontend environment variables must be prefixed with `VITE_` to be accessible
+   - The contest results password is required to access `/admin/contest/results`
+   - Google Analytics is optional and respects user privacy
+   - Analytics supports cross-subdomain tracking for sogni.ai domains
 
 ### Redis Configuration
 
