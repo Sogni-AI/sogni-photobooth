@@ -41,7 +41,7 @@ const HalloweenEvent = () => {
         <meta property="og:title" content="🎃 Sogni Halloween Photobooth Costume Party 👻" />
         <meta property="og:description" content="Create the perfect Halloween costume using AI! Win 40,000 Premium Sparks. Share your creation and enter the contest. Deadline: Oct 27" />
         <meta property="og:image" content="https://photobooth.sogni.ai/halloween_bg.jpg" />
-        <meta property="og:url" content="https://photobooth.sogni.ai/halloween" />
+        <meta property="og:url" content="https://photobooth.sogni.ai/event/halloween" />
         <meta property="og:type" content="website" />
         
         {/* Twitter */}
@@ -49,7 +49,7 @@ const HalloweenEvent = () => {
         <meta name="twitter:title" content="🎃 Sogni Halloween Photobooth Costume Party 👻" />
         <meta name="twitter:description" content="Create the perfect Halloween costume using AI! Win 40,000 Premium Sparks. Share your creation and enter the contest. Deadline: Oct 27" />
         <meta name="twitter:image" content="https://photobooth.sogni.ai/halloween_bg.jpg" />
-        <meta property="twitter:url" content="https://photobooth.sogni.ai/halloween" />
+        <meta property="twitter:url" content="https://photobooth.sogni.ai/event/halloween" />
       </Helmet>
 
       {/* Authentication Status - top-left */}

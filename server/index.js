@@ -172,11 +172,12 @@ console.log('📁 Environment: ' + (isLocalEnv ? 'LOCAL' : 'PRODUCTION'));
 console.log('📁 Static directory:', staticDir);
 
 // IMPORTANT: Define custom routes BEFORE static middleware to ensure they take priority
-// Halloween event route with custom meta tags for social sharing
-app.get('/halloween', (req, res) => {
+// Halloween event route handler (shared logic for both /halloween and /event/halloween)
+const handleHalloweenRoute = (req, res) => {
   const indexPath = path.join(staticDir, 'index.html');
-  console.log('[Halloween Route] Attempting to read:', indexPath);
-  
+  const requestPath = req.path;
+  console.log(`[Halloween Route] Attempting to read: ${indexPath} for path: ${requestPath}`);
+
   fs.readFile(indexPath, 'utf8', (err, html) => {
     if (err) {
       console.error('[Halloween Route] Error reading index.html:', err);
@@ -184,18 +185,19 @@ app.get('/halloween', (req, res) => {
       console.error('[Halloween Route] Index path:', indexPath);
       return res.status(500).send('Error loading page: ' + err.message);
     }
-    
+
     console.log('[Halloween Route] Successfully read index.html, injecting meta tags...');
-    
+
     // Replace meta tags with Halloween-specific content
     // Using simple global string replacement - safest approach
     let modifiedHtml = html;
-    
+
     const halloweenTitle = '🎃 Sogni Halloween Photobooth Costume Party 👻';
     const halloweenDesc = 'Create the perfect Halloween costume using AI! Win 40,000 Premium Sparks. Share your creation and enter the contest. Deadline: Oct 27';
-    const halloweenUrl = 'https://photobooth.sogni.ai/halloween';
+    // Always use /event/halloween as the canonical URL for metadata
+    const halloweenUrl = 'https://photobooth.sogni.ai/event/halloween';
     const halloweenImage = 'https://photobooth.sogni.ai/halloween_bg.jpg';
-    
+
     // Simple string replacements - no regex complexity
     // Do specific replacements BEFORE global ones to avoid conflicts
     modifiedHtml = modifiedHtml.replace('<title>Sogni AI Photobooth</title>', `<title>${halloweenTitle}</title>`);
@@ -206,18 +208,22 @@ app.get('/halloween', (req, res) => {
     modifiedHtml = modifiedHtml.replace(/content="https:\/\/photobooth\.sogni\.ai\/"/g, `content="${halloweenUrl}"`);
     // Replace image URL globally (appears in both og:image and twitter:image)
     modifiedHtml = modifiedHtml.replace(/https:\/\/repository-images\.githubusercontent\.com\/945858402\/db2496be-4fcb-4471-ad36-4eed6ffd4a9e/g, halloweenImage);
-    
+
     // Set cache headers to prevent stale metadata
     res.set({
       'Cache-Control': 'no-cache, no-store, must-revalidate',
       'Pragma': 'no-cache',
       'Expires': '0'
     });
-    
+
     console.log('[Halloween Route] Successfully injected meta tags and sent response');
     res.send(modifiedHtml);
   });
-});
+};
+
+// Halloween event routes with custom meta tags for social sharing
+app.get('/halloween', handleHalloweenRoute);
+app.get('/event/halloween', handleHalloweenRoute);
 
 // Mobile sharing page route
 app.use('/mobile-share', mobileShareRoutes);

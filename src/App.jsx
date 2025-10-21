@@ -2219,10 +2219,10 @@ const App = () => {
     // Store the message for potential retry
     setLastTwitterMessage(customMessage);
     
-    // Create a clean URL - use /halloween path if user came from Halloween event
+    // Create a clean URL - use /event/halloween path if user came from Halloween event
     const shareUrl = new URL(window.location.origin);
     if (settings.halloweenContext) {
-      shareUrl.pathname = '/halloween';
+      shareUrl.pathname = '/event/halloween';
     }
     
     // Only add the prompt parameter if we have a hashtag and it's not from a custom prompt

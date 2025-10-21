@@ -21,7 +21,7 @@ const AppRouter = () => {
     if (hash === '#contest' || pathname === '/admin/contest/results') {
       return 'contest';
     }
-    if (hash === '#halloween' || pathname === '/halloween') {
+    if (hash === '#halloween' || pathname === '/halloween' || pathname === '/event/halloween') {
       return 'halloween';
     }
     return 'main';
@@ -41,7 +41,7 @@ const AppRouter = () => {
         setCurrentRoute('analytics');
       } else if (hash === '#contest' || pathname === '/admin/contest/results') {
         setCurrentRoute('contest');
-      } else if (hash === '#halloween' || pathname === '/halloween') {
+      } else if (hash === '#halloween' || pathname === '/halloween' || pathname === '/event/halloween') {
         setCurrentRoute('halloween');
       } else {
         setCurrentRoute('main');
