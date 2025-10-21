@@ -85,7 +85,8 @@ const LoginUpsellPopup = ({ isOpen, onClose }) => {
 
   const handleGetStartedClick = () => {
     // app.sogni.ai automatically shows signup for new users, login for existing users
-    redirectToAuth('login');
+    // Include PHOTOBOOTH promo code for free credits
+    redirectToAuth('login', 'PHOTOBOOTH');
     onClose();
   };
 

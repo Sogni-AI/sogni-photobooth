@@ -34,13 +34,18 @@ export const getAuthConfig = () => {
   };
 };
 
-export const redirectToAuth = (mode: 'login' | 'signup' = 'login') => {
+export const redirectToAuth = (mode: 'login' | 'signup' = 'login', promoCode?: string) => {
   const config = getAuthConfig();
   const currentUrl = window.location.href;
   
   const url = new URL(mode === 'signup' ? config.signupUrl : config.authUrl);
   url.searchParams.set('redirect', currentUrl);
   url.searchParams.set('authMode', 'cookies');
+  
+  // Add promo code if provided
+  if (promoCode) {
+    url.searchParams.set('code', promoCode);
+  }
   
   console.log(`🔐 Redirecting to ${mode} at:`, url.toString());
   window.location.href = url.toString();
