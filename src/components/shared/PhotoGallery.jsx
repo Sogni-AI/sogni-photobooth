@@ -181,6 +181,10 @@ const PhotoGallery = ({
   // State to track when to show the "more" button during generation
   const [showMoreButtonDuringGeneration, setShowMoreButtonDuringGeneration] = useState(false);
 
+  // State and ref to track More button width for positioning Download All button
+  const [moreButtonWidth, setMoreButtonWidth] = useState(0);
+  const moreButtonRef = useRef(null);
+
   // State to track concurrent refresh operations
   const [refreshingPhotos, setRefreshingPhotos] = useState(new Set());
   
@@ -258,6 +262,26 @@ const PhotoGallery = ({
       }
     }
   }, [isPromptSelectorMode, initialSearchTerm]);
+
+  // Measure More button width for positioning Download All button
+  useEffect(() => {
+    const measureMoreButton = () => {
+      if (moreButtonRef.current) {
+        const width = moreButtonRef.current.offsetWidth;
+        setMoreButtonWidth(width);
+      }
+    };
+
+    measureMoreButton();
+
+    // Re-measure when content changes
+    const observer = new ResizeObserver(measureMoreButton);
+    if (moreButtonRef.current) {
+      observer.observe(moreButtonRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, [moreButtonCost, numImages, isGenerating, tokenLabel]);
 
   // Keep track of the previous photos array length to detect new batches (for legacy compatibility)
   const [, setPreviousPhotosLength] = useState(0);
@@ -2023,7 +2047,7 @@ const PhotoGallery = ({
       )}
       {/* Download All button - circular button to the left of More button */}
       {!isPromptSelectorMode && selectedPhotoIndex === null && photos && photos.length > 0 && photos.every(p => !p.loading && !p.generating) && photos.filter(p => !p.error && p.images && p.images.length > 0).length > 0 && (
-        <div style={{ position: 'fixed', right: '145px', bottom: '22px', zIndex: 9999 }}>
+        <div style={{ position: 'fixed', right: `${20 + (moreButtonWidth || 125) + 10}px`, bottom: '22px', zIndex: 10000000 }}>
           <button
             className="download-all-circular-btn"
             onClick={(e) => {
@@ -2166,6 +2190,7 @@ const PhotoGallery = ({
       {/* More button - positioned on the right side - hidden in Sample Gallery mode */}
       {!isPromptSelectorMode && ((!isGenerating && selectedPhotoIndex === null) || (isGenerating && showMoreButtonDuringGeneration && selectedPhotoIndex === null)) && (
         <button
+          ref={moreButtonRef}
           className="more-photos-btn corner-btn"
           onClick={handleMoreButtonClick}
           disabled={!isGenerating && (activeProjectReference.current !== null || !isSogniReady || !lastPhotoData.blob)}
