@@ -67,6 +67,7 @@ export class FrontendProjectAdapter extends BrowserEventEmitter implements Sogni
   private uploadProgressEmitted: boolean = false;
   private jobPrompts: Map<string, string> = new Map(); // Store individual job prompts from global events
   private workerNameCache: Map<string, string> = new Map(); // Store worker names from early events (like backend)
+  private failedJobs: Map<string, string> = new Map(); // Track failed jobs by ID -> error message
   private completionTracker = {
     expectedJobs: 0,
     sentJobCompletions: 0,
@@ -93,7 +94,19 @@ export class FrontendProjectAdapter extends BrowserEventEmitter implements Sogni
 
   // Expose the real project's properties and methods
   get id() { return this.realProject.id; }
-  get jobs() { return this.realProject.jobs; }
+  get jobs() {
+    // Return job objects with error properties set for failed jobs (like backend client does)
+    if (!this.realProject.jobs) return this.realProject.jobs;
+    
+    return this.realProject.jobs.map((job: any) => {
+      const failedError = this.failedJobs.get(job.id);
+      if (failedError) {
+        // Return a copy of the job with the error property set
+        return { ...job, error: failedError };
+      }
+      return job;
+    });
+  }
   get status() { return this.realProject.status; }
 
   // Forward method calls to the real project
@@ -230,12 +243,6 @@ export class FrontendProjectAdapter extends BrowserEventEmitter implements Sogni
         }
       }
       
-      // Log when resultUrl is still missing after checking project.jobs
-      if (!resultUrl && !job.fallback) {
-        console.error(`[FrontendAdapter] Job ${job.id} completed but resultUrl is null in both event and project.jobs`);
-        console.error(`[FrontendAdapter] Event details:`, JSON.stringify(job, null, 2));
-      }
-      
       // Get cached worker name or use default (matches backend logic)
       const cachedWorkerName = this.workerNameCache.get(job.id);
       const workerName = job.workerName || cachedWorkerName || 'Worker';
@@ -245,10 +252,68 @@ export class FrontendProjectAdapter extends BrowserEventEmitter implements Sogni
         this.workerNameCache.set(job.id, job.workerName);
       }
       
-      // Prepare the jobCompleted event (matches backend - always send jobCompleted, never convert to jobFailed)
+      // CRITICAL FIX: Handle NSFW filtering and missing results (matches backend client behavior)
+      // When job is NSFW-filtered or missing result, emit jobFailed instead of jobCompleted
+      if (job.isNSFW && !resultUrl) {
+        // Track this job as failed (so the jobs getter can return it with error property set)
+        const errorMessage = 'CONTENT FILTERED: NSFW detected';
+        this.failedJobs.set(job.id, errorMessage);
+        
+        this.emit('jobFailed', {
+          id: job.id,
+          error: errorMessage,
+          isNSFW: true,
+          positivePrompt: individualJobPrompt,
+          workerName: workerName
+        });
+
+        // Track completion for project completion handling
+        this.completionTracker.sentJobCompletions++;
+
+        // Clear any timeout for this job
+        const timeoutId = this.completionTracker.jobCompletionTimeouts.get(job.id);
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+          this.completionTracker.jobCompletionTimeouts.delete(job.id);
+        }
+
+        // Check if we can send project completion
+        this.checkAndSendProjectCompletion();
+        return;
+      }
+
+      // Check for missing resultUrl without NSFW flag (also should fail)
+      if (!resultUrl && !job.fallback) {
+        // Track this job as failed (so the jobs getter can return it with error property set)
+        const errorMessage = 'No result URL provided';
+        this.failedJobs.set(job.id, errorMessage);
+        
+        this.emit('jobFailed', {
+          id: job.id,
+          error: errorMessage,
+          positivePrompt: individualJobPrompt,
+          workerName: workerName
+        });
+
+        // Track completion for project completion handling
+        this.completionTracker.sentJobCompletions++;
+
+        // Clear any timeout for this job
+        const timeoutId = this.completionTracker.jobCompletionTimeouts.get(job.id);
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+          this.completionTracker.jobCompletionTimeouts.delete(job.id);
+        }
+
+        // Check if we can send project completion
+        this.checkAndSendProjectCompletion();
+        return;
+      }
+
+      // Prepare the jobCompleted event for successful jobs
       const completedEvent: any = {
         id: job.id,
-        resultUrl: resultUrl, // Send null if missing - let App.jsx handle it
+        resultUrl: resultUrl,
         previewUrl: job.previewUrl,
         isPreview: job.isPreview || false,
         positivePrompt: individualJobPrompt,
@@ -257,13 +322,8 @@ export class FrontendProjectAdapter extends BrowserEventEmitter implements Sogni
         seed: job.seed,
         steps: job.steps
       };
-      
-      // Handle NSFW filtering (matches backend logic - add flag but still send as jobCompleted)
-      if (job.isNSFW && !resultUrl) {
-        completedEvent.nsfwFiltered = true;
-      }
-      
-      // Emit the jobCompleted event (matches backend - always jobCompleted, never jobFailed)
+
+      // Emit the jobCompleted event for successful jobs
       this.emit('jobCompleted', completedEvent);
 
       // Track job completion for proper project completion handling

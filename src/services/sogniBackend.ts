@@ -854,7 +854,7 @@ export class BackendSogniClient {
                 } else if (isNSFW) {
                   console.warn(`Job ${targetJob.id} (real ID ${jobId}) completed but was filtered due to NSFW content`);
                   // Mark job as failed due to NSFW filtering
-                  project.failJob(targetJob.id, 'Content filtered due to NSFW detection');
+                  project.failJob(targetJob.id, 'CONTENT FILTERED: NSFW detected');
                 } else {
                   console.warn(`Job ${targetJob.id} (real ID ${jobId}) completed but resultUrl is missing`);
                   project.failJob(targetJob.id, 'No result URL provided');

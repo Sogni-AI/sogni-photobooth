@@ -2429,7 +2429,7 @@ const App = () => {
             activeProjectReference.current = null;
             
             // Mark all generating photos as failed
-            setRegularPhotos(prevPhotos => {
+            const markEmailVerificationRequired = (prevPhotos) => {
               return prevPhotos.map(photo => {
                 if (photo.generating) {
                   return {
@@ -2443,7 +2443,10 @@ const App = () => {
                 }
                 return photo;
               });
-            });
+            };
+            
+            setRegularPhotos(markEmailVerificationRequired);
+            setPhotos(markEmailVerificationRequired);
           }
         });
       }
@@ -3567,7 +3570,7 @@ const App = () => {
     timeouts.jobTimers.set(jobId, timer);
     
     // Update photo with job start time
-    setRegularPhotos(prev => {
+    const updateJobStartTime = (prev) => {
       const updated = [...prev];
       if (updated[photoIndex]) {
         updated[photoIndex] = {
@@ -3577,7 +3580,11 @@ const App = () => {
         };
       }
       return updated;
-    });
+    };
+    
+    // Update BOTH state arrays
+    setRegularPhotos(updateJobStartTime);
+    setPhotos(updateJobStartTime);
   };
 
   const clearJobTimeout = (jobId) => {
@@ -3596,7 +3603,7 @@ const App = () => {
     clearJobTimeout(jobId);
     
     // Mark the photo as timed out
-    setRegularPhotos(prev => {
+    const markPhotoTimedOut = (prev) => {
       const updated = [...prev];
       if (updated[photoIndex]) {
         updated[photoIndex] = {
@@ -3610,11 +3617,15 @@ const App = () => {
         };
       }
       return updated;
-    });
+    };
+    
+    // Update BOTH state arrays
+    setRegularPhotos(markPhotoTimedOut);
+    setPhotos(markPhotoTimedOut);
     
     // Check if all jobs are done (completed, failed, or timed out)
     setTimeout(() => {
-      setRegularPhotos(prev => {
+      const checkAllJobsDone = (prev) => {
         const stillGenerating = prev.some(photo => photo.generating);
         if (!stillGenerating && activeProjectReference.current) {
           console.log('All jobs finished (including timeouts), clearing active project');
@@ -3622,7 +3633,10 @@ const App = () => {
           clearAllTimeouts();
         }
         return prev;
-      });
+      };
+      
+      setRegularPhotos(checkAllJobsDone);
+      setPhotos(checkAllJobsDone);
     }, 100);
   };
 
@@ -3633,7 +3647,7 @@ const App = () => {
     clearAllTimeouts();
     
     // Mark all generating photos as timed out
-    setRegularPhotos(prev => {
+    const markAllTimedOut = (prev) => {
       const updated = [...prev];
       let hasChanges = false;
       
@@ -3664,7 +3678,11 @@ const App = () => {
       }
       
       return updated;
-    });
+    };
+    
+    // Update BOTH state arrays
+    setRegularPhotos(markAllTimedOut);
+    setPhotos(markAllTimedOut);
   };
 
   // -------------------------
@@ -4008,7 +4026,8 @@ const App = () => {
           progressUpdateTimeout = setTimeout(() => {
             // Update watchdog timer along with progress to batch the operations
             updateWatchdogTimer();
-            setRegularPhotos(prev => {
+            
+            const updateProgress = (prev) => {
               const updated = [...prev];
               if (updated[photoIndex] && !updated[photoIndex].permanentError) {
                 // Use workerName from current event if available and not "Worker", otherwise fall back to cached value
@@ -4030,7 +4049,11 @@ const App = () => {
                 };
               }
               return updated;
-            });
+            };
+            
+            // Update BOTH state arrays
+            setRegularPhotos(updateProgress);
+            setPhotos(updateProgress);
           }, 200); // Throttle to max 5 updates per second (reduced from 10 to minimize flickering on high-res displays)
           return; // Don't process immediately
         }
@@ -4046,7 +4069,7 @@ const App = () => {
             clearTimeout(nonProgressUpdateTimeout);
           }
           nonProgressUpdateTimeout = setTimeout(() => {
-            setRegularPhotos(prev => {
+            const updateNonProgress = (prev) => {
               const updated = [...prev];
               if (photoIndex >= updated.length) return prev;
               // Process the event type
@@ -4088,7 +4111,11 @@ const App = () => {
                 }
               }
               return updated;
-            });
+            };
+            
+            // Update BOTH state arrays
+            setRegularPhotos(updateNonProgress);
+            setPhotos(updateNonProgress);
           }, 50); // Very short throttle for non-progress events
           return; // Don't process immediately
         }
@@ -4189,6 +4216,27 @@ const App = () => {
                 clearAllTimeouts();
                 activeProjectReference.current = null;
                 
+                // Safety net: Force-clear any photos still marked as generating despite having errors
+                const clearGeneratingFlagsExtended = (prevPhotos) => {
+                  const generatingWithErrors = prevPhotos.filter(photo => 
+                    photo.generating && photo.error && 
+                    (photo.projectId === project.id || photo.projectId === undefined));
+                  
+                  if (generatingWithErrors.length > 0) {
+                    return prevPhotos.map(photo => {
+                      if (photo.generating && photo.error && 
+                          (photo.projectId === project.id || photo.projectId === undefined)) {
+                        return { ...photo, generating: false, loading: false };
+                      }
+                      return photo;
+                    });
+                  }
+                  return prevPhotos;
+                };
+                
+                setRegularPhotos(clearGeneratingFlagsExtended);
+                setPhotos(clearGeneratingFlagsExtended);
+                
                 // Track demo render completion for non-authenticated users
                 trackDemoRenderCompletion();
                 
@@ -4199,6 +4247,27 @@ const App = () => {
               console.log('All jobs completed after delay, proceeding with project completion.');
               clearAllTimeouts();
               activeProjectReference.current = null;
+              
+              // Safety net: Force-clear any photos still marked as generating despite having errors
+              const clearGeneratingFlagsDelayed = (prevPhotos) => {
+                const generatingWithErrors = prevPhotos.filter(photo => 
+                  photo.generating && photo.error && 
+                  (photo.projectId === project.id || photo.projectId === undefined));
+                
+                if (generatingWithErrors.length > 0) {
+                  return prevPhotos.map(photo => {
+                    if (photo.generating && photo.error && 
+                        (photo.projectId === project.id || photo.projectId === undefined)) {
+                      return { ...photo, generating: false, loading: false };
+                    }
+                    return photo;
+                  });
+                }
+                return prevPhotos;
+              };
+              
+              setRegularPhotos(clearGeneratingFlagsDelayed);
+              setPhotos(clearGeneratingFlagsDelayed);
               
               // Track demo render completion for non-authenticated users
               trackDemoRenderCompletion();
@@ -4214,6 +4283,33 @@ const App = () => {
           clearAllTimeouts();
           
           activeProjectReference.current = null; // Clear active project reference when complete
+          
+          // Safety net: Force-clear any photos still marked as generating despite having errors
+          // This handles edge case race conditions in React state updates
+          const clearGeneratingFlags = (prevPhotos) => {
+            const generatingWithErrors = prevPhotos.filter(photo => 
+              photo.generating && photo.error && 
+              (photo.projectId === project.id || photo.projectId === undefined));
+            
+            if (generatingWithErrors.length > 0) {
+              return prevPhotos.map(photo => {
+                if (photo.generating && photo.error && 
+                    (photo.projectId === project.id || photo.projectId === undefined)) {
+                  return {
+                    ...photo,
+                    generating: false,
+                    loading: false
+                  };
+                }
+                return photo;
+              });
+            }
+            return prevPhotos;
+          };
+          
+          // Update both state arrays
+          setRegularPhotos(clearGeneratingFlags);
+          setPhotos(clearGeneratingFlags);
           
           // Track demo render completion for non-authenticated users
           trackDemoRenderCompletion();
@@ -4454,9 +4550,11 @@ const App = () => {
           clearJobTimeout(job.id);
         }
         
-        // CRITICAL ERROR HANDLING: Check for missing resultUrl (matches backend logic)
+        // FAILSAFE ERROR HANDLING: Check for missing resultUrl
+        // Note: The frontend adapter should now emit jobFailed for these cases,
+        // but we keep this as a defensive failsafe for edge cases
         if (!job.resultUrl) {
-          console.error('Missing resultUrl for job:', job.id);
+          console.error('Missing resultUrl for job (failsafe handler):', job.id);
           
           // Get job index for error handling
           const jobIndex = projectStateReference.current.jobMap.get(job.id);
@@ -4468,22 +4566,19 @@ const App = () => {
           const offset = keepOriginalPhoto ? 1 : 0;
           const photoIndex = jobIndex + offset;
           
-          // Determine error type based on job properties (use explicit nsfwFiltered flag from adapter)
+          // Determine error type
           let errorMessage = 'GENERATION FAILED: result missing';
           let errorType = 'missing_result';
           
-          // Check for NSFW filtering (use explicit flag, not inference)
-          if (job.nsfwFiltered === true) {
-            console.warn(`Job ${job.id} was flagged as NSFW by the AI detection system`);
-            console.warn(`Current NSFW filter setting: ${sensitiveContentFilter ? 'ENABLED' : 'DISABLED'}`);
-            errorMessage = sensitiveContentFilter 
-              ? 'GENERATION FAILED: content filtered (NSFW detected)'
-              : 'GENERATION FAILED: NSFW detected (check filter settings)';
+          // Check for NSFW filtering (should be handled by jobFailed now, but keep as failsafe)
+          if (job.isNSFW === true) {
+            console.warn(`Job ${job.id} was flagged as NSFW (failsafe handler)`);
+            errorMessage = 'CONTENT FILTERED: NSFW detected';
             errorType = 'nsfw_filtered';
           }
           
-          // Update photo state with error
-          setRegularPhotos(previous => {
+          // Update photo state with error (update BOTH state arrays)
+          const markJobMissingResult = (previous) => {
             const updated = [...previous];
             if (!updated[photoIndex]) {
               console.error(`No photo box found at index ${photoIndex}`);
@@ -4495,7 +4590,7 @@ const App = () => {
               generating: false,
               loading: false,
               error: errorMessage,
-              permanentError: true, // Mark as permanent so it won't be overwritten
+              permanentError: true,
               statusText: 'Failed',
               errorType: errorType
             };
@@ -4503,20 +4598,17 @@ const App = () => {
             // Check if all photos are done generating
             const stillGenerating = updated.some(photo => photo.generating);
             if (!stillGenerating && activeProjectReference.current) {
-              // All photos are done, clear the active project and timeouts
-              console.log('All jobs completed or failed (missing resultUrl), clearing active project');
               clearAllTimeouts();
               activeProjectReference.current = null;
-              
-              // Track demo render completion for non-authenticated users
               trackDemoRenderCompletion();
-              
-              // Trigger promotional popup after batch completion
               triggerPromoPopupIfNeeded();
             }
             
             return updated;
-          });
+          };
+          
+          setRegularPhotos(markJobMissingResult);
+          setPhotos(markJobMissingResult);
           
           return; // Don't process further
         }
@@ -4734,13 +4826,23 @@ const App = () => {
       });
 
       project.on('jobFailed', (job) => {
+        // CRITICAL: Clear ALL pending throttled progress updates for this job
+        // Otherwise they'll re-set generating: true after we clear it
+        if (progressUpdateTimeout) {
+          clearTimeout(progressUpdateTimeout);
+          progressUpdateTimeout = null;
+        }
+        if (nonProgressUpdateTimeout) {
+          clearTimeout(nonProgressUpdateTimeout);
+          nonProgressUpdateTimeout = null;
+        }
+        
         // Clear job timeout when it fails
         clearJobTimeout(job.id);
         
         console.error('Job failed:', job.id, job.error);
         
         const jobIndex = projectStateReference.current.jobMap.get(job.id);
-        console.log('Looking up job index for failed job:', job.id, 'found:', jobIndex, 'in map:', projectStateReference.current.jobMap);
         if (jobIndex === undefined) {
           console.error('Unknown job failed:', job.id);
           return;
@@ -4748,9 +4850,9 @@ const App = () => {
         
         const offset = keepOriginalPhoto ? 1 : 0;
         const photoIndex = jobIndex + offset;
-        console.log(`Marking failed job ${job.id} for box ${photoIndex}`);
         
-        setRegularPhotos(previous => {
+        // Update function that we'll use for both regularPhotos and photos
+        const updatePhotoWithError = (previous) => {
           const updated = [...previous];
           if (!updated[photoIndex]) {
             console.error(`No photo box found at index ${photoIndex}`);
@@ -4765,43 +4867,43 @@ const App = () => {
               // Handle error object case
               // Check for NSFW filtering first (new error scenario)
               if (job.error.isNSFW || job.error.nsfwFiltered) {
-                errorMessage = 'GENERATION FAILED: content filtered';
+                errorMessage = 'CONTENT FILTERED: NSFW detected';
               } else if (job.error.missingResult) {
                 errorMessage = 'GENERATION FAILED: result missing';
               } else if (job.error.isInsufficientFunds || job.error.errorCode === 'insufficient_funds') {
-                errorMessage = 'GENERATION FAILED: replenish tokens';
+                errorMessage = 'INSUFFICIENT FUNDS: replenish tokens';
               } else if (job.error.isAuthError || job.error.errorCode === 'auth_error') {
-                errorMessage = 'GENERATION FAILED: authentication failed';
+                errorMessage = 'AUTH FAILED: login required';
               } else if (job.error.message) {
                 // Extract key info from error message
                 if (job.error.message.includes('Insufficient') || job.error.message.includes('credits') || job.error.message.includes('funds')) {
-                  errorMessage = 'GENERATION FAILED: replenish tokens';
-                } else if (job.error.message.includes('NSFW') || job.error.message.includes('filtered')) {
-                  errorMessage = 'GENERATION FAILED: content filtered';
+                  errorMessage = 'INSUFFICIENT FUNDS: replenish tokens';
+                } else if (job.error.message.includes('NSFW') || job.error.message.includes('filtered') || job.error.message.includes('CONTENT FILTERED')) {
+                  errorMessage = 'CONTENT FILTERED: NSFW detected';
                 } else if (job.error.message.includes('missing') || job.error.message.includes('result')) {
                   errorMessage = 'GENERATION FAILED: result missing';
                 } else if (job.error.message.includes('timeout') || job.error.message.includes('worker')) {
-                  errorMessage = 'GENERATION FAILED: processing timeout';
+                  errorMessage = 'GENERATION FAILED: timeout';
                 } else if (job.error.message.includes('network') || job.error.message.includes('connection')) {
-                  errorMessage = 'GENERATION FAILED: connection error';
+                  errorMessage = 'NETWORK ERROR: check connection';
                 } else {
-                  errorMessage = 'GENERATION FAILED: processing error';
+                  errorMessage = 'GENERATION FAILED: unknown error';
                 }
               } else {
-                errorMessage = 'GENERATION FAILED: processing error';
+                errorMessage = 'GENERATION FAILED: unknown error';
               }
             } else if (typeof job.error === 'string') {
               // Handle string error case
               if (job.error.includes('Insufficient') || job.error.includes('credits') || job.error.includes('funds')) {
-                errorMessage = 'GENERATION FAILED: replenish tokens';
-              } else if (job.error.includes('NSFW') || job.error.includes('filtered')) {
-                errorMessage = 'GENERATION FAILED: content filtered';
+                errorMessage = 'INSUFFICIENT FUNDS: replenish tokens';
+              } else if (job.error.includes('NSFW') || job.error.includes('filtered') || job.error.includes('CONTENT FILTERED')) {
+                errorMessage = 'CONTENT FILTERED: NSFW detected';
               } else if (job.error.includes('missing') || job.error.includes('result')) {
                 errorMessage = 'GENERATION FAILED: result missing';
               } else if (job.error.includes('timeout') || job.error.includes('worker')) {
-                errorMessage = 'GENERATION FAILED: processing timeout';
+                errorMessage = 'GENERATION FAILED: timeout';
               } else if (job.error.includes('network') || job.error.includes('connection')) {
-                errorMessage = 'GENERATION FAILED: connection error';
+                errorMessage = 'NETWORK ERROR: check connection';
               } else {
                 errorMessage = 'GENERATION FAILED: processing error';
               }
@@ -4828,12 +4930,16 @@ const App = () => {
             // Track demo render completion for non-authenticated users
             trackDemoRenderCompletion();
             
-            // Trigger promotional popup after batch completion
-            triggerPromoPopupIfNeeded();
+          // Trigger promotional popup after batch completion
+          triggerPromoPopupIfNeeded();
           }
           
           return updated;
-        });
+        };
+        
+        // Update BOTH regularPhotos and photos so isGenerating recalculates correctly
+        setRegularPhotos(updatePhotoWithError);
+        setPhotos(updatePhotoWithError);
       });
 
     } catch (error) {
