@@ -242,7 +242,7 @@ router.post('/start', getSessionId, async (req, res) => {
             : message || "Created in #SogniPhotobooth https://photobooth.sogni.ai";
           
           // Attempt to share the image directly
-          await shareImageToX(loggedUserClient, imageUrl, tweetText);
+          const tweetResult = await shareImageToX(loggedUserClient, imageUrl, tweetText);
           
           // Update usage timestamps
           existingOAuthData.lastUsed = Date.now();
@@ -260,9 +260,38 @@ router.post('/start', getSessionId, async (req, res) => {
           await incrementTwitterShares();
           await trackMetric('twitter_shares', 1);
           
-          // Send direct success response
           console.log('[Twitter OAuth] Successfully shared directly using existing token');
           
+          // If this is a Halloween context share, submit to contest (direct share path)
+          if (halloweenContext && prompt && tweetResult?.data?.id) {
+            try {
+              console.log('[Contest] Submitting Halloween contest entry (direct share)');
+              const tweetUrl = `https://twitter.com/i/web/status/${tweetResult.data.id}`;
+              
+              await saveContestEntry({
+                contestId: 'halloween',
+                imageUrl,
+                prompt,
+                username,
+                address,
+                tweetId: tweetResult.data.id,
+                tweetUrl,
+                metadata: {
+                  message: message || '',
+                  shareUrl: shareUrl || '',
+                  timestamp: Date.now(),
+                  shareType: 'direct'
+                }
+              });
+              
+              console.log('[Contest] Successfully submitted Halloween contest entry (direct share)');
+            } catch (contestError) {
+              // Don't fail the whole share if contest submission fails
+              console.error('[Contest] Error submitting contest entry (direct share):', contestError);
+            }
+          }
+          
+          // Send direct success response
           // Make sure the response includes all necessary fields for the client to recognize success
           return res.json({ 
             success: true,
@@ -457,10 +486,10 @@ router.get('/callback', async (req, res) => {
       
       console.log('[Twitter OAuth] Image successfully shared to X, tweet ID:', tweetResult.data.id);
       
-      // If this is a Halloween context share, submit to contest
+      // If this is a Halloween context share, submit to contest (OAuth callback path)
       if (oauthData.halloweenContext && oauthData.prompt) {
         try {
-          console.log('[Contest] Submitting Halloween contest entry');
+          console.log('[Contest] Submitting Halloween contest entry (OAuth callback)');
           const tweetUrl = `https://twitter.com/i/web/status/${tweetResult.data.id}`;
           
           await saveContestEntry({
@@ -474,14 +503,15 @@ router.get('/callback', async (req, res) => {
             metadata: {
               message: message || '',
               shareUrl: shareUrl || '',
-              timestamp: Date.now()
+              timestamp: Date.now(),
+              shareType: 'oauth_callback'
             }
           });
           
-          console.log('[Contest] Successfully submitted Halloween contest entry');
+          console.log('[Contest] Successfully submitted Halloween contest entry (OAuth callback)');
         } catch (contestError) {
           // Don't fail the whole share if contest submission fails
-          console.error('[Contest] Error submitting contest entry:', contestError);
+          console.error('[Contest] Error submitting contest entry (OAuth callback):', contestError);
         }
       }
       
