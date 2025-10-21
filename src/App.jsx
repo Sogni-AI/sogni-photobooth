@@ -2877,6 +2877,13 @@ const App = () => {
       
       // Clear demo render tracking when user logs in
       clearDemoRenderStatus();
+      
+      // Disable QR watermark for logged-in users (they don't need it for attribution)
+      // Only update if not explicitly set by user (check if it's still at default)
+      if (settings.sogniWatermark === true) {
+        console.log('💧 Disabling QR watermark for logged-in user');
+        updateSetting('sogniWatermark', false);
+      }
     } else if (!authState.isAuthenticated && authState.authMode === null) {
       // User logged out - switch back to demo mode (backend client)
       console.log('🔐 User logged out, switching back to demo mode (backend client)');
@@ -2887,8 +2894,14 @@ const App = () => {
       
       // Reinitialize with backend client
       initializeSogni();
+      
+      // Re-enable QR watermark for anonymous users (needed for attribution)
+      if (settings.sogniWatermark === false) {
+        console.log('💧 Re-enabling QR watermark for anonymous user');
+        updateSetting('sogniWatermark', true);
+      }
     }
-  }, [authState.isAuthenticated, authState.authMode, initializeSogni]);
+  }, [authState.isAuthenticated, authState.authMode, initializeSogni, settings.sogniWatermark, updateSetting]);
 
   // Create batch cancellation function for WebSocket errors
   const cancelBatchOnError = useCallback((error) => {
