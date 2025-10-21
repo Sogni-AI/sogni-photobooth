@@ -1,6 +1,6 @@
 export const PLAYLIST = [
   {
-    url: 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/music/09_bash_unstable.mp3',
+    url: 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/music/10_bash_unstable_(reprise).mp3',
     title: 'Bash Unstable'
   },
   {
@@ -40,7 +40,7 @@ export const PLAYLIST = [
     title: 'In the Room Where It Renders'
   },
   {
-    url: 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/music/10_bash_unstable_(reprise).mp3',
+    url: 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/music/09_bash_unstable.mp3',
     title: 'Bash Unstable (Reprise)'
   }
 ];
