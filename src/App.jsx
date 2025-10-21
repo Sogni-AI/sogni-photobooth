@@ -2215,10 +2215,10 @@ const App = () => {
     // Store the message for potential retry
     setLastTwitterMessage(customMessage);
     
-    // Get the current URL with any hashtag parameter
-    const shareUrl = new URL(window.location.href);
+    // Create a clean URL without query parameters
+    const shareUrl = new URL(window.location.origin);
     
-    // If we have a hashtag and it's not from a custom prompt, add it to the URL
+    // Only add the prompt parameter if we have a hashtag and it's not from a custom prompt
     if (currentHashtag && selectedStyle !== 'custom') {
       shareUrl.searchParams.set('prompt', currentHashtag);
     }
