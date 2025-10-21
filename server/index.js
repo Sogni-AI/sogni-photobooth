@@ -151,7 +151,7 @@ Disallow: /api/
 `);
 });
 
-// Static routes - detect environment based on SOGNI_ENV and CLIENT_ORIGIN
+// Determine static directory - detect environment based on SOGNI_ENV and CLIENT_ORIGIN
 const isLocalEnv = process.env.SOGNI_ENV === 'local' || 
                    process.env.CLIENT_ORIGIN?.includes('local') ||
                    process.env.NODE_ENV !== 'production';
@@ -169,12 +169,9 @@ if (isLocalEnv) {
 }
 
 console.log('📁 Environment: ' + (isLocalEnv ? 'LOCAL' : 'PRODUCTION'));
-console.log('📁 Serving static files from:', staticDir);
-app.use(express.static(staticDir));
+console.log('📁 Static directory:', staticDir);
 
-// Mobile sharing page route - must come before catch-all
-app.use('/mobile-share', mobileShareRoutes);
-
+// IMPORTANT: Define custom routes BEFORE static middleware to ensure they take priority
 // Halloween event route with custom meta tags for social sharing
 app.get('/halloween', (req, res) => {
   const indexPath = path.join(staticDir, 'index.html');
@@ -191,53 +188,42 @@ app.get('/halloween', (req, res) => {
     console.log('[Halloween Route] Successfully read index.html, injecting meta tags...');
     
     // Replace meta tags with Halloween-specific content
+    // Using simple global string replacement - safest approach
     let modifiedHtml = html;
     
-    // Update title
-    modifiedHtml = modifiedHtml.replace(
-      /<title>.*?<\/title>/s,
-      '<title>🎃 Sogni Halloween Photobooth Costume Party 👻</title>'
-    );
+    const halloweenTitle = '🎃 Sogni Halloween Photobooth Costume Party 👻';
+    const halloweenDesc = 'Create the perfect Halloween costume using AI! Win 40,000 Premium Sparks. Share your creation and enter the contest. Deadline: Oct 27';
+    const halloweenUrl = 'https://photobooth.sogni.ai/halloween';
+    const halloweenImage = 'https://photobooth.sogni.ai/halloween_bg.jpg';
     
-    // Update Open Graph title (handles multi-line format)
-    modifiedHtml = modifiedHtml.replace(
-      /<meta\s+property="og:title"\s+content="[^"]*"\s*\/?>/s,
-      '<meta property="og:title" content="🎃 Sogni Halloween Photobooth Costume Party 👻" />'
-    );
+    // Simple string replacements - no regex complexity
+    // Do specific replacements BEFORE global ones to avoid conflicts
+    modifiedHtml = modifiedHtml.replace('<title>Sogni AI Photobooth</title>', `<title>${halloweenTitle}</title>`);
+    modifiedHtml = modifiedHtml.replace('content="Sogni AI Photobooth" />', `content="${halloweenTitle}" />`);
+    modifiedHtml = modifiedHtml.replace('content="Sogni-AI/sogni-photobooth: Sogni Photobooth: Capture and transform your photos with AI styles"', `content="${halloweenTitle}"`);
+    // Replace description text globally AFTER specific twitter:title (appears in og:description and twitter:description)
+    modifiedHtml = modifiedHtml.replace(/Sogni Photobooth: Capture and transform your photos with AI styles/g, halloweenDesc);
+    modifiedHtml = modifiedHtml.replace(/content="https:\/\/photobooth\.sogni\.ai\/"/g, `content="${halloweenUrl}"`);
+    // Replace image URL globally (appears in both og:image and twitter:image)
+    modifiedHtml = modifiedHtml.replace(/https:\/\/repository-images\.githubusercontent\.com\/945858402\/db2496be-4fcb-4471-ad36-4eed6ffd4a9e/g, halloweenImage);
     
-    // Update Open Graph description (handles multi-line format)
-    modifiedHtml = modifiedHtml.replace(
-      /<meta[\s\n]+property="og:description"[\s\n]+content="[^"]*"[\s\n]*\/?>/s,
-      '<meta property="og:description" content="Create the perfect Halloween costume using AI! Win 40,000 Premium Sparks. Share your creation and enter the contest. Deadline: Oct 27" />'
-    );
+    // Set cache headers to prevent stale metadata
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
     
-    // Update Open Graph URL (handles multi-line format)
-    modifiedHtml = modifiedHtml.replace(
-      /<meta\s+property="og:url"\s+content="[^"]*"\s*\/?>/s,
-      '<meta property="og:url" content="https://photobooth.sogni.ai/halloween" />'
-    );
-    
-    // Update Twitter title (handles multi-line format)
-    modifiedHtml = modifiedHtml.replace(
-      /<meta\s+name="twitter:title"\s+content="[^"]*"\s*\/?>/s,
-      '<meta name="twitter:title" content="🎃 Sogni Halloween Photobooth Costume Party 👻" />'
-    );
-    
-    // Update Twitter description (handles multi-line format)
-    modifiedHtml = modifiedHtml.replace(
-      /<meta[\s\n]+name="twitter:description"[\s\n]+content="[^"]*"[\s\n]*\/?>/s,
-      '<meta name="twitter:description" content="Create the perfect Halloween costume using AI! Win 40,000 Premium Sparks. Share your creation and enter the contest. Deadline: Oct 27" />'
-    );
-    
-    // Update Twitter URL (handles multi-line format)
-    modifiedHtml = modifiedHtml.replace(
-      /<meta\s+property="twitter:url"\s+content="[^"]*"\s*\/?>/s,
-      '<meta property="twitter:url" content="https://photobooth.sogni.ai/halloween" />'
-    );
-    
+    console.log('[Halloween Route] Successfully injected meta tags and sent response');
     res.send(modifiedHtml);
   });
 });
+
+// Mobile sharing page route
+app.use('/mobile-share', mobileShareRoutes);
+
+// Static files - serve after custom routes so they don't override our meta tag injection
+app.use(express.static(staticDir));
 
 // Catch-all route to serve index.html for SPA routing
 app.get('*', (req, res) => {

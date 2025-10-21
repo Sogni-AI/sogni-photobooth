@@ -30,8 +30,38 @@
 - `}, [array.length, object.property])` ❌
 - `}, [authState.isAuthenticated, initializeSogni])` ❌
 
-## Development Environment Rules 🌐
-- **Local development URL**: Always use `https://photobooth-local.sogni.ai` (NOT localhost:5175)
+## 🚨🚨🚨 LOCAL DEVELOPMENT RULES - CRITICAL 🚨🚨🚨
+### ❌ NEVER TEST WITH THESE:
+- `http://localhost:3001` ❌
+- `http://localhost:5173` ❌  
+- `http://localhost:5175` ❌
+- `http://127.0.0.1:3001` ❌
+
+### ✅ ALWAYS TEST WITH THESE:
+- **Frontend**: `https://photobooth-local.sogni.ai` ✅
+- **Backend API**: `https://photobooth-api-local.sogni.ai` ✅
+- **Use `-k` flag with curl** for self-signed certificates ✅
+
+### 🔧 WHY THIS MATTERS:
+- **CORS** - Server only allows sogni.ai origins
+- **Cookies** - Set for `.sogni.ai` domain only
+- **OAuth** - Twitter/X OAuth uses sogni.ai redirects
+- **SSL/TLS** - Local uses HTTPS with self-signed certs
+- **Nginx** - Routes through nginx configuration
+
+### 📝 TESTING EXAMPLES:
+```bash
+# Test Halloween meta tags (CORRECT)
+curl -k -s https://photobooth-local.sogni.ai/halloween | grep "og:"
+
+# Test API health (CORRECT)  
+curl -k https://photobooth-api-local.sogni.ai/health
+
+# WRONG - Don't use localhost
+curl http://localhost:3001/halloween  # ❌ WILL FAIL
+```
+
+### 🚦 OTHER ENVIRONMENT RULES:
 - **Terminal instances**: NEVER spawn new terminal instances - the application is already running externally to Cursor
 - **Server management**: Do NOT use `npm run dev` or start/stop servers - they're managed outside Cursor
 - **Testing**: Use the live local development URL for testing changes
