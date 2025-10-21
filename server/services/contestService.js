@@ -151,6 +151,21 @@ export async function getContestEntries(contestId, options = {}) {
     } else {
       // Fallback to filesystem
       const contestDir = path.join(uploadsDir, 'contest', contestId);
+      
+      // Check if directory exists first
+      try {
+        await fs.access(contestDir);
+      } catch {
+        // Directory doesn't exist yet
+        return {
+          entries: [],
+          total: 0,
+          page,
+          limit,
+          totalPages: 0
+        };
+      }
+      
       const files = await fs.readdir(contestDir);
       const jsonFiles = files.filter(f => f.endsWith('.json'));
 
