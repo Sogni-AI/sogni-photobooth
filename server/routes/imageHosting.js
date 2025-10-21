@@ -46,6 +46,11 @@ const cleanupOldImages = () => {
       const filePath = path.join(UPLOADS_DIR, file);
       const stats = fs.statSync(filePath);
       
+      // Skip directories
+      if (!stats.isFile()) {
+        continue;
+      }
+      
       if (stats.mtime.getTime() < twoDaysAgo) {
         try {
           fs.unlinkSync(filePath);

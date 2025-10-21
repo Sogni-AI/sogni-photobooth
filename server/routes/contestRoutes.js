@@ -9,6 +9,7 @@ import {
   getContestStats,
   deleteContestEntry
 } from '../services/contestService.js';
+import { redisReady } from '../services/redisService.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
