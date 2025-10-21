@@ -103,4 +103,6 @@ export interface Settings {
   // Inactivity splash screen settings
   showSplashOnInactivity: boolean;
   inactivityTimeout: number; // in seconds
+  // Event context flags
+  halloweenContext?: boolean; // Flag to indicate user started from Halloween event
 } 

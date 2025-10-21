@@ -1,6 +1,7 @@
 import React, { useState, useEffect, createContext, useContext } from 'react';
 import App from '../App';
 import AnalyticsDashboard from './admin/AnalyticsDashboard';
+import ContestResults from './admin/ContestResults';
 import HalloweenEvent from './events/HalloweenEvent';
 import { MusicPlayerProvider } from '../context/MusicPlayerContext';
 import GlobalMusicPlayer from './shared/GlobalMusicPlayer';
@@ -16,6 +17,9 @@ const AppRouter = () => {
     const pathname = window.location.pathname;
     if (hash === '#analytics' || pathname === '/admin/analytics') {
       return 'analytics';
+    }
+    if (hash === '#contest' || pathname === '/admin/contest/results') {
+      return 'contest';
     }
     if (hash === '#halloween' || pathname === '/halloween') {
       return 'halloween';
@@ -35,6 +39,8 @@ const AppRouter = () => {
       const pathname = window.location.pathname;
       if (hash === '#analytics' || pathname === '/admin/analytics') {
         setCurrentRoute('analytics');
+      } else if (hash === '#contest' || pathname === '/admin/contest/results') {
+        setCurrentRoute('contest');
       } else if (hash === '#halloween' || pathname === '/halloween') {
         setCurrentRoute('halloween');
       } else {
@@ -61,6 +67,8 @@ const AppRouter = () => {
         
         {currentRoute === 'analytics' ? (
           <AnalyticsDashboard />
+        ) : currentRoute === 'contest' ? (
+          <ContestResults />
         ) : currentRoute === 'halloween' ? (
           <HalloweenEvent />
         ) : (

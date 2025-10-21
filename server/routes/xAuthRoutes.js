@@ -15,6 +15,7 @@ import {
   incrementTwitterShares
 } from '../services/redisService.js';
 import { trackMetric } from '../services/analyticsService.js';
+import { saveContestEntry } from '../services/contestService.js';
 
 const router = express.Router();
 
@@ -171,7 +172,7 @@ const getSessionId = (req, res, next) => {
 router.post('/start', getSessionId, async (req, res) => {
   try {
     // Check for required data
-    const { imageUrl, message, shareUrl } = req.body;
+    const { imageUrl, message, shareUrl, halloweenContext, prompt, username, address } = req.body;
     if (!imageUrl) {
       return res.status(400).json({ message: 'No image URL provided' });
     }
@@ -296,7 +297,11 @@ router.post('/start', getSessionId, async (req, res) => {
       timestamp: Date.now(),
       pendingImageUrl: imageUrl,
       pendingMessage: message,
-      pendingShareUrl: shareUrl
+      pendingShareUrl: shareUrl,
+      halloweenContext: halloweenContext || false,
+      prompt: prompt || null,
+      username: username || null,
+      address: address || null
     };
     
     if (redisReady()) {
@@ -451,6 +456,34 @@ router.get('/callback', async (req, res) => {
       }
       
       console.log('[Twitter OAuth] Image successfully shared to X, tweet ID:', tweetResult.data.id);
+      
+      // If this is a Halloween context share, submit to contest
+      if (oauthData.halloweenContext && oauthData.prompt) {
+        try {
+          console.log('[Contest] Submitting Halloween contest entry');
+          const tweetUrl = `https://twitter.com/i/web/status/${tweetResult.data.id}`;
+          
+          await saveContestEntry({
+            contestId: 'halloween',
+            imageUrl,
+            prompt: oauthData.prompt,
+            username: oauthData.username,
+            address: oauthData.address,
+            tweetId: tweetResult.data.id,
+            tweetUrl,
+            metadata: {
+              message: message || '',
+              shareUrl: shareUrl || '',
+              timestamp: Date.now()
+            }
+          });
+          
+          console.log('[Contest] Successfully submitted Halloween contest entry');
+        } catch (contestError) {
+          // Don't fail the whole share if contest submission fails
+          console.error('[Contest] Error submitting contest entry:', contestError);
+        }
+      }
       
       // Success HTML with messaging to parent window
       const successHtml = `

@@ -24,6 +24,7 @@ const HalloweenEvent = () => {
     console.log('🎃 Halloween prompt submitted:', prompt);
     updateSetting('positivePrompt', prompt);
     updateSetting('selectedStyle', 'custom');
+    updateSetting('halloweenContext', true); // Flag to enable Halloween-specific Twitter share message
     
     // Navigate to camera view WITHOUT page reload
     navigateToCamera();

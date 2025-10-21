@@ -57,7 +57,12 @@ const TwitterShareModal = ({
   useEffect(() => {
     const loadMessage = async () => {
       if (isOpen) {
-        if (tezdevTheme !== 'off') {
+        // Check if user came from Halloween event
+        if (settings.halloweenContext && settings.positivePrompt) {
+          // Use Halloween-specific message format
+          const halloweenMessage = `My @sogni_protocol Halloween Costume Party Challenge entry! My prompt: "${settings.positivePrompt}"`;
+          setMessage(halloweenMessage);
+        } else if (tezdevTheme !== 'off') {
           // Use dynamic theme-specific message format
           try {
             const styleTag = styleDisplayText ? styleDisplayText.toLowerCase().replace(/\s+/g, '') : '';
@@ -90,7 +95,7 @@ const TwitterShareModal = ({
     };
 
     loadMessage();
-  }, [isOpen, defaultMessage, styleDisplayText, tezdevTheme]);
+  }, [isOpen, defaultMessage, styleDisplayText, tezdevTheme, settings.halloweenContext, settings.positivePrompt]);
 
   // Ensure font is loaded when component mounts
   useEffect(() => {

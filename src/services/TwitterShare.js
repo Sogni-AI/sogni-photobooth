@@ -43,6 +43,10 @@ export const getPhotoHashtag = (photo) => {
  * @param {boolean} [params.sogniWatermark=true] - Whether to include Sogni watermark
  * @param {number} [params.sogniWatermarkSize=100] - Size of the QR watermark
  * @param {number} [params.sogniWatermarkMargin=26] - Margin of the QR watermark from edge
+ * @param {boolean} [params.halloweenContext=false] - Whether this is a Halloween contest entry
+ * @param {string} [params.prompt] - User's prompt (for contest entries)
+ * @param {string} [params.username] - User's username (for contest entries)
+ * @param {string} [params.address] - User's wallet address (for contest entries)
  * @returns {Promise<void>}
  */
 export const shareToTwitter = async ({
@@ -59,6 +63,10 @@ export const shareToTwitter = async ({
   sogniWatermark = true,
   sogniWatermarkSize = 100,
   sogniWatermarkMargin = 26,
+  halloweenContext = false,
+  prompt = null,
+  username = null,
+  address = null,
 }) => {
   if (photoIndex === null || !photos[photoIndex] || !photos[photoIndex].images || !photos[photoIndex].images[0]) {
     console.error('No image selected or image URL is missing for sharing.');
@@ -228,7 +236,11 @@ export const shareToTwitter = async ({
           body: JSON.stringify({ 
             imageUrl: imageDataUrl, // Send the data URL directly instead of blob URL
             message: twitterMessage, // Use the appropriate message format
-            shareUrl: shareUrl // Include the share URL if provided
+            shareUrl: shareUrl, // Include the share URL if provided
+            halloweenContext, // Include Halloween context flag
+            prompt, // Include user's prompt for contest
+            username, // Include username for contest
+            address // Include wallet address for contest
           }),
         });
 

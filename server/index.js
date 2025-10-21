@@ -1,5 +1,5 @@
 import express from 'express';
-// import cors from 'cors'; // Nginx handles CORS now
+import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
 import path from 'path';
@@ -10,6 +10,7 @@ import metricsRoutes from './routes/metricsRoutes.js';
 import mobileShareRoutes from './routes/mobileShare.js';
 import imageHostingRoutes from './routes/imageHosting.js';
 import analyticsRoutes from './routes/analytics.js';
+import contestRoutes from './routes/contestRoutes.js';
 import process from 'process'; // Added to address linter error
 
 // Load environment variables FIRST
@@ -39,10 +40,39 @@ if (process.env.NODE_ENV === 'production' && COOKIE_DOMAIN_EFFECTIVE !== '.sogni
 // 1. Trust proxy (if applicable)
 app.set('trust proxy', 1); // Trust first proxy if deployed behind one (e.g., Nginx, Heroku)
 
-// 2. Cookie Parser (might not be strictly necessary before cookieSession, but doesn't hurt)
+// 2. CORS Configuration
+const allowedOrigins = [
+  'https://photobooth.sogni.ai',
+  'https://photobooth-staging.sogni.ai',
+  'https://photobooth-local.sogni.ai',
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'http://127.0.0.1:5173',
+  'http://127.0.0.1:3000'
+];
+
+app.use(cors({
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps, Postman, or curl)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1 || origin.endsWith('.sogni.ai')) {
+      callback(null, true);
+    } else {
+      console.warn(`CORS blocked origin: ${origin}`);
+      callback(null, true); // Allow anyway for now, but log it
+    }
+  },
+  credentials: true, // Important for cookies
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
+  exposedHeaders: ['Set-Cookie']
+}));
+
+// 3. Cookie Parser
 app.use(cookieParser());
 
-// 3. Body Parsers
+// 4. Body Parsers
 app.use(express.json({ limit: '50mb' })); 
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
@@ -81,6 +111,7 @@ app.use('/api/metrics', metricsRoutes); // Metrics routes
 app.use('/api/mobile-share', mobileShareRoutes); // Mobile sharing routes
 app.use('/api/images', imageHostingRoutes); // Image hosting routes
 app.use('/api/analytics', analyticsRoutes); // Analytics routes
+app.use('/api/contest', contestRoutes); // Contest routes
 
 // Health check endpoint
 app.get('/health', (req, res) => {

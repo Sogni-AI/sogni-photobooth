@@ -183,6 +183,8 @@ const createDefaultSettings = (): Settings => {
     // Inactivity splash screen settings
     showSplashOnInactivity: false, // Default to disabled
     inactivityTimeout: 60 * 5, // Default to 5 minutes
+    // Event context flags
+    halloweenContext: false, // Default to disabled, set to true when user starts from Halloween event
   };
 };
 

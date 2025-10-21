@@ -130,7 +130,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       skipWorkers: getSettingFromCookie('skipWorkers', DEFAULT_SETTINGS.skipWorkers),
       // Inactivity splash screen settings
       showSplashOnInactivity: getSettingFromCookie('showSplashOnInactivity', DEFAULT_SETTINGS.showSplashOnInactivity),
-      inactivityTimeout: getSettingFromCookie('inactivityTimeout', DEFAULT_SETTINGS.inactivityTimeout)
+      inactivityTimeout: getSettingFromCookie('inactivityTimeout', DEFAULT_SETTINGS.inactivityTimeout),
+      // Event context flags
+      halloweenContext: getSettingFromCookie('halloweenContext', DEFAULT_SETTINGS.halloweenContext)
     };
   });
   

@@ -56,6 +56,7 @@ export const MusicPlayerProvider = ({ children }) => {
     return saved === null ? true : saved === 'true';
   });
   const audioRef = useRef(null);
+  const shouldAutoPlayNextRef = useRef(false); // Track if next track should auto-play
 
   // Persist state to sessionStorage (except isEnabled)
   // Don't persist isEnabled - it should only be true during Halloween session
@@ -134,7 +135,10 @@ export const MusicPlayerProvider = ({ children }) => {
     };
 
     const handleEnded = () => {
-      handleNext();
+      // When track ends, mark that we should auto-play the next track
+      shouldAutoPlayNextRef.current = true;
+      console.log('🎵 Track ended, will auto-play next track');
+      setCurrentTrackIndex((prev) => (prev + 1) % PLAYLIST.length);
     };
 
     audio.addEventListener('loadedmetadata', handleLoadedMetadata);
@@ -146,6 +150,27 @@ export const MusicPlayerProvider = ({ children }) => {
       audio.removeEventListener('timeupdate', handleTimeUpdate);
       audio.removeEventListener('ended', handleEnded);
     };
+  }, [currentTrackIndex]);
+
+  // Auto-play new track when track changes if auto-play flag is set
+  useEffect(() => {
+    if (shouldAutoPlayNextRef.current && audioRef.current) {
+      console.log('🎵 Track changed, auto-playing next track');
+      shouldAutoPlayNextRef.current = false; // Reset flag
+      
+      // Small delay to ensure audio element is ready with new source
+      setTimeout(() => {
+        audioRef.current?.play()
+          .then(() => {
+            console.log('🎵 Next track auto-play succeeded');
+            setIsPlaying(true);
+          })
+          .catch((err) => {
+            console.log('🎵 Failed to auto-play next track:', err);
+            setIsPlaying(false);
+          });
+      }, 100);
+    }
   }, [currentTrackIndex]);
 
   const handlePlayPause = async () => {

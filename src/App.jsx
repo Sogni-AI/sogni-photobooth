@@ -1293,6 +1293,7 @@ const App = () => {
       updateSetting('positivePrompt', ''); // No prompt for gallery browsing
       updateUrlWithPrompt(null); // Clear URL parameter
       setCurrentHashtag(null); // Clear hashtag
+      updateSetting('halloweenContext', false); // Clear Halloween context
       return;
     }
     
@@ -1303,6 +1304,8 @@ const App = () => {
     } else {
       const prompt = stylePrompts[style] || '';
       updateSetting('positivePrompt', prompt); 
+      // Clear Halloween context when switching away from custom style
+      updateSetting('halloweenContext', false);
     }
     
     // Update the URL with the prompt parameter
@@ -1533,7 +1536,9 @@ const App = () => {
       updateSetting('positivePrompt', ''); 
     } else {
       const prompt = stylePrompts[promptKey] || '';
-      updateSetting('positivePrompt', prompt); 
+      updateSetting('positivePrompt', prompt);
+      // Clear Halloween context when switching to a preset style
+      updateSetting('halloweenContext', false);
     }
     // Update current hashtag for sharing
     setCurrentHashtag(getHashtagForStyle(promptKey));
@@ -1550,6 +1555,7 @@ const App = () => {
     updateSetting('selectedStyle', 'randomMix');
     updateSetting('positivePrompt', '');
     setCurrentHashtag(null);
+    updateSetting('halloweenContext', false); // Clear Halloween context
     // Update URL (randomMix will clear the prompt parameter)
     updateUrlWithPrompt('randomMix');
     // Don't automatically redirect - let user choose to navigate with camera/photos buttons
@@ -1560,6 +1566,7 @@ const App = () => {
     updateSetting('selectedStyle', 'random');
     updateSetting('positivePrompt', '');
     setCurrentHashtag(null);
+    updateSetting('halloweenContext', false); // Clear Halloween context
     // Update URL (random will clear the prompt parameter)
     updateUrlWithPrompt('random');
     // Don't automatically redirect - let user choose to navigate with camera/photos buttons
@@ -1570,6 +1577,7 @@ const App = () => {
     updateSetting('selectedStyle', 'oneOfEach');
     updateSetting('positivePrompt', '');
     setCurrentHashtag(null);
+    updateSetting('halloweenContext', false); // Clear Halloween context
     // Update URL (oneOfEach will clear the prompt parameter)
     updateUrlWithPrompt('oneOfEach');
     // Don't automatically redirect - let user choose to navigate with camera/photos buttons
@@ -1580,6 +1588,7 @@ const App = () => {
     updateSetting('selectedStyle', 'custom');
     updateSetting('positivePrompt', '');
     setCurrentHashtag('SogniPhotobooth'); // Use #SogniPhotobooth for custom prompts
+    updateSetting('halloweenContext', false); // Clear Halloween context (user is manually entering custom mode)
     // Update URL (custom will clear the prompt parameter)
     updateUrlWithPrompt('custom');
     // Note: User can now edit custom prompt via the popup in StyleDropdown
@@ -2227,14 +2236,27 @@ const App = () => {
       sogniWatermark: settings.sogniWatermark,
       sogniWatermarkSize: settings.sogniWatermarkSize,
       sogniWatermarkMargin: settings.sogniWatermarkMargin,
+      halloweenContext: settings.halloweenContext || false,
+      prompt: settings.positivePrompt || null,
+      username: authState.user?.username || null,
+      address: authState.user?.email || null, // Using email as identifier for now
       onSuccess: async () => {
-        // Show success toast using the new toast system
-        showToast({
-          title: 'Success!',
-          message: 'Your photo has been shared to X/Twitter!',
-          type: 'success',
-          timeout: 4000
-        });
+        // Show success toast using the new toast system - special message for Halloween contest
+        if (settings.halloweenContext) {
+          showToast({
+            title: '🎃 Contest Entry Submitted!',
+            message: 'Your Halloween creation has been shared and entered into the contest!',
+            type: 'success',
+            timeout: 5000
+          });
+        } else {
+          showToast({
+            title: 'Success!',
+            message: 'Your photo has been shared to X/Twitter!',
+            type: 'success',
+            timeout: 4000
+          });
+        }
         setShowTwitterModal(false);
         
         // Track analytics for successful Twitter share
@@ -2245,7 +2267,8 @@ const App = () => {
           tezdevTheme,
           aspectRatio,
           outputFormat,
-          hasWatermark: settings.sogniWatermark
+          hasWatermark: settings.sogniWatermark,
+          halloweenContext: settings.halloweenContext || false
         });
       }
     });
