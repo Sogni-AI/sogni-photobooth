@@ -4,6 +4,7 @@ import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import fs from 'fs';
 import sogniRoutes from './routes/sogni.js';
 import xAuthRoutes from './routes/xAuthRoutes.js';
 import metricsRoutes from './routes/metricsRoutes.js';
@@ -150,16 +151,93 @@ Disallow: /api/
 `);
 });
 
-// Static routes for production
-const isDev = process.env.NODE_ENV !== 'production';
-const staticDir = isDev 
-  ? path.join(__dirname, '..', 'dist')
-  : '/var/www/photobooth.sogni.ai';
-  
+// Static routes - detect environment based on SOGNI_ENV and CLIENT_ORIGIN
+const isLocalEnv = process.env.SOGNI_ENV === 'local' || 
+                   process.env.CLIENT_ORIGIN?.includes('local') ||
+                   process.env.NODE_ENV !== 'production';
+
+let staticDir;
+if (isLocalEnv) {
+  staticDir = path.join(__dirname, '..', 'dist');
+} else {
+  // Determine production path based on environment
+  if (process.env.CLIENT_ORIGIN?.includes('staging')) {
+    staticDir = '/var/www/photobooth-staging.sogni.ai';
+  } else {
+    staticDir = '/var/www/photobooth.sogni.ai';
+  }
+}
+
+console.log('📁 Environment: ' + (isLocalEnv ? 'LOCAL' : 'PRODUCTION'));
+console.log('📁 Serving static files from:', staticDir);
 app.use(express.static(staticDir));
 
 // Mobile sharing page route - must come before catch-all
 app.use('/mobile-share', mobileShareRoutes);
+
+// Halloween event route with custom meta tags for social sharing
+app.get('/halloween', (req, res) => {
+  const indexPath = path.join(staticDir, 'index.html');
+  console.log('[Halloween Route] Attempting to read:', indexPath);
+  
+  fs.readFile(indexPath, 'utf8', (err, html) => {
+    if (err) {
+      console.error('[Halloween Route] Error reading index.html:', err);
+      console.error('[Halloween Route] Static dir:', staticDir);
+      console.error('[Halloween Route] Index path:', indexPath);
+      return res.status(500).send('Error loading page: ' + err.message);
+    }
+    
+    console.log('[Halloween Route] Successfully read index.html, injecting meta tags...');
+    
+    // Replace meta tags with Halloween-specific content
+    let modifiedHtml = html;
+    
+    // Update title
+    modifiedHtml = modifiedHtml.replace(
+      /<title>.*?<\/title>/s,
+      '<title>🎃 Sogni Halloween Photobooth Costume Party 👻</title>'
+    );
+    
+    // Update Open Graph title (handles multi-line format)
+    modifiedHtml = modifiedHtml.replace(
+      /<meta\s+property="og:title"\s+content="[^"]*"\s*\/?>/s,
+      '<meta property="og:title" content="🎃 Sogni Halloween Photobooth Costume Party 👻" />'
+    );
+    
+    // Update Open Graph description (handles multi-line format)
+    modifiedHtml = modifiedHtml.replace(
+      /<meta[\s\n]+property="og:description"[\s\n]+content="[^"]*"[\s\n]*\/?>/s,
+      '<meta property="og:description" content="Create the perfect Halloween costume using AI! Win 40,000 Premium Sparks. Share your creation and enter the contest. Deadline: Oct 27" />'
+    );
+    
+    // Update Open Graph URL (handles multi-line format)
+    modifiedHtml = modifiedHtml.replace(
+      /<meta\s+property="og:url"\s+content="[^"]*"\s*\/?>/s,
+      '<meta property="og:url" content="https://photobooth.sogni.ai/halloween" />'
+    );
+    
+    // Update Twitter title (handles multi-line format)
+    modifiedHtml = modifiedHtml.replace(
+      /<meta\s+name="twitter:title"\s+content="[^"]*"\s*\/?>/s,
+      '<meta name="twitter:title" content="🎃 Sogni Halloween Photobooth Costume Party 👻" />'
+    );
+    
+    // Update Twitter description (handles multi-line format)
+    modifiedHtml = modifiedHtml.replace(
+      /<meta[\s\n]+name="twitter:description"[\s\n]+content="[^"]*"[\s\n]*\/?>/s,
+      '<meta name="twitter:description" content="Create the perfect Halloween costume using AI! Win 40,000 Premium Sparks. Share your creation and enter the contest. Deadline: Oct 27" />'
+    );
+    
+    // Update Twitter URL (handles multi-line format)
+    modifiedHtml = modifiedHtml.replace(
+      /<meta\s+property="twitter:url"\s+content="[^"]*"\s*\/?>/s,
+      '<meta property="twitter:url" content="https://photobooth.sogni.ai/halloween" />'
+    );
+    
+    res.send(modifiedHtml);
+  });
+});
 
 // Catch-all route to serve index.html for SPA routing
 app.get('*', (req, res) => {

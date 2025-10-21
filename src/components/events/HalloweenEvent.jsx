@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Helmet } from 'react-helmet-async';
 import HalloweenPromptPopup from './HalloweenPromptPopup';
 import { AuthStatus } from '../auth/AuthStatus';
 import { useMusicPlayer } from '../../context/MusicPlayerContext';
@@ -32,6 +33,23 @@ const HalloweenEvent = () => {
 
   return (
     <div className="halloween-event">
+      <Helmet>
+        <title>🎃 Sogni Halloween Photobooth Costume Party 👻</title>
+        <meta name="description" content="Create the perfect Halloween costume using AI! Win 40,000 Premium Sparks. Share your creation and enter the contest. Deadline: Oct 27" />
+        
+        {/* Open Graph / Facebook */}
+        <meta property="og:title" content="🎃 Sogni Halloween Photobooth Costume Party 👻" />
+        <meta property="og:description" content="Create the perfect Halloween costume using AI! Win 40,000 Premium Sparks. Share your creation and enter the contest. Deadline: Oct 27" />
+        <meta property="og:url" content="https://photobooth.sogni.ai/halloween" />
+        <meta property="og:type" content="website" />
+        
+        {/* Twitter */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="🎃 Sogni Halloween Photobooth Costume Party 👻" />
+        <meta name="twitter:description" content="Create the perfect Halloween costume using AI! Win 40,000 Premium Sparks. Share your creation and enter the contest. Deadline: Oct 27" />
+        <meta property="twitter:url" content="https://photobooth.sogni.ai/halloween" />
+      </Helmet>
+
       {/* Authentication Status - top-left */}
       <div className="halloween-auth-status">
         <AuthStatus />
