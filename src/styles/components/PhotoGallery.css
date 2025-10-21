@@ -933,3 +933,8 @@ html body .photo-action-buttons .action-button,
     padding: 10px 14px !important;
   }
 }
+
+/* Portrait type button hover labels */
+.portrait-type-button-container:hover .portrait-type-label {
+  opacity: 1;
+}

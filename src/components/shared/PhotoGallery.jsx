@@ -2214,7 +2214,7 @@ const PhotoGallery = ({
           title="Generate fresh batch with current settings"
         >
           <span className="view-photos-label">
-            IMAGINE {numImages}x
+            Imagine {numImages}x
             {isAuthenticated && !moreButtonCostLoading && moreButtonCost && moreButtonCost !== '—' && (
               <span style={{ fontSize: '0.85em', opacity: 0.95, marginLeft: '6px' }}>
                 • {moreButtonCost} {tokenLabel}
@@ -3162,39 +3162,70 @@ const PhotoGallery = ({
             alignItems: 'center',
             justifyContent: 'center'
           }}>
-            <button 
-              onClick={() => onPortraitTypeChange && onPortraitTypeChange('headshot')}
-              style={{
-                background: 'transparent',
-                border: portraitType === 'headshot' ? '3px solid #72e3f2' : 'none',
-                borderRadius: '50%',
-                padding: '0',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                width: '60px',
-                height: '60px',
-                overflow: 'hidden',
-                boxShadow: portraitType === 'headshot' ? '0 0 12px rgba(114, 227, 242, 0.6)' : '0 2px 8px rgba(0,0,0,0.2)'
+            <div 
+              style={{ position: 'relative' }} 
+              className="portrait-type-button-container"
+              onMouseEnter={(e) => {
+                if (portraitType !== 'headshot') {
+                  const label = e.currentTarget.querySelector('.portrait-type-label');
+                  if (label) label.style.opacity = '1';
+                }
               }}
-              onMouseOver={e => {
-                e.currentTarget.style.transform = 'scale(1.1)';
+              onMouseLeave={(e) => {
+                const label = e.currentTarget.querySelector('.portrait-type-label');
+                if (label) label.style.opacity = '0';
               }}
-              onMouseOut={e => {
-                e.currentTarget.style.transform = 'scale(1)';
-              }}
-              title="Up Close"
             >
-              <img 
-                src="/gallery/sample-gallery-headshot-einstein.jpg"
-                alt="Up Close"
+              <button 
+                onClick={() => onPortraitTypeChange && onPortraitTypeChange('headshot')}
                 style={{
-                  width: '100%',
-                  height: '100%',
-                  objectFit: 'cover',
-                  display: 'block'
+                  background: 'transparent',
+                  border: portraitType === 'headshot' ? '3px solid #72e3f2' : 'none',
+                  borderRadius: '50%',
+                  padding: '0',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  width: '60px',
+                  height: '60px',
+                  overflow: 'hidden',
+                  boxShadow: portraitType === 'headshot' ? '0 0 12px rgba(114, 227, 242, 0.6)' : '0 2px 8px rgba(0,0,0,0.2)'
                 }}
-              />
-            </button>
+                onMouseOver={e => {
+                  e.currentTarget.style.transform = 'scale(1.1)';
+                }}
+                onMouseOut={e => {
+                  e.currentTarget.style.transform = 'scale(1)';
+                }}
+                title="Up Close"
+              >
+                <img 
+                  src="/gallery/sample-gallery-headshot-einstein.jpg"
+                  alt="Up Close"
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                    display: 'block'
+                  }}
+                />
+              </button>
+              <span style={{
+                position: 'absolute',
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+                fontSize: '14px',
+                fontWeight: 'bold',
+                color: 'white',
+                textShadow: '0 0 4px rgba(0, 0, 0, 0.6), 0 0 2px rgba(0, 0, 0, 0.8)',
+                whiteSpace: 'nowrap',
+                pointerEvents: 'none',
+                opacity: 0,
+                transition: 'opacity 0.2s ease'
+              }} className="portrait-type-label">
+                CLOSE
+              </span>
+            </div>
             
             <button 
               onClick={() => onPortraitTypeChange && onPortraitTypeChange('medium')}
@@ -3230,39 +3261,70 @@ const PhotoGallery = ({
               />
             </button>
             
-            <button 
-              onClick={() => onPortraitTypeChange && onPortraitTypeChange('fullbody')}
-              style={{
-                background: 'transparent',
-                border: portraitType === 'fullbody' ? '3px solid #72e3f2' : 'none',
-                borderRadius: '50%',
-                padding: '0',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                width: '60px',
-                height: '60px',
-                overflow: 'hidden',
-                boxShadow: portraitType === 'fullbody' ? '0 0 12px rgba(114, 227, 242, 0.6)' : '0 2px 8px rgba(0,0,0,0.2)'
+            <div 
+              style={{ position: 'relative' }} 
+              className="portrait-type-button-container"
+              onMouseEnter={(e) => {
+                if (portraitType !== 'fullbody') {
+                  const label = e.currentTarget.querySelector('.portrait-type-label');
+                  if (label) label.style.opacity = '1';
+                }
               }}
-              onMouseOver={e => {
-                e.currentTarget.style.transform = 'scale(1.1)';
+              onMouseLeave={(e) => {
+                const label = e.currentTarget.querySelector('.portrait-type-label');
+                if (label) label.style.opacity = '0';
               }}
-              onMouseOut={e => {
-                e.currentTarget.style.transform = 'scale(1)';
-              }}
-              title="Wide Portrait"
             >
-              <img 
-                src="/gallery/sample-gallery-full-body-mark.jpg"
-                alt="Wide Portrait"
+              <button 
+                onClick={() => onPortraitTypeChange && onPortraitTypeChange('fullbody')}
                 style={{
-                  width: '100%',
-                  height: '100%',
-                  objectFit: 'cover',
-                  display: 'block'
+                  background: 'transparent',
+                  border: portraitType === 'fullbody' ? '3px solid #72e3f2' : 'none',
+                  borderRadius: '50%',
+                  padding: '0',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  width: '60px',
+                  height: '60px',
+                  overflow: 'hidden',
+                  boxShadow: portraitType === 'fullbody' ? '0 0 12px rgba(114, 227, 242, 0.6)' : '0 2px 8px rgba(0,0,0,0.2)'
                 }}
-              />
-            </button>
+                onMouseOver={e => {
+                  e.currentTarget.style.transform = 'scale(1.1)';
+                }}
+                onMouseOut={e => {
+                  e.currentTarget.style.transform = 'scale(1)';
+                }}
+                title="Wide Portrait"
+              >
+                <img 
+                  src="/gallery/sample-gallery-full-body-mark.jpg"
+                  alt="Wide Portrait"
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                    display: 'block'
+                  }}
+                />
+              </button>
+              <span style={{
+                position: 'absolute',
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+                fontSize: '14px',
+                fontWeight: 'bold',
+                color: 'white',
+                textShadow: '0 0 4px rgba(0, 0, 0, 0.6), 0 0 2px rgba(0, 0, 0, 0.8)',
+                whiteSpace: 'nowrap',
+                pointerEvents: 'none',
+                opacity: 0,
+                transition: 'opacity 0.2s ease'
+              }} className="portrait-type-label">
+                FAR
+              </span>
+            </div>
           </div>
 
           {/* Filter button on the right */}
