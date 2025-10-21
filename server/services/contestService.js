@@ -14,11 +14,8 @@ import {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Determine the base uploads directory
-const isDev = process.env.NODE_ENV !== 'production';
-const uploadsDir = isDev
-  ? path.join(__dirname, '..', 'uploads')
-  : '/var/www/photobooth-uploads';
+// Use the same uploads directory as imageHosting.js - relative to server's cwd
+const uploadsDir = path.join(process.cwd(), 'uploads');
 
 /**
  * Save a contest entry image and metadata
@@ -230,6 +227,20 @@ export async function getContestStats(contestId) {
     } else {
       // Fallback to filesystem
       const contestDir = path.join(uploadsDir, 'contest', contestId);
+      
+      // Check if directory exists first
+      try {
+        await fs.access(contestDir);
+      } catch {
+        // Directory doesn't exist yet
+        return {
+          totalEntries: 0,
+          uniqueUsers: 0,
+          oldestEntry: null,
+          newestEntry: null
+        };
+      }
+      
       const files = await fs.readdir(contestDir);
       const jsonFiles = files.filter(f => f.endsWith('.json'));
 

@@ -159,11 +159,8 @@ router.get('/:contestId/image/:filename', async (req, res) => {
       });
     }
 
-    const isDev = process.env.NODE_ENV !== 'production';
-    const uploadsDir = isDev
-      ? path.join(__dirname, '..', 'uploads')
-      : '/var/www/photobooth-uploads';
-
+    // Use the same uploads directory pattern as imageHosting.js
+    const uploadsDir = path.join(process.cwd(), 'uploads');
     const imagePath = path.join(uploadsDir, 'contest', contestId, filename);
 
     // Check if file exists
