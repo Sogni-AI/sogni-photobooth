@@ -1,0 +1,575 @@
+.halloween-event {
+  height: 100vh;
+  background: #fc984a;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Authentication status in top-left corner */
+.halloween-auth-status {
+  position: fixed;
+  top: 24px;
+  left: 24px;
+  z-index: 1000;
+}
+
+/* Background image at the bottom left */
+.halloween-background-image {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 35%;
+  height: 100vh;
+  background-image: url('/halloween_bg.jpg');
+  background-size: contain;
+  background-position: bottom left;
+  background-repeat: no-repeat;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* Main content container */
+.halloween-content {
+  position: relative;
+  z-index: 1;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 2rem;
+  box-sizing: border-box;
+}
+
+/* Floating decorations */
+.halloween-decorations {
+  position: fixed;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  z-index: 2;
+  overflow: hidden;
+}
+
+.floating-ghost,
+.floating-pumpkin,
+.floating-bat,
+.floating-spider {
+  position: absolute;
+  font-size: 2rem;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+}
+
+.floating-ghost {
+  animation: floatGhost 8s ease-in-out infinite;
+}
+
+.ghost-1 {
+  top: 10%;
+  left: 5%;
+  animation-delay: 0s;
+}
+
+.ghost-2 {
+  top: 30%;
+  right: 8%;
+  animation-delay: 3s;
+}
+
+.floating-pumpkin {
+  animation: bobPumpkin 6s ease-in-out infinite;
+}
+
+.pumpkin-1 {
+  top: 20%;
+  left: 15%;
+  animation-delay: 1s;
+}
+
+.pumpkin-2 {
+  top: 50%;
+  right: 12%;
+  animation-delay: 2.5s;
+}
+
+.floating-bat {
+  animation: flyBat 10s ease-in-out infinite;
+}
+
+.bat-1 {
+  top: 15%;
+  left: 30%;
+  animation-delay: 0s;
+}
+
+.bat-2 {
+  top: 40%;
+  left: 60%;
+  animation-delay: 3s;
+}
+
+.bat-3 {
+  top: 25%;
+  right: 20%;
+  animation-delay: 5s;
+}
+
+.floating-spider {
+  animation: swingSpider 4s ease-in-out infinite;
+}
+
+.spider-1 {
+  top: 5%;
+  left: 40%;
+  animation-delay: 0.5s;
+}
+
+.spider-2 {
+  top: 35%;
+  right: 30%;
+  animation-delay: 2s;
+}
+
+/* Header */
+.halloween-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.halloween-title {
+  font-size: 2.5rem;
+  font-weight: bold;
+  color: #2d1810;
+  text-shadow: 
+    2px 2px 0 #fff,
+    -2px -2px 0 #fff,
+    2px -2px 0 #fff,
+    -2px 2px 0 #fff;
+  margin: 0 0 0.5rem 0;
+  animation: pulseTitle 3s ease-in-out infinite;
+}
+
+.pumpkin-icon,
+.ghost-icon {
+  display: inline-block;
+  margin: 0 1rem;
+  animation: wiggle 2s ease-in-out infinite;
+}
+
+.halloween-subtitle {
+  font-size: 1.3rem;
+  color: #2d1810;
+  font-weight: 600;
+  margin: 0;
+}
+
+.sparkle {
+  display: inline-block;
+  margin: 0 0.5rem;
+  animation: twinkle 1.5s ease-in-out infinite;
+}
+
+/* Music Section - global positioning in shared styles */
+
+/* Contest Section */
+.halloween-contest {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: 700px;
+}
+
+.contest-card {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 20px;
+  padding: 1.8rem 2rem;
+  box-shadow: 
+    0 10px 30px rgba(0, 0, 0, 0.3),
+    0 0 0 5px #2d1810;
+  width: 100%;
+  position: relative;
+  overflow: hidden;
+}
+
+.contest-card::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  background: linear-gradient(45deg, #ff6b00, #ffa500, #ff8c00, #ff6b00);
+  z-index: -1;
+  border-radius: 20px;
+  animation: borderGlow 3s ease-in-out infinite;
+}
+
+.contest-title {
+  font-size: 1.4rem;
+  color: #2d1810;
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+.contest-description {
+  font-size: 1rem;
+  color: #333;
+  margin-bottom: 1.5rem;
+  text-align: center;
+  line-height: 1.6;
+  max-width: 90%;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.how-to-win {
+  background: #fff5e6;
+  border-radius: 15px;
+  padding: 1rem;
+  margin-bottom: 1.2rem;
+  border: 3px solid #ff8c00;
+}
+
+.how-to-win h3 {
+  font-size: 1.2rem;
+  color: #2d1810;
+  text-align: center;
+  margin: 0 0 0.6rem 0;
+}
+
+.how-to-win ul {
+  list-style: none;
+  padding: 0;
+}
+
+.how-to-win li {
+  padding: 0.4rem 0 0.4rem 2rem;
+  position: relative;
+  color: #333;
+  line-height: 1.5;
+  font-size: 0.95rem;
+  text-align: left;
+}
+
+.how-to-win li::before {
+  content: '🎃';
+  position: absolute;
+  left: 0;
+}
+
+.prize-info {
+  background: linear-gradient(135deg, #fff5e6 0%, #ffe6cc 100%);
+  border-radius: 15px;
+  padding: 1rem;
+  margin-bottom: 1.2rem;
+  border: 3px solid #ff6b00;
+}
+
+.prize-pool,
+.feature-info,
+.deadline {
+  text-align: center;
+  font-size: 1rem;
+  color: #2d1810;
+  margin: 0.6rem 0;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.highlight {
+  color: #ff6b00;
+  font-weight: bold;
+  font-size: 1.3em;
+}
+
+.start-creating-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 0.9rem 1.2rem;
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: white;
+  background: linear-gradient(135deg, #ff6b00 0%, #ff8c00 100%);
+  border: none;
+  border-radius: 50px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 5px 15px rgba(255, 107, 0, 0.4);
+}
+
+.start-creating-btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(255, 107, 0, 0.6);
+}
+
+.start-creating-btn:active {
+  transform: translateY(-1px);
+}
+
+.btn-icon {
+  margin: 0 0.5rem;
+  font-size: 1.8rem;
+}
+
+/* Animations */
+@keyframes floatGhost {
+  0%, 100% {
+    transform: translateY(0) translateX(0);
+  }
+  25% {
+    transform: translateY(-20px) translateX(10px);
+  }
+  50% {
+    transform: translateY(-10px) translateX(-10px);
+  }
+  75% {
+    transform: translateY(-30px) translateX(5px);
+  }
+}
+
+@keyframes bobPumpkin {
+  0%, 100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-15px) rotate(5deg);
+  }
+}
+
+@keyframes flyBat {
+  0%, 100% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  25% {
+    transform: translate(-30px, -20px) rotate(-10deg);
+  }
+  50% {
+    transform: translate(20px, -40px) rotate(5deg);
+  }
+  75% {
+    transform: translate(-10px, -25px) rotate(-5deg);
+  }
+}
+
+@keyframes swingSpider {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(20px);
+  }
+}
+
+@keyframes pulseTitle {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+@keyframes wiggle {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(-10deg);
+  }
+  75% {
+    transform: rotate(10deg);
+  }
+}
+
+@keyframes twinkle {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(0.8);
+  }
+}
+
+@keyframes borderGlow {
+  0%, 100% {
+    opacity: 0.8;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .halloween-event {
+    overflow-y: auto;
+  }
+
+  .halloween-auth-status {
+    top: 16px;
+    left: 16px;
+  }
+
+  .halloween-content {
+    padding: 1rem;
+    min-height: 100vh;
+    height: auto;
+    justify-content: flex-start;
+    padding-top: 2rem;
+    padding-bottom: 50vh;
+  }
+
+  .halloween-header {
+    margin-bottom: 1rem;
+  }
+
+  .halloween-title {
+    font-size: 1.8rem;
+    margin-bottom: 0.3rem;
+  }
+
+  .pumpkin-icon,
+  .ghost-icon {
+    font-size: 1.5rem;
+    margin: 0 0.5rem;
+  }
+
+  .halloween-contest {
+    max-width: 100%;
+    margin-bottom: 2rem;
+  }
+  
+  .contest-card {
+    padding: 1.3rem 1.2rem;
+  }
+  
+  .contest-title {
+    font-size: 1.4rem;
+    margin-bottom: 1rem;
+  }
+  
+  .contest-description {
+    font-size: 0.95rem;
+    margin-bottom: 1.2rem;
+    max-width: 100%;
+    line-height: 1.5;
+  }
+
+  .contest-description p {
+    margin: 0;
+  }
+
+  .how-to-win {
+    padding: 1rem 0.9rem;
+    margin-bottom: 1rem;
+  }
+
+  .how-to-win h3 {
+    font-size: 1.15rem;
+    margin-bottom: 0.7rem;
+  }
+
+  .how-to-win li {
+    font-size: 0.9rem;
+    padding: 0.35rem 0 0.35rem 1.8rem;
+    line-height: 1.4;
+  }
+
+  .how-to-win li::before {
+    font-size: 1rem;
+  }
+
+  .prize-info {
+    padding: 1rem 0.9rem;
+    margin-bottom: 1rem;
+  }
+
+  .prize-pool,
+  .feature-info,
+  .deadline {
+    font-size: 0.95rem;
+    margin: 0.5rem 0;
+    line-height: 1.4;
+  }
+
+  .highlight {
+    font-size: 1.2em;
+  }
+  
+  .start-creating-btn {
+    font-size: 1.15rem;
+    padding: 1rem 1.3rem;
+  }
+
+  .btn-icon {
+    font-size: 1.3rem;
+  }
+  
+  .floating-ghost,
+  .floating-pumpkin,
+  .floating-bat,
+  .floating-spider {
+    font-size: 1.3rem;
+  }
+
+  .halloween-background-image {
+    width: 100%;
+    height: 45vh;
+    background-position: bottom center;
+  }
+
+}
+
+/* Music section mobile positioning - in HalloweenMusicPlayer.css */
+
+/* Extra small screens */
+@media (max-width: 400px) {
+  .halloween-content {
+    padding: 0.8rem;
+    padding-top: 1.5rem;
+  }
+
+  .halloween-title {
+    font-size: 1.5rem;
+  }
+
+  .contest-card {
+    padding: 1.1rem 1rem;
+  }
+
+  .contest-title {
+    font-size: 1.2rem;
+  }
+
+  .contest-description {
+    font-size: 0.9rem;
+  }
+
+  .how-to-win h3 {
+    font-size: 1.05rem;
+  }
+
+  .how-to-win li {
+    font-size: 0.85rem;
+  }
+
+  .prize-pool,
+  .feature-info,
+  .deadline {
+    font-size: 0.9rem;
+  }
+
+  .start-creating-btn {
+    font-size: 1.05rem;
+    padding: 0.9rem 1.1rem;
+  }
+}
+

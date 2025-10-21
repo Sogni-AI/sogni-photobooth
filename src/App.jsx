@@ -819,6 +819,24 @@ const App = () => {
       setShowSplashScreen(false);
     }
     
+    // Handle page=camera parameter to skip start menu and go to camera
+    if (pageParam === 'camera') {
+      console.log('🎃 Halloween: page=camera detected, skipping start menu');
+      setShowStartMenu(false);
+      setCurrentPage('camera');
+      setShowPhotoGrid(false); // Ensure we're not showing photo grid
+      
+      // Start camera immediately
+      const initCamera = async () => {
+        await listCameras();
+        const preferredDeviceId = preferredCameraDeviceId || selectedCameraDeviceId;
+        console.log('📹 Starting camera from Halloween redirect:', preferredDeviceId || 'auto-select');
+        await startCamera(preferredDeviceId);
+        setCameraManuallyStarted(true);
+      };
+      initCamera();
+    }
+    
     // Initialize history state on first load if not already set
     if (!window.history.state || !window.history.state.navigationContext) {
       const initialContext = { from: 'initial', timestamp: Date.now() };
