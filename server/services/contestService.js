@@ -57,15 +57,17 @@ export async function saveContestEntry({
       // Extract image data from data URL or download from URL
       if (imageUrl.startsWith('data:')) {
         // Data URL - extract and save
-        const matches = imageUrl.match(/^data:image\/(\w+);base64,(.+)$/);
+        const matches = imageUrl.match(/^data:image\/([a-zA-Z0-9]+);base64,(.+)$/);
         if (matches) {
-          const ext = matches[1];
+          const ext = matches[1] === 'jpeg' ? 'jpg' : matches[1]; // Normalize jpeg to jpg
           const base64Data = matches[2];
           imageFilename = `${entryId}.${ext}`;
           savedImagePath = path.join(contestDir, imageFilename);
           
           await fs.writeFile(savedImagePath, Buffer.from(base64Data, 'base64'));
-          console.log(`[Contest] Saved image to ${savedImagePath}`);
+          console.log(`[Contest] Saved data URL image to ${savedImagePath} (size: ${base64Data.length} chars)`);
+        } else {
+          console.error('[Contest] Failed to parse data URL format:', imageUrl.substring(0, 100));
         }
       } else {
         // Regular URL - download and save

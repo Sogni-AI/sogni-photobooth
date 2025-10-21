@@ -166,13 +166,17 @@ router.get('/:contestId/image/:filename', async (req, res) => {
     // Check if file exists
     try {
       await fs.access(imagePath);
-    } catch {
+    } catch (err) {
+      console.error(`[Contest] Image not found at ${imagePath}:`, err);
       return res.status(404).json({
         success: false,
-        message: 'Image not found'
+        message: 'Image not found',
+        path: imagePath,
+        filename: filename
       });
     }
 
+    console.log(`[Contest] Serving image: ${imagePath}`);
     // Serve the image
     res.sendFile(imagePath);
   } catch (error) {
