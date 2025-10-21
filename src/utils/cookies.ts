@@ -202,6 +202,35 @@ export function isFavoriteImage(photoId: string): boolean {
   return favorites.includes(photoId);
 }
 
+// Demo render tracking utilities for non-authenticated users
+export function hasDoneDemoRender(): boolean {
+  try {
+    const demoRenderDone = localStorage.getItem('sogni_demo_render_done');
+    return demoRenderDone === 'true';
+  } catch (e) {
+    console.warn('Error checking demo render status:', e);
+    return false;
+  }
+}
+
+export function markDemoRenderDone(): void {
+  try {
+    localStorage.setItem('sogni_demo_render_done', 'true');
+    console.log('✅ Marked demo render as done for non-authenticated user');
+  } catch (e) {
+    console.warn('Error marking demo render as done:', e);
+  }
+}
+
+export function clearDemoRenderStatus(): void {
+  try {
+    localStorage.removeItem('sogni_demo_render_done');
+    console.log('🧹 Cleared demo render status (user logged in)');
+  } catch (e) {
+    console.warn('Error clearing demo render status:', e);
+  }
+}
+
 // Utility function to clean up corrupted localStorage values
 export function cleanupCorruptedSettings(): void {
   try {

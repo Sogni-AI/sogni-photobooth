@@ -2,7 +2,7 @@ import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react'
 
 import { getModelOptions, defaultStylePrompts as initialStylePrompts, TIMEOUT_CONFIG, isFluxKontextModel, TWITTER_SHARE_CONFIG, getQRWatermarkConfig } from './constants/settings';
 import { photoThoughts, randomThoughts } from './constants/thoughts';
-import { saveSettingsToCookies, shouldShowPromoPopup, markPromoPopupShown } from './utils/cookies';
+import { saveSettingsToCookies, shouldShowPromoPopup, markPromoPopupShown, hasDoneDemoRender, markDemoRenderDone, clearDemoRenderStatus } from './utils/cookies';
 import { styleIdToDisplay } from './utils';
 import { getCustomDimensions } from './utils/imageProcessing';
 import { goToPreviousPhoto, goToNextPhoto } from './utils/photoNavigation';
@@ -66,6 +66,7 @@ import ImageAdjuster from './components/shared/ImageAdjuster';
 import UploadProgress from './components/shared/UploadProgress';
 import PromoPopup from './components/shared/PromoPopup';
 import OutOfCreditsPopup from './components/shared/OutOfCreditsPopup';
+import LoginUpsellPopup from './components/shared/LoginUpsellPopup';
 import NetworkStatus from './components/shared/NetworkStatus';
 import ConfettiCelebration from './components/shared/ConfettiCelebration';
 // import AnalyticsDashboard from './components/admin/AnalyticsDashboard';
@@ -559,6 +560,9 @@ const App = () => {
 
   // Add state for out of credits popup
   const [showOutOfCreditsPopup, setShowOutOfCreditsPopup] = useState(false);
+
+  // Add state for login upsell popup (for non-authenticated users who've used their demo render)
+  const [showLoginUpsellPopup, setShowLoginUpsellPopup] = useState(false);
   
   // Connection state management
   const [connectionState, setConnectionState] = useState(getCurrentConnectionState());
@@ -590,6 +594,15 @@ const App = () => {
       setTimeout(() => {
         setShowPromoPopup(true);
       }, 20000);
+    }
+  };
+
+  // Helper function to track demo render completion for non-authenticated users
+  const trackDemoRenderCompletion = () => {
+    // Only track for non-authenticated users
+    if (!authState.isAuthenticated && !hasDoneDemoRender()) {
+      console.log('✅ Marking demo render as complete for non-authenticated user');
+      markDemoRenderDone();
     }
   };
 
@@ -2810,6 +2823,9 @@ const App = () => {
       setIsSogniReady(true);
       
       console.log('✅ Switched to frontend client with adapter - now using personal account credits');
+      
+      // Clear demo render tracking when user logs in
+      clearDemoRenderStatus();
     } else if (!authState.isAuthenticated && authState.authMode === null) {
       // User logged out - switch back to demo mode (backend client)
       console.log('🔐 User logged out, switching back to demo mode (backend client)');
@@ -4098,6 +4114,10 @@ const App = () => {
                 // Proceed with completion regardless
                 clearAllTimeouts();
                 activeProjectReference.current = null;
+                
+                // Track demo render completion for non-authenticated users
+                trackDemoRenderCompletion();
+                
                 trackEvent('Generation', 'complete', selectedStyle);
                 triggerBatchCelebration();
               }, 7000); // Additional 7 second delay (10 total)
@@ -4105,6 +4125,10 @@ const App = () => {
               console.log('All jobs completed after delay, proceeding with project completion.');
               clearAllTimeouts();
               activeProjectReference.current = null;
+              
+              // Track demo render completion for non-authenticated users
+              trackDemoRenderCompletion();
+              
               trackEvent('Generation', 'complete', selectedStyle);
               triggerBatchCelebration();
             }
@@ -4116,6 +4140,9 @@ const App = () => {
           clearAllTimeouts();
           
           activeProjectReference.current = null; // Clear active project reference when complete
+          
+          // Track demo render completion for non-authenticated users
+          trackDemoRenderCompletion();
           
           // Track successful generation completion
           trackEvent('Generation', 'complete', selectedStyle);
@@ -4407,6 +4434,9 @@ const App = () => {
               clearAllTimeouts();
               activeProjectReference.current = null;
               
+              // Track demo render completion for non-authenticated users
+              trackDemoRenderCompletion();
+              
               // Trigger promotional popup after batch completion
               triggerPromoPopupIfNeeded();
             }
@@ -4600,6 +4630,9 @@ const App = () => {
               clearAllTimeouts();
               activeProjectReference.current = null;
               
+              // Track demo render completion for non-authenticated users
+              trackDemoRenderCompletion();
+              
               // Trigger promotional popup after batch completion
               triggerPromoPopupIfNeeded();
             }
@@ -4699,6 +4732,9 @@ const App = () => {
             console.log('All jobs failed or completed, clearing active project');
             clearAllTimeouts();
             activeProjectReference.current = null;
+            
+            // Track demo render completion for non-authenticated users
+            trackDemoRenderCompletion();
             
             // Trigger promotional popup after batch completion
             triggerPromoPopupIfNeeded();
@@ -5908,6 +5944,13 @@ const App = () => {
   //   Generate more photos with the same settings
   // -------------------------
   const handleGenerateMorePhotos = async () => {
+    // Check if user is not authenticated and has already used their demo render
+    if (!authState.isAuthenticated && hasDoneDemoRender()) {
+      console.log('🚫 Non-authenticated user has already used their demo render - showing login upsell');
+      setShowLoginUpsellPopup(true);
+      return;
+    }
+
     // Scroll the film-strip-content element to the top first thing
     const filmStripContent = document.querySelector('.film-strip-container div');
     if (filmStripContent) {
@@ -6559,6 +6602,19 @@ const App = () => {
 
   // Add this new function to handle the adjusted image after confirmation
   const handleAdjustedImage = (adjustedBlob, adjustments) => {
+    // Check if user is not authenticated and has already used their demo render
+    if (!authState.isAuthenticated && hasDoneDemoRender()) {
+      console.log('🚫 Non-authenticated user has already used their demo render - showing login upsell');
+      setShowLoginUpsellPopup(true);
+      // Hide the adjuster and clean up
+      setShowImageAdjuster(false);
+      if (currentUploadedImageUrl) {
+        URL.revokeObjectURL(currentUploadedImageUrl);
+      }
+      setCurrentUploadedImageUrl('');
+      return;
+    }
+
     // Hide the adjuster
     setShowImageAdjuster(false);
     
@@ -7227,6 +7283,12 @@ const App = () => {
       <OutOfCreditsPopup
         isOpen={showOutOfCreditsPopup}
         onClose={handleOutOfCreditsPopupClose}
+      />
+
+      {/* Login Upsell Popup for non-authenticated users who've used their demo render */}
+      <LoginUpsellPopup
+        isOpen={showLoginUpsellPopup}
+        onClose={() => setShowLoginUpsellPopup(false)}
       />
 
       {/* Network Status Notification */}

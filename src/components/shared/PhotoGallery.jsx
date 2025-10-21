@@ -3223,7 +3223,7 @@ const PhotoGallery = ({
                 opacity: 0,
                 transition: 'opacity 0.2s ease'
               }} className="portrait-type-label">
-                CLOSE
+                NEAR
               </span>
             </div>
             
