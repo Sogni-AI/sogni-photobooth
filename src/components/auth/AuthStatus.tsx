@@ -85,7 +85,7 @@ export const AuthStatus: React.FC = () => {
         <div style={{
           position: 'absolute',
           top: 'calc(100% + 4px)',
-          right: '0',
+          left: '0',
           backgroundColor: '#2d3748',
           borderRadius: '8px',
           boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
@@ -206,7 +206,7 @@ export const AuthStatus: React.FC = () => {
 
           {/* Logout Button */}
           <button
-            onClick={handleLogout}
+            onClick={() => { void handleLogout(); }}
             disabled={isLoading}
             style={{
               width: '100%',
