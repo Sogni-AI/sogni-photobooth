@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useRef, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { PLAYLIST } from '../constants/musicPlaylist';
+import { trackEvent } from '../utils/analytics';
 
 const MusicPlayerContext = createContext();
 
@@ -116,7 +117,8 @@ export const MusicPlayerProvider = ({ children }) => {
       // When track ends, mark that we should auto-play the next track
       shouldAutoPlayNextRef.current = true;
       console.log('🎵 Track ended, will auto-play next track');
-      setCurrentTrackIndex((prev) => (prev + 1) % PLAYLIST.length);
+      const nextIndex = (currentTrackIndex + 1) % PLAYLIST.length;
+      setCurrentTrackIndex(nextIndex);
     };
 
     audio.addEventListener('loadedmetadata', handleLoadedMetadata);
@@ -142,6 +144,8 @@ export const MusicPlayerProvider = ({ children }) => {
           .then(() => {
             console.log('🎵 Next track auto-play succeeded');
             setIsPlaying(true);
+            // Track song play when auto-playing after track ends
+            trackEvent('Music Player', 'play_song', PLAYLIST[currentTrackIndex].title);
           })
           .catch((err) => {
             console.log('🎵 Failed to auto-play next track:', err);
@@ -162,6 +166,8 @@ export const MusicPlayerProvider = ({ children }) => {
       } else {
         await audio.play();
         setIsPlaying(true);
+        // Track song play in analytics
+        trackEvent('Music Player', 'play_song', currentTrack.title);
       }
     } catch (error) {
       console.error('Error playing audio:', error);
@@ -170,20 +176,30 @@ export const MusicPlayerProvider = ({ children }) => {
 
   const handleNext = () => {
     const wasPlaying = isPlaying;
-    setCurrentTrackIndex((prev) => (prev + 1) % PLAYLIST.length);
+    const nextIndex = (currentTrackIndex + 1) % PLAYLIST.length;
+    setCurrentTrackIndex(nextIndex);
     if (wasPlaying) {
       setTimeout(() => {
-        audioRef.current?.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
+        audioRef.current?.play().then(() => {
+          setIsPlaying(true);
+          // Track song play when skipping to next
+          trackEvent('Music Player', 'play_song', PLAYLIST[nextIndex].title);
+        }).catch(() => setIsPlaying(false));
       }, 100);
     }
   };
 
   const handlePrevious = () => {
     const wasPlaying = isPlaying;
-    setCurrentTrackIndex((prev) => (prev - 1 + PLAYLIST.length) % PLAYLIST.length);
+    const prevIndex = (currentTrackIndex - 1 + PLAYLIST.length) % PLAYLIST.length;
+    setCurrentTrackIndex(prevIndex);
     if (wasPlaying) {
       setTimeout(() => {
-        audioRef.current?.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
+        audioRef.current?.play().then(() => {
+          setIsPlaying(true);
+          // Track song play when skipping to previous
+          trackEvent('Music Player', 'play_song', PLAYLIST[prevIndex].title);
+        }).catch(() => setIsPlaying(false));
       }, 100);
     }
   };
@@ -219,6 +235,8 @@ export const MusicPlayerProvider = ({ children }) => {
           await audio.play();
           setIsPlaying(true);
           setShowClickPrompt(false);
+          // Track song play when enabling player
+          trackEvent('Music Player', 'play_song', currentTrack.title);
         } catch (error) {
           console.log('Auto-play prevented:', error);
         }

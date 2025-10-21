@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import '../../styles/events/HalloweenMusicPlayer.css';
 import { PLAYLIST } from '../../constants/musicPlaylist';
+import { trackEvent } from '../../utils/analytics';
 
 const HalloweenMusicPlayer = () => {
   const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
@@ -26,7 +27,16 @@ const HalloweenMusicPlayer = () => {
     };
 
     const handleEnded = () => {
-      handleNext();
+      const nextIndex = (currentTrackIndex + 1) % PLAYLIST.length;
+      setCurrentTrackIndex(nextIndex);
+      // Auto-play next track and track it
+      setTimeout(() => {
+        audioRef.current?.play().then(() => {
+          setIsPlaying(true);
+          // Track song play when auto-playing next track
+          trackEvent('Music Player', 'play_song', PLAYLIST[nextIndex].title);
+        }).catch(() => setIsPlaying(false));
+      }, 100);
     };
 
     audio.addEventListener('loadedmetadata', handleLoadedMetadata);
@@ -51,6 +61,8 @@ const HalloweenMusicPlayer = () => {
       } else {
         await audio.play();
         setIsPlaying(true);
+        // Track song play in analytics
+        trackEvent('Music Player', 'play_song', currentTrack.title);
       }
     } catch (error) {
       console.error('Error playing audio:', error);
@@ -59,22 +71,32 @@ const HalloweenMusicPlayer = () => {
 
   const handleNext = () => {
     const wasPlaying = isPlaying;
-    setCurrentTrackIndex((prev) => (prev + 1) % PLAYLIST.length);
+    const nextIndex = (currentTrackIndex + 1) % PLAYLIST.length;
+    setCurrentTrackIndex(nextIndex);
     // Auto-play next track if currently playing
     if (wasPlaying) {
       setTimeout(() => {
-        audioRef.current?.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
+        audioRef.current?.play().then(() => {
+          setIsPlaying(true);
+          // Track song play when skipping to next
+          trackEvent('Music Player', 'play_song', PLAYLIST[nextIndex].title);
+        }).catch(() => setIsPlaying(false));
       }, 100);
     }
   };
 
   const handlePrevious = () => {
     const wasPlaying = isPlaying;
-    setCurrentTrackIndex((prev) => (prev - 1 + PLAYLIST.length) % PLAYLIST.length);
+    const prevIndex = (currentTrackIndex - 1 + PLAYLIST.length) % PLAYLIST.length;
+    setCurrentTrackIndex(prevIndex);
     // Auto-play previous track if currently playing
     if (wasPlaying) {
       setTimeout(() => {
-        audioRef.current?.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
+        audioRef.current?.play().then(() => {
+          setIsPlaying(true);
+          // Track song play when skipping to previous
+          trackEvent('Music Player', 'play_song', PLAYLIST[prevIndex].title);
+        }).catch(() => setIsPlaying(false));
       }, 100);
     }
   };
@@ -109,9 +131,34 @@ const HalloweenMusicPlayer = () => {
       try {
         await audio.play();
         setIsPlaying(true);
+        // Track song play when expanding player
+        trackEvent('Music Player', 'play_song', currentTrack.title);
       } catch (error) {
         console.log('Auto-play prevented:', error);
       }
+    }
+  };
+
+  const handleDownload = async () => {
+    try {
+      // Track download event
+      trackEvent('Music Player', 'download_song', currentTrack.title);
+
+      // Fetch the audio file
+      const response = await fetch(currentTrack.url);
+      const blob = await response.blob();
+      
+      // Create download link
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${currentTrack.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.mp3`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error downloading track:', error);
     }
   };
 
@@ -155,7 +202,7 @@ const HalloweenMusicPlayer = () => {
         <div className="music-player-card">
           <div className="player-header">
             <span className="music-icon">🎵</span>
-            <h3>Sogni Halloween Beats</h3>
+            <h3>Halloween Beats</h3>
             <button 
               className="minimize-btn"
               onClick={(e) => {
@@ -192,7 +239,7 @@ const HalloweenMusicPlayer = () => {
               onClick={handlePrevious}
               aria-label="Previous track"
             >
-              ⏮️
+              ◄
             </button>
             
             <button 
@@ -200,7 +247,7 @@ const HalloweenMusicPlayer = () => {
               onClick={handlePlayPause}
               aria-label={isPlaying ? 'Pause' : 'Play'}
             >
-              {isPlaying ? '⏸️' : '▶️'}
+              {isPlaying ? '❚❚' : '►'}
             </button>
             
             <button 
@@ -208,7 +255,18 @@ const HalloweenMusicPlayer = () => {
               onClick={handleNext}
               aria-label="Next track"
             >
-              ⏭️
+              ►
+            </button>
+          </div>
+
+          <div className="download-section">
+            <button 
+              className="download-btn"
+              onClick={handleDownload}
+              aria-label="Download current track"
+              title="Download this track"
+            >
+              💾 Download
             </button>
           </div>
         </div>

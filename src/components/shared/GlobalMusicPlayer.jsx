@@ -1,5 +1,6 @@
 import React from 'react';
 import { useMusicPlayer } from '../../context/MusicPlayerContext';
+import { trackEvent } from '../../utils/analytics';
 import '../../styles/events/HalloweenMusicPlayer.css';
 
 const GlobalMusicPlayer = () => {
@@ -18,7 +19,6 @@ const GlobalMusicPlayer = () => {
     handleNext,
     handlePrevious,
     handleProgressClick,
-    audioRef,
     totalTracks
   } = useMusicPlayer();
 
@@ -38,20 +38,66 @@ const GlobalMusicPlayer = () => {
     setShowClickPrompt(false);
     
     // Auto-play when clicked
-    const audio = audioRef.current;
-    if (audio && !isPlaying) {
-      try {
-        await audio.play();
-        setIsPlaying(true);
-      } catch (error) {
-        console.log('Auto-play prevented:', error);
-      }
+    if (!isPlaying) {
+      handlePlayPause();
     }
   };
 
   const handleDismissPrompt = (e) => {
     e.stopPropagation();
     setShowClickPrompt(false);
+  };
+
+  const handleDownload = () => {
+    console.log('💾 Download button clicked!', currentTrack.title);
+    try {
+      // Track download event
+      trackEvent('Music Player', 'download_song', currentTrack.title);
+
+      const filename = `${currentTrack.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.mp3`;
+      
+      // Use XMLHttpRequest - works better for cross-origin downloads than fetch
+      const xhr = new XMLHttpRequest();
+      xhr.open('GET', currentTrack.url, true);
+      xhr.responseType = 'blob';
+      
+      xhr.onload = function() {
+        if (xhr.status === 200) {
+          const blob = xhr.response;
+          const url = window.URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = filename;
+          link.style.display = 'none';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          window.URL.revokeObjectURL(url);
+          console.log('✅ Download initiated via XHR!');
+        } else {
+          console.warn('XHR failed, trying direct link');
+          // Fallback to direct link
+          const link = document.createElement('a');
+          link.href = currentTrack.url;
+          link.download = filename;
+          link.click();
+        }
+      };
+      
+      xhr.onerror = function() {
+        console.warn('XHR error, trying direct link');
+        // Final fallback
+        const link = document.createElement('a');
+        link.href = currentTrack.url;
+        link.download = filename;
+        link.click();
+      };
+      
+      xhr.send();
+    } catch (error) {
+      console.error('❌ Error downloading track:', error);
+      alert('Failed to download track. Please try again.');
+    }
   };
 
   return (
@@ -88,7 +134,7 @@ const GlobalMusicPlayer = () => {
           <div className="music-player-card">
             <div className="player-header">
               <span className="music-icon">🎵</span>
-              <h3>Sogni Halloween Beats</h3>
+              <h3>Halloween Beats</h3>
               <button 
                 className="minimize-btn"
                 onClick={(e) => {
@@ -142,6 +188,17 @@ const GlobalMusicPlayer = () => {
                 aria-label="Next track"
               >
                 ⏭️
+              </button>
+            </div>
+
+            <div className="download-section">
+              <button 
+                className="download-btn"
+                onClick={handleDownload}
+                aria-label="Download current track"
+                title="Download this track"
+              >
+                💾
               </button>
             </div>
           </div>
