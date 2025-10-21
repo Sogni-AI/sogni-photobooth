@@ -1,0 +1,131 @@
+.halloween-notification-tooltip {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: linear-gradient(135deg, #ff6b35 0%, #ff8c42 100%);
+  color: white;
+  padding: 16px 20px;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3),
+              0 0 20px rgba(255, 107, 53, 0.4);
+  cursor: pointer;
+  z-index: 9999;
+  max-width: 320px;
+  animation: slideIn 0.5s ease-out, pulse 2s ease-in-out 0.5s infinite;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.halloween-notification-tooltip:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 6px 25px rgba(0, 0, 0, 0.4),
+              0 0 30px rgba(255, 107, 53, 0.6);
+}
+
+.halloween-notification-dismiss {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: white;
+  font-size: 24px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  padding: 0;
+  transition: background 0.2s ease;
+}
+
+.halloween-notification-dismiss:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.halloween-notification-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.halloween-notification-icon {
+  font-size: 32px;
+  flex-shrink: 0;
+  animation: bounce 1s ease-in-out infinite;
+}
+
+.halloween-notification-text {
+  flex: 1;
+  padding-right: 20px;
+}
+
+.halloween-notification-text strong {
+  display: block;
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.halloween-notification-text p {
+  margin: 0;
+  font-size: 14px;
+  opacity: 0.95;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(400px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3),
+                0 0 20px rgba(255, 107, 53, 0.4);
+  }
+  50% {
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3),
+                0 0 30px rgba(255, 107, 53, 0.7);
+  }
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .halloween-notification-tooltip {
+    top: 10px;
+    right: 10px;
+    left: 10px;
+    max-width: none;
+    padding: 14px 18px;
+  }
+
+  .halloween-notification-text strong {
+    font-size: 15px;
+  }
+
+  .halloween-notification-text p {
+    font-size: 13px;
+  }
+
+  .halloween-notification-icon {
+    font-size: 28px;
+  }
+}
+

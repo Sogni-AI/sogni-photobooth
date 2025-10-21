@@ -1,7 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import '../../styles/admin/ContestResults.css';
 
+const CORRECT_PASSWORD = import.meta.env.VITE_CONTEST_RESULTS_PASSWORD || '';
+const AUTH_KEY = 'contest_results_auth';
+
 const ContestResults = () => {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [passwordInput, setPasswordInput] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+
   const [contestId, setContestId] = useState('halloween');
   const [entries, setEntries] = useState([]);
   const [stats, setStats] = useState(null);
@@ -11,6 +18,37 @@ const ContestResults = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const limit = 20;
+
+  // Check if already authenticated on mount
+  useEffect(() => {
+    const authData = localStorage.getItem(AUTH_KEY);
+    if (authData) {
+      try {
+        const { timestamp } = JSON.parse(authData);
+        // Session expires after 24 hours
+        const hoursSinceAuth = (Date.now() - timestamp) / (1000 * 60 * 60);
+        if (hoursSinceAuth < 24) {
+          setIsAuthenticated(true);
+        } else {
+          localStorage.removeItem(AUTH_KEY);
+        }
+      } catch (e) {
+        localStorage.removeItem(AUTH_KEY);
+      }
+    }
+  }, []);
+
+  const handlePasswordSubmit = (e) => {
+    e.preventDefault();
+    if (passwordInput === CORRECT_PASSWORD) {
+      setIsAuthenticated(true);
+      setPasswordError('');
+      localStorage.setItem(AUTH_KEY, JSON.stringify({ timestamp: Date.now() }));
+    } else {
+      setPasswordError('Incorrect password. Try again.');
+      setPasswordInput('');
+    }
+  };
 
   // Fetch contest entries
   const fetchEntries = async () => {
@@ -60,11 +98,13 @@ const ContestResults = () => {
     }
   };
 
-  // Load entries and stats
+  // Load entries and stats (only when authenticated)
   useEffect(() => {
-    fetchEntries();
-    fetchStats();
-  }, [contestId, page]);
+    if (isAuthenticated) {
+      fetchEntries();
+      fetchStats();
+    }
+  }, [contestId, page, isAuthenticated]);
 
   const formatDate = (timestamp) => {
     return new Date(timestamp).toLocaleString();
@@ -101,6 +141,36 @@ const ContestResults = () => {
       alert('Failed to delete entry: ' + err.message);
     }
   };
+
+  // Show password modal if not authenticated
+  if (!isAuthenticated) {
+    return (
+      <div className="contest-results">
+        <div className="password-modal-overlay">
+          <div className="password-modal">
+            <h2>🔐 Access Restricted</h2>
+            <p>Please enter the password to view contest results.</p>
+            <form onSubmit={handlePasswordSubmit}>
+              <input
+                type="password"
+                value={passwordInput}
+                onChange={(e) => setPasswordInput(e.target.value)}
+                placeholder="Enter password"
+                className="password-input"
+                autoFocus
+              />
+              {passwordError && (
+                <div className="password-error">{passwordError}</div>
+              )}
+              <button type="submit" className="password-submit-btn">
+                Submit
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="contest-results">

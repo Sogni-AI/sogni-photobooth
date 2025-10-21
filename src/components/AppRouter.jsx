@@ -5,6 +5,7 @@ import ContestResults from './admin/ContestResults';
 import HalloweenEvent from './events/HalloweenEvent';
 import { MusicPlayerProvider } from '../context/MusicPlayerContext';
 import GlobalMusicPlayer from './shared/GlobalMusicPlayer';
+import HalloweenNotificationTooltip from './notifications/HalloweenNotificationTooltip';
 
 // Create navigation context
 const NavigationContext = createContext();
@@ -31,6 +32,11 @@ const AppRouter = () => {
     console.log('🎃 Navigating to camera view');
     setCurrentRoute('main');
     window.history.pushState({}, '', '/?page=camera&skipWelcome=true');
+  };
+
+  const navigateToHalloween = () => {
+    setCurrentRoute('halloween');
+    window.history.pushState({}, '', '/event/halloween');
   };
 
   useEffect(() => {
@@ -64,7 +70,12 @@ const AppRouter = () => {
       <MusicPlayerProvider>
         {/* Global music player - shows on all pages when enabled */}
         <GlobalMusicPlayer />
-        
+
+        {/* Halloween notification tooltip - only on main page */}
+        {currentRoute === 'main' && (
+          <HalloweenNotificationTooltip onNavigate={navigateToHalloween} />
+        )}
+
         {currentRoute === 'analytics' ? (
           <AnalyticsDashboard />
         ) : currentRoute === 'contest' ? (
