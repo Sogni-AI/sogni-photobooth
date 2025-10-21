@@ -105,8 +105,12 @@ const updateUrlWithPrompt = (promptKey) => {
 
 // Helper function to get the hashtag for a style
 const getHashtagForStyle = (styleKey) => {
-  if (!styleKey || styleKey === 'custom' || styleKey === 'random' || styleKey === 'randomMix' || styleKey === 'oneOfEach') {
+  if (!styleKey || styleKey === 'random' || styleKey === 'randomMix' || styleKey === 'oneOfEach') {
     return null;
+  }
+  // For custom prompts, use #SogniPhotobooth
+  if (styleKey === 'custom') {
+    return 'SogniPhotobooth';
   }
   return styleKey;
 };
@@ -1575,7 +1579,7 @@ const App = () => {
     // For Sample Gallery mode - just switch to custom style
     updateSetting('selectedStyle', 'custom');
     updateSetting('positivePrompt', '');
-    setCurrentHashtag(null);
+    setCurrentHashtag('SogniPhotobooth'); // Use #SogniPhotobooth for custom prompts
     // Update URL (custom will clear the prompt parameter)
     updateUrlWithPrompt('custom');
     // Note: User can now edit custom prompt via the popup in StyleDropdown
@@ -1591,7 +1595,7 @@ const App = () => {
         updateSetting('selectedStyle', 'custom'); 
         // Clear the URL parameter when switching to custom
         updateUrlWithPrompt(null);
-        setCurrentHashtag(null);
+        setCurrentHashtag('SogniPhotobooth'); // Use #SogniPhotobooth for custom prompts
       }
     }
   };
@@ -2034,7 +2038,13 @@ const App = () => {
         const hashtag = getPhotoHashtag(photo);
         const label = hashtag || photo.label || photo.style || '';
         
-        console.log('Creating polaroid image for mobile sharing');
+        console.log('Creating polaroid image for mobile sharing', {
+          photoStatusText: photo.statusText,
+          extractedHashtag: hashtag,
+          finalLabel: label,
+          photoStyle: photo.style,
+          photoLabel: photo.label
+        });
         framedImageDataUrl = await createPolaroidImage(originalImageUrl, label, {
           tezdevTheme,
           aspectRatio,
@@ -4573,6 +4583,12 @@ const App = () => {
           hashtag = `#${selectedStyle}`;
         }
         
+        // Strategy 3.5: For custom prompts, use #SogniPhotobooth
+        if (!hashtag && selectedStyle === 'custom') {
+          console.log('📸 Using #SogniPhotobooth for custom prompt');
+          hashtag = '#SogniPhotobooth';
+        }
+        
         // Strategy 4: Final fallback - try to find ANY matching prompt in our style library
         if (!hashtag && positivePrompt) {
           // Check if the positive prompt contains any known style keywords
@@ -4620,6 +4636,18 @@ const App = () => {
               const extractedPromptKey = hashtag ? hashtag.replace('#', '') : 
                 (selectedStyle && selectedStyle !== 'custom' && selectedStyle !== 'random' && selectedStyle !== 'randomMix' && selectedStyle !== 'oneOfEach') ? selectedStyle : undefined;
               
+              // Determine statusText - preserve #SogniPhotobooth for custom prompts
+              let statusText;
+              if (hashtag === '#SogniPhotobooth') {
+                statusText = '#SogniPhotobooth';
+              } else if (hashtag) {
+                statusText = styleIdToDisplay(hashtag.replace('#', ''));
+              } else if (selectedStyle && selectedStyle !== 'custom' && selectedStyle !== 'random' && selectedStyle !== 'randomMix') {
+                statusText = styleIdToDisplay(selectedStyle);
+              } else {
+                statusText = '#SogniPhotobooth';
+              }
+              
               updated[photoIndex] = {
                 ...updated[photoIndex],
                 images: [loadedImageUrl], // Replace preview with final image
@@ -4631,7 +4659,7 @@ const App = () => {
                 positivePrompt,
                 stylePrompt: positivePrompt, // Use the actual prompt that was used for generation
                 promptKey: extractedPromptKey, // Track which style was used for favoriting
-                statusText: hashtag ? styleIdToDisplay(hashtag.replace('#', '')) : (selectedStyle && selectedStyle !== 'custom' && selectedStyle !== 'random' && selectedStyle !== 'randomMix' ? styleIdToDisplay(selectedStyle) : '#SogniPhotobooth')
+                statusText
               };
             }
             return updated;

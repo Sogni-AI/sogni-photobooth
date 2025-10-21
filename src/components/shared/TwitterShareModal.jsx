@@ -47,10 +47,10 @@ const TwitterShareModal = ({
       Object.entries(stylePrompts || {}).find(([, value]) => value === photoData.stylePrompt)?.[0] || ''
     )) || '';
   
-  // Determine photo label - fix duplicate label issue by using statusText directly or just the style
-  // This matches the fix applied in PhotoGallery.jsx
-  const photoNumberLabel = photoData?.statusText?.split('#')[0]?.trim() || '';
-  const photoLabel = photoNumberLabel || styleDisplayText || '';
+  // Use statusText directly if it's a hashtag (like #SogniPhotobooth), otherwise use styleDisplayText
+  const photoLabel = (photoData?.statusText && photoData.statusText.includes('#')) 
+    ? photoData.statusText 
+    : styleDisplayText || '';
   
   
   // Initialize message with default and hashtag when modal opens

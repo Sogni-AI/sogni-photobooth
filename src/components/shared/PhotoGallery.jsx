@@ -980,8 +980,10 @@ const PhotoGallery = ({
         if (includeFrames) {
           // FRAMED DOWNLOAD - USE EXACT SAME LOGIC AS handleDownloadPhoto
           try {
-            const photoNumberLabel = photo?.statusText?.split('#')[0]?.trim() || '';
-            const photoLabel = photoNumberLabel || styleDisplayText || '';
+            // Use statusText directly if it's a hashtag, otherwise use styleDisplayText
+            const photoLabel = (photo?.statusText && photo.statusText.includes('#')) 
+              ? photo.statusText 
+              : styleDisplayText || '';
             
             // Check if theme is supported - SAME AS INDIVIDUAL
             const useTheme = isThemeSupported();
@@ -1736,10 +1738,10 @@ const PhotoGallery = ({
       // Get style display text (spaced format, no hashtags)
       const styleDisplayText = getStyleDisplayText(targetPhoto);
       
-      // Determine photo label (only used for default polaroid frame)
-      // Fix duplicate label issue by using statusText directly or just the style
-      const photoNumberLabel = targetPhoto?.statusText?.split('#')[0]?.trim() || '';
-      const photoLabel = photoNumberLabel || styleDisplayText || '';
+      // Use statusText directly if it's a hashtag (like #SogniPhotobooth), otherwise use styleDisplayText
+      const photoLabel = (targetPhoto?.statusText && targetPhoto.statusText.includes('#')) 
+        ? targetPhoto.statusText 
+        : styleDisplayText || '';
       
       // Generate filename based on outputFormat setting
       const cleanStyleName = styleDisplayText ? styleDisplayText.toLowerCase().replace(/\s+/g, '-') : 'sogni';
