@@ -13,8 +13,22 @@ const CustomPromptPopup = ({
   currentPrompt = ''
 }) => {
   const [promptText, setPromptText] = useState(currentPrompt);
+  const [showSparkles, setShowSparkles] = useState(false);
   const textareaRef = useRef(null);
   const popupRef = useRef(null);
+
+  // Fun placeholder examples that rotate
+  const funPlaceholders = [
+    "riding a rainbow unicorn through cotton candy clouds ✨🦄",
+    "as a superhero saving the day in a comic book style 💥",
+    "having a tea party with woodland creatures 🍵🦊",
+    "exploring a magical underwater city 🐠🏰",
+    "dancing in a field of glowing fireflies at sunset 🌅✨",
+    "as a space explorer discovering alien planets 🚀👽",
+    "painting a masterpiece in a cozy art studio 🎨",
+    "having a picnic in a field of sunflowers 🌻"
+  ];
+  const [currentPlaceholder, setCurrentPlaceholder] = useState(funPlaceholders[0]);
 
   // Auto-focus the textarea when the popup opens
   useEffect(() => {
@@ -23,6 +37,15 @@ const CustomPromptPopup = ({
         textareaRef.current?.focus();
         textareaRef.current?.select();
       }, 100);
+      // Rotate placeholder examples
+      const placeholderInterval = setInterval(() => {
+        setCurrentPlaceholder(prev => {
+          const currentIndex = funPlaceholders.indexOf(prev);
+          const nextIndex = (currentIndex + 1) % funPlaceholders.length;
+          return funPlaceholders[nextIndex];
+        });
+      }, 4000);
+      return () => clearInterval(placeholderInterval);
     }
   }, [isOpen]);
 
@@ -79,13 +102,43 @@ const CustomPromptPopup = ({
     onClose();
   };
 
+  const handleTextChange = (e) => {
+    setPromptText(e.target.value);
+    // Show sparkles when typing
+    setShowSparkles(true);
+    setTimeout(() => setShowSparkles(false), 500);
+  };
+
+  // Get encouraging message based on character count
+  const getEncouragingMessage = () => {
+    const length = promptText.length;
+    if (length === 0) return "🌟 Let your imagination run wild!";
+    if (length < 20) return "✨ Keep going, you're doing great!";
+    if (length < 50) return "🎨 Love it! Add more details if you'd like!";
+    if (length < 100) return "🚀 Wow! That sounds amazing!";
+    if (length < 200) return "🌈 Incredible detail! This will be epic!";
+    return "💫 You're a prompt wizard! ✨";
+  };
+
   if (!isOpen) return null;
 
   return ReactDOM.createPortal(
     <div className="custom-prompt-overlay">
       <div className="custom-prompt-popup" ref={popupRef}>
+        {/* Floating sparkles decoration */}
+        <div className="sparkles-container">
+          <span className="sparkle sparkle-1">✨</span>
+          <span className="sparkle sparkle-2">⭐</span>
+          <span className="sparkle sparkle-3">💫</span>
+          <span className="sparkle sparkle-4">🌟</span>
+        </div>
+
         <div className="custom-prompt-header">
-          <h3>Custom Prompt</h3>
+          <h3>
+            <span className="header-emoji">🎨</span>
+            Dream It Up!
+            <span className="header-emoji">✨</span>
+          </h3>
           <button 
             className="custom-prompt-close"
             onClick={handleCancel}
@@ -97,18 +150,31 @@ const CustomPromptPopup = ({
 
         <div className="custom-prompt-body">
           <label className="custom-prompt-label">
-            Describe what you want to see:
+            ✏️ What magical scene do you want to create?
           </label>
-          <textarea
-            ref={textareaRef}
-            className="custom-prompt-textarea"
-            placeholder="Enter your custom prompt here... (e.g., 'in bubble bath submerged to face, white bubbles, pink bathtub, 35mm cinematic film')"
-            value={promptText}
-            onChange={(e) => setPromptText(e.target.value)}
-            rows={5}
-          />
+          <div className="textarea-wrapper">
+            <textarea
+              ref={textareaRef}
+              className={`custom-prompt-textarea ${showSparkles ? 'typing-sparkle' : ''}`}
+              placeholder={currentPlaceholder}
+              value={promptText}
+              onChange={handleTextChange}
+              rows={5}
+            />
+            {showSparkles && <div className="typing-sparkles">✨</div>}
+          </div>
+
+          <div className="prompt-stats">
+            <div className="encouraging-message">
+              {getEncouragingMessage()}
+            </div>
+            <div className="character-count">
+              {promptText.length} characters
+            </div>
+          </div>
+
           <div className="custom-prompt-hint">
-            💡 Tip: Press Ctrl+Enter (or Cmd+Enter) to apply quickly
+            ⚡ Tip: Press Ctrl+Enter (or Cmd+Enter) to apply quickly
           </div>
         </div>
 
@@ -117,13 +183,14 @@ const CustomPromptPopup = ({
             className="custom-prompt-btn custom-prompt-btn-cancel"
             onClick={handleCancel}
           >
-            Cancel
+            Maybe Later 🤔
           </button>
           <button 
             className="custom-prompt-btn custom-prompt-btn-apply"
             onClick={handleApply}
+            disabled={!promptText.trim()}
           >
-            Apply Custom Prompt
+            Let&apos;s Create Magic! ✨
           </button>
         </div>
       </div>
