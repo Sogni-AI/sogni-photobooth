@@ -10,6 +10,25 @@
   background: transparent !important; /* No overlay - use solid orange background from .halloween-event */
 }
 
+/* Disable the container slide-in animation for Halloween page */
+.halloween-film-strip.film-strip-container.visible {
+  animation: none !important;
+  opacity: 1 !important;
+  transform: none !important;
+  filter: none !important;
+}
+
+/* Disable flying-in animation for Halloween photos */
+.halloween-film-strip.film-strip-container.visible .film-frame:not(.loading):not(.newly-arrived) {
+  animation: none !important;
+  opacity: 1 !important;
+}
+
+/* Disable staggered animation delays for Halloween photos */
+.halloween-film-strip.film-strip-container.visible .film-frame:not(.loading):not(.newly-arrived):nth-child(n) {
+  animation-delay: 0s !important;
+}
+
 /* Ensure film-strip takes full height */
 .halloween-film-strip.film-strip-container {
   height: 100vh;

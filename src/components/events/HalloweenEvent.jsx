@@ -12,15 +12,15 @@ import '../../styles/events/HalloweenEvent.css';
 
 const HalloweenEvent = () => {
   const [showPromptPopup, setShowPromptPopup] = useState(false);
-  const [showOverlay, setShowOverlay] = useState(true); // Show full overlay
+  const [showOverlay, setShowOverlay] = useState(false); // Start minimized (pumpkin button only)
   const { isEnabled, enable: enableMusic } = useMusicPlayer();
   const { updateSetting, stylePrompts } = useApp();
   const { navigateToCamera } = useNavigation();
-  
+
   const handleDismissOverlay = () => {
     setShowOverlay(false);
   };
-  
+
   const handleExpandOverlay = () => {
     setShowOverlay(true);
   };
