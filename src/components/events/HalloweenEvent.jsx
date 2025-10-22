@@ -85,12 +85,12 @@ const HalloweenEvent = () => {
         <div className="halloween-contest">
           <div className="contest-card">
             <h2 className="contest-title">
-              🎃 Photobooth Costume Party Challenge 🕸️✨
+              🎃 <span className="photobooth-prefix">Photobooth </span>Costume Party Challenge 🕸️✨
             </h2>
             
             <div className="contest-description">
               <p>
-                Your mission? Create the perfect Halloween costume look.<br/>
+                <span className="mission-prefix">Your mission? </span>Create the perfect Halloween costume look.<br/>
                 Winning entries will be added to our <a href="/?page=prompts&themes=halloween" className="style-library-link">style library</a>.
               </p>
             </div>
@@ -139,8 +139,9 @@ const HalloweenEvent = () => {
         </div>
       </div>
 
-      {/* Background Image */}
-      <div className="halloween-background-image" />
+      {/* Background Images */}
+      <div className="halloween-background-image halloween-background-left" />
+      <div className="halloween-background-image halloween-background-right" />
 
       {/* Prompt Popup */}
       <HalloweenPromptPopup

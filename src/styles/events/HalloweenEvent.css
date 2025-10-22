@@ -13,19 +13,28 @@
   z-index: 1000;
 }
 
-/* Background image at the bottom left */
+/* Background images at the bottom corners */
 .halloween-background-image {
   position: fixed;
   bottom: 0;
-  left: 0;
   width: 35%;
   height: 100vh;
   background-image: url('/halloween_bg.jpg');
   background-size: contain;
-  background-position: bottom left;
   background-repeat: no-repeat;
   z-index: 0;
   pointer-events: none;
+}
+
+.halloween-background-left {
+  left: 0;
+  background-position: bottom left;
+}
+
+.halloween-background-right {
+  right: 0;
+  background-position: bottom right;
+  transform: scaleX(-1);
 }
 
 /* Main content container */
@@ -184,7 +193,7 @@
 }
 
 .contest-card {
-  background: rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.5);
   border-radius: 20px;
   padding: 1.8rem 2rem;
   box-shadow: 
@@ -527,6 +536,11 @@
     margin: 0;
   }
 
+  .mission-prefix,
+  .photobooth-prefix {
+    display: none;
+  }
+
   .how-to-win {
     padding: 1rem 0.9rem;
     margin-bottom: 1rem;
@@ -574,6 +588,10 @@
     width: 60px;
     height: 90px;
   }
+
+  .halloween-event .halloween-polaroid:nth-child(5) {
+    display: none;
+  }
   
   .start-creating-btn {
     font-size: 1.15rem;
@@ -591,10 +609,14 @@
     font-size: 1.3rem;
   }
 
-  .halloween-background-image {
+  .halloween-background-left {
     width: 100%;
     height: 45vh;
     background-position: bottom center;
+  }
+
+  .halloween-background-right {
+    display: none;
   }
 
 }
@@ -622,6 +644,11 @@
 
   .contest-description {
     font-size: 0.9rem;
+  }
+
+  .mission-prefix,
+  .photobooth-prefix {
+    display: none;
   }
 
   .how-to-win h3 {
@@ -652,6 +679,10 @@
   .halloween-event .halloween-polaroid img {
     width: 50px;
     height: 75px;
+  }
+
+  .halloween-event .halloween-polaroid:nth-child(5) {
+    display: none;
   }
 
   .start-creating-btn {
