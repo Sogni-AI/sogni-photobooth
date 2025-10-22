@@ -404,6 +404,15 @@
   }
 }
 
+/* Desktop: hide emoji, show text */
+.compete-emoji {
+  display: none;
+}
+
+.compete-text {
+  display: inline;
+}
+
 /* Mobile styles for pumpkin button */
 @media (max-width: 768px) {
   .halloween-pumpkin-button {
@@ -416,8 +425,17 @@
   }
   
   .halloween-pumpkin-button .compete-bubble {
-    font-size: 0.7rem;
-    padding: 5px 10px;
+    font-size: 1.5rem;
+    padding: 8px 12px;
+  }
+
+  /* Mobile: hide text, show emoji */
+  .compete-text {
+    display: none;
+  }
+
+  .compete-emoji {
+    display: inline;
   }
 }
 

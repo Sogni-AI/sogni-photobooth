@@ -263,7 +263,10 @@ const HalloweenEvent = () => {
           aria-label="View contest information"
         >
           <span className="pumpkin-emoji">🎃</span>
-          <span className="compete-bubble">Create your own costume and win!</span>
+          <span className="compete-bubble">
+            <span className="compete-text">Create your own costume and win!</span>
+            <span className="compete-emoji">🎁</span>
+          </span>
         </button>
       )}
 
