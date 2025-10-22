@@ -37,6 +37,16 @@
   z-index: 10; /* Above background images */
 }
 
+/* Add extra bottom space so users can scroll past and see the background sloths */
+.halloween-film-strip .film-strip-content.prompt-selector-mode {
+  padding-bottom: 150px !important;
+}
+
+/* Ensure container allows scrolling past content */
+.halloween-film-strip.film-strip-container {
+  padding-bottom: 0 !important;
+}
+
 /* Halloween-specific film-frame hover effects - use Style Explorer behavior */
 .halloween-film-strip .film-frame:not(.selected):hover {
   transform: translateY(-5px);
@@ -62,6 +72,13 @@
 
 .halloween-style-frame:hover .halloween-hover-overlay {
   opacity: 1;
+}
+
+/* Mobile: show overlay on selected (first tap) */
+@media (max-width: 768px) {
+  .halloween-style-frame.mobile-selected .halloween-hover-overlay {
+    opacity: 1;
+  }
 }
 
 .use-costume-text {
@@ -329,7 +346,7 @@
 
 /* Collapsed pumpkin button */
 .halloween-pumpkin-button {
-  position: fixed;
+  position: absolute;
   top: 30px;
   right: 30px;
   z-index: 99; /* Below music player (100) but above most content */
@@ -418,6 +435,8 @@
   .halloween-pumpkin-button {
     top: 20px;
     right: 20px;
+    flex-direction: column; /* Stack vertically: pumpkin on top, bubble below */
+    gap: 8px;
   }
   
   .pumpkin-emoji {
@@ -425,8 +444,8 @@
   }
   
   .halloween-pumpkin-button .compete-bubble {
-    font-size: 1.5rem;
-    padding: 8px 12px;
+    font-size: 1.1rem;
+    padding: 6px 10px;
   }
 
   /* Mobile: hide text, show emoji */
@@ -436,6 +455,31 @@
 
   .compete-emoji {
     display: inline;
+  }
+
+  /* Reposition speech bubble arrow to point upward (toward pumpkin) */
+  .halloween-pumpkin-button .compete-bubble::before {
+    top: auto;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border-left: 8px solid transparent;
+    border-right: 8px solid transparent;
+    border-bottom: 10px solid #ff6b00;
+    border-top: none;
+  }
+
+  .halloween-pumpkin-button .compete-bubble::after {
+    top: auto;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-bottom: 8px solid white;
+    border-top: none;
+    margin-left: 0;
+    margin-bottom: -2px;
   }
 }
 

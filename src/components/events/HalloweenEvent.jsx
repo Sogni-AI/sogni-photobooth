@@ -13,6 +13,7 @@ import '../../styles/events/HalloweenEvent.css';
 const HalloweenEvent = () => {
   const [showPromptPopup, setShowPromptPopup] = useState(false);
   const [showOverlay, setShowOverlay] = useState(false); // Start minimized (pumpkin button only)
+  const [selectedStyleKey, setSelectedStyleKey] = useState(null); // Track selected style for mobile two-click
   const { isEnabled, enable: enableMusic } = useMusicPlayer();
   const { updateSetting, stylePrompts } = useApp();
   const { navigateToCamera } = useNavigation();
@@ -44,6 +45,11 @@ const HalloweenEvent = () => {
     }
   }, [isEnabled, enableMusic]);
 
+  // Mark Halloween notification as dismissed when visiting the Halloween event page
+  React.useEffect(() => {
+    sessionStorage.setItem('halloween-contest-dismissed', 'true');
+  }, []);
+
   const handlePromptSubmit = (prompt) => {
     // Store the prompt in app settings (synchronously saved to cookies)
     console.log('🎃 Halloween prompt submitted:', prompt);
@@ -56,7 +62,28 @@ const HalloweenEvent = () => {
   };
 
   const handleStyleSelect = (styleKey) => {
-    console.log('🎃 Halloween style selected:', styleKey);
+    // Check if we're on mobile (screen width <= 768px)
+    const isMobile = window.innerWidth <= 768;
+
+    // On mobile: first click shows overlay, second click confirms
+    if (isMobile) {
+      if (selectedStyleKey === styleKey) {
+        // Second click - proceed with selection
+        console.log('🎃 Halloween style confirmed:', styleKey);
+        proceedWithStyleSelection(styleKey);
+      } else {
+        // First click - show overlay
+        console.log('🎃 Halloween style preview:', styleKey);
+        setSelectedStyleKey(styleKey);
+      }
+    } else {
+      // Desktop - proceed immediately
+      console.log('🎃 Halloween style selected:', styleKey);
+      proceedWithStyleSelection(styleKey);
+    }
+  };
+
+  const proceedWithStyleSelection = (styleKey) => {
     // Get the prompt for this style from Halloween prompts
     const halloweenPrompts = promptsDataRaw.halloween?.prompts || {};
     const prompt = halloweenPrompts[styleKey] || stylePrompts[styleKey] || '';
@@ -114,6 +141,21 @@ const HalloweenEvent = () => {
           <div className="floating-spider spider-2">🕷️</div>
         </div>
 
+        {/* Collapsed pumpkin button - scrolls with page */}
+        {!showOverlay && (
+          <button 
+            className="halloween-pumpkin-button"
+            onClick={handleExpandOverlay}
+            aria-label="View contest information"
+          >
+            <span className="pumpkin-emoji">🎃</span>
+            <span className="compete-bubble">
+              <span className="compete-text">Create your own costume and win!</span>
+              <span className="compete-emoji">🎁</span>
+            </span>
+          </button>
+        )}
+
         {/* Header - positioned absolutely at top */}
         <header className="halloween-header">
           <h1 className="halloween-title">
@@ -128,7 +170,7 @@ const HalloweenEvent = () => {
           {halloweenStyles.map((style) => (
             <div
               key={style.key}
-              className="film-frame loaded halloween-style-frame"
+              className={`film-frame loaded halloween-style-frame ${selectedStyleKey === style.key ? 'mobile-selected' : ''}`}
               onClick={() => handleStyleSelect(style.key)}
               style={{
                 width: '100%',
@@ -253,21 +295,6 @@ const HalloweenEvent = () => {
             </div>
           </div>
         </div>
-      )}
-
-      {/* Collapsed pumpkin button */}
-      {!showOverlay && (
-        <button 
-          className="halloween-pumpkin-button"
-          onClick={handleExpandOverlay}
-          aria-label="View contest information"
-        >
-          <span className="pumpkin-emoji">🎃</span>
-          <span className="compete-bubble">
-            <span className="compete-text">Create your own costume and win!</span>
-            <span className="compete-emoji">🎁</span>
-          </span>
-        </button>
       )}
 
       {/* Background Images */}
