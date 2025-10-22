@@ -25,14 +25,16 @@ const HalloweenEvent = () => {
     setShowOverlay(true);
   };
 
-  // Dynamically generate Halloween styles from prompts.json
+  // Dynamically generate Halloween styles from prompts.json (sorted alphabetically)
   const halloweenStyles = useMemo(() => {
     const halloweenPrompts = promptsDataRaw.halloween?.prompts || {};
-    return Object.keys(halloweenPrompts).map(key => ({
-      key,
-      img: `/gallery/prompts/medium/sogni-photobooth-${key.replace(/([A-Z])/g, '-$1').toLowerCase()}-raw.jpg`,
-      title: styleIdToDisplay(key)
-    }));
+    return Object.keys(halloweenPrompts)
+      .sort((a, b) => styleIdToDisplay(a).localeCompare(styleIdToDisplay(b)))
+      .map(key => ({
+        key,
+        img: `/gallery/prompts/medium/sogni-photobooth-${key.replace(/([A-Z])/g, '-$1').toLowerCase()}-raw.jpg`,
+        title: styleIdToDisplay(key)
+      }));
   }, []);
 
   // Enable music player when component mounts (but not expanded)
@@ -261,7 +263,7 @@ const HalloweenEvent = () => {
           aria-label="View contest information"
         >
           <span className="pumpkin-emoji">🎃</span>
-          <span className="compete-bubble">Compete!</span>
+          <span className="compete-bubble">Create your own costume and win!</span>
         </button>
       )}
 
