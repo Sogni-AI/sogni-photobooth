@@ -201,6 +201,9 @@
   display: flex;
   gap: 15px;
   margin-top: 10px;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
 }
 
 .image-adjustment-buttons button {
@@ -238,6 +241,108 @@
   opacity: 0.95;
   font-weight: 500;
   margin-left: 4px;
+}
+
+/* Batch dropdown container */
+.batch-dropdown-container {
+  position: relative;
+  display: inline-flex;
+  gap: 0;
+  border-radius: 8px;
+  overflow: visible;
+  background: linear-gradient(135deg, #ff7eb3, #ff5e8a);
+  transition: all 0.2s ease;
+}
+
+.batch-dropdown-container:hover {
+  background: linear-gradient(135deg, #ff8eba, #ff6e9a);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(255, 94, 138, 0.3);
+}
+
+/* Split button styles */
+.confirm-button-main {
+  border-radius: 0 !important;
+  padding: 10px 20px;
+  background: transparent !important;
+  box-shadow: none !important;
+  transform: none !important;
+  white-space: nowrap;
+}
+
+.confirm-button-main:hover {
+  background: transparent !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.confirm-button-dropdown {
+  border-radius: 0 !important;
+  padding: 10px 6px;
+  min-width: auto !important;
+  width: 30px;
+  flex-shrink: 0;
+  border-left: 1px solid rgba(255, 255, 255, 0.15);
+  background: transparent !important;
+  box-shadow: none !important;
+  transform: none !important;
+  position: relative;
+}
+
+.confirm-button-dropdown:hover {
+  background: transparent !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.dropdown-caret {
+  font-size: 0.65em;
+  line-height: 1;
+  display: block;
+}
+
+/* Dropdown menu */
+.batch-dropdown-menu {
+  position: absolute;
+  bottom: calc(100% + 5px);
+  right: 0;
+  background-color: #333;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+  z-index: 10000;
+  width: 70px;
+}
+
+.batch-dropdown-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  padding: 10px 12px;
+  background-color: #333;
+  color: white;
+  border: none;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  border-radius: 0;
+}
+
+.batch-dropdown-item:hover {
+  background-color: #444;
+}
+
+.batch-dropdown-item.selected {
+  background: linear-gradient(135deg, rgba(255, 126, 179, 0.3), rgba(255, 94, 138, 0.3));
+}
+
+.batch-dropdown-item .checkmark {
+  color: #ff5e8a;
+  font-weight: bold;
+  font-size: 0.9em;
 }
 
 /* iPad responsiveness - make Image Adjuster larger */
@@ -296,6 +401,25 @@
     font-size: 18px;
     min-width: 120px;
   }
+
+  .confirm-button-main {
+    padding-right: 18px;
+  }
+
+  .confirm-button-dropdown {
+    padding: 12px 8px;
+    min-width: auto !important;
+    width: 35px;
+  }
+
+  .batch-dropdown-item {
+    padding: 12px 14px;
+    font-size: 18px;
+  }
+
+  .batch-dropdown-menu {
+    width: 80px;
+  }
   
   .frame-corner {
     width: 18px;
@@ -322,6 +446,25 @@
   .image-adjustment-buttons button {
     padding: 8px 16px;
     font-size: 14px;
+  }
+
+  .confirm-button-main {
+    padding-right: 12px;
+  }
+
+  .confirm-button-dropdown {
+    padding: 8px 5px;
+    min-width: auto !important;
+    width: 26px;
+  }
+
+  .batch-dropdown-item {
+    padding: 8px 12px;
+    font-size: 14px;
+  }
+
+  .batch-dropdown-menu {
+    width: 60px;
   }
   
   .frame-corner {

@@ -24,7 +24,7 @@ const ImageAdjuster = ({
 }) => {
 
   
-  const { settings } = useApp();
+  const { settings, updateSetting } = useApp();
   const { aspectRatio, tezdevTheme, selectedModel, inferenceSteps, promptGuidance, scheduler, numImages: contextNumImages } = settings;
   const { isAuthenticated } = useSogniAuth();
   const { tokenType } = useWallet();
@@ -33,11 +33,16 @@ const ImageAdjuster = ({
   // Use the number of images passed as prop, or fallback to context
   const effectiveNumImages = numImages || contextNumImages;
   
+  // Batch count selection state
+  const batchOptions = [1, 2, 4, 8, 16];
+  const [selectedBatchCount, setSelectedBatchCount] = useState(numImages || contextNumImages);
+  const [isBatchDropdownOpen, setIsBatchDropdownOpen] = useState(false);
+
   // Estimate cost for this generation
   // ImageAdjuster uses InstantID ControlNet, not Flux Kontext
   const { loading: costLoading, formattedCost } = useCostEstimation({
     model: selectedModel,
-    imageCount: effectiveNumImages,
+    imageCount: selectedBatchCount,
     stepCount: inferenceSteps,
     guidance: promptGuidance,
     scheduler: scheduler,
@@ -61,6 +66,7 @@ const ImageAdjuster = ({
   
   const containerRef = useRef(null);
   const imageRef = useRef(null);
+  const dropdownRef = useRef(null);
   
   // Track image position and scale - initialize directly with props
   const [position, setPosition] = useState(initialPosition);
@@ -249,6 +255,23 @@ const ImageAdjuster = ({
       }
     };
   }, []);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsBatchDropdownOpen(false);
+      }
+    };
+
+    if (isBatchDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isBatchDropdownOpen]);
   
   // Update position via DOM manipulation only (no React state updates during drag)
   const updatePositionDirect = useCallback((newPosition) => {
@@ -581,7 +604,7 @@ const ImageAdjuster = ({
       const finalSizeMB = (finalBlob.size / 1024 / 1024).toFixed(2);
       console.log(`📤 ImageAdjuster transmission size: ${finalSizeMB}MB`);
 
-      onConfirm(finalBlob, { position, scale });
+      onConfirm(finalBlob, { position, scale, batchCount: selectedBatchCount });
     }, 'image/png', 1.0);
   };
   
@@ -703,25 +726,53 @@ const ImageAdjuster = ({
           >
             Cancel
           </button>
-          <button 
-            className="confirm-button" 
-            onClick={handleConfirm}
-          >
-            Imagine {effectiveNumImages}x
-            {(() => {
-              console.log('[ImageAdjuster Button] Render check:', {
-                isAuthenticated,
-                costLoading,
-                formattedCost,
-                tokenLabel,
-                shouldShow: isAuthenticated && !costLoading && formattedCost && formattedCost !== '—'
-              });
-              return null;
-            })()}
-            {isAuthenticated && !costLoading && formattedCost && formattedCost !== '—' && (
-              <span className="cost-estimate"> • {formattedCost} {tokenLabel}</span>
+          <div className="batch-dropdown-container" ref={dropdownRef}>
+            <button 
+              className="confirm-button confirm-button-main" 
+              onClick={handleConfirm}
+            >
+              Imagine {selectedBatchCount}x
+              {(() => {
+                console.log('[ImageAdjuster Button] Render check:', {
+                  isAuthenticated,
+                  costLoading,
+                  formattedCost,
+                  tokenLabel,
+                  shouldShow: isAuthenticated && !costLoading && formattedCost && formattedCost !== '—'
+                });
+                return null;
+              })()}
+              {isAuthenticated && !costLoading && formattedCost && formattedCost !== '—' && (
+                <span className="cost-estimate"> • {formattedCost} {tokenLabel}</span>
+              )}
+            </button>
+            <button
+              className="confirm-button confirm-button-dropdown"
+              onClick={() => setIsBatchDropdownOpen(!isBatchDropdownOpen)}
+              aria-label="Select batch count"
+            >
+              <span className="dropdown-caret">▼</span>
+            </button>
+            {isBatchDropdownOpen && (
+              <div className="batch-dropdown-menu">
+                {batchOptions.map(count => (
+                  <button
+                    key={count}
+                    className={`batch-dropdown-item ${count === selectedBatchCount ? 'selected' : ''}`}
+                    onClick={() => {
+                      console.log(`🔢 Batch count changed to ${count}`);
+                      setSelectedBatchCount(count);
+                      updateSetting('numImages', count); // Save to settings immediately
+                      setIsBatchDropdownOpen(false);
+                    }}
+                  >
+                    {count}x
+                    {count === selectedBatchCount && <span className="checkmark">✓</span>}
+                  </button>
+                ))}
+              </div>
             )}
-          </button>
+          </div>
         </div>
       </div>
     </div>
