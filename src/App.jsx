@@ -5807,6 +5807,7 @@ const App = () => {
             onThemeChange={handleThemeChange}
             onCustomPromptChange={(prompt) => updateSetting('positivePrompt', prompt)}
             currentCustomPrompt={positivePrompt}
+            portraitType={portraitType}
           />
           
 

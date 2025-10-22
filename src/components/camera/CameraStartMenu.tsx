@@ -1,8 +1,9 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useMemo } from 'react';
 import MetricsBar from '../shared/MetricsBar';
 import StyleDropdown from '../shared/StyleDropdown';
 import { styleIdToDisplay } from '../../utils';
 import { isFluxKontextModel } from '../../constants/settings';
+import { generateGalleryFilename } from '../../utils/galleryLoader';
 import './CameraStartMenu.css';
 
 interface CameraStartMenuProps {
@@ -20,6 +21,7 @@ interface CameraStartMenuProps {
   onThemeChange?: (themeState: Record<string, boolean>) => void;
   onCustomPromptChange?: (prompt: string) => void;
   currentCustomPrompt?: string;
+  portraitType?: 'headshot' | 'medium' | 'fullbody';
 }
 
 const CameraStartMenu: React.FC<CameraStartMenuProps> = ({ 
@@ -34,10 +36,30 @@ const CameraStartMenu: React.FC<CameraStartMenuProps> = ({
   onShowControlOverlay,
   onThemeChange,
   onCustomPromptChange,
-  currentCustomPrompt = ''
+  currentCustomPrompt = '',
+  portraitType = 'medium'
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showStyleDropdown, setShowStyleDropdown] = useState(false);
+
+  // Generate preview image path for selected style
+  const stylePreviewImage = useMemo(() => {
+    // Check if it's an individual style (not a prompt sampler mode)
+    const isIndividualStyle = selectedStyle && 
+      !['custom', 'random', 'randomMix', 'oneOfEach', 'browseGallery'].includes(selectedStyle);
+    
+    if (isIndividualStyle) {
+      try {
+        const expectedFilename = generateGalleryFilename(selectedStyle);
+        return `/gallery/prompts/${portraitType}/${expectedFilename}`;
+      } catch (error) {
+        console.warn('Error generating style preview image:', error);
+        return null;
+      }
+    }
+    
+    return null;
+  }, [selectedStyle, portraitType]);
 
   const handleBrowseClick = () => {
     if (isProcessing) return;
@@ -118,7 +140,24 @@ const CameraStartMenu: React.FC<CameraStartMenuProps> = ({
             disabled={isProcessing}
           >
             <div className="style-selector-content">
-              <span className="style-icon">🎨</span>
+              {stylePreviewImage ? (
+                <img 
+                  src={stylePreviewImage} 
+                  alt={selectedStyle ? styleIdToDisplay(selectedStyle) : 'Style preview'}
+                  className="style-preview-image"
+                  onError={(e) => {
+                    // Fallback to emoji icon if image fails to load
+                    e.currentTarget.style.display = 'none';
+                    const fallbackIcon = e.currentTarget.nextElementSibling;
+                    if (fallbackIcon && fallbackIcon.classList.contains('style-icon-fallback')) {
+                      (fallbackIcon as HTMLElement).style.display = 'block';
+                    }
+                  }}
+                />
+              ) : null}
+              <span className={`style-icon ${stylePreviewImage ? 'style-icon-fallback' : ''}`} style={stylePreviewImage ? { display: 'none' } : {}}>
+                🎨
+              </span>
               <span className="style-text">
                 {selectedStyle === 'custom' ? 'Custom...' : selectedStyle ? styleIdToDisplay(selectedStyle) : 'Select Style'}
               </span>

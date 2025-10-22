@@ -135,6 +135,27 @@
   transform: scale(1.1);
 }
 
+/* Circular style preview image */
+.camera-start-menu .style-preview-image {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin-right: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+
+.camera-start-menu .style-selector-button:hover .style-preview-image {
+  transform: scale(1.1);
+}
+
+/* Fallback icon (hidden when preview image is shown) */
+.camera-start-menu .style-icon-fallback {
+  display: none;
+}
+
 .camera-start-menu .style-text {
   flex: 1;
   text-align: left;
@@ -330,6 +351,12 @@
 
   .camera-start-menu .style-arrow {
     font-size: 1.2rem;
+  }
+
+  .camera-start-menu .style-preview-image {
+    width: 44px;
+    height: 44px;
+    margin-right: 14px;
   }
   
   .start-menu-options {
