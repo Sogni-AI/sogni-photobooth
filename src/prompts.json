@@ -267,17 +267,12 @@
       "vectorPop": "Attractive, bold vector pop-portrait, flat CMY blocks, thick white outline, shadow offset."
     }
   },
-  "zombies-horror": {
-    "name": "Zombies / Horror",
-    "prompts": {
-      "grindhouse": "70s grindhouse poster vibe, deep reds, film scratches, dramatic chiaroscuro, torn wardrobe, suggestive splatter (non-graphic), no readable text",
-      "classicZombieBW": "zombie with bone hands reaching hand out to camera, mouth open, 1960s black-and-white undead portrait, film grain, harsh key light, haunted farmhouse vibe, cracked makeup, subtle bloodless grime",
-      "apocalypseRooftop": "zombie portrait, solo survivor-turned-undead on rooftop, city smoke plumes, helicopter silhouette, dusk gradient sky, tattered clothes"
-    }
-  },
   "halloween": {
     "name": "Halloween",
     "prompts": {
+      "grindhouse": "70s grindhouse poster vibe, deep reds, film scratches, dramatic chiaroscuro, torn wardrobe, suggestive splatter (non-graphic), no readable text",
+      "classicZombieBW": "zombie with bone hands reaching hand out to camera, mouth open, 1960s black-and-white undead portrait, film grain, harsh key light, haunted farmhouse vibe, cracked makeup, subtle bloodless grime",
+      "apocalypseRooftop": "zombie portrait, solo survivor-turned-undead on rooftop, city smoke plumes, helicopter silhouette, dusk gradient sky, tattered clothes",
       "midsommarBloom": "Sweden eerie midsummer folk beautiy queen portrait, (blood dripping down face), painful strained sad expression, frown, furrowed eyebrows, super grand thick colorful floral crown headdress, elaborate flower garlands, grimacing expression, elaborate Sweden nordic white linen folk dress, overexposed sunlit meadow, creepy white robed villagers in background, lens-flare halo, hash sun shadows, professional teal and orange, arri alexa film grade look, blood splatter, midsommer, cinematic bokeh, warm golden sunlight, soft pastel tones, subtle desaturation, high dynamic range, fine film grain",
       "hauntedPromQueen": "all red figured covered in blood, 1970s prom setting, bloody tiara, hands up in the air, completely drenched in blood, sparkly sequin dress, disco lights through fog, frozen smile, slow-motion horror glam moment",
       "revengeBride": "blood-stained wedding gown, covered in blood, holding gleaming sword, bouquet, rain pouring, cinematic lens flare, gothic romance tone, horror movie cover composition",

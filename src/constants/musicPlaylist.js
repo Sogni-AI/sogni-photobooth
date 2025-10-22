@@ -1,7 +1,7 @@
 export const PLAYLIST = [
   {
     url: 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/music/10_bash_unstable_(reprise).mp3',
-    title: 'Bash Unstable'
+    title: 'Render Bash'
   },
   {
     url: 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/music/04_sogni_smash.mp3',
@@ -41,7 +41,7 @@ export const PLAYLIST = [
   },
   {
     url: 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/music/09_bash_unstable.mp3',
-    title: 'Bash Unstable (Reprise)'
+    title: 'Render Bash (Reprise)'
   }
 ];
 

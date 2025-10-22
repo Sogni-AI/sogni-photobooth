@@ -184,7 +184,7 @@
 }
 
 .contest-card {
-  background: rgba(255, 255, 255, 0.95);
+  background: rgba(255, 255, 255, 0.4);
   border-radius: 20px;
   padding: 1.8rem 2rem;
   box-shadow: 
@@ -226,6 +226,18 @@
   margin-right: auto;
 }
 
+.style-library-link {
+  color: #ff6b00;
+  font-weight: bold;
+  text-decoration: underline;
+  transition: color 0.2s ease;
+}
+
+.style-library-link:hover {
+  color: #ff8c00;
+  text-decoration: none;
+}
+
 .how-to-win {
   background: #fff5e6;
   border-radius: 15px;
@@ -261,15 +273,6 @@
   left: 0;
 }
 
-.prize-info {
-  background: linear-gradient(135deg, #fff5e6 0%, #ffe6cc 100%);
-  border-radius: 15px;
-  padding: 1rem;
-  margin-bottom: 1.2rem;
-  border: 3px solid #ff6b00;
-}
-
-.prize-pool,
 .feature-info,
 .deadline {
   text-align: center;
@@ -284,6 +287,63 @@
   color: #ff6b00;
   font-weight: bold;
   font-size: 1.3em;
+}
+
+.halloween-inspiration {
+  margin-bottom: 1.2rem;
+  text-align: center;
+}
+
+.halloween-inspiration h3 {
+  font-size: 1.2rem;
+  color: #2d1810;
+  margin: 0 0 1rem 0;
+}
+
+.halloween-gallery {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  padding: 0.5rem 0;
+}
+
+.halloween-event .halloween-polaroid {
+  background: white;
+  padding: 8px 8px 20px 8px;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
+  transform: rotate(-2deg);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  cursor: pointer;
+}
+
+.halloween-event .halloween-polaroid:nth-child(2) {
+  transform: rotate(1deg);
+}
+
+.halloween-event .halloween-polaroid:nth-child(3) {
+  transform: rotate(-3deg);
+}
+
+.halloween-event .halloween-polaroid:nth-child(4) {
+  transform: rotate(2deg);
+}
+
+.halloween-event .halloween-polaroid:nth-child(5) {
+  transform: rotate(-1deg);
+}
+
+.halloween-event .halloween-polaroid:hover {
+  transform: rotate(0deg) scale(1.05);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+  z-index: 10;
+}
+
+.halloween-event .halloween-polaroid img {
+  width: 80px;
+  height: 120px;
+  object-fit: cover;
+  display: block;
 }
 
 .start-creating-btn {
@@ -487,12 +547,6 @@
     font-size: 1rem;
   }
 
-  .prize-info {
-    padding: 1rem 0.9rem;
-    margin-bottom: 1rem;
-  }
-
-  .prize-pool,
   .feature-info,
   .deadline {
     font-size: 0.95rem;
@@ -502,6 +556,23 @@
 
   .highlight {
     font-size: 1.2em;
+  }
+
+  .halloween-inspiration h3 {
+    font-size: 1.1rem;
+  }
+
+  .halloween-gallery {
+    gap: 0.8rem;
+  }
+
+  .halloween-event .halloween-polaroid {
+    padding: 6px 6px 16px 6px;
+  }
+
+  .halloween-event .halloween-polaroid img {
+    width: 60px;
+    height: 90px;
   }
   
   .start-creating-btn {
@@ -561,10 +632,26 @@
     font-size: 0.85rem;
   }
 
-  .prize-pool,
   .feature-info,
   .deadline {
     font-size: 0.9rem;
+  }
+
+  .halloween-inspiration h3 {
+    font-size: 1rem;
+  }
+
+  .halloween-gallery {
+    gap: 0.6rem;
+  }
+
+  .halloween-event .halloween-polaroid {
+    padding: 5px 5px 14px 5px;
+  }
+
+  .halloween-event .halloween-polaroid img {
+    width: 50px;
+    height: 75px;
   }
 
   .start-creating-btn {

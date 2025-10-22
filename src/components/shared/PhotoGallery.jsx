@@ -215,7 +215,15 @@ const PhotoGallery = ({
     }
     return getDefaultThemeGroupState();
   });
-  const [showThemeFilters, setShowThemeFilters] = useState(false);
+  const [showThemeFilters, setShowThemeFilters] = useState(() => {
+    // Auto-open filters if themes parameter exists in URL
+    if (isPromptSelectorMode) {
+      const urlParams = new URLSearchParams(window.location.search);
+      const themesParam = urlParams.get('themes');
+      return themesParam !== null;
+    }
+    return false;
+  });
   const [showSearchInput, setShowSearchInput] = useState(false);
   const [searchTerm, setSearchTerm] = useState(initialSearchTerm);
 

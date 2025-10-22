@@ -90,30 +90,40 @@ const HalloweenEvent = () => {
             
             <div className="contest-description">
               <p>
-                Your mission? Create the perfect Halloween costume look. 
-                Winning entries will be added to our style library, all credited to the winners.
+                Your mission? Create the perfect Halloween costume look.<br/>
+                Winning entries will be added to our <a href="/?page=prompts&themes=halloween" className="style-library-link">style library</a>.
               </p>
             </div>
 
             <div className="how-to-win">
               <h3>🎨✨ How to Win ✨🎨</h3>
               <ul>
-                <li>Create a photobooth image using your own creative prompt (must log in to Photobooth with your Sogni account)</li>
-                <li>Share your creation on Twitter with the in-app share button</li>
-                <li>Your post will automatically include your prompt and tag @sogni_protocol</li>
-                <li>This will automatically submit your work to the contest under the Sogni account</li>
+                <li>1️⃣ Create a photobooth image using your own creative prompt (must log in)</li>
+                <li>2️⃣ Share your creation on Twitter with the in-app share by Oct 27.</li>
+                <li>
+                🏆 Prize Pool: <span className="highlight">40,000 Premium Sparks</span> between winners
+                </li>
               </ul>
+              
             </div>
 
-            <div className="prize-info">
-              <div className="prize-pool">
-                🏆 Prize Pool: <span className="highlight">40,000 Premium Sparks</span> to share between winners
-              </div>
-              <div className="feature-info">
-                💡 Winning entries could be featured on Sogni platforms with full credit
-              </div>
-              <div className="deadline">
-                📅 Deadline: <span className="highlight">Oct 27</span> (end of UTC day)
+            <div className="halloween-inspiration">
+              <div className="halloween-gallery">
+                <div className="halloween-polaroid">
+                  <img src="/gallery/prompts/medium/sogni-photobooth-dream-stalker-raw.jpg" alt="Dream Stalker" />
+                </div>
+                <div className="halloween-polaroid">
+                  <img src="/gallery/prompts/medium/sogni-photobooth-clown-from-hell-raw.jpg" alt="Clown from Hell" />
+                </div>
+                <div className="halloween-polaroid">
+                  <img src="/gallery/prompts/medium/sogni-photobooth-corpse-bride-raw.jpg" alt="Corpse Bride" />
+                </div>
+                <div className="halloween-polaroid">
+                  <img src="/gallery/prompts/medium/sogni-photobooth-haunted-prom-queen-raw.jpg" alt="Haunted Prom Queen" />
+                </div>
+                <div className="halloween-polaroid">
+                  <img src="/gallery/prompts/medium/sogni-photobooth-midsommar-bloom-raw.jpg" alt="Midsommar Bloom" />
+                </div>
               </div>
             </div>
 
