@@ -44,4 +44,13 @@ export const getAppTitle = (): string => {
   if (isDevelopment()) return `${baseTitle} (Dev)`;
   if (isStaging()) return `${baseTitle} (Staging)`;
   return baseTitle;
+};
+
+/**
+ * Get Turnstile site key for bot protection
+ */
+export const getTurnstileKey = (): string => {
+  const env = import.meta.env as Record<string, unknown>;
+  const key = env['VITE_TURNSTILE_KEY'];
+  return typeof key === 'string' ? key : '';
 }; 
