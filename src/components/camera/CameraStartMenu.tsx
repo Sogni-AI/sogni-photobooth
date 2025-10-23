@@ -178,7 +178,6 @@ const CameraStartMenu: React.FC<CameraStartMenuProps> = ({
               <div className="option-icon">📸</div>
               <div className="option-label">Take Photo</div>
             </button>
-            
             <button 
               className="option-button browse-photo"
               onClick={isProcessing ? undefined : handleBrowseClick}
@@ -187,11 +186,6 @@ const CameraStartMenu: React.FC<CameraStartMenuProps> = ({
               <div className="option-icon">🖼️</div>
               <div className="option-label">Upload Photo</div>
             </button>
-            
-            <div className="option-button drag-photo info-only">
-              <div className="option-icon">✋</div>
-              <div className="option-label">Drag & Drop Photo</div>
-            </div>
           </div>
         </div>
         
@@ -223,6 +217,7 @@ const CameraStartMenu: React.FC<CameraStartMenuProps> = ({
           onGallerySelect={undefined}
           onCustomPromptChange={onCustomPromptChange as any}
           currentCustomPrompt={currentCustomPrompt}
+          portraitType={portraitType}
         />
       )}
     </div>

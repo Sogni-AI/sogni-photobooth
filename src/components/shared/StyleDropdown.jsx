@@ -4,6 +4,7 @@ import { styleIdToDisplay } from '../../utils';
 import { THEME_GROUPS, getDefaultThemeGroupState, getEnabledPrompts } from '../../constants/themeGroups';
 import { getThemeGroupPreferences, saveThemeGroupPreferences } from '../../utils/cookies';
 import { isFluxKontextModel } from '../../constants/settings';
+import { generateGalleryFilename } from '../../utils/galleryLoader';
 import CustomPromptPopup from './CustomPromptPopup';
 import '../../styles/style-dropdown.css';
 import PropTypes from 'prop-types';
@@ -22,7 +23,8 @@ const StyleDropdown = ({
   selectedModel = null, // Current selected model to determine UI behavior
   onGallerySelect = null, // Callback for gallery selection
   onCustomPromptChange = null, // Callback for custom prompt changes
-  currentCustomPrompt = '' // Current custom prompt value
+  currentCustomPrompt = '', // Current custom prompt value
+  portraitType = 'medium' // Portrait type for gallery preview images
 }) => {
   const [position, setPosition] = useState({ top: 0, left: 0, width: 0 });
   const [mounted, setMounted] = useState(false);
@@ -360,18 +362,41 @@ const StyleDropdown = ({
             // If both are the same type (both alphanumeric or both non-alphanumeric), sort alphabetically
             return displayA.localeCompare(displayB);
           })
-          .map(styleKey => (
-            <div 
-              key={styleKey}
-              className={`style-option ${selectedStyle === styleKey ? 'selected' : ''}`} 
-              onClick={() => { 
-                updateStyle(styleKey);
-                onClose();
-              }}
-            >
-              <span>{styleIdToDisplay(styleKey)}</span>
-            </div>
-          ))}
+          .map(styleKey => {
+            // Generate preview image path for this style
+            let previewImagePath = null;
+            try {
+              const expectedFilename = generateGalleryFilename(styleKey);
+              previewImagePath = `/gallery/prompts/${portraitType}/${expectedFilename}`;
+            } catch (error) {
+              // If filename generation fails, we'll just show no preview
+              previewImagePath = null;
+            }
+            
+            return (
+              <div 
+                key={styleKey}
+                className={`style-option ${selectedStyle === styleKey ? 'selected' : ''}`} 
+                onClick={() => { 
+                  updateStyle(styleKey);
+                  onClose();
+                }}
+              >
+                {previewImagePath && (
+                  <img 
+                    src={previewImagePath} 
+                    alt={styleIdToDisplay(styleKey)}
+                    className="style-option-preview"
+                    onError={(e) => {
+                      // Hide image if it fails to load
+                      e.currentTarget.style.display = 'none';
+                    }}
+                  />
+                )}
+                <span>{styleIdToDisplay(styleKey)}</span>
+              </div>
+            );
+          })}
       </div>
     </div>,
         document.body
@@ -405,6 +430,7 @@ StyleDropdown.propTypes = {
   onGallerySelect: PropTypes.func,
   onCustomPromptChange: PropTypes.func,
   currentCustomPrompt: PropTypes.string,
+  portraitType: PropTypes.oneOf(['headshot', 'medium', 'fullbody']),
 };
 
 export default StyleDropdown; 

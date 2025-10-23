@@ -152,6 +152,20 @@
   background: #fff0f4;
 }
 
+/* Circular preview image in dropdown */
+.style-option-preview {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  flex-shrink: 0;
+  margin-left: -4px;
+  margin-right: 4px;
+  margin-top: -8px;
+  margin-bottom: -8px;
+}
+
 /* Mobile Portrait Specific Styles */
 @media (max-width: 480px) and (orientation: portrait) {
   .style-dropdown.mobile-portrait {

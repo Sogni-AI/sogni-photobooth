@@ -38,13 +38,7 @@ export const AuthStatus: React.FC<AuthStatusProps> = ({ onPurchaseClick }) => {
 
   // Mark visitor on mount (after we've already computed the initial button text)
   useEffect(() => {
-    console.log('🔍 Visitor tracking - Initial state:', {
-      hasVisited: document.cookie.includes('sogni_has_visited'),
-      buttonText: authButtonText,
-      allCookies: document.cookie
-    });
     markAsVisited();
-    console.log('✅ Visitor marked, cookies now:', document.cookie);
   }, [authButtonText]);
 
   const handleLogout = async () => {

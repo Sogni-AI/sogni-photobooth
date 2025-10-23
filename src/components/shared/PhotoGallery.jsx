@@ -2250,12 +2250,12 @@ const PhotoGallery = ({
           }}
           title={isGenerating ? 'Cancel current generation and start new batch' : 'Generate more photos'}
         >
-          {isGenerating ? `CANCEL + NEXT ${numImages}x` : (
+          {isGenerating ? `CANCEL + NEXT ($){numImages}x)` : (
             <>
-              NEXT {numImages}x
+              NEXT ({numImages}x)
               {isAuthenticated && !moreButtonCostLoading && moreButtonCost && moreButtonCost !== '—' && (
                 <span style={{ fontSize: '0.85em', opacity: 0.95, marginLeft: '6px' }}>
-                  • {moreButtonCost} {tokenLabel}
+                   {moreButtonCost} {tokenLabel}
                 </span>
               )}
             </>
@@ -2284,10 +2284,10 @@ const PhotoGallery = ({
           title="Generate fresh batch with current settings"
         >
           <span className="view-photos-label">
-            Imagine {numImages}x
+            Imagine ({numImages}x) 
             {isAuthenticated && !moreButtonCostLoading && moreButtonCost && moreButtonCost !== '—' && (
               <span style={{ fontSize: '0.85em', opacity: 0.95, marginLeft: '6px' }}>
-                • {moreButtonCost} {tokenLabel}
+                 {moreButtonCost} {tokenLabel}
               </span>
             )}
           </span>

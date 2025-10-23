@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 
 import PropTypes from 'prop-types';
 import { getCustomDimensions } from '../../utils/imageProcessing';
@@ -8,6 +8,9 @@ import { useSogniAuth } from '../../services/sogniAuth';
 import { useWallet } from '../../hooks/useWallet';
 import { useCostEstimation } from '../../hooks/useCostEstimation.ts';
 import { getTokenLabel } from '../../services/walletService';
+import { styleIdToDisplay } from '../../utils';
+import { generateGalleryFilename } from '../../utils/galleryLoader';
+import StyleDropdown from './StyleDropdown';
 import '../../styles/components/ImageAdjuster.css';
 
 /**
@@ -20,15 +23,38 @@ const ImageAdjuster = ({
   onCancel,
   initialPosition = { x: 0, y: 0 },
   defaultScale = 1,
-  numImages = 1
+  numImages = 1,
+  stylePrompts = {}
 }) => {
 
   
   const { settings, updateSetting } = useApp();
-  const { aspectRatio, tezdevTheme, selectedModel, inferenceSteps, promptGuidance, scheduler, numImages: contextNumImages } = settings;
+  const { aspectRatio, tezdevTheme, selectedModel, inferenceSteps, promptGuidance, scheduler, numImages: contextNumImages, selectedStyle, portraitType } = settings;
   const { isAuthenticated } = useSogniAuth();
   const { tokenType } = useWallet();
   const tokenLabel = getTokenLabel(tokenType);
+  
+  // Style dropdown state
+  const [showStyleDropdown, setShowStyleDropdown] = useState(false);
+  
+  // Generate preview image path for selected style
+  const stylePreviewImage = useMemo(() => {
+    // Check if it's an individual style (not a prompt sampler mode)
+    const isIndividualStyle = selectedStyle && 
+      !['custom', 'random', 'randomMix', 'oneOfEach', 'browseGallery'].includes(selectedStyle);
+    
+    if (isIndividualStyle) {
+      try {
+        const expectedFilename = generateGalleryFilename(selectedStyle);
+        return `/gallery/prompts/${portraitType || 'medium'}/${expectedFilename}`;
+      } catch (error) {
+        console.warn('Error generating style preview image:', error);
+        return null;
+      }
+    }
+    
+    return null;
+  }, [selectedStyle, portraitType]);
   
   // Use the number of images passed as prop, or fallback to context
   const effectiveNumImages = numImages || contextNumImages;
@@ -612,8 +638,56 @@ const ImageAdjuster = ({
   return (
     <div className="image-adjuster-overlay">
       <div className="image-adjuster-container">
+        {/* Pinned Style Widget - Top Left */}
+        <div className="image-adjuster-style-pinned">
+          <div 
+            className="style-label-text"
+            onClick={() => setShowStyleDropdown(true)}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                setShowStyleDropdown(true);
+              }
+            }}
+          >
+            Your style
+          </div>
+          <button 
+            className="image-adjuster-style-selector-button"
+            onClick={() => setShowStyleDropdown(true)}
+            title="Change style"
+          >
+            <div className="image-adjuster-style-selector-content">
+              {stylePreviewImage ? (
+                <img 
+                  src={stylePreviewImage} 
+                  alt={selectedStyle ? styleIdToDisplay(selectedStyle) : 'Style preview'}
+                  className="image-adjuster-style-preview-image"
+                  onError={(e) => {
+                    // Fallback to emoji icon if image fails to load
+                    e.currentTarget.style.display = 'none';
+                    const fallbackIcon = e.currentTarget.nextElementSibling;
+                    if (fallbackIcon && fallbackIcon.classList.contains('image-adjuster-style-icon-fallback')) {
+                      fallbackIcon.style.display = 'block';
+                    }
+                  }}
+                />
+              ) : null}
+              <span className={`image-adjuster-style-icon ${stylePreviewImage ? 'image-adjuster-style-icon-fallback' : ''}`} style={stylePreviewImage ? { display: 'none' } : {}}>
+                🎨
+              </span>
+              <span className="image-adjuster-style-text">
+                {selectedStyle === 'custom' ? 'Custom...' : selectedStyle ? styleIdToDisplay(selectedStyle) : 'Select Style'}
+              </span>
+            </div>
+          </button>
+        </div>
+        
         <h2>Adjust Your Image</h2>
         <p className="image-adjuster-subtitle">Smaller faces can give more room for creativity.</p>
+        
         <div 
           className="image-frame"
           ref={containerRef}
@@ -731,7 +805,7 @@ const ImageAdjuster = ({
               className="confirm-button confirm-button-main" 
               onClick={handleConfirm}
             >
-              Imagine {selectedBatchCount}x
+              Imagine ({selectedBatchCount}x) 
               {(() => {
                 console.log('[ImageAdjuster Button] Render check:', {
                   isAuthenticated,
@@ -743,7 +817,7 @@ const ImageAdjuster = ({
                 return null;
               })()}
               {isAuthenticated && !costLoading && formattedCost && formattedCost !== '—' && (
-                <span className="cost-estimate">• {formattedCost} {tokenLabel}</span>
+                <span className="cost-estimate"> {formattedCost} {tokenLabel}</span>
               )}
             </button>
             <button
@@ -774,6 +848,22 @@ const ImageAdjuster = ({
             )}
           </div>
         </div>
+        
+        {/* Style Dropdown */}
+        {showStyleDropdown && (
+          <StyleDropdown
+            isOpen={showStyleDropdown}
+            onClose={() => setShowStyleDropdown(false)}
+            selectedStyle={selectedStyle}
+            updateStyle={(style) => updateSetting('selectedStyle', style)}
+            defaultStylePrompts={stylePrompts}
+            setShowControlOverlay={() => {}}
+            dropdownPosition="top"
+            triggerButtonClass=".image-adjuster-style-selector-button"
+            selectedModel={selectedModel}
+            portraitType={portraitType}
+          />
+        )}
       </div>
     </div>
   );
@@ -788,7 +878,8 @@ ImageAdjuster.propTypes = {
     y: PropTypes.number
   }),
   defaultScale: PropTypes.number,
-  numImages: PropTypes.number
+  numImages: PropTypes.number,
+  stylePrompts: PropTypes.object
 };
 
 export default ImageAdjuster; 

@@ -7,6 +7,7 @@ import { styleIdToDisplay } from './utils';
 import { getCustomDimensions } from './utils/imageProcessing';
 import { goToPreviousPhoto, goToNextPhoto } from './utils/photoNavigation';
 import { initializeStylePrompts, getRandomStyle, getRandomMixPrompts } from './services/prompts';
+import { generateGalleryFilename } from './utils/galleryLoader';
 import { getDefaultThemeGroupState, getEnabledPrompts, getOneOfEachPrompts } from './constants/themeGroups';
 import { getThemeGroupPreferences, saveThemeGroupPreferences } from './utils/cookies';
 import { initializeSogniClient } from './services/sogni';
@@ -1450,18 +1451,29 @@ const App = () => {
 
   // State for top-left style dropdown
   const [showTopLeftStyleDropdown, setShowTopLeftStyleDropdown] = useState(false);
-
-  // Intelligent style selector handler - shows dropdown for Flux Kontext, gallery for others
-  const handleStyleSelectorClick = () => {
-    const isFluxKontext = isFluxKontextModel(selectedModel);
+  
+  // Generate preview image path for selected style
+  const stylePreviewImage = useMemo(() => {
+    // Check if it's an individual style (not a prompt sampler mode)
+    const isIndividualStyle = selectedStyle && 
+      !['custom', 'random', 'randomMix', 'oneOfEach', 'browseGallery'].includes(selectedStyle);
     
-    if (isFluxKontext) {
-      // For Flux Kontext, show the dropdown
-      setShowTopLeftStyleDropdown(true);
-    } else {
-      // For other models, navigate to the full gallery
-      handleNavigateToPromptSelector();
+    if (isIndividualStyle) {
+      try {
+        const expectedFilename = generateGalleryFilename(selectedStyle);
+        return `/gallery/prompts/${portraitType || 'medium'}/${expectedFilename}`;
+      } catch (error) {
+        console.warn('Error generating style preview image:', error);
+        return null;
+      }
     }
+    
+    return null;
+  }, [selectedStyle, portraitType]);
+
+  // Style selector handler - opens dropdown for all models
+  const handleStyleSelectorClick = () => {
+    setShowTopLeftStyleDropdown(true);
   };
 
   // Track navigation source for proper back button behavior
@@ -1741,15 +1753,12 @@ const App = () => {
   useEffect(() => {
     // Initial delay between 5-15 seconds
     const initialDelay = 5000 + Math.random() * 10000;
-    console.log(`🤔 Setting up optimized thought system: first check in ${Math.round(initialDelay/1000)}s`);
     
     const firstThought = setTimeout(() => {
-      console.log('🤔 Starting thought scheduling system');
       scheduleNextThought();
     }, initialDelay);
 
     return () => {
-      console.log('🤔 Cleaning up thought system');
       clearTimeout(firstThought);
       if (thoughtTimeoutRef.current) {
         clearTimeout(thoughtTimeoutRef.current);
@@ -2722,24 +2731,11 @@ const App = () => {
         const userAgent = navigator.userAgent;
         const isMobileOrTablet = /iphone|ipad|ipod|android/i.test(userAgent) || 
                                 (navigator.maxTouchPoints > 1 && /safari/i.test(userAgent) && !/chrome/i.test(userAgent));
-        console.log('🔍 Re-enumeration check:', { 
-          isMobileOrTablet, 
-          cameraDevicesLength: cameraDevices.length, 
-          shouldReEnumerate: isMobileOrTablet && cameraDevices.length <= 1,
-          userAgent: userAgent,
-          maxTouchPoints: navigator.maxTouchPoints,
-          isSafari: /safari/i.test(userAgent) && !/chrome/i.test(userAgent)
-        });
         if (isMobileOrTablet && cameraDevices.length <= 1) {
-          console.log('📱 Re-enumerating cameras after stream start to get proper device labels');
           setTimeout(async () => {
             try {
               const devices = await navigator.mediaDevices.enumerateDevices();
               const videoDevices = devices.filter(d => d.kind === 'videoinput');
-              console.log('📱 Re-enumeration found:', videoDevices.length, 'cameras:', videoDevices.map(d => ({ 
-                id: d.deviceId, 
-                label: d.label || 'Unnamed Camera' 
-              })));
               if (videoDevices.length > cameraDevices.length) {
                 setCameraDevices(videoDevices);
               }
@@ -5786,46 +5782,82 @@ const App = () => {
           top: '24px',
           left: '20px',
           zIndex: 9999,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'flex-start',
         }}>
-        <button
-          className="header-style-select global-style-btn"
-          onClick={handleStyleSelectorClick}
-          style={{
-            all: 'unset',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            fontFamily: '"Permanent Marker", cursive',
-            fontSize: '14px',
-            color: '#333',
-            cursor: 'pointer',
-            padding: '8px 16px',
-            paddingRight: '24px',
-            borderRadius: '20px',
-            background: window.extensionMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(255, 255, 255, 0.9)',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
-            transition: 'all 0.2s',
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis'
-          }}
-          onMouseOver={(e) => {
-            e.currentTarget.style.background = 'white';
-            e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
-          }}
-          onMouseOut={(e) => {
-            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.9)';
-            e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.12)';
-          }}
-        >
-          <span className="style-text" style={{ maxWidth: '250px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {selectedStyle === 'custom' ? 'STYLE: Custom...' : selectedStyle ? `STYLE: ${styleIdToDisplay(selectedStyle)}` : 'Select Style'}
-          </span>
-        </button>
-          
+          <button
+            className="global-style-btn"
+            onClick={handleStyleSelectorClick}
+            style={{
+              all: 'unset',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              fontFamily: '"Permanent Marker", cursive',
+              fontSize: '13px',
+              color: 'white',
+              cursor: 'pointer',
+              padding: '8px 12px',
+              borderRadius: '12px',
+              background: 'linear-gradient(135deg, #ff7eb3, #7868e6)',
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.25)',
+              transition: 'all 0.3s ease',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              position: 'relative',
+            }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.background = 'linear-gradient(135deg, #ff8cc8, #8b7aed)';
+              e.currentTarget.style.boxShadow = '0 6px 16px rgba(255, 126, 179, 0.4)';
+              e.currentTarget.style.transform = 'translateY(-2px) scale(1.05)';
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.background = 'linear-gradient(135deg, #ff7eb3, #7868e6)';
+              e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.25)';
+              e.currentTarget.style.transform = 'none';
+            }}
+          >
+            {stylePreviewImage ? (
+              <img 
+                src={stylePreviewImage} 
+                alt={selectedStyle ? styleIdToDisplay(selectedStyle) : 'Style preview'}
+                style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '50%',
+                  objectFit: 'cover',
+                  boxShadow: '0 2px 6px rgba(0, 0, 0, 0.3)',
+                  flexShrink: 0,
+                }}
+                onError={(e) => {
+                  // Fallback to emoji icon if image fails to load
+                  e.currentTarget.style.display = 'none';
+                  const fallbackIcon = e.currentTarget.nextElementSibling;
+                  if (fallbackIcon && fallbackIcon.textContent === '🎨') {
+                    fallbackIcon.style.display = 'block';
+                  }
+                }}
+              />
+            ) : null}
+            <span style={{ 
+              fontSize: '1.3rem',
+              display: stylePreviewImage ? 'none' : 'block',
+              filter: 'drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3))',
+              flexShrink: 0,
+            }}>
+              🎨
+            </span>
+            <span style={{ 
+              maxWidth: '140px', 
+              overflow: 'hidden', 
+              textOverflow: 'ellipsis', 
+              whiteSpace: 'nowrap',
+              fontWeight: 700,
+              textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)',
+              letterSpacing: '0.3px',
+            }}>
+              {selectedStyle === 'custom' ? 'Custom...' : selectedStyle ? styleIdToDisplay(selectedStyle) : 'Select Style'}
+            </span>
+          </button>
         </div>
       )}
 
@@ -7144,7 +7176,7 @@ const App = () => {
         outputFormat={outputFormat}
       />
 
-      {/* Top-left Style Dropdown - only show for Flux Kontext models */}
+      {/* Top-left Style Dropdown */}
       {showTopLeftStyleDropdown && (
         <StyleDropdown
           isOpen={showTopLeftStyleDropdown}
@@ -7154,12 +7186,13 @@ const App = () => {
           defaultStylePrompts={stylePrompts}
           setShowControlOverlay={() => setShowControlOverlay(true)}
           dropdownPosition="bottom"
-          triggerButtonClass=".header-style-select"
+          triggerButtonClass=".global-style-btn"
           onThemeChange={handleThemeChange}
           selectedModel={selectedModel}
           onGallerySelect={handleNavigateToPromptSelector}
           onCustomPromptChange={(prompt) => updateSetting('positivePrompt', prompt)}
           currentCustomPrompt={positivePrompt}
+          portraitType={portraitType}
         />
       )}
 
@@ -7686,6 +7719,7 @@ const App = () => {
             lastEditablePhoto?.adjustments?.scale || defaultScaleValue
           }
           numImages={numImages}
+          stylePrompts={stylePrompts}
         />
       )}
 

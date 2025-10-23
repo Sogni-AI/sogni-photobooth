@@ -379,11 +379,6 @@
   .option-icon {
     font-size: 2.2rem;
   }
-
-  /* Hide drag & drop option in portrait mode */
-  .option-button.info-only {
-    display: none;
-  }
 }
 
 /* iPhone-specific fixes for view photos button */
