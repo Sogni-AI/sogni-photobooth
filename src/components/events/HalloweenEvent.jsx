@@ -14,6 +14,7 @@ const HalloweenEvent = () => {
   const [showPromptPopup, setShowPromptPopup] = useState(false);
   const [showOverlay, setShowOverlay] = useState(false); // Start minimized (pumpkin button only)
   const [selectedStyleKey, setSelectedStyleKey] = useState(null); // Track selected style for mobile two-click
+  const [pumpkinDismissed, setPumpkinDismissed] = useState(false);
   const { isEnabled, enable: enableMusic } = useMusicPlayer();
   const { updateSetting, stylePrompts } = useApp();
   const { navigateToCamera } = useNavigation();
@@ -24,6 +25,11 @@ const HalloweenEvent = () => {
 
   const handleExpandOverlay = () => {
     setShowOverlay(true);
+  };
+
+  const handleDismissPumpkin = (e) => {
+    e.stopPropagation(); // Prevent expanding the overlay
+    setPumpkinDismissed(true);
   };
 
   // Dynamically generate Halloween styles from prompts.json (sorted alphabetically)
@@ -142,12 +148,19 @@ const HalloweenEvent = () => {
         </div>
 
         {/* Collapsed pumpkin button - scrolls with page */}
-        {!showOverlay && (
+        {!showOverlay && !pumpkinDismissed && (
           <button 
             className="halloween-pumpkin-button"
             onClick={handleExpandOverlay}
             aria-label="View contest information"
           >
+            <button
+              className="pumpkin-dismiss-btn"
+              onClick={handleDismissPumpkin}
+              aria-label="Dismiss pumpkin notification"
+            >
+              ✕
+            </button>
             <span className="pumpkin-emoji">🎃</span>
             <span className="compete-bubble">
               <span className="compete-text">Create your own costume and win!</span>

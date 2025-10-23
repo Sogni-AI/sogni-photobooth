@@ -20,6 +20,9 @@ const HalloweenMusicPlayer = () => {
     const saved = sessionStorage.getItem('halloweenMusicPlayerShowPrompt');
     return saved === null ? true : saved === 'true';
   });
+  const [playerDismissed, setPlayerDismissed] = useState(() => {
+    return sessionStorage.getItem('halloweenMusicPlayerDismissed') === 'true';
+  });
   const audioRef = useRef(null);
   const savePositionIntervalRef = useRef(null); // Track interval for saving playback position
 
@@ -260,10 +263,21 @@ const HalloweenMusicPlayer = () => {
     }
   };
 
-  const handleDismissPrompt = (e) => {
+  const handleDismissPlayer = (e) => {
     e.stopPropagation();
-    setShowClickPrompt(false);
+    setPlayerDismissed(true);
+    sessionStorage.setItem('halloweenMusicPlayerDismissed', 'true');
+    // Pause music if playing
+    if (isPlaying && audioRef.current) {
+      audioRef.current.pause();
+      setIsPlaying(false);
+    }
   };
+
+  // Don't render if dismissed
+  if (playerDismissed) {
+    return null;
+  }
 
   return (
     <div className={`halloween-music-player ${isExpanded ? 'expanded' : 'minimized'}`}>
@@ -277,6 +291,13 @@ const HalloweenMusicPlayer = () => {
             onClick={handleMinimizedClick}
             title="Click to expand music player"
           >
+            <button
+              className="music-player-dismiss-btn"
+              onClick={handleDismissPlayer}
+              aria-label="Dismiss music player"
+            >
+              ✕
+            </button>
             <span className="mini-icon">{isPlaying ? '🎵' : '🎃'}</span>
           </div>
           {showClickPrompt && (
@@ -285,13 +306,6 @@ const HalloweenMusicPlayer = () => {
               onClick={handleMinimizedClick}
             >
               <span className="prompt-text">Click me!</span>
-              <button 
-                className="dismiss-prompt-btn"
-                onClick={handleDismissPrompt}
-                aria-label="Dismiss"
-              >
-                ×
-              </button>
             </div>
           )}
         </div>

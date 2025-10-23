@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useMusicPlayer } from '../../context/MusicPlayerContext';
 import { trackEvent } from '../../utils/analytics';
 import '../../styles/events/HalloweenMusicPlayer.css';
@@ -19,10 +19,13 @@ const GlobalMusicPlayer = () => {
     handleNext,
     handlePrevious,
     handleProgressClick,
-    totalTracks
+    totalTracks,
+    audioRef
   } = useMusicPlayer();
 
-  if (!isEnabled) {
+  const [playerDismissed, setPlayerDismissed] = useState(false);
+
+  if (!isEnabled || playerDismissed) {
     return null;
   }
 
@@ -43,9 +46,13 @@ const GlobalMusicPlayer = () => {
     }
   };
 
-  const handleDismissPrompt = (e) => {
+  const handleDismissPlayer = (e) => {
     e.stopPropagation();
-    setShowClickPrompt(false);
+    setPlayerDismissed(true);
+    // Pause music if playing
+    if (isPlaying && audioRef?.current) {
+      audioRef.current.pause();
+    }
   };
 
   const handleDownload = () => {
@@ -111,6 +118,13 @@ const GlobalMusicPlayer = () => {
               onClick={handleMinimizedClick}
               title="Click to expand music player"
             >
+              <button
+                className="music-player-dismiss-btn"
+                onClick={handleDismissPlayer}
+                aria-label="Dismiss music player"
+              >
+                ✕
+              </button>
               <span className="mini-icon">{isPlaying ? '🎵' : '🎃'}</span>
             </div>
             {showClickPrompt && (
@@ -119,13 +133,6 @@ const GlobalMusicPlayer = () => {
                 onClick={handleMinimizedClick}
               >
                 <span className="prompt-text">Click me!</span>
-                <button 
-                  className="dismiss-prompt-btn"
-                  onClick={handleDismissPrompt}
-                  aria-label="Dismiss"
-                >
-                  ×
-                </button>
               </div>
             )}
           </div>
@@ -133,8 +140,10 @@ const GlobalMusicPlayer = () => {
           // Expanded state
           <div className="music-player-card">
             <div className="player-header">
-              <span className="music-icon">🎵</span>
-              <h3>Halloween Beats</h3>
+              <div className="header-text-group">
+                <h3>Halloween Beats</h3>
+                <span className="music-icon">🎵</span>
+              </div>
               <button 
                 className="minimize-btn"
                 onClick={(e) => {

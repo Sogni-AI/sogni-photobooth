@@ -30,18 +30,57 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 
+  box-shadow:
     0 4px 15px rgba(0, 0, 0, 0.3),
     0 0 0 3px #2d1810;
   cursor: pointer;
   transition: all 0.3s ease;
+  position: relative;
 }
 
 .music-player-minimized:hover {
   transform: scale(1.1);
-  box-shadow: 
+  box-shadow:
     0 6px 20px rgba(0, 0, 0, 0.4),
     0 0 0 3px #ff6b00;
+}
+
+.music-player-dismiss-btn {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: rgba(45, 24, 16, 0.8);
+  color: #fff;
+  border: 1px solid rgba(255, 107, 0, 0.8);
+  font-size: 0.8rem;
+  cursor: pointer;
+  z-index: 10;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  padding: 0;
+  line-height: 1;
+  opacity: 0;
+}
+
+.music-player-minimized:hover .music-player-dismiss-btn {
+  opacity: 1;
+}
+
+.music-player-dismiss-btn:hover {
+  background: rgba(255, 107, 0, 0.95);
+  transform: scale(1.15);
+  box-shadow: 0 2px 6px rgba(255, 107, 0, 0.5);
+}
+
+.music-player-dismiss-btn:active {
+  transform: scale(0.95);
 }
 
 .mini-icon {
@@ -54,9 +93,8 @@
   position: relative;
   background: rgba(255, 255, 255, 0.98);
   padding: 0.5rem 0.8rem;
-  padding-right: 2rem;
   border-radius: 15px;
-  box-shadow: 
+  box-shadow:
     0 4px 12px rgba(0, 0, 0, 0.2),
     0 0 0 2px #ff6b00;
   animation: bouncePrompt 2s ease-in-out infinite;
@@ -108,34 +146,6 @@
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
-.dismiss-prompt-btn {
-  position: absolute;
-  right: 0.3rem;
-  top: 50%;
-  transform: translateY(-50%);
-  background: rgba(255, 107, 0, 0.2);
-  border: none;
-  border-radius: 50%;
-  width: 20px;
-  height: 20px;
-  font-size: 1.2rem;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
-  color: #ff6b00;
-  font-weight: bold;
-  line-height: 1;
-  padding: 0;
-  z-index: 10;
-}
-
-.dismiss-prompt-btn:hover {
-  background: rgba(255, 107, 0, 0.4);
-  transform: translateY(-50%) scale(1.2);
-}
-
 @keyframes bouncePrompt {
   0%, 100% {
     transform: translateY(0);
@@ -146,15 +156,32 @@
 }
 
 .music-player-card {
-  background: rgba(255, 255, 255, 0.95);
+  background: #fc984a;
   border-radius: 12px;
   padding: 0.8rem 1rem;
   padding-bottom: 0.8rem;
   box-shadow: 
     0 4px 15px rgba(0, 0, 0, 0.3),
     0 0 0 3px #2d1810;
-  width: 240px;
+  width: 384px;
   position: relative;
+  overflow: hidden;
+}
+
+.music-player-card::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: url('/halloween_bg.jpg');
+  background-size: contain;
+  background-position: -25px bottom;
+  background-repeat: no-repeat;
+  transform: scaleX(-1);
+  z-index: 0;
+  pointer-events: none;
 }
 
 .player-header {
@@ -163,6 +190,15 @@
   justify-content: space-between;
   gap: 0.3rem;
   margin-bottom: 0.6rem;
+  position: relative;
+  z-index: 1;
+}
+
+.header-text-group {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex: 1;
 }
 
 .player-header h3 {
@@ -170,8 +206,7 @@
   color: #2d1810;
   margin: 0;
   font-weight: 600;
-  flex: 1;
-  text-align: center;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
 }
 
 .music-icon {
@@ -180,8 +215,8 @@
 }
 
 .minimize-btn {
-  background: rgba(255, 107, 0, 0.2);
-  border: none;
+  background: rgba(45, 24, 16, 0.6);
+  border: 1px solid rgba(45, 24, 16, 0.8);
   border-radius: 50%;
   width: 24px;
   height: 24px;
@@ -195,10 +230,13 @@
   font-weight: bold;
   line-height: 1;
   padding: 0;
+  position: relative;
+  z-index: 1;
 }
 
 .minimize-btn:hover {
-  background: rgba(255, 107, 0, 0.4);
+  background: rgba(45, 24, 16, 0.8);
+  color: #fff;
   transform: scale(1.1);
 }
 
@@ -214,14 +252,17 @@
 }
 
 .track-info {
-  text-align: center;
+  text-align: left;
   margin-bottom: 0.6rem;
+  position: relative;
+  z-index: 1;
 }
 
 .track-number {
   font-size: 0.65rem;
-  color: #666;
+  color: #2d1810;
   margin-bottom: 0.2rem;
+  text-shadow: 0 1px 1px rgba(255, 255, 255, 0.6);
 }
 
 .track-title {
@@ -231,21 +272,25 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
 }
 
 .progress-bar-container {
   margin-bottom: 0.4rem;
   cursor: pointer;
+  position: relative;
+  z-index: 1;
 }
 
 .progress-bar {
   width: 100%;
   height: 4px;
-  background: #e0e0e0;
+  background: rgba(255, 255, 255, 0.4);
   border-radius: 4px;
   overflow: hidden;
   margin-bottom: 0.3rem;
   position: relative;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 .progress-fill {
@@ -274,14 +319,17 @@
   display: flex;
   justify-content: space-between;
   font-size: 0.65rem;
-  color: #666;
+  color: #2d1810;
+  text-shadow: 0 1px 1px rgba(255, 255, 255, 0.6);
 }
 
 .player-controls {
   display: flex;
-  justify-content: center;
+  justify-content: flex-start;
   align-items: center;
   gap: 0.4rem;
+  position: relative;
+  z-index: 1;
 }
 
 .control-btn {
@@ -355,10 +403,10 @@
   border: none;
   padding: 0.2rem;
   font-size: 1rem;
-  color: #ff6b00;
+  color: #2d1810;
   cursor: pointer;
   transition: all 0.2s ease;
-  opacity: 0.7;
+  opacity: 0.8;
   line-height: 1;
   display: flex;
   align-items: center;
@@ -366,13 +414,13 @@
   pointer-events: auto;
   position: relative;
   z-index: 1000;
-  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.3));
+  filter: drop-shadow(0 2px 3px rgba(255, 255, 255, 0.5));
 }
 
 .download-btn:hover {
   transform: scale(1.2);
   opacity: 1;
-  filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.4));
+  filter: drop-shadow(0 3px 4px rgba(255, 255, 255, 0.8));
 }
 
 .download-btn:active {
@@ -414,13 +462,21 @@
     height: 45px;
   }
 
+  .music-player-dismiss-btn {
+    width: 16px;
+    height: 16px;
+    font-size: 0.7rem;
+    top: -2px;
+    right: -2px;
+    opacity: 1;
+  }
+
   .mini-icon {
     font-size: 1.3rem;
   }
 
   .click-me-prompt {
     padding: 0.4rem 0.6rem;
-    padding-right: 1.8rem;
   }
 
   .click-me-prompt::before {
@@ -435,14 +491,8 @@
     font-size: 0.75rem;
   }
 
-  .dismiss-prompt-btn {
-    width: 18px;
-    height: 18px;
-    font-size: 1.1rem;
-  }
-
   .music-player-card {
-    width: 220px;
+    width: 336px;
     padding: 0.7rem 0.9rem;
   }
   
@@ -520,12 +570,21 @@
     height: 42px;
   }
 
+  .music-player-dismiss-btn {
+    width: 15px;
+    height: 15px;
+    font-size: 0.65rem;
+    top: -2px;
+    right: -2px;
+    opacity: 1;
+  }
+
   .mini-icon {
     font-size: 1.2rem;
   }
 
   .music-player-card {
-    width: 200px;
+    width: 312px;
     padding: 0.6rem 0.8rem;
   }
   

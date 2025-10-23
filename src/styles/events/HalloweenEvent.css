@@ -142,9 +142,7 @@
 }
 
 .halloween-background-right {
-  right: 0;
-  background-position: bottom right;
-  transform: scaleX(-1);
+  display: none;
 }
 
 /* Main content container */
@@ -366,10 +364,49 @@
   display: block;
   filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
   transition: transform 0.2s ease;
+  position: relative;
 }
 
 .halloween-pumpkin-button:hover .pumpkin-emoji {
   transform: scale(1.1) rotate(-5deg);
+}
+
+.pumpkin-dismiss-btn {
+  position: absolute;
+  top: 8px;
+  right: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgba(45, 24, 16, 0.8);
+  color: #fff;
+  border: 1px solid rgba(255, 107, 0, 0.8);
+  font-size: 0.85rem;
+  cursor: pointer;
+  z-index: 100;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  padding: 0;
+  line-height: 1;
+  opacity: 0;
+}
+
+.halloween-pumpkin-button:hover .pumpkin-dismiss-btn {
+  opacity: 1;
+}
+
+.pumpkin-dismiss-btn:hover {
+  background: rgba(255, 107, 0, 0.95);
+  transform: scale(1.1);
+  box-shadow: 0 2px 6px rgba(255, 107, 0, 0.5);
+}
+
+.pumpkin-dismiss-btn:active {
+  transform: scale(0.95);
 }
 
 .halloween-pumpkin-button .compete-bubble {
@@ -438,9 +475,18 @@
     flex-direction: column; /* Stack vertically: pumpkin on top, bubble below */
     gap: 8px;
   }
-  
+
   .pumpkin-emoji {
     font-size: 3rem;
+  }
+
+  .pumpkin-dismiss-btn {
+    width: 18px;
+    height: 18px;
+    font-size: 0.75rem;
+    top: 6px;
+    right: 2px;
+    opacity: 1;
   }
   
   .halloween-pumpkin-button .compete-bubble {
