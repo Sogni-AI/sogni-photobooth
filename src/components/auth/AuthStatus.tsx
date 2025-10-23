@@ -19,9 +19,10 @@ const formatTimeRemaining = (ms: number): string => {
 
 interface AuthStatusProps {
   onPurchaseClick?: () => void;
+  onSignupComplete?: () => void;
 }
 
-export const AuthStatus: React.FC<AuthStatusProps> = ({ onPurchaseClick }) => {
+export const AuthStatus: React.FC<AuthStatusProps> = ({ onPurchaseClick, onSignupComplete }) => {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [loginModalMode, setLoginModalMode] = useState<LoginModalMode>('login');
@@ -60,6 +61,11 @@ export const AuthStatus: React.FC<AuthStatusProps> = ({ onPurchaseClick }) => {
     // Called when signup is successfully completed
     console.log('🎉 Signup complete - opening user menu and highlighting Daily Boost');
     setShowLoginModal(false);
+    
+    // Trigger confetti celebration
+    if (onSignupComplete) {
+      onSignupComplete();
+    }
     
     // Wait a moment for the modal to close, then open user menu
     setTimeout(() => {

@@ -687,6 +687,19 @@ const App = () => {
     }
   };
 
+  // Helper function to trigger confetti celebration when account is created
+  const triggerSignupCelebration = () => {
+    // Show confetti if background animations are enabled (no session limit for signup)
+    if (backgroundAnimationsEnabled) {
+      // Reset confetti state first, then trigger new animation
+      setShowConfetti(false);
+      // Small delay to ensure state reset
+      setTimeout(() => {
+        setShowConfetti(true);
+      }, 600);
+    }
+  };
+
   // Add this for testing - you can call this from browser console
   window.showPromoPopupNow = () => {
     setShowPromoPopup(true);
@@ -712,6 +725,17 @@ const App = () => {
   window.resetConfettiSession = () => {
     confettiShownThisSession.current = false;
     console.log('🎊 Confetti session reset! Next batch completion will show confetti.');
+  };
+  
+  // Add testing function for signup confetti celebration
+  window.testSignupConfetti = () => {
+    if (!backgroundAnimationsEnabled) {
+      console.log('🎊 Confetti is disabled. Enable "Background Animations" in settings to see confetti.');
+      return;
+    }
+    
+    console.log('🎉 Testing signup confetti celebration!');
+    triggerSignupCelebration();
   };
   
   // Handle promotional popup close
@@ -829,15 +853,15 @@ const App = () => {
     };
   }, [orientationHandler]);
 
-  // Handle delayed display of camera permission message (3 second delay)
+  // Handle delayed display of camera permission message (2 second delay)
   useEffect(() => {
     let timer;
     
     if (waitingForCameraPermission) {
-      // Start a timer to show the message after 3 seconds
+      // Start a timer to show the message after 2 seconds
       timer = setTimeout(() => {
         setShowPermissionMessage(true);
-      }, 3000);
+      }, 2000);
     } else {
       // Clear the message immediately when permission is no longer being waited on
       setShowPermissionMessage(false);
@@ -5817,6 +5841,7 @@ const App = () => {
         }}>
           <AuthStatus 
             onPurchaseClick={authState.isAuthenticated && authState.authMode === 'frontend' ? () => setShowStripePurchase(true) : undefined}
+            onSignupComplete={triggerSignupCelebration}
           />
         </div>
       )}
