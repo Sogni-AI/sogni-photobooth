@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Step1Fields, Step2Fields } from '../types';
 import Step1 from './Step1';
 import Step2 from './Step2';

@@ -106,8 +106,6 @@ function reducer<F = unknown, R = unknown>(state: Form<F, R>, action: Action<F, 
 
 type ChangeHandler<F> = (delta: Partial<F>) => void;
 
-type Reducer<F, R> = (state: Form<F, R>, action: Action<F, R>) => Form<F, R>;
-
 type Validator<F> = (fields: F) => Promise<Record<string, string>>;
 
 export type FormContext<F, R> = Form<F, R> & {
@@ -130,7 +128,7 @@ function useForm<F, R>(
   validate?: Validator<F>
 ): FormContext<F, R> {
   const isSubmittingRef = useRef(false);
-  const [form, dispatch] = useReducer<Reducer<F, R>>(reducer, {
+  const [form, dispatch] = useReducer(reducer<F, R>, {
     fields: initialState,
     status: 'idle',
     result: null,
@@ -138,7 +136,7 @@ function useForm<F, R>(
     error: null,
     isValid: null,
     isLoading: false
-  });
+  } as Form<F, R>);
 
   const handleChange = useCallback<ChangeHandler<F>>((delta) => {
     dispatch({ type: 'change', payload: delta });

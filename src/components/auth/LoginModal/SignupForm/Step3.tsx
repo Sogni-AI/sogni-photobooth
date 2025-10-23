@@ -1,4 +1,4 @@
-import React, { useCallback, useState, useEffect } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { Step1Fields, Step2Fields } from '../types';
 import { FormContent, FormFooter, FormPanel } from '../common';
 import useForm from '../../../../hooks/useForm';

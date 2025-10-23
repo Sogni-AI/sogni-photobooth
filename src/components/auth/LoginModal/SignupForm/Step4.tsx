@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { ContentPanel, FormContent, FormFooter } from '../common';
 import { useSogniAuth } from '../../../../services/sogniAuth';
 import '../styles.css';

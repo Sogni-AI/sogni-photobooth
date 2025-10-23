@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import useForm, { ErrorData } from '../../../hooks/useForm';
 import FormField from '../../shared/FormField';
 import { useSogniAuth } from '../../../services/sogniAuth';

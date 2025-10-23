@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import { useCallback } from 'react';
 import { Step1Fields, Step2Fields } from '../types';
 import useForm from '../../../../hooks/useForm';
 import FormField from '../../../shared/FormField';

@@ -1,5 +1,4 @@
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import React, { useCallback } from 'react';
+import { useCallback } from 'react';
 import { Step1Fields } from '../types';
 import useForm from '../../../../hooks/useForm';
 import FormField from '../../../shared/FormField';

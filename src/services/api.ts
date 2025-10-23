@@ -2,7 +2,6 @@
  * API service for communicating with the backend
  */
 import urls from '../config/urls';
-import { v4 as uuidv4 } from 'uuid';
 import { getOrCreateAppId as getAppId } from '../utils/appId';
 
 // Add network connectivity detection utilities at the top of the file after the imports
