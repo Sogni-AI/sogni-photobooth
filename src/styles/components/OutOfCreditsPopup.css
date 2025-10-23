@@ -179,6 +179,30 @@
   font-weight: 700;
 }
 
+/* Special styling for switch wallet suggestion */
+.switch-wallet-item {
+  background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+  border-color: #81c784;
+}
+
+.switch-wallet-item:hover {
+  border-color: #66bb6a;
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.2);
+}
+
+.switch-wallet-item .info-text strong {
+  color: #2e7d32;
+}
+
+.out-of-credits-switch-btn {
+  background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+  color: white;
+}
+
+.out-of-credits-switch-btn:hover {
+  background: linear-gradient(135deg, #45a049 0%, #388e3c 100%);
+}
+
 .out-of-credits-modal-footer {
   display: flex;
   flex-direction: column;

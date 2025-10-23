@@ -51,6 +51,7 @@ import PhotoGallery from './components/shared/PhotoGallery';
 import { useApp } from './context/AppContext.tsx';
 import { useWallet } from './hooks/useWallet';
 import { isPremiumBoosted } from './services/walletService';
+import { estimateJobCost } from './hooks/useCostEstimation.ts';
 import TwitterShareModal from './components/shared/TwitterShareModal';
 import StyleDropdown from './components/shared/StyleDropdown';
 
@@ -264,12 +265,63 @@ const App = () => {
   }, []);
 
   // --- Use wallet for payment method ---
-  const { tokenType: walletTokenType, balances } = useWallet();
+  const { tokenType: walletTokenType, balances, switchPaymentMethod, onBalanceIncrease } = useWallet();
+  
+  // Track app initialization time to prevent balance update toasts during initial load
+  const appInitTimeRef = useRef(Date.now());
+  
+  // Reset the initialization time when authentication changes
+  useEffect(() => {
+    if (authState.isAuthenticated) {
+      console.log('🔐 Authentication detected, resetting balance notification grace period');
+      appInitTimeRef.current = Date.now();
+    }
+  }, [authState.isAuthenticated]);
   
   // Log when payment method changes
   useEffect(() => {
     console.log('💳 Payment method updated:', walletTokenType);
   }, [walletTokenType]);
+
+  // Handle balance increases - show toast and auto-switch to Spark if needed
+  useEffect(() => {
+    if (!onBalanceIncrease) return;
+
+    onBalanceIncrease((tokenType, oldBalance, newBalance) => {
+      const increase = newBalance - oldBalance;
+      console.log(`💰 Balance increased for ${tokenType}: ${oldBalance} -> ${newBalance} (+${increase.toFixed(2)})`);
+
+      // Check if we're within the grace period after app load/login (5 seconds)
+      const timeSinceInit = Date.now() - appInitTimeRef.current;
+      const isWithinGracePeriod = timeSinceInit < 5000;
+      
+      if (isWithinGracePeriod) {
+        console.log(`💰 Skipping balance notification - within grace period (${(timeSinceInit / 1000).toFixed(1)}s since init)`);
+        return;
+      }
+
+      // Show toast notification
+      showToast({
+        type: 'success',
+        title: `${tokenType === 'spark' ? 'Spark' : 'SOGNI'} Credits Added!`,
+        message: `+${increase.toFixed(2)} ${tokenType === 'spark' ? 'Spark Points' : 'SOGNI'} added to your wallet`,
+        timeout: 5000
+      });
+
+      // Auto-switch to Spark if Spark balance increased and current payment method is Sogni
+      // This handles Stripe purchases automatically
+      if (tokenType === 'spark' && walletTokenType === 'sogni') {
+        console.log('💳 Auto-switching payment method from sogni to spark after Spark balance increase');
+        switchPaymentMethod('spark');
+        showToast({
+          type: 'info',
+          title: 'Payment Method Updated',
+          message: 'Switched to Spark Points as your payment method',
+          timeout: 4000
+        });
+      }
+    });
+  }, [onBalanceIncrease, showToast, walletTokenType, switchPaymentMethod]);
 
   // Extract preferredCameraDeviceId for easier access
   const { preferredCameraDeviceId } = settings;
@@ -570,6 +622,7 @@ const App = () => {
 
   // Add state for out of credits popup
   const [showOutOfCreditsPopup, setShowOutOfCreditsPopup] = useState(false);
+  const [lastJobCostEstimate, setLastJobCostEstimate] = useState(null);
 
   // Stripe purchase modal state
   const [showStripePurchase, setShowStripePurchase] = useState(false);
@@ -3970,6 +4023,92 @@ const App = () => {
           guidanceStart: 0,
           guidanceEnd: controlNetGuidanceEnd,
         };
+      }
+
+      // Estimate job cost before creating project (for smart wallet switching)
+      let estimatedCost = null;
+      try {
+        estimatedCost = await estimateJobCost(sogniClient, {
+          model: selectedModel,
+          imageCount: numImages,
+          stepCount: inferenceSteps,
+          guidance: isFluxKontext ? guidance : promptGuidance,
+          scheduler: scheduler,
+          network: 'fast',
+          previewCount: 10,
+          contextImages: isFluxKontext ? 1 : 0,
+          cnEnabled: !isFluxKontext,
+          tokenType: walletTokenType
+        });
+        if (estimatedCost !== null) {
+          setLastJobCostEstimate(estimatedCost);
+          console.log('💰 Estimated job cost:', estimatedCost, walletTokenType);
+        }
+      } catch (costError) {
+        console.warn('Failed to estimate cost:', costError);
+        // Continue even if cost estimation fails
+      }
+
+      // Check if current wallet has sufficient balance before submitting
+      if (balances && estimatedCost !== null) {
+        const currentBalance = parseFloat(balances[walletTokenType]?.net || '0');
+        if (currentBalance < estimatedCost) {
+          console.log(`❌ Insufficient ${walletTokenType} balance: ${currentBalance} < ${estimatedCost}`);
+          
+          // Check if alternative wallet has enough balance
+          const alternativeTokenType = walletTokenType === 'spark' ? 'sogni' : 'spark';
+          const alternativeBalance = parseFloat(balances[alternativeTokenType]?.net || '0');
+          
+          if (alternativeBalance >= estimatedCost) {
+            // Alternative wallet has enough - auto-switch with notification
+            console.log(`✅ Switching to ${alternativeTokenType} wallet (has ${alternativeBalance}, need ${estimatedCost})`);
+            
+            showToast({
+              type: 'warning',
+              title: 'Insufficient Balance - Auto-Switching',
+              message: `Not enough ${walletTokenType === 'spark' ? 'Spark Points' : 'SOGNI'}. Switching to ${alternativeTokenType === 'spark' ? 'Spark Points' : 'SOGNI'} wallet (${alternativeBalance.toFixed(2)} available)`,
+              timeout: 6000
+            });
+            
+            // Switch the payment method
+            switchPaymentMethod(alternativeTokenType);
+            
+            // Update the projectConfig with the new tokenType
+            projectConfig.tokenType = alternativeTokenType;
+            
+            // Continue with project creation using the alternative wallet
+          } else {
+            // Neither wallet has enough balance
+            console.log(`❌ Neither wallet has sufficient balance. ${walletTokenType}: ${currentBalance}, ${alternativeTokenType}: ${alternativeBalance}, need: ${estimatedCost}`);
+            
+            // Clear all timeouts when preventing submission
+            clearAllTimeouts();
+            activeProjectReference.current = null;
+
+            // Mark all generating photos as cancelled with insufficient credits error
+            setRegularPhotos(prevPhotos => {
+              return prevPhotos.map(photo => {
+                if (photo.generating) {
+                  return {
+                    ...photo,
+                    generating: false,
+                    loading: false,
+                    error: 'INSUFFICIENT CREDITS',
+                    permanentError: true,
+                    statusText: 'Out of Credits',
+                    cancelled: true
+                  };
+                }
+                return photo;
+              });
+            });
+
+            // Show the out of credits popup
+            setShowOutOfCreditsPopup(true);
+
+            return;
+          }
+        }
       }
       
       const project = await sogniClient.projects.create(projectConfig);
@@ -7514,6 +7653,10 @@ const App = () => {
         isOpen={showOutOfCreditsPopup}
         onClose={handleOutOfCreditsPopupClose}
         onPurchase={authState.isAuthenticated && authState.authMode === 'frontend' ? () => setShowStripePurchase(true) : undefined}
+        balances={balances}
+        currentTokenType={walletTokenType}
+        estimatedCost={lastJobCostEstimate}
+        onSwitchPaymentMethod={switchPaymentMethod}
       />
 
       {/* Login Upsell Popup for non-authenticated users who've used their demo render */}
