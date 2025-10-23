@@ -36,6 +36,7 @@ export const MusicPlayerProvider = ({ children }) => {
   });
   const audioRef = useRef(null);
   const shouldAutoPlayNextRef = useRef(false); // Track if next track should auto-play
+  const savePositionIntervalRef = useRef(null); // Track interval for saving playback position
 
   // Persist state to sessionStorage (except isEnabled)
   // Don't persist isEnabled - it should only be true during Halloween session
@@ -56,27 +57,39 @@ export const MusicPlayerProvider = ({ children }) => {
     sessionStorage.setItem('musicPlayerShowPrompt', showClickPrompt.toString());
   }, [showClickPrompt]);
 
-  // Auto-resume playback after page reload
+  // Save playback position every 5 seconds while playing
   useEffect(() => {
-    if (isEnabled && isPlaying && audioRef.current && audioRef.current.paused) {
-      console.log('🎵 Attempting to auto-resume music playback');
-      // Small delay to ensure audio element is ready
-      const timer = setTimeout(() => {
-        audioRef.current?.play()
-          .then(() => {
-            console.log('🎵 Music auto-resumed successfully');
-            setIsPlaying(true); // Confirm playing state
-          })
-          .catch((err) => {
-            console.log('🎵 Failed to auto-resume music (browser blocked):', err.message);
-            // Update UI to show play button since auto-play was blocked
-            setIsPlaying(false);
-          });
-      }, 500);
-      return () => clearTimeout(timer);
+    if (isPlaying && audioRef.current) {
+      const savePosition = () => {
+        const audio = audioRef.current;
+        // Only save if position is greater than 0 (don't save at start)
+        if (audio && !isNaN(audio.currentTime) && audio.currentTime > 0.5) {
+          const positionData = {
+            trackIndex: currentTrackIndex,
+            position: audio.currentTime
+          };
+          sessionStorage.setItem('musicPlayerPosition', JSON.stringify(positionData));
+        }
+      };
+
+      // Start interval to save every 5 seconds (don't save immediately to avoid saving position 0)
+      savePositionIntervalRef.current = setInterval(savePosition, 5000);
+
+      return () => {
+        if (savePositionIntervalRef.current) {
+          clearInterval(savePositionIntervalRef.current);
+          savePositionIntervalRef.current = null;
+        }
+      };
+    } else {
+      // Clear interval when not playing
+      if (savePositionIntervalRef.current) {
+        clearInterval(savePositionIntervalRef.current);
+        savePositionIntervalRef.current = null;
+      }
     }
-  }, [isEnabled, currentTrackIndex, isPlaying]); // Re-run when any of these change
-  
+  }, [isPlaying, currentTrackIndex]);
+
   // Monitor audio element to sync play/pause state with actual playback
   useEffect(() => {
     const audio = audioRef.current;
@@ -107,6 +120,13 @@ export const MusicPlayerProvider = ({ children }) => {
 
     const handleLoadedMetadata = () => {
       setDuration(audio.duration);
+      
+      // Reset playing state on page load since browser will block auto-play
+      // Position will be restored when user clicks play
+      if (audio.paused && isPlaying) {
+        console.log('🎵 Audio is paused on load - resetting UI to show play button');
+        setIsPlaying(false);
+      }
     };
 
     const handleTimeUpdate = () => {
@@ -117,6 +137,8 @@ export const MusicPlayerProvider = ({ children }) => {
       // When track ends, mark that we should auto-play the next track
       shouldAutoPlayNextRef.current = true;
       console.log('🎵 Track ended, will auto-play next track');
+      // Clear saved position when track ends
+      sessionStorage.removeItem('musicPlayerPosition');
       const nextIndex = (currentTrackIndex + 1) % PLAYLIST.length;
       setCurrentTrackIndex(nextIndex);
     };
@@ -130,7 +152,7 @@ export const MusicPlayerProvider = ({ children }) => {
       audio.removeEventListener('timeupdate', handleTimeUpdate);
       audio.removeEventListener('ended', handleEnded);
     };
-  }, [currentTrackIndex]);
+  }, [currentTrackIndex, isEnabled, isPlaying]);
 
   // Auto-play new track when track changes if auto-play flag is set
   useEffect(() => {
@@ -164,6 +186,30 @@ export const MusicPlayerProvider = ({ children }) => {
         audio.pause();
         setIsPlaying(false);
       } else {
+        // Before playing, check if we need to restore position
+        const savedPositionData = sessionStorage.getItem('musicPlayerPosition');
+        console.log('🎵 Play clicked - currentTime:', audio.currentTime, 'currentTrackIndex:', currentTrackIndex);
+        console.log('🎵 Saved position data:', savedPositionData);
+        
+        if (savedPositionData && audio.currentTime === 0) {
+          try {
+            const { trackIndex, position } = JSON.parse(savedPositionData);
+            console.log('🎵 Parsed saved data - trackIndex:', trackIndex, 'position:', position);
+            // Only restore if it's for the current track and position is valid
+            if (trackIndex === currentTrackIndex && !isNaN(position) && position > 0) {
+              // Duration might not be loaded yet, so don't check it here
+              audio.currentTime = position;
+              console.log('🎵 Restored playback position on play:', position.toFixed(2), 'for track', trackIndex);
+            } else {
+              console.log('🎵 Not restoring - trackIndex match:', trackIndex === currentTrackIndex, 'position valid:', !isNaN(position) && position > 0);
+            }
+          } catch (e) {
+            console.log('🎵 Failed to parse saved position data:', e);
+          }
+        } else {
+          console.log('🎵 Not restoring - hasData:', !!savedPositionData, 'currentTime is 0:', audio.currentTime === 0);
+        }
+        
         await audio.play();
         setIsPlaying(true);
         // Track song play in analytics
@@ -176,6 +222,8 @@ export const MusicPlayerProvider = ({ children }) => {
 
   const handleNext = () => {
     const wasPlaying = isPlaying;
+    // Clear saved position when manually changing tracks
+    sessionStorage.removeItem('musicPlayerPosition');
     const nextIndex = (currentTrackIndex + 1) % PLAYLIST.length;
     setCurrentTrackIndex(nextIndex);
     if (wasPlaying) {
@@ -191,6 +239,8 @@ export const MusicPlayerProvider = ({ children }) => {
 
   const handlePrevious = () => {
     const wasPlaying = isPlaying;
+    // Clear saved position when manually changing tracks
+    sessionStorage.removeItem('musicPlayerPosition');
     const prevIndex = (currentTrackIndex - 1 + PLAYLIST.length) % PLAYLIST.length;
     setCurrentTrackIndex(prevIndex);
     if (wasPlaying) {
@@ -251,11 +301,17 @@ export const MusicPlayerProvider = ({ children }) => {
     }
     setIsEnabled(false);
     setIsPlaying(false);
+    // Clear interval if running
+    if (savePositionIntervalRef.current) {
+      clearInterval(savePositionIntervalRef.current);
+      savePositionIntervalRef.current = null;
+    }
     // Clear all session storage when disabling
     sessionStorage.removeItem('musicPlayerTrackIndex');
     sessionStorage.removeItem('musicPlayerPlaying');
     sessionStorage.removeItem('musicPlayerExpanded');
     sessionStorage.removeItem('musicPlayerShowPrompt');
+    sessionStorage.removeItem('musicPlayerPosition');
   };
 
   const value = {
