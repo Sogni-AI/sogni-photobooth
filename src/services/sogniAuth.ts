@@ -1,5 +1,6 @@
 import React from 'react';
 import { SogniClient } from '@sogni-ai/sogni-client';
+import { getOrCreateAppId } from '../utils/appId';
 
 export interface SogniAuthState {
   isAuthenticated: boolean;
@@ -95,32 +96,71 @@ class SogniAuthManager implements SogniAuthService {
     try {
       this.setAuthState({ isLoading: true, error: null });
 
-
-      // Create a temporary client to check for existing session
+      // Create or reuse client to check for existing session
       const sogniUrls = this.getSogniUrls();
       const hostname = window.location.hostname;
       const isLocalDev = hostname === 'localhost' || hostname === '127.0.0.1';
       const isStaging = hostname.includes('staging');
-      
-      const tempClient = await SogniClient.createInstance({
-        appId: `photobooth-auth-check-${Date.now()}`,
-        network: 'fast',
-        restEndpoint: sogniUrls.rest,
-        socketEndpoint: sogniUrls.socket,
-        testnet: isLocalDev || isStaging,
-        authType: 'cookies'  // Enable cookie-based authentication
-      });
 
-      // Check for existing authentication using checkAuth (like dashboard does)
-      console.log('🔐 Calling checkAuth to resume session...');
-      const isAuthenticated = await tempClient.checkAuth().catch((error) => {
-        console.log('🔐 checkAuth failed:', error);
+      // If we already have a client, check if it's authenticated
+      if (this.sogniClient) {
+        const currentAccount = this.sogniClient.account.currentAccount;
+        const isAlreadyAuthenticated = currentAccount?.isAuthenicated;
         
+        console.log('🔐 Checking existing client auth state:', {
+          isAuthenticated: isAlreadyAuthenticated,
+          username: currentAccount?.username,
+          hasToken: !!(currentAccount as any)?.token
+        });
+
+        if (isAlreadyAuthenticated) {
+          // Client is already authenticated (e.g., just logged in or signed up)
+          console.log('✅ Client already authenticated, updating auth state:', {
+            username: currentAccount?.username,
+            email: currentAccount?.email
+          });
+          
+          this.setAuthState({
+            isAuthenticated: true,
+            authMode: 'frontend',
+            user: {
+              username: currentAccount?.username,
+              email: currentAccount?.email
+            },
+            isLoading: false,
+            error: null
+          });
+
+          console.log('✅ Auth state updated, listeners notified');
+          return true;
+        }
+      }
+
+      // If we don't have a client or it's not authenticated, create/check one
+      if (!this.sogniClient) {
+        // Use persistent app ID for this browser installation
+        const appId = getOrCreateAppId();
+        
+        this.sogniClient = await SogniClient.createInstance({
+          appId,
+          network: 'fast',
+          restEndpoint: sogniUrls.rest,
+          socketEndpoint: sogniUrls.socket,
+          testnet: isLocalDev || isStaging,
+          authType: 'cookies'  // Enable cookie-based authentication
+        });
+      }
+
+      // Check for existing authentication using checkAuth
+      console.log('🔐 Calling checkAuth to resume session...');
+      const isAuthenticated = await this.sogniClient.checkAuth().catch((error) => {
+        console.log('🔐 checkAuth failed:', error);
+
         // Check for email verification error during auth check
-        if (error && typeof error === 'object' && 
+        if (error && typeof error === 'object' &&
             (error.code === 4052 || (error.message && error.message.includes('verify your email')))) {
           console.error('❌ Email verification required during checkAuth');
-          
+
           // Set error state immediately
           this.setAuthState({
             isAuthenticated: false,
@@ -129,7 +169,7 @@ class SogniAuthManager implements SogniAuthService {
             isLoading: false,
             error: 'Email verification required. Please verify your email at app.sogni.ai and try again.'
           });
-          
+
           // Also emit the custom event for the App to handle
           window.dispatchEvent(new CustomEvent('sogni-email-verification-required', {
             detail: {
@@ -138,36 +178,33 @@ class SogniAuthManager implements SogniAuthService {
             }
           }));
         }
-        
+
         return false;
       });
-      
+
       console.log('🔐 Session check results:', {
         hostname,
         isLocalDev,
         isStaging,
         sogniUrls,
         isAuthenticated,
-        currentAccount: tempClient.account.currentAccount,
-        hasToken: !!(tempClient.account.currentAccount as any)?.token,
-        hasRefreshToken: !!(tempClient.account.currentAccount as any)?.refreshToken
+        currentAccount: this.sogniClient.account.currentAccount,
+        hasToken: !!(this.sogniClient.account.currentAccount as any)?.token,
+        hasRefreshToken: !!(this.sogniClient.account.currentAccount as any)?.refreshToken
       });
-      
-      
+
+
       if (isAuthenticated) {
-        // We have a valid session, use this client
-        this.sogniClient = tempClient;
-        
-        // Set up error handling for email verification and other socket errors
-        if (tempClient.apiClient) {
-          (tempClient.apiClient as any).on('error', (error: any) => {
+        // We have a valid session, set up error handling
+        if (this.sogniClient.apiClient) {
+          (this.sogniClient.apiClient as any).on('error', (error: any) => {
             console.error('Frontend client socket error:', error);
-            
+
             // Check for email verification error (code 4052)
-            if (error && typeof error === 'object' && 
+            if (error && typeof error === 'object' &&
                 (error.code === 4052 || (error.reason && error.reason.includes('verify your email')))) {
               console.error('❌ Email verification required from frontend client');
-              
+
               // Emit a custom event that the App can listen to
               window.dispatchEvent(new CustomEvent('sogni-email-verification-required', {
                 detail: {
@@ -178,25 +215,22 @@ class SogniAuthManager implements SogniAuthService {
             }
           });
         }
-        
+
         this.setAuthState({
           isAuthenticated: true,
           authMode: 'frontend',
           user: {
-            username: tempClient.account.currentAccount?.username,
-            email: tempClient.account.currentAccount?.email
+            username: this.sogniClient.account.currentAccount?.username,
+            email: this.sogniClient.account.currentAccount?.email
           },
           isLoading: false,
           error: null
         });
-        
+
         console.log('✅ Existing Sogni session found and restored');
         return true;
       } else {
-        // No existing session, clean up temp client
-        if ((tempClient as any).disconnect) {
-          await (tempClient as any).disconnect();
-        }
+        // No existing session, but keep the client for login/signup
         this.setAuthState({
           isAuthenticated: false,
           authMode: null,
@@ -204,7 +238,7 @@ class SogniAuthManager implements SogniAuthService {
           isLoading: false,
           error: null
         });
-        
+
         console.log('ℹ️ No existing Sogni session found');
         return false;
       }
@@ -309,6 +343,33 @@ class SogniAuthManager implements SogniAuthService {
     return this.sogniClient;
   }
 
+  // Ensure client is initialized (create if needed)
+  async ensureClient(): Promise<SogniClient> {
+    if (this.sogniClient) {
+      return this.sogniClient;
+    }
+
+    // Create a new client if one doesn't exist
+    const sogniUrls = this.getSogniUrls();
+    const hostname = window.location.hostname;
+    const isLocalDev = hostname === 'localhost' || hostname === '127.0.0.1';
+    const isStaging = hostname.includes('staging');
+
+    // Use persistent app ID for this browser installation
+    const appId = getOrCreateAppId();
+
+    this.sogniClient = await SogniClient.createInstance({
+      appId,
+      network: 'fast',
+      restEndpoint: sogniUrls.rest,
+      socketEndpoint: sogniUrls.socket,
+      testnet: isLocalDev || isStaging,
+      authType: 'cookies'
+    });
+
+    return this.sogniClient;
+  }
+
   onAuthStateChange(callback: (state: SogniAuthState) => void): () => void {
     this.authStateListeners.push(callback);
     
@@ -319,6 +380,27 @@ class SogniAuthManager implements SogniAuthService {
         this.authStateListeners.splice(index, 1);
       }
     };
+  }
+
+  // Directly set authenticated state after successful login/signup
+  setAuthenticatedState(username: string, email?: string): void {
+    if (!this.sogniClient) {
+      console.error('Cannot set authenticated state: no client available');
+      return;
+    }
+    
+    this.setAuthState({
+      isAuthenticated: true,
+      authMode: 'frontend',
+      user: {
+        username,
+        email
+      },
+      isLoading: false,
+      error: null
+    });
+
+    console.log('✅ Auth state set to authenticated');
   }
 
   // Ensure initialization is complete before using the service
@@ -351,6 +433,8 @@ export function useSogniAuth() {
     logout: sogniAuth.logout.bind(sogniAuth),
     switchToDemoMode: sogniAuth.switchToDemoMode.bind(sogniAuth),
     checkExistingSession: sogniAuth.checkExistingSession.bind(sogniAuth),
-    getSogniClient: sogniAuth.getSogniClient.bind(sogniAuth)
+    getSogniClient: sogniAuth.getSogniClient.bind(sogniAuth),
+    ensureClient: sogniAuth.ensureClient.bind(sogniAuth),
+    setAuthenticatedState: sogniAuth.setAuthenticatedState.bind(sogniAuth)
   };
 }

@@ -7479,7 +7479,7 @@ const App = () => {
                           e.currentTarget.style.transform = 'scale(1)';
                           e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
                         }}
-                        title="Get 100 free credits with Sogni!"
+                        title="Get 125 free credits with Sogni!"
                       >
                         Signup? ✨
                       </button>

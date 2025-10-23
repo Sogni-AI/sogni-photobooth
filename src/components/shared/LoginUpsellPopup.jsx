@@ -1,11 +1,13 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
-import { redirectToAuth } from '../../config/auth';
+import LoginModal from '../auth/LoginModal';
 import '../../styles/components/OutOfCreditsPopup.css';
 
 const LoginUpsellPopup = ({ isOpen, onClose }) => {
   const modalRef = useRef(null);
   const overlayRef = useRef(null);
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [loginModalMode, setLoginModalMode] = useState('signup');
 
   // Handle click outside to close
   useEffect(() => {
@@ -84,15 +86,20 @@ const LoginUpsellPopup = ({ isOpen, onClose }) => {
   }, [isOpen]);
 
   const handleGetStartedClick = () => {
-    // app.sogni.ai automatically shows signup for new users, login for existing users
-    // Include PHOTOBOOTH promo code for free credits
-    redirectToAuth('login', 'PHOTOBOOTH');
+    // Open signup modal with PHOTOBOOTH promo code pre-filled
+    setLoginModalMode('signup');
+    setShowLoginModal(true);
     onClose();
+  };
+
+  const handleCloseLoginModal = () => {
+    setShowLoginModal(false);
   };
 
   if (!isOpen) return null;
 
   return (
+    <>
     <div className="out-of-credits-modal-overlay" ref={overlayRef}>
       <div className="out-of-credits-modal" ref={modalRef}>
         <button className="out-of-credits-modal-close" onClick={onClose}>×</button>
@@ -116,7 +123,7 @@ const LoginUpsellPopup = ({ isOpen, onClose }) => {
             <div className="credits-info">
               <div className="info-item">
                 <span className="info-icon">🎁</span>
-                <span className="info-text">Get <strong>100 free credits</strong> on signup</span>
+                <span className="info-text">Get <strong>125 free credits</strong> on signup</span>
               </div>
               <div className="info-item">
                 <span className="info-icon">✨</span>
@@ -148,6 +155,13 @@ const LoginUpsellPopup = ({ isOpen, onClose }) => {
         </div>
       </div>
     </div>
+        <LoginModal
+          open={showLoginModal}
+          mode={loginModalMode}
+          onModeChange={setLoginModalMode}
+          onClose={handleCloseLoginModal}
+        />
+    </>
   );
 };
 

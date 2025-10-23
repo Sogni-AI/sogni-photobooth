@@ -3,6 +3,7 @@
  */
 import urls from '../config/urls';
 import { v4 as uuidv4 } from 'uuid';
+import { getOrCreateAppId as getAppId } from '../utils/appId';
 
 // Add network connectivity detection utilities at the top of the file after the imports
 let isOnline = navigator.onLine;
@@ -108,41 +109,9 @@ window.addEventListener('offline', () => {
 // Use the configured API URL from the urls config
 const API_BASE_URL = urls.apiUrl;
 
-// App ID management
-const APP_ID_COOKIE_NAME = 'sogni_app_id';
-
-// Function to get or generate an app ID and store it in a cookie
-const getOrCreateAppId = (): string => {
-  if (typeof document === 'undefined') return '';
-
-  // Try to get existing app ID from cookie
-  const cookies = document.cookie.split(';');
-  const appIdCookie = cookies.find(cookie => cookie.trim().startsWith(`${APP_ID_COOKIE_NAME}=`));
-  
-  if (appIdCookie) {
-    const appId = appIdCookie.split('=')[1].trim();
-    console.log(`Using existing app ID from cookie: ${appId}`);
-    return appId;
-  }
-  
-  // Generate a new app ID if none exists
-  const appPrefix = 'photobooth';
-  const newAppId = `${appPrefix}-${uuidv4()}`;
-  
-  // Store in cookie with long expiration (30 days)
-  const expiryDate = new Date();
-  expiryDate.setDate(expiryDate.getDate() + 30);
-  
-  // Set the cookie with secure attributes
-  const isSecure = window.location.protocol === 'https:';
-  document.cookie = `${APP_ID_COOKIE_NAME}=${newAppId};path=/;max-age=${30*24*60*60};${isSecure ? 'secure;' : ''}samesite=lax`;
-  
-  console.log(`Generated new app ID and stored in cookie: ${newAppId}`);
-  return newAppId;
-};
-
-// Get the app ID on module load
-export const clientAppId = typeof window !== 'undefined' ? getOrCreateAppId() : '';
+// Get the app ID on module load using the centralized utility
+// This ensures consistency with auth service
+export const clientAppId = typeof window !== 'undefined' ? getAppId() : '';
 
 // Keep track of last status check to avoid duplicate calls
 let lastStatusCheckTime = 0;

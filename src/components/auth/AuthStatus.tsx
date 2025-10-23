@@ -1,15 +1,15 @@
 import React, { useState } from 'react';
 import { useSogniAuth } from '../../services/sogniAuth';
-import { redirectToAuth } from '../../config/auth';
 import { useWallet } from '../../hooks/useWallet';
 import { formatTokenAmount, getTokenLabel } from '../../services/walletService';
 import { useRewards } from '../../context/RewardsContext';
+import LoginModal, { LoginModalMode } from './LoginModal';
 
 // Helper to format time remaining
 const formatTimeRemaining = (ms: number): string => {
   const hours = Math.floor(ms / (1000 * 60 * 60));
   const minutes = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
-  
+
   if (hours > 0) {
     return `${hours}h ${minutes}m`;
   }
@@ -22,6 +22,9 @@ interface AuthStatusProps {
 
 export const AuthStatus: React.FC<AuthStatusProps> = ({ onPurchaseClick }) => {
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [loginModalMode, setLoginModalMode] = useState<LoginModalMode>('login');
+  const [highlightDailyBoost, setHighlightDailyBoost] = useState(false);
   const { isAuthenticated, authMode, user, logout, isLoading } = useSogniAuth();
   const { balances, tokenType, switchPaymentMethod } = useWallet();
   const { rewards, claimReward, loading: rewardsLoading } = useRewards();
@@ -32,7 +35,30 @@ export const AuthStatus: React.FC<AuthStatusProps> = ({ onPurchaseClick }) => {
   };
 
   const handleLoginClick = () => {
-    redirectToAuth('login');
+    setLoginModalMode('login');
+    setShowLoginModal(true);
+  };
+
+
+  const handleCloseLoginModal = () => {
+    setShowLoginModal(false);
+  };
+
+  const handleSignupComplete = () => {
+    // Called when signup is successfully completed
+    console.log('🎉 Signup complete - opening user menu and highlighting Daily Boost');
+    setShowLoginModal(false);
+    
+    // Wait a moment for the modal to close, then open user menu
+    setTimeout(() => {
+      setShowUserMenu(true);
+      setHighlightDailyBoost(true);
+      
+      // Remove highlight after 5 seconds
+      setTimeout(() => {
+        setHighlightDailyBoost(false);
+      }, 5000);
+    }, 500);
   };
 
   const handleBuyPremiumSpark = () => {
@@ -71,9 +97,16 @@ export const AuthStatus: React.FC<AuthStatusProps> = ({ onPurchaseClick }) => {
     }
   };
 
-  // If not authenticated, show simple login button (exactly like dashboard)
-  if (!isAuthenticated) {
-    return (
+  // Prepare variables for authenticated state (used in conditional rendering)
+  const currentBalance = balances?.[tokenType]?.net || '0';
+  const tokenLabel = getTokenLabel(tokenType);
+  const hasPremiumSpark = balances ? parseFloat(balances.spark.premiumCredit || '0') > 1 : false;
+
+  // Single return statement to prevent remounting modal
+  return (
+    <>
+    {!isAuthenticated ? (
+      // Show simple login button
       <button
         onClick={handleLoginClick}
         disabled={isLoading}
@@ -81,18 +114,8 @@ export const AuthStatus: React.FC<AuthStatusProps> = ({ onPurchaseClick }) => {
       >
         {isLoading ? 'Loading...' : 'Login'}
       </button>
-    );
-  }
-
-  // Get balance display info
-  const currentBalance = balances?.[tokenType]?.net || '0';
-  const tokenLabel = getTokenLabel(tokenType);
-  
-  // Check if user has Premium Spark credits specifically (for the blue sparkle icon and premium styling)
-  const hasPremiumSpark = balances ? parseFloat(balances.spark.premiumCredit || '0') > 1 : false;
-
-  // If authenticated, show username with balance inline
-  return (
+    ) : (
+    // Show username with balance inline
     <div className="relative">
       <div
         onClick={() => setShowUserMenu(!showUserMenu)}
@@ -316,7 +339,9 @@ export const AuthStatus: React.FC<AuthStatusProps> = ({ onPurchaseClick }) => {
                           outline: 'none',
                           transition: 'all 0.2s',
                           opacity: rewardsLoading ? 0.6 : 1,
-                          whiteSpace: 'nowrap'
+                          whiteSpace: 'nowrap',
+                          boxShadow: highlightDailyBoost && canClaimDailyBoost ? '0 0 0 3px rgba(16, 185, 129, 0.4), 0 0 20px rgba(16, 185, 129, 0.6)' : 'none',
+                          animation: highlightDailyBoost && canClaimDailyBoost ? 'pulse 2s ease-in-out infinite' : 'none'
                         }}
                         onMouseOver={(e) => {
                           if (canClaimDailyBoost && !rewardsLoading) {
@@ -440,7 +465,7 @@ export const AuthStatus: React.FC<AuthStatusProps> = ({ onPurchaseClick }) => {
 
       {/* Click outside to close */}
       {showUserMenu && (
-        <div 
+        <div
           style={{
             position: 'fixed',
             inset: '0',
@@ -450,5 +475,16 @@ export const AuthStatus: React.FC<AuthStatusProps> = ({ onPurchaseClick }) => {
         />
       )}
     </div>
+    )}
+    
+    {/* Render modal once, outside conditional to preserve state during auth changes */}
+    <LoginModal
+      open={showLoginModal}
+      mode={loginModalMode}
+      onModeChange={setLoginModalMode}
+      onClose={handleCloseLoginModal}
+      onSignupComplete={handleSignupComplete}
+    />
+    </>
   );
 };
