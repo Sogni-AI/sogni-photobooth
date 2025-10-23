@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useSogniAuth } from '../../services/sogniAuth';
 import { useWallet } from '../../hooks/useWallet';
 import { formatTokenAmount, getTokenLabel } from '../../services/walletService';
 import { useRewards } from '../../context/RewardsContext';
 import LoginModal, { LoginModalMode } from './LoginModal';
+import { getAuthButtonText, getDefaultModalMode, markAsVisited } from '../../utils/visitorTracking';
 
 // Helper to format time remaining
 const formatTimeRemaining = (ms: number): string => {
@@ -25,9 +26,26 @@ export const AuthStatus: React.FC<AuthStatusProps> = ({ onPurchaseClick }) => {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [loginModalMode, setLoginModalMode] = useState<LoginModalMode>('login');
   const [highlightDailyBoost, setHighlightDailyBoost] = useState(false);
+  
+  // Compute button text ONCE based on visitor status (before marking as visited)
+  // Use useRef to preserve the initial value across renders
+  const authButtonTextRef = useRef<string>(getAuthButtonText());
+  const authButtonText = authButtonTextRef.current;
+  
   const { isAuthenticated, authMode, user, logout, isLoading } = useSogniAuth();
   const { balances, tokenType, switchPaymentMethod } = useWallet();
   const { rewards, claimReward, loading: rewardsLoading } = useRewards();
+
+  // Mark visitor on mount (after we've already computed the initial button text)
+  useEffect(() => {
+    console.log('🔍 Visitor tracking - Initial state:', {
+      hasVisited: document.cookie.includes('sogni_has_visited'),
+      buttonText: authButtonText,
+      allCookies: document.cookie
+    });
+    markAsVisited();
+    console.log('✅ Visitor marked, cookies now:', document.cookie);
+  }, [authButtonText]);
 
   const handleLogout = async () => {
     await logout();
@@ -35,7 +53,7 @@ export const AuthStatus: React.FC<AuthStatusProps> = ({ onPurchaseClick }) => {
   };
 
   const handleLoginClick = () => {
-    setLoginModalMode('login');
+    setLoginModalMode(getDefaultModalMode());
     setShowLoginModal(true);
   };
 
@@ -112,7 +130,7 @@ export const AuthStatus: React.FC<AuthStatusProps> = ({ onPurchaseClick }) => {
         disabled={isLoading}
         className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg transition-all duration-200 hover:shadow-xl"
       >
-        {isLoading ? 'Loading...' : 'Login'}
+        {isLoading ? 'Loading...' : authButtonText}
       </button>
     ) : (
     // Show username with balance inline
