@@ -124,7 +124,6 @@ export const MusicPlayerProvider = ({ children }) => {
       // Reset playing state on page load since browser will block auto-play
       // Position will be restored when user clicks play
       if (audio.paused && isPlaying) {
-        console.log('🎵 Audio is paused on load - resetting UI to show play button');
         setIsPlaying(false);
       }
     };
@@ -188,26 +187,18 @@ export const MusicPlayerProvider = ({ children }) => {
       } else {
         // Before playing, check if we need to restore position
         const savedPositionData = sessionStorage.getItem('musicPlayerPosition');
-        console.log('🎵 Play clicked - currentTime:', audio.currentTime, 'currentTrackIndex:', currentTrackIndex);
-        console.log('🎵 Saved position data:', savedPositionData);
         
         if (savedPositionData && audio.currentTime === 0) {
           try {
             const { trackIndex, position } = JSON.parse(savedPositionData);
-            console.log('🎵 Parsed saved data - trackIndex:', trackIndex, 'position:', position);
             // Only restore if it's for the current track and position is valid
             if (trackIndex === currentTrackIndex && !isNaN(position) && position > 0) {
-              // Duration might not be loaded yet, so don't check it here
               audio.currentTime = position;
-              console.log('🎵 Restored playback position on play:', position.toFixed(2), 'for track', trackIndex);
-            } else {
-              console.log('🎵 Not restoring - trackIndex match:', trackIndex === currentTrackIndex, 'position valid:', !isNaN(position) && position > 0);
+              console.log('🎵 Resumed from:', position.toFixed(1) + 's');
             }
           } catch (e) {
-            console.log('🎵 Failed to parse saved position data:', e);
+            console.log('🎵 Failed to parse saved position');
           }
-        } else {
-          console.log('🎵 Not restoring - hasData:', !!savedPositionData, 'currentTime is 0:', audio.currentTime === 0);
         }
         
         await audio.play();

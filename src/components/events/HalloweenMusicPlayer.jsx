@@ -94,7 +94,6 @@ const HalloweenMusicPlayer = () => {
       // Reset playing state on page load since browser will block auto-play
       // Position will be restored when user clicks play
       if (audio.paused && isPlaying) {
-        console.log('🎃 Audio is paused on load - resetting UI to show play button');
         setIsPlaying(false);
       }
     };
@@ -140,17 +139,17 @@ const HalloweenMusicPlayer = () => {
       } else {
         // Before playing, check if we need to restore position
         const savedPositionData = sessionStorage.getItem('halloweenMusicPlayerPosition');
+        
         if (savedPositionData && audio.currentTime === 0) {
           try {
             const { trackIndex, position } = JSON.parse(savedPositionData);
             // Only restore if it's for the current track and position is valid
             if (trackIndex === currentTrackIndex && !isNaN(position) && position > 0) {
-              // Duration might not be loaded yet, so don't check it here
               audio.currentTime = position;
-              console.log('🎃 Restored playback position on play:', position.toFixed(2), 'for track', trackIndex);
+              console.log('🎃 Resumed from:', position.toFixed(1) + 's');
             }
           } catch (e) {
-            console.log('🎃 Failed to parse saved position data:', e);
+            console.log('🎃 Failed to parse saved position');
           }
         }
         
