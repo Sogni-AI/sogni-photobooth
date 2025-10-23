@@ -796,6 +796,9 @@ const App = () => {
   const [cameraDevices, setCameraDevices] = useState([]);
   const [selectedCameraDeviceId, setSelectedCameraDeviceId] = useState(preferredCameraDeviceId || null); // Initialize from settings
   const [isFrontCamera, setIsFrontCamera] = useState(true); // Keep this local state
+  const [waitingForCameraPermission, setWaitingForCameraPermission] = useState(false); // Track camera permission request
+  const [showPermissionMessage, setShowPermissionMessage] = useState(false); // Show message after delay
+  const [cameraPermissionDenied, setCameraPermissionDenied] = useState(false); // Track if permission was denied
 
   // State for orientation handler cleanup
   const [orientationHandler, setOrientationHandler] = useState(null);
@@ -825,6 +828,28 @@ const App = () => {
       }
     };
   }, [orientationHandler]);
+
+  // Handle delayed display of camera permission message (3 second delay)
+  useEffect(() => {
+    let timer;
+    
+    if (waitingForCameraPermission) {
+      // Start a timer to show the message after 3 seconds
+      timer = setTimeout(() => {
+        setShowPermissionMessage(true);
+      }, 3000);
+    } else {
+      // Clear the message immediately when permission is no longer being waited on
+      setShowPermissionMessage(false);
+    }
+    
+    // Cleanup timer on unmount or when waitingForCameraPermission changes
+    return () => {
+      if (timer) {
+        clearTimeout(timer);
+      }
+    };
+  }, [waitingForCameraPermission]);
 
   // When entering Style Explorer (prompt selector), ensure we have a usable
   // reference photo in lastPhotoData by hydrating it from lastEditablePhoto
@@ -2633,8 +2658,15 @@ const App = () => {
         }
       }
 
+      // Set waiting state before requesting camera access
+      setWaitingForCameraPermission(true);
+
       // Request camera access
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      
+      // Clear waiting and denied states after successful access
+      setWaitingForCameraPermission(false);
+      setCameraPermissionDenied(false);
       
       console.log(`✅ Camera stream acquired - requested ${requestWidth}×${requestHeight} for ${aspectRatio} aspect ratio`);
       
@@ -2740,6 +2772,16 @@ const App = () => {
     } catch (error) {
       console.error('Failed to get camera access:', error);
       
+      // Clear waiting state on error
+      setWaitingForCameraPermission(false);
+      
+      // Check if permission was denied by the user
+      if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+        console.error('Camera permission denied by user');
+        setCameraPermissionDenied(true);
+        return; // Don't try fallback for permission errors
+      }
+      
       // If we failed with a specific device ID, try falling back to auto-select
       if (deviceId && (error.name === 'OverconstrainedError' || error.name === 'NotFoundError')) {
         console.warn('📹 Specific camera device failed, trying auto-select fallback...');
@@ -2759,6 +2801,10 @@ const App = () => {
           
           const fallbackStream = await navigator.mediaDevices.getUserMedia(fallbackConstraints);
           console.log('✅ Fallback camera stream acquired');
+          
+          // Clear waiting and denied states after successful fallback
+          setWaitingForCameraPermission(false);
+          setCameraPermissionDenied(false);
           
           if (videoReference.current) {
             videoReference.current.srcObject = fallbackStream;
@@ -6145,6 +6191,12 @@ const App = () => {
   // The start menu state was moved to the top
   // Handler for the "Take Photo" option in start menu
   const handleTakePhotoOption = async () => {
+    // Clear any previous permission denied state
+    setCameraPermissionDenied(false);
+    
+    // Set waiting state before starting the camera permission flow
+    setWaitingForCameraPermission(true);
+    
     // Add exit animation class
     const startMenuElement = document.querySelector('.camera-start-menu');
     if (startMenuElement) {
@@ -7673,6 +7725,115 @@ const App = () => {
         isVisible={showConfetti && backgroundAnimationsEnabled}
         onComplete={() => setShowConfetti(false)}
       />
+
+      {/* Camera Permission Waiting Message */}
+      {showPermissionMessage && (
+        <div
+          style={{
+            position: 'fixed',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            zIndex: 10000,
+            textAlign: 'center',
+          }}
+          data-testid="camera-permission-waiting"
+        >
+          {/* Slothicorn above message */}
+          <div
+            style={{
+              marginBottom: '20px',
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              width: '100%',
+            }}
+          >
+            <img 
+              src="/sloth_cam_hop_trnsparent.png" 
+              alt="Sogni Sloth Camera" 
+              style={{
+                width: '180px',
+                height: 'auto',
+                objectFit: 'contain',
+                filter: 'drop-shadow(0 6px 20px rgba(0, 0, 0, 0.2))',
+                animation: 'sadFloat 3s ease-in-out infinite',
+                pointerEvents: 'none',
+              }}
+            />
+          </div>
+          
+          <div
+            style={{
+              color: 'white',
+              fontSize: '24px',
+              lineHeight: '1.6',
+              fontFamily: 'Arial, sans-serif',
+              textShadow: '0 2px 4px rgba(0, 0, 0, 0.8)',
+            }}
+          >
+            <div>Allow Photobooth to access</div>
+            <div>your camera to start</div>
+            <div>your shoot!</div>
+          </div>
+        </div>
+      )}
+
+      {/* Camera Permission Denied Overlay */}
+      {cameraPermissionDenied && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: 'rgba(0, 0, 0, 0.85)',
+            zIndex: 10000,
+            padding: '20px',
+          }}
+          data-testid="camera-permission-denied"
+        >
+          <div
+            style={{
+              color: 'white',
+              fontSize: '20px',
+              textAlign: 'center',
+              maxWidth: '600px',
+              lineHeight: '1.6',
+              fontFamily: 'Arial, sans-serif',
+            }}
+          >
+            <div style={{ fontSize: '24px', marginBottom: '20px', fontWeight: 'bold' }}>
+              Camera Access Denied
+            </div>
+            <div style={{ marginBottom: '30px' }}>
+              Photobooth needs camera access to take photos. Please allow camera access in your browser settings and refresh the page.
+            </div>
+            <button
+              onClick={() => {
+                setCameraPermissionDenied(false);
+                setShowStartMenu(true);
+              }}
+              style={{
+                backgroundColor: '#ff6b9d',
+                color: 'white',
+                border: 'none',
+                padding: '12px 30px',
+                fontSize: '16px',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontWeight: 'bold',
+              }}
+            >
+              Back to Menu
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Stripe Purchase Modal */}
       {showStripePurchase && sogniClient && (

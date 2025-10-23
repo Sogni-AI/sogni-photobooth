@@ -521,7 +521,6 @@ export const CameraView: React.FC<CameraViewProps> = (props) => {
                 zIndex: 1
               }}
             />
-            
 
           </div>
         </div>

@@ -33,10 +33,10 @@ export function useCostEstimation(params: CostEstimationParams): CostEstimationR
   const [error, setError] = useState<Error | null>(null);
   const { getSogniClient } = useSogniAuth();
   const { tokenType } = useWallet();
-  
+
   // Use ref to track the last params to avoid unnecessary re-fetches
   const lastParamsRef = useRef<string>('');
-  
+
   useEffect(() => {
     const estimateCost = async () => {
       // Don't fetch if we don't have the minimum required params
@@ -46,23 +46,23 @@ export function useCostEstimation(params: CostEstimationParams): CostEstimationR
         setLoading(false);
         return;
       }
-      
+
       // Create a stable params hash to avoid re-fetching with same params
       const paramsHash = JSON.stringify({ ...params, tokenType });
       if (paramsHash === lastParamsRef.current) {
         return;
       }
       lastParamsRef.current = paramsHash;
-      
+
       setLoading(true);
       setError(null);
-      
+
       try {
         const client = getSogniClient();
         if (!client) {
           throw new Error('Sogni client not available');
         }
-        
+
         // Check if the client has the estimateCost method
         if (!client.projects || typeof (client.projects as any).estimateCost !== 'function') {
           // If estimateCost is not available, we can't estimate
@@ -70,7 +70,7 @@ export function useCostEstimation(params: CostEstimationParams): CostEstimationR
           setLoading(false);
           return;
         }
-        
+
         const estimationParams = {
           network: params.network || 'fast',
           model: params.model,
@@ -85,9 +85,9 @@ export function useCostEstimation(params: CostEstimationParams): CostEstimationR
           denoiseStrength: params.denoiseStrength,
           tokenType: tokenType
         };
-        
+
         const result = await (client.projects as any).estimateCost(estimationParams);
-        
+
         if (result && result.token !== undefined && result.token !== null) {
           // Handle both string and number values
           const tokenCost = typeof result.token === 'string' ? parseFloat(result.token) : result.token;
@@ -107,13 +107,13 @@ export function useCostEstimation(params: CostEstimationParams): CostEstimationR
         setLoading(false);
       }
     };
-    
-    estimateCost();
-  }, [params.model, params.imageCount, params.stepCount, params.previewCount, params.scheduler, params.guidance, params.contextImages, params.network, tokenType, getSogniClient]);
-  
+
+    void estimateCost();
+  }, [params.model, params.imageCount, params.stepCount, params.previewCount, params.scheduler, params.guidance, params.contextImages, params.cnEnabled, params.guideImage, params.denoiseStrength, params.network, tokenType]);
+
   // Format the cost for display
   const formattedCost = cost !== null ? cost.toFixed(2) : '—';
-  
+
   return {
     loading,
     cost,
@@ -134,7 +134,7 @@ export async function estimateJobCost(
     if (!client || !client.projects || typeof client.projects.estimateCost !== 'function') {
       return null;
     }
-    
+
     const estimationParams = {
       network: params.network || 'fast',
       model: params.model,
@@ -149,7 +149,7 @@ export async function estimateJobCost(
       denoiseStrength: params.denoiseStrength,
       tokenType: params.tokenType || 'spark'
     };
-    
+
     const result = await client.projects.estimateCost(estimationParams);
     if (result?.token !== undefined && result?.token !== null) {
       // Handle both string and number values

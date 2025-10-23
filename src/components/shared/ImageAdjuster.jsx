@@ -56,9 +56,6 @@ const ImageAdjuster = ({
     return null;
   }, [selectedStyle, portraitType]);
   
-  // Use the number of images passed as prop, or fallback to context
-  const effectiveNumImages = numImages || contextNumImages;
-  
   // Batch count selection state
   const batchOptions = [1, 2, 4, 8, 16];
   const [selectedBatchCount, setSelectedBatchCount] = useState(numImages || contextNumImages);
@@ -76,17 +73,6 @@ const ImageAdjuster = ({
     previewCount: 10,
     contextImages: 0, // Not using Flux Kontext reference images
     cnEnabled: true // Using InstantID ControlNet
-  });
-  
-  // Debug logging
-  console.log('[ImageAdjuster] Cost estimation:', {
-    isAuthenticated,
-    costLoading,
-    formattedCost,
-    selectedModel,
-    effectiveNumImages,
-    tokenType,
-    tokenLabel
   });
   
   
@@ -805,17 +791,7 @@ const ImageAdjuster = ({
               className="confirm-button confirm-button-main" 
               onClick={handleConfirm}
             >
-              Imagine ({selectedBatchCount}x) 
-              {(() => {
-                console.log('[ImageAdjuster Button] Render check:', {
-                  isAuthenticated,
-                  costLoading,
-                  formattedCost,
-                  tokenLabel,
-                  shouldShow: isAuthenticated && !costLoading && formattedCost && formattedCost !== '—'
-                });
-                return null;
-              })()}
+              Imagine ({selectedBatchCount}x)
               {isAuthenticated && !costLoading && formattedCost && formattedCost !== '—' && (
                 <span className="cost-estimate"> {formattedCost} {tokenLabel}</span>
               )}
