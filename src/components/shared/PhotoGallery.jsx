@@ -72,7 +72,7 @@ const PhotoGallery = ({
   handlePreviousPhoto,
   handleNextPhoto,
   handlePhotoViewerClick,
-  handleGenerateMorePhotos,
+  handleOpenImageAdjusterForNextBatch,
   handleShowControlOverlay,
   isGenerating,
   keepOriginalPhoto,
@@ -120,7 +120,8 @@ const PhotoGallery = ({
   initialSearchTerm = '',
   portraitType = 'medium',
   onPortraitTypeChange = null,
-  numImages = 1,
+  // eslint-disable-next-line no-unused-vars
+  numImages = 1, // Intentionally unused - ImageAdjuster handles batch count selection
   authState = null,
   handleRefreshPhoto = null
 }) => {
@@ -129,20 +130,6 @@ const PhotoGallery = ({
   const { isAuthenticated } = useSogniAuth();
   const { tokenType } = useWallet();
   const tokenLabel = getTokenLabel(tokenType);
-
-  // Cost estimation for "More" button (generates more photos with same reference)
-  // Uses InstantID ControlNet like ImageAdjuster
-  const { loading: moreButtonCostLoading, formattedCost: moreButtonCost } = useCostEstimation({
-    model: settings.selectedModel,
-    imageCount: numImages,
-    stepCount: settings.inferenceSteps,
-    guidance: settings.promptGuidance,
-    scheduler: settings.scheduler,
-    network: 'fast',
-    previewCount: 10,
-    contextImages: 0, // Not using Flux Kontext
-    cnEnabled: true // Using InstantID ControlNet
-  });
 
   // Cost estimation for Krea enhancement (one-click image enhance)
   // Krea uses the image as a guide/starting image for enhancement
@@ -292,7 +279,7 @@ const PhotoGallery = ({
     }
 
     return () => observer.disconnect();
-  }, [moreButtonCost, numImages, isGenerating, tokenLabel]);
+  }, [isGenerating]);
 
   // Keep track of the previous photos array length to detect new batches (for legacy compatibility)
   const [, setPreviousPhotosLength] = useState(0);
@@ -473,7 +460,7 @@ const PhotoGallery = ({
     }
     
     if (isGenerating && activeProjectReference.current) {
-      // Cancel current project and immediately start new batch
+      // Cancel current project before opening ImageAdjuster
       console.log('Cancelling current project from more button:', activeProjectReference.current);
       try {
         if (sogniClient && sogniClient.cancelProject) {
@@ -482,18 +469,24 @@ const PhotoGallery = ({
         activeProjectReference.current = null;
         // Reset the timeout state
         setShowMoreButtonDuringGeneration(false);
-        // Immediately start new batch after canceling
-        handleGenerateMorePhotos();
+        // Open ImageAdjuster after canceling
+        if (handleOpenImageAdjusterForNextBatch) {
+          handleOpenImageAdjusterForNextBatch();
+        }
       } catch (error) {
         console.warn('Error cancelling project from more button:', error);
-        // Even if cancellation fails, try to start new batch
-        handleGenerateMorePhotos();
+        // Even if cancellation fails, open ImageAdjuster
+        if (handleOpenImageAdjusterForNextBatch) {
+          handleOpenImageAdjusterForNextBatch();
+        }
       }
     } else {
-      // Normal "generate more photos" behavior
-      handleGenerateMorePhotos();
+      // Open ImageAdjuster for batch configuration
+      if (handleOpenImageAdjusterForNextBatch) {
+        handleOpenImageAdjusterForNextBatch();
+      }
     }
-  }, [isGenerating, activeProjectReference, sogniClient, handleGenerateMorePhotos, framedImageUrls, onClearQrCode]);
+  }, [isGenerating, activeProjectReference, sogniClient, handleOpenImageAdjusterForNextBatch, framedImageUrls, onClearQrCode, onClearMobileShareCache]);
 
   // Generate QR code when qrCodeData changes
   useEffect(() => {
@@ -2248,31 +2241,20 @@ const PhotoGallery = ({
             backgroundColor: isGenerating ? '#ff6b6b' : undefined,
             borderColor: isGenerating ? '#ff6b6b' : undefined,
           }}
-          title={isGenerating ? 'Cancel current generation and start new batch' : 'Generate more photos'}
+          title={isGenerating ? 'Cancel current generation and start new batch' : 'Adjust and generate next batch'}
         >
-          {isGenerating ? `CANCEL + NEXT ($){numImages}x)` : (
-            <>
-              NEXT ({numImages}x)
-              {isAuthenticated && !moreButtonCostLoading && moreButtonCost && moreButtonCost !== '—' && (
-                <span style={{ fontSize: '0.85em', opacity: 0.95, marginLeft: '6px' }}>
-                   {moreButtonCost} {tokenLabel}
-                </span>
-              )}
-            </>
-          )}
+          {isGenerating ? 'CANCEL + NEXT BATCH' : 'NEXT BATCH'}
         </button>
       )}
-      {/* Generate button - only show in prompt selector mode when reference photo exists */}
+      {/* Continue button - only show in prompt selector mode when reference photo exists */}
       {isPromptSelectorMode && onBackToPhotos && lastPhotoData && lastPhotoData.blob && selectedPhotoIndex === null && (
         <button
           className="view-photos-btn corner-btn"
           onClick={() => {
-            // Switch back to regular Photos Grid view and generate fresh batch
-            onBackToPhotos();
-            // Small delay to ensure state updates properly, then generate
-            setTimeout(() => {
-              handleGenerateMorePhotos();
-            }, 100);
+            // Just open ImageAdjuster over current view - don't navigate away
+            if (handleOpenImageAdjusterForNextBatch) {
+              handleOpenImageAdjusterForNextBatch();
+            }
           }}
           style={{
             position: 'fixed',
@@ -2281,15 +2263,10 @@ const PhotoGallery = ({
             left: 'auto',
             zIndex: 9999,
           }}
-          title="Generate fresh batch with current settings"
+          title="Adjust and generate batch with current settings"
         >
           <span className="view-photos-label">
-            Imagine ({numImages}x) 
-            {isAuthenticated && !moreButtonCostLoading && moreButtonCost && moreButtonCost !== '—' && (
-              <span style={{ fontSize: '0.85em', opacity: 0.95, marginLeft: '6px' }}>
-                 {moreButtonCost} {tokenLabel}
-              </span>
-            )}
+            Continue
           </span>
         </button>
       )}
@@ -5159,7 +5136,7 @@ PhotoGallery.propTypes = {
   handlePreviousPhoto: PropTypes.func.isRequired,
   handleNextPhoto: PropTypes.func.isRequired,
   handlePhotoViewerClick: PropTypes.func.isRequired,
-  handleGenerateMorePhotos: PropTypes.func.isRequired,
+  handleOpenImageAdjusterForNextBatch: PropTypes.func,
   handleShowControlOverlay: PropTypes.func.isRequired,
   isGenerating: PropTypes.bool.isRequired,
   keepOriginalPhoto: PropTypes.bool.isRequired,

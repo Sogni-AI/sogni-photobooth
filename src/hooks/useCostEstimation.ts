@@ -41,7 +41,6 @@ export function useCostEstimation(params: CostEstimationParams): CostEstimationR
     const estimateCost = async () => {
       // Don't fetch if we don't have the minimum required params
       if (!params.model || !params.imageCount) {
-        console.log('[CostEstimation] Missing required params:', { model: params.model, imageCount: params.imageCount });
         setCost(null);
         setError(null);
         setLoading(false);
@@ -61,17 +60,12 @@ export function useCostEstimation(params: CostEstimationParams): CostEstimationR
       try {
         const client = getSogniClient();
         if (!client) {
-          console.log('[CostEstimation] No Sogni client available');
           throw new Error('Sogni client not available');
         }
-        
-        console.log('[CostEstimation] Client type:', client.constructor.name);
-        console.log('[CostEstimation] Has estimateCost?', !!client.projects && typeof (client.projects as any).estimateCost === 'function');
         
         // Check if the client has the estimateCost method
         if (!client.projects || typeof (client.projects as any).estimateCost !== 'function') {
           // If estimateCost is not available, we can't estimate
-          console.log('[CostEstimation] Client does not support estimateCost method');
           setCost(null);
           setLoading(false);
           return;
@@ -92,23 +86,18 @@ export function useCostEstimation(params: CostEstimationParams): CostEstimationR
           tokenType: tokenType
         };
         
-        console.log('[CostEstimation] Requesting estimate with params:', estimationParams);
         const result = await (client.projects as any).estimateCost(estimationParams);
-        console.log('[CostEstimation] Received result:', result);
         
         if (result && result.token !== undefined && result.token !== null) {
           // Handle both string and number values
           const tokenCost = typeof result.token === 'string' ? parseFloat(result.token) : result.token;
           if (!isNaN(tokenCost)) {
             setCost(tokenCost);
-            console.log('[CostEstimation] Cost set to:', tokenCost);
           } else {
             setCost(null);
-            console.log('[CostEstimation] Invalid token value (NaN):', result.token);
           }
         } else {
           setCost(null);
-          console.log('[CostEstimation] Invalid result, cost set to null');
         }
         setLoading(false);
       } catch (err) {

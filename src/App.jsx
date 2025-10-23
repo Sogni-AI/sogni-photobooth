@@ -2,12 +2,11 @@ import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react'
 
 import { getModelOptions, defaultStylePrompts as initialStylePrompts, TIMEOUT_CONFIG, isFluxKontextModel, TWITTER_SHARE_CONFIG, getQRWatermarkConfig } from './constants/settings';
 import { photoThoughts, randomThoughts } from './constants/thoughts';
-import { saveSettingsToCookies, shouldShowPromoPopup, markPromoPopupShown, hasDoneDemoRender, markDemoRenderDone, clearDemoRenderStatus } from './utils/cookies';
+import { saveSettingsToCookies, shouldShowPromoPopup, markPromoPopupShown, hasDoneDemoRender, markDemoRenderDone } from './utils/cookies';
 import { styleIdToDisplay } from './utils';
 import { getCustomDimensions } from './utils/imageProcessing';
 import { goToPreviousPhoto, goToNextPhoto } from './utils/photoNavigation';
 import { initializeStylePrompts, getRandomStyle, getRandomMixPrompts } from './services/prompts';
-import { generateGalleryFilename } from './utils/galleryLoader';
 import { getDefaultThemeGroupState, getEnabledPrompts, getOneOfEachPrompts } from './constants/themeGroups';
 import { getThemeGroupPreferences, saveThemeGroupPreferences } from './utils/cookies';
 import { initializeSogniClient } from './services/sogni';
@@ -54,7 +53,6 @@ import { useWallet } from './hooks/useWallet';
 import { isPremiumBoosted } from './services/walletService';
 import { estimateJobCost } from './hooks/useCostEstimation.ts';
 import TwitterShareModal from './components/shared/TwitterShareModal';
-import StyleDropdown from './components/shared/StyleDropdown';
 
 import FriendlyErrorModal from './components/shared/FriendlyErrorModal';
 import { useToastContext } from './context/ToastContext';
@@ -1259,11 +1257,6 @@ const App = () => {
 
   // Set up inactivity detection
   useEffect(() => {
-    console.log('🔧 Inactivity detection useEffect triggered', {
-      showSplashOnInactivity,
-      showSplashScreen,
-      inactivityTimeout
-    });
 
     if (!showSplashOnInactivity) {
       console.log('🚫 Inactivity detection disabled - clearing timer');
@@ -1449,32 +1442,6 @@ const App = () => {
     }
   };
 
-  // State for top-left style dropdown
-  const [showTopLeftStyleDropdown, setShowTopLeftStyleDropdown] = useState(false);
-  
-  // Generate preview image path for selected style
-  const stylePreviewImage = useMemo(() => {
-    // Check if it's an individual style (not a prompt sampler mode)
-    const isIndividualStyle = selectedStyle && 
-      !['custom', 'random', 'randomMix', 'oneOfEach', 'browseGallery'].includes(selectedStyle);
-    
-    if (isIndividualStyle) {
-      try {
-        const expectedFilename = generateGalleryFilename(selectedStyle);
-        return `/gallery/prompts/${portraitType || 'medium'}/${expectedFilename}`;
-      } catch (error) {
-        console.warn('Error generating style preview image:', error);
-        return null;
-      }
-    }
-    
-    return null;
-  }, [selectedStyle, portraitType]);
-
-  // Style selector handler - opens dropdown for all models
-  const handleStyleSelectorClick = () => {
-    setShowTopLeftStyleDropdown(true);
-  };
 
   // Track navigation source for proper back button behavior
   const navigationSourceRef = useRef('startMenu');
@@ -2423,17 +2390,23 @@ const App = () => {
         const realClient = authState.getSogniClient();
         
         if (!realClient) {
-          throw new Error('Frontend authentication client not available');
+          // Frontend client not available (e.g., during logout transition)
+          // Fall back to backend mode instead of throwing error
+          console.warn('⚠️ Frontend client not available, falling back to backend mode');
+          client = await initializeSogniClient();
+          setSogniClient(client);
+          setIsSogniReady(true);
+          console.log('✅ Backend Sogni client initialized successfully (fallback from frontend)');
+        } else {
+          // Wrap the real client with our adapter to ensure compatibility with photobooth UI
+          client = createFrontendClientAdapter(realClient);
+          
+          
+          setSogniClient(client);
+          setIsSogniReady(true);
+          
+          console.log('✅ Frontend Sogni client initialized successfully with adapter - using personal account credits');
         }
-        
-        // Wrap the real client with our adapter to ensure compatibility with photobooth UI
-        client = createFrontendClientAdapter(realClient);
-        
-        
-        setSogniClient(client);
-        setIsSogniReady(true);
-        
-        console.log('✅ Frontend Sogni client initialized successfully with adapter - using personal account credits');
         
       } else {
         // Use the backend client (demo mode - shared demo account credits)
@@ -2598,7 +2571,6 @@ const App = () => {
     setIosQuirkDetected(false);
     setActualCameraDimensions(null);
     setQuirkDetectionComplete(false);
-    console.log('🔄 Starting new camera session - reset iOS quirk detection state');
     
     // Determine resolution based on aspect ratio
     let requestWidth, requestHeight;
@@ -2932,9 +2904,18 @@ const App = () => {
     initializeAppOnMount();
   }, []); // Empty dependency array - only run on mount
 
+  // Track previous auth state to detect actual logout transitions
+  const prevAuthRef = useRef({ isAuthenticated: false, authMode: null });
+  
   // Update Sogni client when auth state changes (login/logout)
   useEffect(() => {
-    if (authState.isAuthenticated && authState.authMode === 'frontend' && authState.getSogniClient()) {
+    const wasAuthenticated = prevAuthRef.current.isAuthenticated;
+    const isNowAuthenticated = authState.isAuthenticated;
+    
+    // Update the ref for next time
+    prevAuthRef.current = { isAuthenticated: authState.isAuthenticated, authMode: authState.authMode };
+    
+    if (isNowAuthenticated && authState.authMode === 'frontend' && authState.getSogniClient()) {
       console.log(`🔐 User logged in with frontend auth, switching to direct SDK connection for personal credits`);
       const realClient = authState.getSogniClient();
       
@@ -2946,8 +2927,8 @@ const App = () => {
       
       console.log('✅ Switched to frontend client with adapter - now using personal account credits');
       
-      // Clear demo render tracking when user logs in
-      clearDemoRenderStatus();
+      // Note: We do NOT clear demo render status on login
+      // The free demo render is a one-time offer that should persist across login/logout
       
       // Disable QR watermark for logged-in users (they don't need it for attribution)
       // Only update if not explicitly set by user (check if it's still at default)
@@ -2955,8 +2936,8 @@ const App = () => {
         console.log('💧 Disabling QR watermark for logged-in user');
         updateSetting('sogniWatermark', false);
       }
-    } else if (!authState.isAuthenticated && authState.authMode === null) {
-      // User logged out - switch back to demo mode (backend client)
+    } else if (!isNowAuthenticated && authState.authMode === null && wasAuthenticated) {
+      // User logged out - ONLY trigger if they were previously authenticated
       console.log('🔐 User logged out, switching back to demo mode (backend client)');
       
       // Clear the current client
@@ -4022,27 +4003,32 @@ const App = () => {
       }
 
       // Estimate job cost before creating project (for smart wallet switching)
+      // Only do cost estimation for authenticated users - demo mode doesn't need it
       let estimatedCost = null;
-      try {
-        estimatedCost = await estimateJobCost(sogniClient, {
-          model: selectedModel,
-          imageCount: numImages,
-          stepCount: inferenceSteps,
-          guidance: isFluxKontext ? guidance : promptGuidance,
-          scheduler: scheduler,
-          network: 'fast',
-          previewCount: 10,
-          contextImages: isFluxKontext ? 1 : 0,
-          cnEnabled: !isFluxKontext,
-          tokenType: walletTokenType
-        });
-        if (estimatedCost !== null) {
-          setLastJobCostEstimate(estimatedCost);
-          console.log('💰 Estimated job cost:', estimatedCost, walletTokenType);
+      if (authState.isAuthenticated) {
+        try {
+          estimatedCost = await estimateJobCost(sogniClient, {
+            model: selectedModel,
+            imageCount: numImages,
+            stepCount: inferenceSteps,
+            guidance: isFluxKontext ? guidance : promptGuidance,
+            scheduler: scheduler,
+            network: 'fast',
+            previewCount: 10,
+            contextImages: isFluxKontext ? 1 : 0,
+            cnEnabled: !isFluxKontext,
+            tokenType: walletTokenType
+          });
+          if (estimatedCost !== null) {
+            setLastJobCostEstimate(estimatedCost);
+            console.log('💰 Estimated job cost:', estimatedCost, walletTokenType);
+          }
+        } catch (costError) {
+          console.warn('Failed to estimate cost:', costError);
+          // Continue even if cost estimation fails
         }
-      } catch (costError) {
-        console.warn('Failed to estimate cost:', costError);
-        // Continue even if cost estimation fails
+      } else {
+        console.log('⏭️ Skipping cost estimation for demo mode (not authenticated)');
       }
 
       // Check if current wallet has sufficient balance before submitting
@@ -5775,89 +5761,17 @@ const App = () => {
       overflow: 'hidden',
       background: window.extensionMode ? 'transparent' : undefined, // Make transparent in extension mode
     }}>
-      {/* Style selector in top left - shown on photo grid page when not in Style Explorer */}
+      {/* Auth Status in top left - shown on photo grid page when not in Style Explorer */}
       {showPhotoGrid && currentPage !== 'prompts' && (
-        <div className="top-left-style-selector" style={{
+        <div style={{
           position: 'fixed',
           top: '24px',
-          left: '20px',
+          left: '24px',
           zIndex: 9999,
         }}>
-          <button
-            className="global-style-btn"
-            onClick={handleStyleSelectorClick}
-            style={{
-              all: 'unset',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              fontFamily: '"Permanent Marker", cursive',
-              fontSize: '13px',
-              color: 'white',
-              cursor: 'pointer',
-              padding: '8px 12px',
-              borderRadius: '12px',
-              background: 'linear-gradient(135deg, #ff7eb3, #7868e6)',
-              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.25)',
-              transition: 'all 0.3s ease',
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              position: 'relative',
-            }}
-            onMouseOver={(e) => {
-              e.currentTarget.style.background = 'linear-gradient(135deg, #ff8cc8, #8b7aed)';
-              e.currentTarget.style.boxShadow = '0 6px 16px rgba(255, 126, 179, 0.4)';
-              e.currentTarget.style.transform = 'translateY(-2px) scale(1.05)';
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.background = 'linear-gradient(135deg, #ff7eb3, #7868e6)';
-              e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.25)';
-              e.currentTarget.style.transform = 'none';
-            }}
-          >
-            {stylePreviewImage ? (
-              <img 
-                src={stylePreviewImage} 
-                alt={selectedStyle ? styleIdToDisplay(selectedStyle) : 'Style preview'}
-                style={{
-                  width: '32px',
-                  height: '32px',
-                  borderRadius: '50%',
-                  objectFit: 'cover',
-                  boxShadow: '0 2px 6px rgba(0, 0, 0, 0.3)',
-                  flexShrink: 0,
-                }}
-                onError={(e) => {
-                  // Fallback to emoji icon if image fails to load
-                  e.currentTarget.style.display = 'none';
-                  const fallbackIcon = e.currentTarget.nextElementSibling;
-                  if (fallbackIcon && fallbackIcon.textContent === '🎨') {
-                    fallbackIcon.style.display = 'block';
-                  }
-                }}
-              />
-            ) : null}
-            <span style={{ 
-              fontSize: '1.3rem',
-              display: stylePreviewImage ? 'none' : 'block',
-              filter: 'drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3))',
-              flexShrink: 0,
-            }}>
-              🎨
-            </span>
-            <span style={{ 
-              maxWidth: '140px', 
-              overflow: 'hidden', 
-              textOverflow: 'ellipsis', 
-              whiteSpace: 'nowrap',
-              fontWeight: 700,
-              textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)',
-              letterSpacing: '0.3px',
-            }}>
-              {selectedStyle === 'custom' ? 'Custom...' : selectedStyle ? styleIdToDisplay(selectedStyle) : 'Select Style'}
-            </span>
-          </button>
+          <AuthStatus 
+            onPurchaseClick={authState.isAuthenticated && authState.authMode === 'frontend' ? () => setShowStripePurchase(true) : undefined}
+          />
         </div>
       )}
 
@@ -5899,6 +5813,7 @@ const App = () => {
                 handleNextPhoto={handleNextPhoto}
                 handlePhotoViewerClick={handlePhotoViewerClick}
                 handleGenerateMorePhotos={handleGenerateMorePhotos}
+                handleOpenImageAdjusterForNextBatch={handleOpenImageAdjusterForNextBatch}
                 handleShowControlOverlay={() => setShowControlOverlay(!showControlOverlay)}
                 numImages={numImages}
                 isGenerating={photos.some(photo => photo.generating)}
@@ -7014,8 +6929,14 @@ const App = () => {
       return;
     }
 
-    // Hide the adjuster
+    // Hide the adjuster first
     setShowImageAdjuster(false);
+
+    // If we're in Style Explorer mode, navigate back to photo gallery view
+    if (currentPage === 'prompts') {
+      console.log('🔄 Navigating from Style Explorer to photo gallery for batch generation');
+      handleBackToPhotosFromPromptSelector();
+    }
     
     // Clean up the URL object to prevent memory leaks
     if (currentUploadedImageUrl) {
@@ -7132,6 +7053,48 @@ const App = () => {
     }
   };
 
+  // Handle opening ImageAdjuster for next batch generation from PhotoGallery
+  const handleOpenImageAdjusterForNextBatch = async () => {
+    if (!lastEditablePhoto) {
+      console.warn('No lastEditablePhoto available for next batch');
+      return;
+    }
+    
+    if (lastEditablePhoto.blob) {
+      // We have the blob - can reopen the adjuster
+      const newTempUrl = URL.createObjectURL(lastEditablePhoto.blob);
+      setCurrentUploadedImageUrl(newTempUrl);
+      setCurrentUploadedSource(lastEditablePhoto.source);
+      setShowImageAdjuster(true);
+    } else if (lastEditablePhoto.dataUrl) {
+      // We have the dataUrl from localStorage - convert back to blob
+      try {
+        const response = await fetch(lastEditablePhoto.dataUrl);
+        const blob = await response.blob();
+        const newTempUrl = URL.createObjectURL(blob);
+        
+        // Update the lastEditablePhoto with the new blob for future use
+        setLastEditablePhoto({
+          ...lastEditablePhoto,
+          blob: blob,
+          imageUrl: newTempUrl
+        });
+        
+        setCurrentUploadedImageUrl(newTempUrl);
+        setCurrentUploadedSource(lastEditablePhoto.source);
+        setShowImageAdjuster(true);
+      } catch (error) {
+        console.error('Failed to restore image from dataUrl:', error);
+        alert('Failed to restore previous photo. Please take a new photo.');
+        setLastEditablePhoto(null);
+      }
+    } else {
+      // No usable image data
+      console.warn('No usable image data found');
+      setLastEditablePhoto(null);
+    }
+  };
+
   // Create stable references using useMemo to ensure they don't change
   const defaultPosition = useMemo(() => ({ x: 0, y: 0 }), []);
   const defaultScaleValue = 1;
@@ -7176,25 +7139,6 @@ const App = () => {
         outputFormat={outputFormat}
       />
 
-      {/* Top-left Style Dropdown */}
-      {showTopLeftStyleDropdown && (
-        <StyleDropdown
-          isOpen={showTopLeftStyleDropdown}
-          onClose={() => setShowTopLeftStyleDropdown(false)}
-          selectedStyle={selectedStyle}
-          updateStyle={handleUpdateStyle}
-          defaultStylePrompts={stylePrompts}
-          setShowControlOverlay={() => setShowControlOverlay(true)}
-          dropdownPosition="bottom"
-          triggerButtonClass=".global-style-btn"
-          onThemeChange={handleThemeChange}
-          selectedModel={selectedModel}
-          onGallerySelect={handleNavigateToPromptSelector}
-          onCustomPromptChange={(prompt) => updateSetting('positivePrompt', prompt)}
-          currentCustomPrompt={positivePrompt}
-          portraitType={portraitType}
-        />
-      )}
 
 
 
@@ -7542,6 +7486,7 @@ const App = () => {
           handleNextPhoto={handleNextPhoto}
           handlePhotoViewerClick={handlePhotoViewerClick}
           handleGenerateMorePhotos={handleGenerateMorePhotos}
+          handleOpenImageAdjusterForNextBatch={handleOpenImageAdjusterForNextBatch}
           handleShowControlOverlay={() => setShowControlOverlay(!showControlOverlay)}
           isGenerating={photos.some(photo => photo.generating)}
           keepOriginalPhoto={keepOriginalPhoto}

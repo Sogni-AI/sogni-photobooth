@@ -294,15 +294,6 @@ export function markDemoRenderDone(): void {
   }
 }
 
-export function clearDemoRenderStatus(): void {
-  try {
-    localStorage.removeItem('sogni_demo_render_done');
-    console.log('🧹 Cleared demo render status (user logged in)');
-  } catch (e) {
-    console.warn('Error clearing demo render status:', e);
-  }
-}
-
 // Utility function to clean up corrupted localStorage values
 export function cleanupCorruptedSettings(): void {
   try {

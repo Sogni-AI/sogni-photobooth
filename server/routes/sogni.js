@@ -1072,6 +1072,18 @@ router.get('/health', (req, res) => {
   });
 });
 
+// Status endpoint for connectivity checks
+router.head('/status', (req, res) => {
+  res.status(200).end();
+});
+
+router.get('/status', (req, res) => {
+  res.status(200).json({
+    status: 'ok',
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Test endpoint for new session management
 router.get('/test-client', ensureSessionId, async (req, res) => {
   try {
