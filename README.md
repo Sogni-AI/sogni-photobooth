@@ -25,6 +25,7 @@ Live demo → **https://photobooth.sogni.ai**
 - **DePIN Powered** – no model downloads or local GPU needed; up to 64 concurrent jobs on the Sogni Supernet.
 - **Secure Backend** – credentials live only in the Node server; the browser never sees them.
 - **Live Progress** – real-time SSE and per-image progress bars.
+- **💳 Stripe Payment Integration** – Purchase Spark Points directly in the app with credit card payments (authenticated users only).
 
 > You'll need a free [Sogni account](https://www.sogni.ai) + tokens for inference jobs.
 
@@ -34,11 +35,12 @@ Live demo → **https://photobooth.sogni.ai**
 1. [Quick Start](#-quick-start)
 2. [Project Layout](#-project-layout)
 3. [Configuration](#️-configuration)
-4. [Testing](#-testing)
-5. [Production Build & Deploy](#-production-build--deploy)
-6. [Contributing](#-contributing)
-7. [License](#-license)
-8. [Acknowledgements](#-acknowledgements)
+4. [Stripe Payment Integration](#-stripe-payment-integration)
+5. [Testing](#-testing)
+6. [Production Build & Deploy](#-production-build--deploy)
+7. [Contributing](#-contributing)
+8. [License](#-license)
+9. [Acknowledgements](#-acknowledgements)
 
 ---
 
@@ -223,6 +225,68 @@ Redis is optional - if not available, the system will use in-memory storage as a
 Running Nginx with the provided `scripts/nginx/local.conf` uses SSL certificates (expected at `/opt/homebrew/etc/nginx/ssl/sogni-local.crt` and `sogni-local.key` - see **Quick Start - Step 3b** for creation/validation instructions using `openssl`) so you can use **https://photobooth-local.sogni.ai** for the frontend and **https://photobooth-api-local.sogni.ai** for the backend, with secure cookies and proper CORS handling.
 
 The `./scripts/run.sh nginx` command is deprecated. Manual Nginx configuration and certificate management as described in **Quick Start - Step 3** is the recommended approach for this setup.
+
+---
+
+## 💳 Stripe Payment Integration
+
+The photobooth now supports credit card payments via Stripe for purchasing Spark Points. This feature allows authenticated users to buy credits directly within the app.
+
+### Features
+- **Beautiful Payment Modal** - Gradient backgrounds, smooth animations, responsive design
+- **Real-time Balance Updates** - WebSocket-powered balance updates via SDK's DataEntity pattern (no polling!)
+- **Cross-tab Notifications** - BroadcastChannel for purchase completion messages
+- **Direct API Integration** - Calls Sogni API directly via authenticated SDK (same as sogni-web)
+- **Mobile Optimized** - Works seamlessly on mobile and desktop
+
+### Architecture
+```
+Photobooth Frontend → Sogni API (via SDK) → Stripe
+                   ← ← ← ← ← ← ← ← ← ← ← ← ←
+```
+*Calls Sogni API directly using the authenticated SogniClient SDK (same as sogni-web)*
+
+### User Flow
+1. User clicks "Buy Spark" in wallet widget OR triggers "Out of Credits" popup
+2. StripePurchase modal shows available Spark Point packages
+3. User selects a package and clicks "Buy"
+4. Stripe Checkout opens in new window/tab
+5. User completes payment with credit card
+6. Stripe redirects to success page `/spark-purchase-complete/`
+7. Success page broadcasts purchase completion to main app
+8. Stripe webhook updates backend, credits are added to user account
+9. **Balance updates automatically via WebSocket** (SDK's DataEntity 'updated' event)
+10. UI displays new balance in real-time
+
+### Backend Changes Required
+
+The Sogni API backend needs updates to support photobooth redirects. See `STRIPE_INTEGRATION.md` for complete implementation details:
+
+**Key changes needed in `../sogni-api`:**
+1. Add `getPhotoboothBaseUrl()` helper function
+2. Update `StripeService.getRedirectUrl()` to support `redirectType: 'photobooth'`
+3. Update TypeScript interfaces to include `'photobooth'` redirect type
+
+### Testing
+
+Use Stripe test cards:
+- **Success**: `4242 4242 4242 4242`
+- **Decline**: `4000 0000 0000 0002`
+- Use any future expiry date and any 3-digit CVC
+
+### Files
+- **Frontend**: `src/components/stripe/*`, `src/services/stripe.ts`, `src/hooks/useSparkPurchase.ts`
+- **Success Page**: `public/spark-purchase-complete/index.html`
+- **Documentation**: `STRIPE_INTEGRATION.md`
+
+*No backend proxy needed - calls Sogni API directly via SDK*
+
+### Limitations
+- Only available for **authenticated users** (not demo mode)
+- Requires backend changes in `../sogni-api` to be deployed
+- Webhook endpoint must be configured in Stripe dashboard
+
+For complete implementation details, troubleshooting, and deployment guide, see **[STRIPE_INTEGRATION.md](./STRIPE_INTEGRATION.md)**.
 
 ---
 

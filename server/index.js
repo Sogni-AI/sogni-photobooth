@@ -113,6 +113,7 @@ app.use('/api/mobile-share', mobileShareRoutes); // Mobile sharing routes
 app.use('/api/images', imageHostingRoutes); // Image hosting routes
 app.use('/api/analytics', analyticsRoutes); // Analytics routes
 app.use('/api/contest', contestRoutes); // Contest routes
+// Note: Stripe payments call Sogni API directly via SDK (no backend proxy needed)
 
 // Health check endpoint
 app.get('/health', (req, res) => {

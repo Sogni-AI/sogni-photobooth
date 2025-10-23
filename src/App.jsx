@@ -71,6 +71,8 @@ import NetworkStatus from './components/shared/NetworkStatus';
 import ConfettiCelebration from './components/shared/ConfettiCelebration';
 // import AnalyticsDashboard from './components/admin/AnalyticsDashboard';
 import { subscribeToConnectionState, getCurrentConnectionState } from './services/api';
+import StripePurchase from './components/stripe/StripePurchase.tsx';
+import { ApiProvider } from './hooks/useSogniApi.ts';
 
 
 
@@ -568,6 +570,9 @@ const App = () => {
 
   // Add state for out of credits popup
   const [showOutOfCreditsPopup, setShowOutOfCreditsPopup] = useState(false);
+
+  // Stripe purchase modal state
+  const [showStripePurchase, setShowStripePurchase] = useState(false);
 
   // Add state for login upsell popup (for non-authenticated users who've used their demo render)
   const [showLoginUpsellPopup, setShowLoginUpsellPopup] = useState(false);
@@ -7178,7 +7183,9 @@ const App = () => {
             left: 24,
             zIndex: 1000,
           }}>
-            <AuthStatus />
+            <AuthStatus 
+              onPurchaseClick={authState.isAuthenticated && authState.authMode === 'frontend' ? () => setShowStripePurchase(true) : undefined}
+            />
           </div>
         )}
 
@@ -7506,6 +7513,7 @@ const App = () => {
       <OutOfCreditsPopup
         isOpen={showOutOfCreditsPopup}
         onClose={handleOutOfCreditsPopupClose}
+        onPurchase={authState.isAuthenticated && authState.authMode === 'frontend' ? () => setShowStripePurchase(true) : undefined}
       />
 
       {/* Login Upsell Popup for non-authenticated users who've used their demo render */}
@@ -7543,6 +7551,22 @@ const App = () => {
         isVisible={showConfetti && backgroundAnimationsEnabled}
         onComplete={() => setShowConfetti(false)}
       />
+
+      {/* Stripe Purchase Modal */}
+      {showStripePurchase && sogniClient && (
+        <ApiProvider value={sogniClient}>
+          <StripePurchase
+            onClose={() => setShowStripePurchase(false)}
+            showAlert={({ variant, title, text }) => {
+              console.log(`${variant}: ${title} - ${text}`);
+              // You can integrate with existing toast/notification system if available
+              if (showToast) {
+                showToast(text, variant === 'error' ? 'error' : 'success');
+              }
+            }}
+          />
+        </ApiProvider>
+      )}
     </>
   );
 };

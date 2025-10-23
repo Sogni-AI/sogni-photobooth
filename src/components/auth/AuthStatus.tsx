@@ -16,7 +16,11 @@ const formatTimeRemaining = (ms: number): string => {
   return `${minutes}m`;
 };
 
-export const AuthStatus: React.FC = () => {
+interface AuthStatusProps {
+  onPurchaseClick?: () => void;
+}
+
+export const AuthStatus: React.FC<AuthStatusProps> = ({ onPurchaseClick }) => {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const { isAuthenticated, authMode, user, logout, isLoading } = useSogniAuth();
   const { balances, tokenType, switchPaymentMethod } = useWallet();
@@ -32,7 +36,13 @@ export const AuthStatus: React.FC = () => {
   };
 
   const handleBuyPremiumSpark = () => {
-    // Determine the app URL based on environment
+    // If we have the onPurchaseClick callback (Stripe integration), use it
+    if (onPurchaseClick) {
+      onPurchaseClick();
+      return;
+    }
+
+    // Fallback: redirect to external wallet (for cases where Stripe isn't available)
     const hostname = window.location.hostname;
     const isLocalDev = hostname === 'localhost' || hostname === '127.0.0.1';
     const isStaging = hostname.includes('staging');

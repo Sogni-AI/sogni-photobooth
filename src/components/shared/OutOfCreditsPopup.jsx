@@ -2,7 +2,7 @@ import React, { useRef, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import '../../styles/components/OutOfCreditsPopup.css';
 
-const OutOfCreditsPopup = ({ isOpen, onClose }) => {
+const OutOfCreditsPopup = ({ isOpen, onClose, onPurchase }) => {
   const modalRef = useRef(null);
   const overlayRef = useRef(null);
 
@@ -83,12 +83,25 @@ const OutOfCreditsPopup = ({ isOpen, onClose }) => {
   }, [isOpen]);
 
   const handleGetCreditsClick = () => {
-    window.open('https://app.sogni.ai/wallet', '_blank');
-    onClose();
+    // If onPurchase is provided, use it to open the Stripe modal
+    if (onPurchase) {
+      onPurchase();
+      onClose();
+    } else {
+      // Fallback to external link
+      window.open('https://app.sogni.ai/wallet', '_blank');
+      onClose();
+    }
   };
 
   const handleInfoItemClick = () => {
-    window.open('https://app.sogni.ai/wallet', '_blank');
+    // If onPurchase is provided, use it for the purchase option
+    if (onPurchase) {
+      onPurchase();
+      onClose();
+    } else {
+      window.open('https://app.sogni.ai/wallet', '_blank');
+    }
   };
 
   if (!isOpen) return null;
@@ -106,7 +119,7 @@ const OutOfCreditsPopup = ({ isOpen, onClose }) => {
               className="sloth-mascot"
             />
           </div>
-          <h2>Uh oh! You're out of credits!</h2>
+          <h2>Uh oh! You&apos;re out of credits!</h2>
         </div>
 
         <div className="out-of-credits-modal-content">
@@ -151,6 +164,7 @@ const OutOfCreditsPopup = ({ isOpen, onClose }) => {
 OutOfCreditsPopup.propTypes = {
   isOpen: PropTypes.bool.isRequired,
   onClose: PropTypes.func.isRequired,
+  onPurchase: PropTypes.func,
 };
 
 export default OutOfCreditsPopup;
