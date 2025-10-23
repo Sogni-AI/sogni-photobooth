@@ -743,7 +743,7 @@ const ImageAdjuster = ({
                 return null;
               })()}
               {isAuthenticated && !costLoading && formattedCost && formattedCost !== '—' && (
-                <span className="cost-estimate"> • {formattedCost} {tokenLabel}</span>
+                <span className="cost-estimate">• {formattedCost} {tokenLabel}</span>
               )}
             </button>
             <button

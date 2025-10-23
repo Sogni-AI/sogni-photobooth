@@ -240,14 +240,15 @@
   font-size: 0.85em;
   opacity: 0.95;
   font-weight: 500;
-  margin-left: 4px;
+  margin-left: 0 !important;
+  padding-right: 0 !important;
 }
 
 /* Batch dropdown container */
 .batch-dropdown-container {
   position: relative;
   display: inline-flex;
-  gap: 0;
+  gap: 0 !important;
   border-radius: 8px;
   overflow: visible;
   background: linear-gradient(135deg, #ff7eb3, #ff5e8a);
@@ -263,7 +264,7 @@
 /* Split button styles */
 .confirm-button-main {
   border-radius: 0 !important;
-  padding: 10px 20px;
+  padding: 10px 6px 10px 20px !important;
   background: transparent !important;
   box-shadow: none !important;
   transform: none !important;
@@ -278,9 +279,9 @@
 
 .confirm-button-dropdown {
   border-radius: 0 !important;
-  padding: 10px 6px;
+  padding: 10px 8px !important;
   min-width: auto !important;
-  width: 30px;
+  width: auto !important;
   flex-shrink: 0;
   border-left: 1px solid rgba(255, 255, 255, 0.15);
   background: transparent !important;
@@ -403,13 +404,13 @@
   }
 
   .confirm-button-main {
-    padding-right: 18px;
+    padding: 12px 6px 12px 24px !important;
   }
 
   .confirm-button-dropdown {
-    padding: 12px 8px;
+    padding: 12px 10px !important;
     min-width: auto !important;
-    width: 35px;
+    width: auto !important;
   }
 
   .batch-dropdown-item {
@@ -449,13 +450,13 @@
   }
 
   .confirm-button-main {
-    padding-right: 12px;
+    padding: 8px 6px 8px 16px !important;
   }
 
   .confirm-button-dropdown {
-    padding: 8px 5px;
+    padding: 8px 6px !important;
     min-width: auto !important;
-    width: 26px;
+    width: auto !important;
   }
 
   .batch-dropdown-item {
