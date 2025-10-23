@@ -15,6 +15,21 @@
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
+/* Hide notification when any modal is open */
+body:has(.login-modal-overlay) .halloween-notification-tooltip,
+body:has(.out-of-credits-modal-overlay) .halloween-notification-tooltip,
+body:has(.stripe-modal-overlay) .halloween-notification-tooltip,
+body:has(.password-modal-overlay) .halloween-notification-tooltip,
+body:has(.halloween-prompt-overlay) .halloween-notification-tooltip,
+body:has(.custom-prompt-overlay) .halloween-notification-tooltip,
+body:has(.twitter-modal-overlay) .halloween-notification-tooltip,
+body:has(.pwa-install-overlay) .halloween-notification-tooltip,
+body:has(.notes-modal-overlay) .halloween-notification-tooltip,
+body:has(.info-modal-overlay) .halloween-notification-tooltip,
+body:has(.promo-modal-overlay) .halloween-notification-tooltip {
+  display: none;
+}
+
 .halloween-notification-tooltip:hover {
   transform: translateY(-2px) scale(1.02);
   box-shadow: 0 6px 25px rgba(0, 0, 0, 0.4),
