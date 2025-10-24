@@ -177,8 +177,8 @@
   }
 }
 
-/* iPad-specific fixes for better layout handling */
-@media (min-width: 768px) and (max-width: 1024px) and (-webkit-touch-callout: none) {
+/* iPad-specific fixes for better layout handling (including iPad Mini) */
+@media (min-width: 744px) and (max-width: 1024px) and (-webkit-touch-callout: none) {
   /* iPad portrait and landscape modes - remove max-height constraints that cause gaps */
   .photobooth-app {
     height: calc(var(--vh, 1vh) * 100) !important;

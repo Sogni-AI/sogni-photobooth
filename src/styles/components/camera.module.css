@@ -781,8 +781,8 @@
   }
 }
 
-/* iPad-specific fixes for portrait mode - HIGH SPECIFICITY to override mobile-portrait-fixes.css */
-@media (min-width: 768px) and (max-width: 1366px) and (orientation: portrait) {
+/* iPad-specific fixes for portrait mode (including iPad Mini) - HIGH SPECIFICITY to override mobile-portrait-fixes.css */
+@media (min-width: 744px) and (max-width: 1366px) and (orientation: portrait) {
   /* Use higher specificity to override mobile-portrait-fixes.css */
   html body #root .polaroidFrame,
   body #root .polaroidFrame {
@@ -855,8 +855,8 @@
   }
 }
 
-/* iPad landscape mode - ensure good proportions and proper spacing */
-@media (min-width: 768px) and (max-width: 1366px) and (orientation: landscape) {
+/* iPad landscape mode (including iPad Mini) - ensure good proportions and proper spacing */
+@media (min-width: 744px) and (max-width: 1366px) and (orientation: landscape) {
   .polaroidFrame {
     max-height: 80vh !important;
     max-width: 70vw !important; /* Narrower in landscape to maintain good proportions */

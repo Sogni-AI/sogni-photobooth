@@ -3,8 +3,8 @@
   These rules use maximum specificity to override any existing styles
 */
 
-/* Only apply these fixes in portrait mode on iOS devices */
-@media (orientation: portrait) and (-webkit-touch-callout: none) {
+/* Only apply these fixes in portrait mode on iOS PHONES (exclude iPads) */
+@media (max-width: 743px) and (orientation: portrait) and (-webkit-touch-callout: none) {
 
   /* FIX FOR SAFARI BOTTOM BAR - Properly Center polaroidFrame */
   body #root [class*="cameraContainer"],
