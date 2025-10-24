@@ -9,18 +9,22 @@ const LoginUpsellPopup = ({ isOpen, onClose }) => {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [loginModalMode, setLoginModalMode] = useState('signup');
 
-  // Handle overlay click to close (more reliable on iOS/touch devices)
-  const handleOverlayClick = (e) => {
-    // Only close if clicking directly on the overlay, not on modal content
-    if (e.target === e.currentTarget) {
-      onClose();
-    }
-  };
+  // Handle click outside to close
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (modalRef.current && !modalRef.current.contains(e.target)) {
+        onClose();
+      }
+    };
 
-  // Prevent modal content clicks from bubbling to overlay
-  const handleModalClick = (e) => {
-    e.stopPropagation();
-  };
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen, onClose]);
 
   // Handle escape key
   useEffect(() => {
@@ -82,22 +86,25 @@ const LoginUpsellPopup = ({ isOpen, onClose }) => {
   }, [isOpen]);
 
   const handleGetStartedClick = () => {
-    // Open signup modal with PHOTOBOOTH promo code pre-filled
+    // Open signup modal
     setLoginModalMode('signup');
     setShowLoginModal(true);
-    onClose();
+    // Don't close the popup yet - wait until login modal is closed
   };
 
   const handleCloseLoginModal = () => {
     setShowLoginModal(false);
+    // Now close the out of credits popup after login modal closes
+    onClose();
   };
 
-  if (!isOpen) return null;
+  if (!isOpen && !showLoginModal) return null;
 
   return (
     <>
-    <div className="out-of-credits-modal-overlay" ref={overlayRef} onClick={handleOverlayClick}>
-      <div className="out-of-credits-modal" ref={modalRef} onClick={handleModalClick}>
+    {isOpen && !showLoginModal && (
+    <div className="out-of-credits-modal-overlay" ref={overlayRef}>
+      <div className="out-of-credits-modal" ref={modalRef}>
         <button className="out-of-credits-modal-close" onClick={onClose}>×</button>
 
         <div className="out-of-credits-modal-header">
@@ -141,22 +148,16 @@ const LoginUpsellPopup = ({ isOpen, onClose }) => {
             <span className="get-credits-text">Get Started Free</span>
             <span className="get-credits-arrow">→</span>
           </button>
-
-          <button
-            className="out-of-credits-close-btn"
-            onClick={onClose}
-          >
-            Close
-          </button>
         </div>
       </div>
     </div>
-        <LoginModal
-          open={showLoginModal}
-          mode={loginModalMode}
-          onModeChange={setLoginModalMode}
-          onClose={handleCloseLoginModal}
-        />
+    )}
+    <LoginModal
+      open={showLoginModal}
+      mode={loginModalMode}
+      onModeChange={setLoginModalMode}
+      onClose={handleCloseLoginModal}
+    />
     </>
   );
 };

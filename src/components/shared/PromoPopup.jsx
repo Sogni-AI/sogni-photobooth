@@ -6,18 +6,22 @@ const PromoPopup = ({ isOpen, onClose }) => {
   const modalRef = useRef(null);
   const overlayRef = useRef(null);
 
-  // Handle overlay click to close (more reliable on iOS/touch devices)
-  const handleOverlayClick = (e) => {
-    // Only close if clicking directly on the overlay, not on modal content
-    if (e.target === e.currentTarget) {
-      onClose();
-    }
-  };
+  // Handle click outside to close
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (modalRef.current && !modalRef.current.contains(e.target)) {
+        onClose();
+      }
+    };
 
-  // Prevent modal content clicks from bubbling to overlay
-  const handleModalClick = (e) => {
-    e.stopPropagation();
-  };
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen, onClose]);
 
   // Handle escape key
   useEffect(() => {
@@ -86,8 +90,8 @@ const PromoPopup = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="promo-modal-overlay" ref={overlayRef} onClick={handleOverlayClick}>
-      <div className="promo-modal" ref={modalRef} onClick={handleModalClick}>
+    <div className="promo-modal-overlay" ref={overlayRef}>
+      <div className="promo-modal" ref={modalRef}>
         <button className="promo-modal-close" onClick={onClose}>×</button>
         
         <div className="promo-modal-header">

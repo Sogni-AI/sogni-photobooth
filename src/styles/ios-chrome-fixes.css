@@ -14,7 +14,6 @@
     touch-action: manipulation;
     -webkit-touch-callout: none;
     -webkit-user-select: none;
-    user-select: none;
   }
   
   /* Ensure root container has no gaps */
@@ -49,8 +48,7 @@
     }
 
     .camera-start-menu .start-menu-title {
-      font-size: 2rem !important;
-      margin-bottom: 8px !important;
+      font-size: 1.6rem !important;
     }
 
     .camera-start-menu .start-menu-description {
@@ -142,6 +140,43 @@
   }
 }
 
+/* iPad Mini specific fixes for camera view buttons in portrait mode */
+@media (min-width: 744px) and (max-width: 834px) and (orientation: portrait) and (-webkit-touch-callout: none) {
+  /* Override mobile-portrait-fixes.css for thumbnail and camera flip buttons on iPad Mini */
+  /* These buttons should be positioned WITHIN the white bottom border, not overlapping the video */
+  html body #root [class*="thumbnailButtonCorner"],
+  body #root [class*="thumbnailButtonCorner"] {
+    bottom: 24px !important; /* Match iPad bottomControls spacing */
+    left: 24px !important;  /* Match iPad border padding */
+    width: 48px !important;  /* Standard size for iPad */
+    height: 48px !important; /* Standard size for iPad */
+    transform: translateY(-50%) !important;
+  }
+  
+  html body #root [class*="cameraFlipButtonWithThumbnail"],
+  body #root [class*="cameraFlipButtonWithThumbnail"] {
+    bottom: 24px !important; /* Match iPad bottomControls spacing */
+    left: 80px !important;   /* 24px padding + 48px thumbnail + 8px gap */
+    width: 36px !important;  /* Standard size for iPad */
+    height: 36px !important; /* Standard size for iPad */
+    transform: translateY(-50%) !important;
+  }
+  
+  /* Ensure bottom controls are also properly positioned */
+  html body #root [class*="bottomControls"],
+  body #root [class*="bottomControls"] {
+    bottom: 24px !important; /* Consistent spacing from bottom */
+    padding: 0 24px !important; /* Match border padding */
+  }
+  
+  /* Fix AspectRatioDropdown positioning on iPad Mini */
+  .aspect-ratio-dropdown.bottom-right {
+    bottom: 24px !important; /* Match iPad bottomControls spacing */
+    right: 24px !important;  /* Match iPad border padding */
+    transform: translateY(-50%) !important;
+  }
+}
+
 /* iPad-specific fixes for better layout handling */
 @media (min-width: 768px) and (max-width: 1024px) and (-webkit-touch-callout: none) {
   /* iPad portrait and landscape modes - remove max-height constraints that cause gaps */
@@ -220,85 +255,5 @@
       height: 100vh !important;
       height: calc(var(--vh, 1vh) * 100) !important;
     }
-  }
-}
-
-/* iPad Mini specific fixes - smaller viewport needs more compact layout */
-@media (min-width: 601px) and (max-width: 820px) and (max-height: 1100px) and (orientation: portrait) and (-webkit-touch-callout: none) {
-  /* Make the entire layout more compact for iPad Mini */
-  .camera-start-menu .start-menu-content {
-    padding: 10px 20px !important;
-    overflow-y: auto !important;
-    overflow-x: hidden !important;
-    -webkit-overflow-scrolling: touch !important;
-    max-height: calc(var(--vh, 1vh) * 100) !important;
-  }
-
-  .camera-start-menu .start-menu-title {
-    font-size: 1.8rem !important;
-    margin-top: -10px !important;
-    margin-bottom: 4px !important;
-  }
-
-  .camera-start-menu .start-menu-tagline {
-    font-size: 1rem !important;
-    margin-bottom: 15px !important;
-  }
-
-  /* Intro section - more compact camera and video */
-  .camera-start-menu.phase-intro .intro-media-container {
-    gap: 20px !important;
-    margin: 25px 0 20px 0 !important;
-  }
-
-  .camera-start-menu.phase-intro .intro-camera-image {
-    max-width: 220px !important;
-  }
-
-  .camera-start-menu.phase-intro .intro-video-container {
-    width: 240px !important;
-  }
-
-  .camera-start-menu.phase-intro .shoot-your-own-btn {
-    font-size: 1.6rem !important;
-    margin: 0 0 8px !important;
-    padding: 0 25px 10px !important;
-  }
-
-  /* Options section - smaller polaroids and tighter spacing */
-  .camera-start-menu.phase-options .polaroid-options-container {
-    gap: 18px !important;
-    margin-top: 8px !important;
-    margin-bottom: 15px !important;
-    padding: 0 15px !important;
-  }
-
-  .camera-start-menu.phase-options .polaroid-button {
-    width: 200px !important;
-    min-width: 200px !important;
-  }
-
-  .camera-start-menu.phase-options .polaroid-caption {
-    font-size: 1.2rem !important;
-  }
-
-  .camera-start-menu.phase-options .step-separator {
-    font-size: 1.3rem !important;
-    margin: 10px 6px !important;
-    margin-bottom: 0 !important;
-  }
-
-  .camera-start-menu.phase-options .photo-options-group .step-separator {
-    margin-bottom: 25px !important;
-  }
-
-  .camera-start-menu.phase-options .polaroid-label {
-    font-size: 16px !important;
-  }
-
-  /* Ensure metrics section doesn't add too much height */
-  .camera-start-menu .metrics-section {
-    margin-top: 20px !important;
-    padding-top: 15px !important;
   }
 } 
