@@ -1237,8 +1237,8 @@ const App = () => {
   // Add state for QR code modal (Kiosk Mode)
   const [qrCodeData, setQrCodeData] = useState(null);
 
-  // Add state for splash screen
-  const [showSplashScreen, setShowSplashScreen] = useState(true);
+  // Add state for splash screen (DISABLED - CameraStartMenu is now the splash screen)
+  const [showSplashScreen, setShowSplashScreen] = useState(false);
   const [splashTriggeredByInactivity, setSplashTriggeredByInactivity] = useState(false);
   
   // Debug: Log when splash screen state changes
@@ -1289,19 +1289,20 @@ const App = () => {
       clearTimeout(inactivityTimerRef.current);
     }
     
-    if (showSplashOnInactivity && !showSplashScreen) {
-      console.log(`⏰ Setting new timer for ${inactivityTimeout} seconds`);
-      inactivityTimerRef.current = setTimeout(() => {
-        console.log('🚀 Inactivity timeout reached - showing splash screen');
-        setSplashTriggeredByInactivity(true);
-        setShowSplashScreen(true);
-      }, inactivityTimeout * 1000);
-    } else {
-      console.log('❌ Not setting timer:', {
-        showSplashOnInactivity: showSplashOnInactivity ? 'enabled' : 'disabled',
-        showSplashScreen: showSplashScreen ? 'already showing' : 'hidden'
-      });
-    }
+    // DISABLED: Old splash screen inactivity trigger (CameraStartMenu is now the splash screen)
+    // if (showSplashOnInactivity && !showSplashScreen) {
+    //   console.log(`⏰ Setting new timer for ${inactivityTimeout} seconds`);
+    //   inactivityTimerRef.current = setTimeout(() => {
+    //     console.log('🚀 Inactivity timeout reached - showing splash screen');
+    //     setSplashTriggeredByInactivity(true);
+    //     setShowSplashScreen(true);
+    //   }, inactivityTimeout * 1000);
+    // } else {
+    //   console.log('❌ Not setting timer:', {
+    //     showSplashOnInactivity: showSplashOnInactivity ? 'enabled' : 'disabled',
+    //     showSplashScreen: showSplashScreen ? 'already showing' : 'hidden'
+    //   });
+    // }
   }, [showSplashOnInactivity, inactivityTimeout, showSplashScreen]);
 
   // Set up inactivity detection
@@ -1399,6 +1400,8 @@ const App = () => {
       updateUrlWithPrompt(null); // Clear URL parameter
       setCurrentHashtag(null); // Clear hashtag
       updateSetting('halloweenContext', false); // Clear Halloween context
+      // Mark that user has explicitly selected a style
+      localStorage.setItem('sogni_style_explicitly_selected', 'true');
       return;
     }
     
@@ -1418,6 +1421,9 @@ const App = () => {
     
     // Update current hashtag for sharing
     setCurrentHashtag(getHashtagForStyle(style));
+    
+    // Mark that user has explicitly selected a style
+    localStorage.setItem('sogni_style_explicitly_selected', 'true');
   };
 
 
@@ -1636,6 +1642,9 @@ const App = () => {
     updateUrlWithPrompt(promptKey);
     // Don't automatically redirect - let user choose to navigate with camera/photos buttons
     
+    // Mark that user has explicitly selected a style
+    localStorage.setItem('sogni_style_explicitly_selected', 'true');
+    
     // Close the photo popup to provide visual feedback that the style was selected
     setSelectedPhotoIndex(null);
   };
@@ -1648,6 +1657,8 @@ const App = () => {
     updateSetting('halloweenContext', false); // Clear Halloween context
     // Update URL (randomMix will clear the prompt parameter)
     updateUrlWithPrompt('randomMix');
+    // Mark that user has explicitly selected a style
+    localStorage.setItem('sogni_style_explicitly_selected', 'true');
     // Don't automatically redirect - let user choose to navigate with camera/photos buttons
   };
 
@@ -1659,6 +1670,8 @@ const App = () => {
     updateSetting('halloweenContext', false); // Clear Halloween context
     // Update URL (random will clear the prompt parameter)
     updateUrlWithPrompt('random');
+    // Mark that user has explicitly selected a style
+    localStorage.setItem('sogni_style_explicitly_selected', 'true');
     // Don't automatically redirect - let user choose to navigate with camera/photos buttons
   };
 
@@ -1670,6 +1683,8 @@ const App = () => {
     updateSetting('halloweenContext', false); // Clear Halloween context
     // Update URL (oneOfEach will clear the prompt parameter)
     updateUrlWithPrompt('oneOfEach');
+    // Mark that user has explicitly selected a style
+    localStorage.setItem('sogni_style_explicitly_selected', 'true');
     // Don't automatically redirect - let user choose to navigate with camera/photos buttons
   };
 
@@ -5957,7 +5972,6 @@ const App = () => {
             onBrowsePhoto={handleBrowsePhotoOption}
             onDragPhoto={handleDragPhotoOption}
             isProcessing={!!activeProjectReference.current || isPhotoButtonCooldown}
-            hasPhotos={photos.length > 0}
             onViewPhotos={null} // Remove the onViewPhotos prop as we're moving the button out
             // Style selector props
             selectedStyle={selectedStyle}
@@ -5970,6 +5984,23 @@ const App = () => {
             onCustomPromptChange={(prompt) => updateSetting('positivePrompt', prompt)}
             currentCustomPrompt={positivePrompt}
             portraitType={portraitType}
+            // Photo tracking props
+            originalPhotoUrl={photos.find(p => p.isOriginal)?.originalDataUrl || null}
+            photoSourceType={photos.find(p => p.isOriginal)?.sourceType || null}
+            reusablePhotoUrl={
+              (lastEditablePhoto?.dataUrl && !lastEditablePhoto.dataUrl.includes('albert-einstein'))
+                ? lastEditablePhoto.dataUrl
+                : (lastPhotoData?.dataUrl && !lastPhotoData.dataUrl.includes('albert-einstein'))
+                  ? lastPhotoData.dataUrl
+                  : null
+            }
+            reusablePhotoSourceType={
+              (lastEditablePhoto?.dataUrl && !lastEditablePhoto.dataUrl.includes('albert-einstein'))
+                ? (lastEditablePhoto.source === 'camera' ? 'camera' : 'upload')
+                : (lastPhotoData?.dataUrl && !lastPhotoData.dataUrl.includes('albert-einstein'))
+                  ? lastPhotoData.sourceType
+                  : null
+            }
           />
           
 
@@ -7375,6 +7406,7 @@ const App = () => {
             top: 24,
             left: 24,
             zIndex: 1000,
+            filter: 'drop-shadow(0 4px 12px rgba(0, 0, 0, 0.15))',
           }}>
             <AuthStatus 
               onPurchaseClick={authState.isAuthenticated && authState.authMode === 'frontend' ? () => setShowStripePurchase(true) : undefined}

@@ -457,7 +457,7 @@ export const AuthStatus: React.FC<AuthStatusProps> = ({ onPurchaseClick, onSignu
             style={{
               width: '100%',
               border: 'none',
-              background: '#4a5568',
+              background: '#718096',
               color: 'white',
               cursor: isLoading ? 'not-allowed' : 'pointer',
               borderRadius: '6px',
@@ -467,13 +467,17 @@ export const AuthStatus: React.FC<AuthStatusProps> = ({ onPurchaseClick, onSignu
               textAlign: 'center',
               opacity: isLoading ? 0.5 : 1,
               outline: 'none',
-              transition: 'opacity 0.2s'
+              transition: 'all 0.2s'
             }}
             onMouseOver={(e) => {
-              if (!isLoading) e.currentTarget.style.opacity = '0.8';
+              if (!isLoading) {
+                e.currentTarget.style.background = '#4a5568';
+              }
             }}
             onMouseOut={(e) => {
-              if (!isLoading) e.currentTarget.style.opacity = '1';
+              if (!isLoading) {
+                e.currentTarget.style.background = '#718096';
+              }
             }}
           >
             {isLoading ? 'Logging out...' : 'Logout'}

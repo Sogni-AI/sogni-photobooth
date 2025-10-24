@@ -81,7 +81,7 @@
   align-items: center;
   justify-content: center;
   gap: 60px;
-  margin-bottom: 40px;
+  margin-bottom: 20px;
   width: 100%;
 }
 
@@ -90,7 +90,7 @@
   position: relative;
   animation: floatEffect 3s infinite ease-in-out;
   transform-origin: center center;
-  margin-top: 80px;
+  margin-top: -20px;
 }
 
 .camera-bubble {
@@ -334,15 +334,44 @@
   }
 }
 
+/* iPad portrait - use more vertical space */
+@media (min-width: 693px) and (max-width: 1024px) and (orientation: portrait) {
+  .splash-layout {
+    gap: 80px;
+    margin-bottom: 30px;
+  }
+
+  .polaroid-splash-container {
+    margin-top: -40px;
+  }
+
+  .polaroid-image {
+    max-width: 350px;
+  }
+
+  .video-container {
+    width: 400px;
+  }
+
+  .splash-tagline {
+    font-size: 4.5rem;
+    margin: 30px 0;
+  }
+}
+
 /* Main responsive styles */
 @media (max-width: 692px) {
-  
+
   .splash-layout {
     flex-direction: column;
     gap: 1px;
-    margin-bottom: 30px;
+    margin-bottom: 10px;
   }
-  
+
+  .polaroid-splash-container {
+    margin-top: 20px;
+  }
+
   .camera-bubble {
     top: -40px;
     font-size: 12px;
@@ -351,16 +380,16 @@
   .polaroid-image {
     max-width: 160px;
   }
-  
+
   .video-container {
     width: 280px;
     height: 420px; /* Proportional to 340x510 */
   }
-  
+
   .splash-tagline {
     font-size: 3rem;
     padding: 12px 25px;
-    margin: 0 0 8px 0;
+    margin: 0;
   }
 
   /* Mobile-specific animations that ensure elements move fully off screen */
@@ -407,22 +436,27 @@
 }
 
 @media (max-width: 576px) {
-  
+
   .splash-layout {
     gap: 1px;
+    margin-bottom: 8px;
   }
-  
+
+  .polaroid-splash-container {
+    margin-top: 15px;
+  }
+
   .camera-bubble {
     font-size: 11px;
     padding: 5px 10px;
     top: -35px;
   }
-  
+
   .video-container {
     width: 240px;
     height: 360px; /* Proportional to 340x510 */
   }
-  
+
   .splash-tagline {
     font-size: 2.5rem;
     padding: 10px 20px;
@@ -468,45 +502,45 @@
     height: calc(var(--vh, 1vh) * 100);
     display: flex;
     justify-content: space-between;
-    padding: 20px 0;
+    padding: 10px 0;
     box-sizing: border-box;
     min-height: 500px; /* Ensure minimum usable space */
   }
-  
+
   .splash-layout {
-    margin-bottom: 15px;
-    gap: 5px;
+    margin-bottom: 8px;
+    gap: 2px;
     flex: 1;
     align-items: center;
     justify-content: center;
     min-height: 0; /* Allow shrinking */
   }
-  
+
   .polaroid-splash-container {
     margin-top: 0; /* Remove the large top margin */
   }
-  
+
   .polaroid-image {
     max-width: 120px; /* Even smaller camera for short screens */
   }
-  
+
   .camera-bubble {
     top: -30px;
     font-size: 10px;
     padding: 4px 8px;
   }
-  
+
   .video-container {
     width: 200px;
     height: 300px; /* Proportional to 340x510 */
   }
-  
+
   .splash-cta-section {
     flex-shrink: 0;
     margin-bottom: env(safe-area-inset-bottom, 10px);
     margin-top: auto; /* Push to bottom when space is available */
   }
-  
+
   .splash-tagline {
     font-size: 2rem; /* Smaller text for short screens */
     padding: 8px 15px;
@@ -517,25 +551,33 @@
 
 /* Extra short screens (iPhone SE 1st gen, etc.) */
 @media (max-width: 375px) and (max-height: 600px) and (orientation: portrait) {
+  .splash-content {
+    padding: 5px 0;
+  }
+
   .splash-layout {
     gap: 0;
-    margin-bottom: 10px;
+    margin-bottom: 5px;
   }
-  
+
+  .polaroid-splash-container {
+    margin-top: 0;
+  }
+
   .polaroid-image {
     max-width: 100px;
   }
-  
+
   .video-container {
     width: 160px;
     height: 240px; /* Proportional to 340x510 */
   }
-  
+
   .splash-tagline {
     font-size: 1.75rem;
     padding: 6px 12px;
   }
-  
+
   .camera-bubble {
     display: none; /* Hide bubble on very small screens to save space */
   }

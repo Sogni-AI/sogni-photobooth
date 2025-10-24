@@ -4,7 +4,6 @@ import HalloweenPromptPopup from './HalloweenPromptPopup';
 import { AuthStatus } from '../auth/AuthStatus';
 import { useMusicPlayer } from '../../context/MusicPlayerContext';
 import { useApp } from '../../context/AppContext';
-import { useNavigation } from '../AppRouter';
 import { styleIdToDisplay } from '../../utils';
 import promptsDataRaw from '../../prompts.json';
 import '../../styles/film-strip.css'; // Reuse existing film-strip styles
@@ -17,7 +16,6 @@ const HalloweenEvent = () => {
   const [pumpkinDismissed, setPumpkinDismissed] = useState(false);
   const { isEnabled, enable: enableMusic } = useMusicPlayer();
   const { updateSetting, stylePrompts } = useApp();
-  const { navigateToCamera } = useNavigation();
 
   const handleDismissOverlay = () => {
     setShowOverlay(false);
@@ -63,8 +61,9 @@ const HalloweenEvent = () => {
     updateSetting('selectedStyle', 'custom');
     updateSetting('halloweenContext', true); // Flag to enable Halloween-specific Twitter share message
 
-    // Navigate to camera view WITHOUT page reload
-    navigateToCamera();
+    // Navigate to main app (start menu will show by default)
+    console.log('🎃 Navigating to camera start menu');
+    window.location.href = '/';
   };
 
   const handleStyleSelect = (styleKey) => {
@@ -101,8 +100,9 @@ const HalloweenEvent = () => {
     updateSetting('positivePrompt', prompt);
     updateSetting('halloweenContext', true); // Flag to enable Halloween-specific Twitter share message
 
-    // Navigate to camera view WITHOUT page reload
-    navigateToCamera();
+    // Navigate to main app (start menu will show by default)
+    console.log('🎃 Navigating to camera start menu');
+    window.location.href = '/';
   };
 
   return (

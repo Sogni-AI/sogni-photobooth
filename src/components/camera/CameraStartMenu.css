@@ -11,12 +11,16 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: rgba(0, 0, 0, 0.75);
+  background: #ffeb3b;
   z-index: 10;
-  -webkit-backdrop-filter: blur(4px);
-  backdrop-filter: blur(4px);
-  overflow: hidden; /* Ensure slideshow doesn't cause scrolling */
-  transition: opacity 0.5s ease-out, backdrop-filter 0.5s ease-out;
+  overflow: hidden;
+  transition: opacity 0.5s ease-out;
+  border: none;
+  outline: none;
+}
+
+.start-menu-content {
+  position: relative;
 }
 
 .camera-start-menu.exiting {
@@ -26,18 +30,21 @@
 }
 
 .start-menu-content {
-  background-color: #222;
-  border-radius: 16px;
-  padding: 36px;
-  max-width: 600px;
-  width: 90%;
+  background-color: transparent;
+  border-radius: 0;
+  padding: 0;
+  max-width: 100%;
+  width: 100%;
+  max-height: 100vh;
+  max-height: calc(var(--vh, 1vh) * 100);
   color: white;
   text-align: center;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  position: relative;
-  margin-right: auto; /* Changed from 320px to auto for centering */
-  margin-left: auto; /* Added for symmetrical centering */
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  overflow: visible;
   transition: transform 0.5s cubic-bezier(0.17, 0.67, 0.83, 0.67), opacity 0.5s ease-out;
 }
 
@@ -48,202 +55,752 @@
 
 .start-menu-title {
   font-size: 2.5rem;
-  margin-bottom: 12px;
-  background: linear-gradient(90deg, #ff7eb3, #7868e6);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  margin-bottom: 8px;
+  margin-top: -15px;
+  color: #1a1a1a;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
   font-weight: 700;
+  font-family: 'Permanent Marker', cursive;
+  letter-spacing: 1.5px;
+  transition: all 0.6s ease;
 }
 
-.start-menu-description {
-  font-size: 1.2rem;
-  margin-bottom: 32px;
-  color: #aaa;
+.start-menu-tagline {
+  font-size: 1.15rem;
+  margin-bottom: 30px;
+  color: #333;
+  font-weight: 600;
+  text-transform: lowercase;
+  letter-spacing: 0.5px;
+  transition: all 0.6s ease;
 }
 
-/* Style Selector Section */
-.style-selector-section {
-  margin-bottom: 32px;
+/* Top Content Section */
+.top-content {
+  width: 100%;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Bottom Layout - Camera and Video Stack in Bottom Right */
+.bottom-layout {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  display: flex;
+  align-items: flex-end;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.bottom-layout > * {
+  pointer-events: auto;
+}
+
+/* Camera-Video Stack */
+.camera-video-stack {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+}
+
+/* Subtle glow connecting camera to video */
+.camera-video-stack::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 100px;
+  height: 200px;
+  background: radial-gradient(ellipse at center, rgba(255, 237, 78, 0.15) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Video Container */
+.video-container {
+  position: relative;
+  width: 220px;
+  max-width: 220px;
+  order: 2;
+  z-index: 2;
+}
+
+.splash-video {
+  width: 100%;
+  height: auto;
+  max-height: none;
+  object-fit: contain;
+  display: block;
+}
+
+/* Audio Toggle Button - Bottom Right corner of video */
+.video-container .audio-toggle-btn {
+  position: absolute;
+  bottom: 6px;
+  right: 6px;
+  background: rgba(0, 0, 0, 0.3);
+  border: none;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: rgba(255, 255, 255, 0.7);
+  transition: all 0.3s ease;
+  z-index: 6;
+  backdrop-filter: blur(8px);
+  opacity: 1;
+}
+
+/* When audio is ON, hide button unless hovered */
+.video-container:not(:hover) .audio-toggle-btn[aria-label="Mute audio"] {
+  opacity: 0;
+}
+
+.video-container .audio-toggle-btn:hover {
+  background: rgba(0, 0, 0, 0.6);
+  color: white;
+  transform: scale(1.05);
+  opacity: 1;
+}
+
+.video-container .audio-toggle-btn:active {
+  transform: scale(0.98);
+}
+
+/* Polaroid Camera Mascot - Above Video */
+.camera-video-stack .polaroid-camera-container {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  animation: gentleFloat 3s infinite ease-in-out;
+  order: 1;
+  margin-bottom: -35px;
+  z-index: 3;
+}
+
+.camera-video-stack .polaroid-camera-image {
+  max-width: 220px;
+  height: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.3));
+  border-radius: 15px;
+  transition: transform 0.3s ease;
+}
+
+.camera-video-stack .polaroid-camera-container:hover .polaroid-camera-image {
+  transform: scale(1.05) rotate(2deg);
+}
+
+.camera-video-stack .camera-speech-bubble {
+  position: relative;
+  margin-bottom: 8px;
+  background: rgba(26, 26, 26, 0.9);
+  color: #FFED4E;
+  padding: 6px 12px;
+  border-radius: 16px;
+  font-family: 'Helvetica', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  text-align: center;
+  align-self: center;
+}
+
+.camera-video-stack .camera-speech-bubble::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: rgba(26, 26, 26, 0.9);
+}
+
+@keyframes gentleFloat {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes bubbleWiggle {
+  0%, 100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  25% {
+    transform: translateY(-3px) rotate(1deg);
+  }
+  75% {
+    transform: translateY(-3px) rotate(-1deg);
+  }
+}
+
+/* Intro Section Styling */
+.intro-section {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.intro-media-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 70px;
+  margin: 30px 0 35px 0;
+}
+
+.intro-section.exiting .intro-camera-container {
+  animation: exitLeft 1.5s cubic-bezier(0.6, 0, 0.9, 0.4) forwards;
+}
+
+.intro-section.exiting .intro-video-wrapper {
+  animation: exitRight 1.5s cubic-bezier(0.6, 0, 0.9, 0.4) forwards;
+}
+
+.intro-section.exiting .shoot-your-own-btn {
+  animation: exitDown 1.5s cubic-bezier(0.6, 0, 0.9, 0.4) forwards;
+}
+
+@keyframes exitLeft {
+  0% {
+    transform: translateX(0) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(-120vw) rotate(-45deg);
+    opacity: 0;
+  }
+}
+
+@keyframes exitRight {
+  0% {
+    transform: translateX(0) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(120vw) rotate(45deg);
+    opacity: 0;
+  }
+}
+
+@keyframes exitDown {
+  0% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100vh);
+    opacity: 0;
+  }
+}
+
+@keyframes fadeOut {
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.intro-camera-container {
+  position: relative;
+  animation: gentleFloat 3s infinite ease-in-out;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.intro-camera-container .camera-speech-bubble {
+  position: relative;
+  margin-bottom: 12px;
+  background: rgba(26, 26, 26, 0.9);
+  color: #FFED4E;
+  padding: 8px 16px;
+  border-radius: 18px;
+  font-family: 'Helvetica', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  text-align: center;
+  animation: bubbleWiggle 2.5s infinite ease-in-out;
+}
+
+.intro-camera-container .camera-speech-bubble::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: rgba(26, 26, 26, 0.9);
+}
+
+.intro-camera-image {
+  max-width: 300px;
+  height: auto;
+  filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.3));
+}
+
+.intro-video-wrapper {
+  position: relative;
+}
+
+.intro-video-container {
+  position: relative;
+  width: 280px;
+}
+
+.intro-video {
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+  display: block;
+}
+
+.intro-video-container .audio-toggle-btn {
+  position: absolute;
+  bottom: 6px;
+  right: 6px;
+  background: rgba(0, 0, 0, 0.3);
+  border: none;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: rgba(255, 255, 255, 0.7);
+  transition: all 0.3s ease;
+  z-index: 6;
+  backdrop-filter: blur(8px);
+  opacity: 1;
+}
+
+.intro-video-container:not(:hover) .audio-toggle-btn[aria-label="Mute audio"] {
+  opacity: 0;
+}
+
+.intro-video-container .audio-toggle-btn:hover {
+  background: rgba(0, 0, 0, 0.6);
+  color: white;
+  transform: scale(1.05);
+  opacity: 1;
+}
+
+.shoot-your-own-btn {
+  font-family: "Permanent Marker", cursive;
+  font-size: 2.2rem;
+  color: #1a1a1a;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0 36px 12px;
+  margin: 0;
+  transition: all 0.3s ease;
+  text-transform: lowercase;
+  letter-spacing: 0.8px;
+}
+
+.shoot-your-own-btn:hover {
+  transform: scale(1.05);
+  text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.shoot-your-own-btn:active {
+  transform: scale(0.98);
+}
+
+.serve-face-text {
+  text-decoration: none;
+  transition: text-decoration 0s;
+}
+
+.shoot-your-own-btn:hover .serve-face-text {
+  text-decoration: underline;
+}
+
+/* Splash return button - bottom left - matches corner-btn style */
+.splash-return-btn {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  background: #ff5252;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  padding-bottom: 10px;
+  border-radius: 8px;
+  font-family: "Permanent Marker", cursive;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  z-index: 9999;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.splash-return-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.splash-return-btn:active {
+  transform: translateY(0);
+}
+
+/* Make login link and username black for visibility on yellow background */
+/* Style only the main login/username button, NOT the dropdown menu buttons */
+body:has(.camera-start-menu) div[style*="position: fixed"][style*="top: 24"][style*="left: 24"][style*="z-index: 1000"] > button {
+  background: transparent !important;
+  color: #000000 !important;
+  box-shadow: none !important;
+  font-weight: 700 !important;
+  text-decoration: underline;
+}
+
+body:has(.camera-start-menu) div[style*="position: fixed"][style*="top: 24"][style*="left: 24"][style*="z-index: 1000"] > button:hover {
+  background: transparent !important;
+  color: #000000 !important;
+  opacity: 0.8;
+}
+
+/* Make username black (it has the gradient) but keep spark balance colors */
+/* Only target the top-level username display, not dropdown content */
+body:has(.camera-start-menu) div[style*="position: fixed"][style*="top: 24"][style*="left: 24"][style*="z-index: 1000"] > div > div[style*="display: flex"] span[style*="linear-gradient"] {
+  background: transparent !important;
+  -webkit-background-clip: unset !important;
+  -webkit-text-fill-color: #000000 !important;
+  background-clip: unset !important;
+  color: #000000 !important;
+  font-weight: 700 !important;
+}
+
+/* Make separator "|" black - only in the top-level display */
+body:has(.camera-start-menu) div[style*="position: fixed"][style*="top: 24"][style*="left: 24"][style*="z-index: 1000"] > div > div[style*="display: flex"] {
+  color: #000000 !important;
+}
+
+/* Hide help/settings/login buttons during intro phase */
+.camera-start-menu.phase-intro ~ .header-settings-btn,
+.camera-start-menu.phase-intro ~ .header-info-btn,
+body:has(.camera-start-menu.phase-intro) .header-settings-btn,
+body:has(.camera-start-menu.phase-intro) .header-info-btn,
+body:has(.camera-start-menu.phase-intro) div[style*="position: fixed"][style*="top: 24"][style*="left: 24"][style*="z-index: 1000"] {
+  display: none !important;
+}
+
+/* Options Section */
+.options-section {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0 20px;
+}
+
+/* Title and tagline stay visible - no fade */
+
+@keyframes fadeIn {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+/* Polaroid Options Container - All 3 in a row on desktop */
+.polaroid-options-container {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 28px;
+  width: 100%;
+  max-width: 1000px;
+  margin: 0 auto;
+  margin-top: 40px;
+  margin-bottom: 50px;
+  padding: 0 40px;
+  flex-shrink: 0;
+}
+
+/* Polaroid slide-up animations */
+.polaroid-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  opacity: 0;
+  transform: translateY(200px);
+  animation: slideUpFade 0.9s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.polaroid-1 {
+  animation-delay: 0.2s;
+}
+
+.polaroid-2 {
+  animation-delay: 0.5s;
+}
+
+.polaroid-2 .polaroid-button {
+  transform: rotate(2deg);
+}
+
+.polaroid-2 .polaroid-button:hover {
+  transform: scale(1.05) rotate(0deg);
+}
+
+.polaroid-3 {
+  animation-delay: 0.8s;
+}
+
+.polaroid-3 .polaroid-button {
+  transform: rotate(-2deg);
+}
+
+.polaroid-3 .polaroid-button:hover {
+  transform: scale(1.05) rotate(0deg);
+}
+
+@keyframes slideUpFade {
+  0% {
+    opacity: 0;
+    transform: translateY(200px);
+  }
+  60% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* "then" separator text */
+.step-separator {
+  font-family: "Permanent Marker", cursive;
+  font-size: 1.6rem;
+  color: #333;
+  text-transform: lowercase;
+  margin: 0 14px;
+  align-self: center;
+  flex-shrink: 0;
+  opacity: 0;
+  transform: translateY(30px);
+  animation: fadeInUp 0.7s ease-out forwards;
+  animation-delay: 0.6s;
+  margin-bottom: 35px; /* Offset for caption height to center with polaroid frames */
+}
+
+@keyframes fadeInUp {
+  0% {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(-17.5px); /* Center to polaroid frame, accounting for caption */
+  }
+}
+
+/* Photo options group wrapper */
+.photo-options-group {
+  display: flex;
+  gap: 16px;
+  align-items: center;
 }
 
 .section-title {
-  font-size: 1.1rem;
+  font-size: 1rem;
   font-weight: 700;
-  color: #ff7eb3;
+  color: #1a1a1a;
   text-align: center;
   margin-bottom: 16px;
-  letter-spacing: 1px;
-  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  text-transform: lowercase;
+  text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.5);
 }
 
-.camera-start-menu .style-selector-button {
-  width: 100%;
-  max-width: 280px;
-  margin: 0 auto 8px auto;
-  background: linear-gradient(135deg, #ff7eb3, #7868e6);
-  border: none;
-  border-radius: 16px;
-  padding: 14px 20px;
+/* Base polaroid button styling */
+.polaroid-button {
+  width: 264px;
+  min-width: 264px;
+  aspect-ratio: 2 / 3;
+  margin: 0;
+  background: white;
+  border: 4px solid white;
+  border-radius: 2px;
+  padding: 12px;
+  padding-bottom: 48px;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: transform 0.3s ease, box-shadow 0.3s ease, background-color 0s;
   position: relative;
   overflow: hidden;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+  box-sizing: border-box;
+  flex-shrink: 0;
 }
 
-.camera-start-menu .style-selector-button::before {
-  content: '';
+/* Remove default ::after since we're using captions outside frames */
+
+/* Inner bevel effect like real polaroids */
+.polaroid-button::before {
+  content: "";
   position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-  transition: left 0.5s ease;
+  top: 12px;
+  left: 12px;
+  right: 12px;
+  bottom: 48px;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.1), inset 0 2px 4px rgba(0, 0, 0, 0.15);
+  pointer-events: none;
+  z-index: 2;
+  border-radius: 2px;
 }
 
-.camera-start-menu .style-selector-button:hover::before {
-  left: 100%;
+.polaroid-button:hover {
+  transform: scale(1.05) rotate(-2deg);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
 }
 
-.camera-start-menu .style-selector-button:hover {
-  background: linear-gradient(135deg, #ff8cc8, #8b7aed);
-  box-shadow: 0 6px 20px rgba(255, 126, 179, 0.4);
-  transform: translateY(-3px) scale(1.02);
+.polaroid-button:active {
+  transform: scale(1.02);
 }
 
-.camera-start-menu .style-selector-button.disabled {
+.polaroid-button.disabled {
   opacity: 0.6;
   cursor: not-allowed;
   pointer-events: none;
 }
 
-.camera-start-menu .style-selector-content {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-}
 
-.camera-start-menu .style-icon {
-  font-size: 1.8rem;
-  margin-right: 16px;
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
-  transition: transform 0.2s ease;
-}
-
-.camera-start-menu .style-selector-button:hover .style-icon {
-  transform: scale(1.1);
-}
-
-/* Circular style preview image */
-.camera-start-menu .style-preview-image {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  object-fit: cover;
-  margin-right: 16px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-  transition: transform 0.2s ease;
-  flex-shrink: 0;
-}
-
-.camera-start-menu .style-selector-button:hover .style-preview-image {
-  transform: scale(1.1);
-}
-
-/* Fallback icon (hidden when preview image is shown) */
-.camera-start-menu .style-icon-fallback {
-  display: none;
-}
-
-.camera-start-menu .style-text {
-  flex: 1;
-  text-align: left;
+/* Caption below polaroid */
+.polaroid-caption {
   font-family: "Permanent Marker", cursive;
-  font-size: 16px;
-  color: white;
-  font-weight: 700;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  font-size: 1.4rem;
+  color: #333;
+  text-transform: lowercase;
   letter-spacing: 0.5px;
 }
 
-.camera-start-menu .style-arrow {
-  font-size: 1.4rem;
-  color: white;
-  margin-left: 12px;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-  transition: transform 0.2s ease;
-}
-
-.camera-start-menu .style-selector-button:hover .style-arrow {
-  transform: translateX(4px);
-}
-
-.start-menu-options {
+/* Polaroid label inside the frame (bottom strip) */
+.polaroid-label {
+  position: absolute;
+  bottom: 10px;
+  left: 8px;
+  right: 8px;
+  height: 28px;
   display: flex;
-  justify-content: center;
-  gap: 24px;
-  flex-wrap: wrap;
-}
-
-.start-menu-options.disabled {
-  opacity: 0.6;
-  pointer-events: none;
-}
-
-.option-button {
-  display: flex;
-  flex-direction: row;
   align-items: center;
-  background-color: #333;
-  border: none;
-  border-radius: 12px;
-  padding: 24px;
-  transition: all 0.2s ease;
-  cursor: pointer;
-  width: 210px;
-  color: white;
+  justify-content: center;
+  font-family: "Permanent Marker", cursive;
+  font-size: 20px;
+  font-weight: 400;
+  color: #333;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+  z-index: 3;
+}
+
+/* Make sampler icons in label larger and properly centered alongside text */
+.style-selector-button .polaroid-label {
+  font-size: 1.3rem;
+  line-height: 1;
+  gap: 4px;
+}
+
+.polaroid-content {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  right: 12px;
+  bottom: 48px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.style-icon {
+  font-size: 5rem;
+  margin: 0;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+  transition: transform 0.2s ease, filter 0.2s ease;
+  position: relative;
+  z-index: 1;
+}
+
+/* Style preview image fills the polaroid content area */
+.style-preview-image {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 2px;
+  object-fit: cover;
+  margin: 0;
+  box-shadow: none;
+  z-index: 0;
+}
+
+/* Fallback icon (hidden when preview image is shown) */
+.style-icon-fallback {
+  display: none;
+}
+
+/* Style text removed - now using .polaroid-label */
+
+.style-arrow {
+  display: none;
+}
+
+
+/* Background image for polaroid photo buttons */
+.polaroid-bg-image {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 2px;
+  z-index: 0;
 }
 
 .option-button:disabled {
   cursor: not-allowed;
   opacity: 0.7;
-}
-
-/* Processing message and spinner */
-.processing-message {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  margin-bottom: 20px;
-  background-color: rgba(0, 0, 0, 0.3);
-  padding: 16px;
-  border-radius: 8px;
-  color: #ff7eb3;
-}
-
-.spinner {
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  border: 3px solid rgba(255, 126, 179, 0.3);
-  border-top-color: #ff7eb3;
-  animation: spinner-animation 1s infinite linear;
-  margin-bottom: 10px;
-}
-
-@keyframes spinner-animation {
-  0% {
-    transform: rotate(0deg);
-  }
-  100% {
-    transform: rotate(360deg);
-  }
-}
-
-.message {
-  font-size: 0.9rem;
-  font-weight: 500;
 }
 
 /* Style for non-clickable options */
@@ -259,13 +816,66 @@
   background-color: #333;
 }
 
-.option-button:hover {
-  background-color: #444;
-  transform: translateY(-5px);
+.polaroid-button.option-button.take-photo::after {
+  content: '📸';
+  position: absolute;
+  bottom: 12px;
+  left: 10px;
+  right: 10px;
+  height: 30px;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Permanent Marker", cursive;
+  font-size: 16px;
+  font-weight: 400;
+  color: #333;
+  text-transform: lowercase;
+  letter-spacing: 0.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+  z-index: 3;
 }
 
-.option-button:disabled:hover {
-  background-color: #333;
+.polaroid-button.option-button.browse-photo::after {
+  content: '📁';
+  position: absolute;
+  bottom: 12px;
+  left: 10px;
+  right: 10px;
+  height: 30px;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Permanent Marker", cursive;
+  font-size: 16px;
+  font-weight: 400;
+  color: #333;
+  text-transform: lowercase;
+  letter-spacing: 0.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+  z-index: 3;
+}
+
+.polaroid-button .option-icon {
+  display: none;
+}
+
+.polaroid-button .option-label {
+  display: none;
+}
+
+.polaroid-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.polaroid-button:disabled:hover {
   transform: none;
 }
 
@@ -279,113 +889,489 @@
   font-weight: 500;
 }
 
-.take-photo:hover {
-  background-color: #2a6b9c;
-}
-
-.browse-photo:hover {
-  background-color: #7c3aed;
-}
-
-.drag-photo:hover {
-  background-color: #10b981;
-}
-
-.drag-photo.info-only:hover {
-  background-color: #333;
-}
+/* Old hover styles removed - now using .polaroid-button:hover for all */
 
 .prompt-selector-header {
   padding-top: 60px !important;
 }
 
-/* Updated media query for mobile devices */
-@media (max-width: 600px), (orientation: portrait) and (max-device-width: 1024px) {
+/* iPad portrait - compact to fit on one screen */
+@media (min-width: 601px) and (max-width: 1024px) and (orientation: portrait) {
   .start-menu-content {
-    padding: 24px 20px;
-    width: 95%;
-    margin-right: auto; /* Reset to auto for centering */
-    margin-left: auto;
-    margin-bottom: 0; /* Remove the added space */
-  }
-  .prompt-selector-header {
-    padding-top: 50px !important;
+    padding: 15px 20px;
   }
 
   .start-menu-title {
     font-size: 2rem;
-    margin-bottom: 8px;
+    margin-top: -15px;
+    margin-bottom: 6px;
   }
 
-  .start-menu-description {
-    font-size: 1rem;
-    margin-bottom: 24px;
+  .start-menu-tagline {
+    font-size: 1.1rem;
+    margin-bottom: 20px;
+  }
+
+  /* Intro section - compact for iPad portrait */
+  .intro-media-container {
+    flex-direction: column;
+    gap: 25px;
+    margin: 35px 0 25px 0;
+  }
+
+  .intro-camera-image {
+    max-width: 260px;
+  }
+
+  .intro-camera-container .camera-speech-bubble {
+    font-size: 13px;
+    padding: 7px 14px;
+  }
+
+  .intro-video-container {
+    width: 280px;
+  }
+
+  .shoot-your-own-btn {
+    font-size: 1.8rem;
+    margin: 0 0 10px;
+    padding: 0 30px 12px;
+  }
+
+  /* Options section - compact polaroids on iPad */
+  .polaroid-options-container {
+    flex-direction: column;
+    gap: 25px;
+    margin-top: 10px;
+    margin-bottom: 20px;
+    padding: 0 20px;
+    align-items: center;
+  }
+
+  .polaroid-wrapper {
+    align-items: center;
+    gap: 12px;
+  }
+
+  .photo-options-group {
+    flex-direction: row;
+    gap: 25px;
+    width: 100%;
+    justify-content: center;
+    align-items: flex-start;
+  }
+
+  .polaroid-button {
+    width: 231px;
+    min-width: 231px;
+  }
+
+  .polaroid-caption {
+    font-size: 1.4rem;
+  }
+
+  .step-separator {
+    font-size: 1.5rem;
+    margin: 12px 8px;
+    margin-bottom: 0; /* Reset for iPad vertical layout */
+  }
+  
+  /* Keep vertical centering for the "or" separator in photo options group (horizontal layout) */
+  .photo-options-group .step-separator {
+    margin-bottom: 30px;
+  }
+
+  .polaroid-label {
+    font-size: 18px;
+  }
+}
+
+/* Updated media query for mobile devices */
+@media (max-width: 600px) {
+  .start-menu-content {
+    padding: 10px 16px 20px;
+    width: 100%;
+    margin: 0;
+  }
+  
+  .prompt-selector-header {
+    padding-top: 50px !important;
+  }
+
+  .camera-start-menu.phase-options .start-menu-title {
+    font-size: 1.6rem;
+    margin-bottom: 4px;
+  }
+
+  .camera-start-menu.phase-options .start-menu-tagline {
+    font-size: 0.85rem;
+    margin-bottom: 8px !important;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+  }
+  
+  .start-menu-title {
+    font-size: 1.6rem;
+    margin-bottom: 4px;
+    margin-top: 5px;
+  }
+
+  .start-menu-tagline {
+    font-size: 0.85rem;
+    margin-bottom: -10px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
   }
 
   .style-selector-section {
-    margin-bottom: 24px;
+    margin-bottom: 8px;
   }
 
   .photo-options-section {
-    margin-bottom: 18px;
+    padding: 0;
+    margin-bottom: 8px;
   }
 
   .section-title {
-    font-size: 1rem;
-    margin-bottom: 12px;
+    font-size: 0.9rem;
+    margin-bottom: 8px;
   }
 
-  .camera-start-menu .style-selector-button {
-    padding: 16px 20px;
-    max-width: none;
+  /* Intro section on mobile */
+  .camera-start-menu.phase-intro .start-menu-title {
+    margin-top: 2px !important;
   }
 
-  .camera-start-menu .style-text {
-    font-size: 15px;
+  .camera-start-menu.phase-intro .start-menu-tagline {
+    margin-bottom: 26px !important;
   }
 
-  .camera-start-menu .style-icon {
-    font-size: 1.6rem;
-    margin-right: 14px;
-  }
-
-  .camera-start-menu .style-arrow {
-    font-size: 1.2rem;
-  }
-
-  .camera-start-menu .style-preview-image {
-    width: 44px;
-    height: 44px;
-    margin-right: 14px;
-  }
-  
-  .start-menu-options {
+  .intro-media-container {
     flex-direction: column;
+    gap: 15px;
+    margin: -5px 0 15px;
+  }
+
+  .intro-camera-image {
+    max-width: 162px;
+    cursor: pointer;
+  }
+
+  .intro-camera-container .camera-speech-bubble {
+    font-size: 11px;
+    padding: 5px 10px;
+  }
+
+  .intro-video-container {
+    width: 200px;
+  }
+
+  .shoot-your-own-btn {
+    font-size: 1.4rem;
+    margin: -10px 0 0;
+    padding: 0 24px 10px;
+  }
+
+  .splash-return-btn {
+    bottom: 15px;
+    left: 15px;
+    padding: 8px 14px;
+    font-size: 0.9rem;
+  }
+
+  /* Stack polaroids like iPad - first one alone, then two side by side */
+  .polaroid-options-container {
+    flex-direction: column;
+    gap: 0px;
+    margin-top: 0px;
+    margin-bottom: 0px;
+    padding: 0;
     align-items: center;
-    gap: 16px;
+  }
+
+  .polaroid-wrapper {
+    align-items: center;
+    gap: 6px;
+  }
+
+  /* First polaroid with proper spacing from title */
+  .polaroid-wrapper:first-child {
+    margin-top: 18px;
+    margin-bottom: 8px;
+  }
+
+  .step-separator {
+    font-size: 1.1rem;
+    margin: 3px 0;
+    margin-bottom: 0; /* Reset for mobile - vertical layout */
   }
   
-  .option-button {
-    display: block;
+  @keyframes fadeInUp {
+    0% {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0); /* Reset vertical offset for mobile */
+    }
+  }
+
+  /* Photo options side by side on mobile - close gap from top polaroid */
+  .photo-options-group {
+    flex-direction: row;
+    gap: 12px;
     width: 100%;
-    padding: 16px;
+    align-items: flex-start;
+    justify-content: center;
+    margin-top: 5px;
   }
 
-  .option-button.take-photo,
-  .option-button.browse-photo {
-    padding: 20px;
+  /* Keep "or" separator visible between horizontal photos */
+  .photo-options-group .step-separator {
+    margin-bottom: 10px;
+    align-self: center;
   }
 
-  .option-icon {
-    font-size: 2.2rem;
+  .polaroid-button {
+    width: 135px;
+    min-width: 135px;
+    padding: 8px;
+    padding-bottom: 26px;
+    border: 3px solid white;
+    border-radius: 0; /* No rounded corners */
+  }
+
+  .polaroid-button::before {
+    top: 8px;
+    left: 8px;
+    right: 8px;
+    bottom: 26px;
+    border-radius: 0;
+  }
+
+  .polaroid-content {
+    top: 8px;
+    left: 8px;
+    right: 8px;
+    bottom: 26px;
+    border-radius: 0;
+  }
+
+  /* First polaroid has larger label text */
+  .polaroid-wrapper:first-child .polaroid-label {
+    font-size: 13px;
+  }
+
+  .polaroid-label {
+    position: absolute;
+    bottom: 3px;
+    left: 3px;
+    right: 3px;
+    height: 15px;
+    font-size: 9px;
+    line-height: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    z-index: 3;
+  }
+  
+  /* Ensure icons stay in label, not floating */
+  .polaroid-label svg,
+  .polaroid-label::before {
+    vertical-align: middle;
+    flex-shrink: 0;
+  }
+  
+  /* Fix camera and folder icons to stay in white strip */
+  .polaroid-button.option-button.take-photo::after,
+  .polaroid-button.option-button.browse-photo::after {
+    bottom: 3px !important;
+    left: 3px !important;
+    right: 3px !important;
+    height: 15px !important;
+    font-size: 12px !important;
+    line-height: 15px !important;
+  }
+
+  .polaroid-caption {
+    font-size: 1rem;
+  }
+
+  .style-icon {
+    font-size: 4rem;
+  }
+
+  /* Responsive bottom layout for mobile */
+  .bottom-layout {
+    bottom: 10px;
+    right: 10px;
+  }
+
+  .video-container {
+    width: 150px;
+    max-width: 150px;
+  }
+
+  /* Responsive polaroid camera mascot for mobile */
+  .camera-video-stack .polaroid-camera-image {
+    max-width: 140px;
+  }
+
+  .camera-video-stack .camera-speech-bubble {
+    font-size: 11px;
+    padding: 5px 10px;
+  }
+
+  .camera-video-stack .camera-speech-bubble::after {
+    border-width: 5px;
+  }
+
+  .camera-video-stack .polaroid-camera-container {
+    margin-bottom: -20px;
+  }
+
+  /* Responsive audio toggle for mobile */
+  .video-container .audio-toggle-btn {
+    width: 28px;
+    height: 28px;
+    bottom: 4px;
+    right: 4px;
+  }
+
+  .video-container .audio-toggle-btn svg {
+    width: 16px;
+    height: 16px;
   }
 }
 
 /* iPhone-specific fixes for view photos button */
 @media (max-width: 420px) and (orientation: portrait) {
   .start-menu-content {
-    padding: 20px 16px;
-    width: 92%;
+    padding: 12px;
+    width: 95%;
+  }
+
+  .start-menu-title {
+    font-size: 1.5rem;
+    margin-top: 45px;
+  }
+
+  .bottom-layout {
+    bottom: 8px;
+    right: 8px;
+  }
+
+  .video-container {
+    width: 120px;
+    max-width: 120px;
+  }
+
+  .camera-video-stack .polaroid-camera-image {
+    max-width: 110px;
+  }
+
+  .camera-video-stack .camera-speech-bubble {
+    font-size: 10px;
+    padding: 4px 8px;
+  }
+
+  .camera-video-stack .polaroid-camera-container {
+    margin-bottom: -15px;
+  }
+
+  .intro-camera-image {
+    max-width: 140px;
+  }
+
+  .intro-camera-container .camera-speech-bubble {
+    font-size: 10px;
+    padding: 4px 8px;
+  }
+
+  .intro-video-container {
+    width: 140px;
+  }
+
+  .shoot-your-own-btn {
+    font-size: 1.25rem;
+    padding: 12px 24px;
+  }
+
+  .splash-return-btn {
+    bottom: 12px;
+    left: 12px;
+    padding: 8px 14px;
+    font-size: 0.9rem;
+  }
+
+  .polaroid-button {
+    width: 115px;
+    min-width: 115px;
+    padding: 8px;
+    padding-bottom: 36px;
+    border: 2px solid white;
+  }
+
+  .polaroid-button::before {
+    top: 8px;
+    left: 8px;
+    right: 8px;
+    bottom: 36px;
+  }
+
+  .polaroid-content {
+    top: 8px;
+    left: 8px;
+    right: 8px;
+    bottom: 36px;
+  }
+
+  .polaroid-label {
+    bottom: 6px;
+    left: 5px;
+    right: 5px;
+    height: 20px;
+    font-size: 14px;
+  }
+
+  .polaroid-caption {
+    font-size: 1rem;
+  }
+
+  .style-icon {
+    font-size: 3.5rem;
+  }
+
+  .step-separator {
+    font-size: 1rem;
+  }
+
+  .polaroid-options-container {
+    gap: 10px;
+    margin-top: 12px;
+  }
+
+  .photo-options-group {
+    gap: 8px;
+  }
+
+  .video-container .audio-toggle-btn {
+    width: 24px;
+    height: 24px;
+    bottom: 3px;
+    right: 3px;
+  }
+
+  .video-container .audio-toggle-btn svg {
+    width: 14px;
+    height: 14px;
   }
 
   
@@ -401,6 +1387,50 @@
 }
 
 /* Make sure buttons appear large enough on mobile */
+/* Handle short desktop screens */
+@media (max-height: 800px) and (min-width: 601px) {
+  .start-menu-content {
+    padding: 12px;
+  }
+
+  .start-menu-title {
+    font-size: 1.75rem;
+    margin-bottom: 8px;
+    margin-top: 4px;
+  }
+
+  .camera-video-stack .polaroid-camera-image {
+    max-width: 170px;
+  }
+
+  .video-container {
+    width: 180px;
+    max-width: 180px;
+  }
+
+  .camera-video-stack .camera-speech-bubble {
+    font-size: 11px;
+  }
+
+  .camera-video-stack .polaroid-camera-container {
+    margin-bottom: -25px;
+  }
+
+  .style-selector-section {
+    margin-bottom: 8px;
+  }
+
+  .photo-options-section {
+    padding: 0;
+  }
+
+  .section-title {
+    font-size: 0.9rem;
+    margin-bottom: 8px;
+  }
+
+}
+
 @media (max-height: 700px) and (orientation: portrait) {
   .start-menu-content {
     padding: 16px;
@@ -410,9 +1440,6 @@
     font-size: 1.8rem;
   }
 
-  .option-button {
-    padding: 12px;
-  }
 }
 
 /* Metrics section */
@@ -448,7 +1475,7 @@
 }
 
 /* Media queries for mobile devices */
-@media (max-width: 600px), (orientation: portrait) and (max-device-width: 1024px) {
+@media (max-width: 600px) {
   .metrics-section {
     margin-top: 20px;
     padding-top: 15px;

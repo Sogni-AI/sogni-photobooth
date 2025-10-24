@@ -1,4 +1,5 @@
 import React, { useCallback, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import './styles.css';
 import { LoginModalMode } from './types';
 import LoginForm from './LoginForm';
@@ -52,7 +53,7 @@ function LoginModal({ open, mode, onModeChange, onClose, textOverrides = emptyOb
       content = null;
   }
 
-  return (
+  const modalContent = (
     <ModalContext.Provider value={modalCtx}>
       <div className="login-modal-overlay" onClick={handleOverlayClick}>
         <div className="login-modal-container">
@@ -64,6 +65,8 @@ function LoginModal({ open, mode, onModeChange, onClose, textOverrides = emptyOb
       </div>
     </ModalContext.Provider>
   );
+
+  return createPortal(modalContent, document.body);
 }
 
 export default LoginModal;

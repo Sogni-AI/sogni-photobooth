@@ -1127,9 +1127,16 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
           </button>
         </div>
         
-        {/* Version information */}
+        {/* Version information and Analytics button */}
         <div className="version-info">
-          Sogni Photobooth v{import.meta.env.APP_VERSION || '1.0.1'}
+          <span>Sogni Photobooth v{import.meta.env.APP_VERSION || '1.0.1'}</span>
+          <button 
+            className="view-analytics-btn"
+            onClick={() => window.location.hash = '#analytics'}
+            title="View Analytics Dashboard"
+          >
+            📊 View Analytics
+          </button>
         </div>
       </div>
     </div>

@@ -163,7 +163,7 @@ if (isLocalEnv) {
 } else {
   // Determine production path based on environment
   if (process.env.CLIENT_ORIGIN?.includes('staging')) {
-    staticDir = '/var/www/photobooth-staging.sogni.ai';
+    staticDir = '/var/www/photobooth-staging.sogni.ai/dist';
   } else {
     staticDir = '/var/www/photobooth.sogni.ai';
   }
@@ -223,20 +223,26 @@ const handleHalloweenRoute = (req, res) => {
 };
 
 // Halloween event routes with custom meta tags for social sharing
-app.get('/halloween', handleHalloweenRoute);
-app.get('/event/halloween', handleHalloweenRoute);
+// Only enable on production/staging (local uses Vite dev server for everything)
+if (!isLocalEnv) {
+  app.get('/halloween', handleHalloweenRoute);
+  app.get('/event/halloween', handleHalloweenRoute);
+}
 
 // Mobile sharing page route
 app.use('/mobile-share', mobileShareRoutes);
 
-// Static files - serve after custom routes so they don't override our meta tag injection
-app.use(express.static(staticDir));
+// Static files and catch-all - only for production/staging (local uses Vite)
+if (!isLocalEnv) {
+  // Static files - serve after custom routes so they don't override our meta tag injection
+  app.use(express.static(staticDir));
 
-// Catch-all route to serve index.html for SPA routing
-app.get('*', (req, res) => {
-  console.log(`[Catch-all] Serving index.html for path: ${req.path}`);
-  res.sendFile(path.join(staticDir, 'index.html'));
-});
+  // Catch-all route to serve index.html for SPA routing
+  app.get('*', (req, res) => {
+    console.log(`[Catch-all] Serving index.html for path: ${req.path}`);
+    res.sendFile(path.join(staticDir, 'index.html'));
+  });
+}
 
 // Error handling middleware
 app.use((err, req, res, next) => {
