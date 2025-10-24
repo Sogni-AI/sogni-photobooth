@@ -855,6 +855,20 @@
   }
 }
 
+/* iPad Mini specific fixes - smaller viewport needs lower button positioning */
+@media (min-width: 601px) and (max-width: 820px) and (max-height: 1100px) and (orientation: portrait) {
+  /* Position buttons lower to stay within the polaroid frame's bottom area */
+  .thumbnailButtonCorner {
+    bottom: 8px !important;
+    left: 20px !important;
+  }
+  
+  .cameraFlipButtonWithThumbnail {
+    bottom: 8px !important;
+    left: 76px !important; /* Adjusted for 20px padding + 48px thumbnail + 8px gap */
+  }
+}
+
 /* iPad landscape mode - ensure good proportions and proper spacing */
 @media (min-width: 768px) and (max-width: 1366px) and (orientation: landscape) {
   .polaroidFrame {
