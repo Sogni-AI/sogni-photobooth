@@ -1490,20 +1490,27 @@ const PhotoGallery = ({
       const selectedPhoto = currentPhotosArray[index];
       
       if (selectedPhoto && selectedPhoto.isGalleryImage && selectedPhoto.promptKey) {
-        // Detect if this is a touch device or event
-        const isTouchEvent = e.type === 'touchend' || (e.nativeEvent && e.nativeEvent.sourceCapabilities && e.nativeEvent.sourceCapabilities.firesTouchEvents);
-        const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+        // Detect if this is a touch device (more reliable detection)
+        const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0 || navigator.msMaxTouchPoints > 0;
         
-        // On touch devices, first tap shows overlay, second tap (when overlay is visible) confirms
-        if ((isTouchEvent || isTouchDevice) && selectedPhotoIndex !== index) {
-          console.log('📱 Touch device - showing overlay first');
-          // First tap: show the overlay by setting selected index
-          setSelectedPhotoIndex(index);
-          return;
+        // On touch devices, first tap shows overlay, second tap deselects
+        // Only the "Use This Style" button should confirm the selection
+        if (isTouchDevice) {
+          if (selectedPhotoIndex !== index) {
+            console.log('📱 Touch device - first tap, showing overlay with buttons');
+            // First tap: show the overlay by setting selected index
+            setSelectedPhotoIndex(index);
+            return;
+          } else {
+            console.log('📱 Touch device - second tap on same photo, deselecting to allow re-selection');
+            // Second tap on same photo: deselect it
+            setSelectedPhotoIndex(null);
+            return;
+          }
         }
         
-        // Desktop or second tap on touch device: immediately select the style
-        console.log('🖱️ Selecting style immediately');
+        // Desktop: clicking photo directly selects the style
+        console.log('🖱️ Desktop - selecting style immediately');
         
         // Reset scroll position to top in extension mode before style selection
         if (isExtensionMode) {
@@ -3607,8 +3614,8 @@ const PhotoGallery = ({
                     }
                     el = el.parentElement;
                   }
-                  // In prompt selector mode, just show selected state - don't immediately set style
-                  isSelected ? setSelectedPhotoIndex(null) : setSelectedPhotoIndex(index);
+                  // Use handlePhotoSelect for consistent touch handling
+                  handlePhotoSelect(index, e);
                 }}
                 // Add touch event handlers for swipe navigation when photo is selected
                 onTouchStart={isSelected && photos.length > 1 ? (e) => {

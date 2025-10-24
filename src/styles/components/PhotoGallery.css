@@ -818,6 +818,19 @@ html body .photo-action-buttons .action-button,
   }
 }
 
+/* On touch devices or when selected, show all buttons */
+.film-frame.selected .photo-hide-btn,
+.film-frame.selected .photo-refresh-btn,
+.film-frame.selected .photo-block-btn-batch,
+.film-frame.selected .photo-favorite-btn,
+.film-frame.selected .photo-video-btn,
+.film-frame.selected .photo-favorite-btn-batch,
+.film-frame.selected .photo-block-btn {
+  opacity: 1 !important;
+  transform: scale(1) !important;
+  pointer-events: auto !important;
+}
+
 /* Favorite button styles - only visible on hover (unless favorited) */
 .photo-favorite-btn {
   pointer-events: auto !important;
