@@ -252,7 +252,8 @@ const App = () => {
       setLastPhotoData({
         blob,
         dataUrl,
-        sourceType: 'upload'
+        // Don't set sourceType for default photo - only set it when user actually uploads/takes a photo
+        sourceType: undefined
       });
 
       console.log('✅ Loaded default Einstein photo as lastPhotoData');
@@ -555,7 +556,8 @@ const App = () => {
       const defaultPhotoData = {
         blob,
         dataUrl,
-        source: 'upload',
+        // Don't set source for default photo - only set it when user actually uploads/takes a photo
+        source: undefined,
         adjustments: null
       };
 
@@ -5988,16 +5990,18 @@ const App = () => {
             originalPhotoUrl={photos.find(p => p.isOriginal)?.originalDataUrl || null}
             photoSourceType={photos.find(p => p.isOriginal)?.sourceType || null}
             reusablePhotoUrl={
-              (lastEditablePhoto?.dataUrl && !lastEditablePhoto.dataUrl.includes('albert-einstein'))
+              // Only show reusable photo if it has a valid source type (not default Einstein)
+              (lastEditablePhoto?.dataUrl && lastEditablePhoto.source)
                 ? lastEditablePhoto.dataUrl
-                : (lastPhotoData?.dataUrl && !lastPhotoData.dataUrl.includes('albert-einstein'))
+                : (lastPhotoData?.dataUrl && lastPhotoData.sourceType)
                   ? lastPhotoData.dataUrl
                   : null
             }
             reusablePhotoSourceType={
-              (lastEditablePhoto?.dataUrl && !lastEditablePhoto.dataUrl.includes('albert-einstein'))
+              // Only set source type if it exists (not default Einstein)
+              (lastEditablePhoto?.dataUrl && lastEditablePhoto.source)
                 ? (lastEditablePhoto.source === 'camera' ? 'camera' : 'upload')
-                : (lastPhotoData?.dataUrl && !lastPhotoData.dataUrl.includes('albert-einstein'))
+                : (lastPhotoData?.dataUrl && lastPhotoData.sourceType)
                   ? lastPhotoData.sourceType
                   : null
             }
