@@ -11,7 +11,7 @@ PRIVATE_KEY="$(cd "$SCRIPT_DIR/../keys" && pwd)/privatekey.pem"
 VERSION=$(grep '"version"' "$EXTENSION_DIR/manifest.json" | sed 's/.*"version": *"\([^"]*\)".*/\1/')
 OUTPUT_CRX="$SCRIPT_DIR/sogni-style-explorer-v${VERSION}-signed.crx"
 
-echo "🔐 Sogni Style Explorer - CRX Signing Script"
+echo "🔐 Sogni Vibe Explorer - CRX Signing Script"
 echo "============================================="
 echo "Extension Directory: $EXTENSION_DIR"
 echo "Private Key: $PRIVATE_KEY"

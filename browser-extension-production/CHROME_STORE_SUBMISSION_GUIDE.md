@@ -1,4 +1,4 @@
-# Chrome Web Store Submission Guide - Sogni Style Explorer
+# Chrome Web Store Submission Guide - Sogni Vibe Explorer
 
 ## Prerequisites
 
@@ -22,7 +22,7 @@
 
 #### 1. Take Screenshots
 You need to take 5 screenshots showing:
-1. **Style Explorer Interface**: The overlay with style grid
+1. **Vibe Explorer Interface**: The overlay with style grid
 2. **Before/After Comparison**: Original vs transformed photos
 3. **Real Website Usage**: Extension working on a conference site
 4. **Style Selection**: Close-up of choosing a style
@@ -61,7 +61,7 @@ You need to take 5 screenshots showing:
 ### Phase 3: Store Listing Configuration
 
 #### 1. Basic Information
-- **Name**: Sogni Style Explorer
+- **Name**: Sogni Vibe Explorer
 - **Summary**: Transform profile photos with hundreds of AI styles using Sogni Photobooth's cutting-edge AI technology.
 - **Category**: Productivity
 - **Language**: English

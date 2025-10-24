@@ -1,7 +1,7 @@
-# Sogni Style Explorer - Chrome Web Store Listing
+# Sogni Vibe Explorer - Chrome Web Store Listing
 
 ## Extension Details
-- **Name**: Sogni Style Explorer
+- **Name**: Sogni Vibe Explorer
 - **Version**: 1.1.0
 - **Category**: Productivity
 - **Language**: English
@@ -11,7 +11,7 @@ Transform profile photos with hundreds of AI styles using Sogni Photobooth's cut
 
 ## Detailed Description (16,000 characters max)
 
-The Sogni Style Explorer easily converts grids of profile photos on websites into AI generated alternate portrait theme versions quickly and efficiently: from conference speaker lineups, team / employee / staff directories, sports and other club rosters / organization memberships, yearbooks, social profiles, friend lists, and more.
+The Sogni Vibe Explorer easily converts grids of profile photos on websites into AI generated alternate portrait theme versions quickly and efficiently: from conference speaker lineups, team / employee / staff directories, sports and other club rosters / organization memberships, yearbooks, social profiles, friend lists, and more.
 
 **🎨 What it does:**
 - Instantly transforms profile photos on any webpage with AI-generated artistic styles
@@ -20,7 +20,7 @@ The Sogni Style Explorer easily converts grids of profile photos on websites int
 - Powered by the Sogni decentralized Supernet, a network of AI art inference GPU worker nodes
 
 **🚀 Key Features:**
-- **One-Click Activation**: Click the Sogni logo that appears on any webpage to open the Style Explorer
+- **One-Click Activation**: Click the Sogni logo that appears on any webpage to open the Vibe Explorer
 - **Hundreds of Styles**: Choose from artistic styles like watercolor, oil painting, cyberpunk, vintage, and many more
 - **Batch Processing**: Transform multiple profile photos simultaneously
 - **Real-time Progress**: Watch transformations happen with live progress indicators
@@ -37,7 +37,7 @@ The Sogni Style Explorer easily converts grids of profile photos on websites int
 **🔧 How to Use:**
 1. Install the free extension securely from the Chrome Web Store
 2. Navigate to any webpage with profile photos (conference speaker lineups, team directories, sports rosters, etc.)
-3. Click on the extension icon to activate the Sogni Style Explorer
+3. Click on the extension icon to activate the Sogni Vibe Explorer
 4. The extension will overlay over the page and automagically detect every profile photo
 5. Browse through hundreds of artistic styles
 6. Simply pick your style and click "Use This Style" to transform all profile photos on the page
@@ -60,13 +60,13 @@ The Sogni Style Explorer easily converts grids of profile photos on websites int
 **🌟 About Sogni:**
 Sogni is a leading AI art platform that makes advanced AI image generation accessible to everyone. This browser extension is a Sogni Superapp that is powered by the Sogni decentralized Supernet, a network of AI art inference GPU worker nodes. The Sogni Photobooth has been used at major conferences and events worldwide, creating thousands of AI-transformed photos.
 
-Transform your browsing experience and bring AI art to any webpage with Sogni Style Explorer!
+Transform your browsing experience and bring AI art to any webpage with Sogni Vibe Explorer!
 
 ## Keywords (separated by commas)
 AI, artificial intelligence, photo transformation, image editing, profile photos, artistic styles, Sogni, photobooth, conference, speakers, team photos, AI art, image generation, browser extension, productivity
 
 ## Screenshots Needed
-1. **Main Interface**: Style Explorer overlay showing style grid
+1. **Main Interface**: Vibe Explorer overlay showing style grid
 2. **Before/After**: Comparison of original vs transformed profile photos
 3. **In Action**: Extension working on a real conference website
 4. **Style Selection**: Close-up of style selection interface
@@ -87,7 +87,7 @@ https://photobooth.sogni.ai
 **contextMenus**: Provides right-click menu options for single image transformations  
 **storage**: Stores user preferences and session data locally
 **host_permissions for photobooth-api.sogni.ai**: Required to communicate with Sogni's AI transformation API
-**host_permissions for photobooth.sogni.ai**: Required to load the Style Explorer interface
+**host_permissions for photobooth.sogni.ai**: Required to load the Vibe Explorer interface
 **host_permissions for all_urls**: Required to work on any website and detect profile photos across different domains
 
 ## Target Audience

@@ -37,7 +37,7 @@ async function toggleDevMode() {
     chrome.notifications.create({
       type: 'basic',
       iconUrl: 'icons/icon48.png',
-      title: 'Sogni Style Explorer',
+      title: 'Sogni Vibe Explorer',
       message: `Development mode ${newDevMode ? 'enabled' : 'disabled'}`
     });
   } catch (error) {

@@ -1,7 +1,7 @@
-# Sogni Style Explorer - Production Build
+# Sogni Vibe Explorer - Production Build
 
 ## Overview
-This directory contains the production-ready build of the Sogni Style Explorer browser extension, configured for Chrome Web Store submission.
+This directory contains the production-ready build of the Sogni Vibe Explorer browser extension, configured for Chrome Web Store submission.
 
 ## Files Included
 - `manifest.json` - Extension manifest (v1.1.0)

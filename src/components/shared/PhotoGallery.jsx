@@ -2916,7 +2916,7 @@ const PhotoGallery = ({
           position: 'relative'
         }}>
 
-          {/* PHOTOBOOTH STYLE EXPLORER Title */}
+          {/* PHOTOBOOTH VIBE EXPLORER Title */}
           <div style={{
             position: 'absolute',
             top: '0px',
@@ -2925,7 +2925,7 @@ const PhotoGallery = ({
           }}>
             <h1 
               className="settings-title"
-              data-text="STYLE EXPLORER"
+              data-text="VIBE EXPLORER"
               style={{
                 margin: '0',
                 textAlign: 'left',
@@ -2933,7 +2933,7 @@ const PhotoGallery = ({
                 opacity: 1
               }}
             >
-              STYLE EXPLORER
+              VIBE EXPLORER
             </h1>
           </div>
 
@@ -2949,7 +2949,7 @@ const PhotoGallery = ({
               margin: '0 0 12px 0',
               textAlign: 'center'
             }}>
-              Pick a style preset
+              Pick a vibes preset
             </h2>
             
             {/* Random Style Buttons */}
@@ -3103,7 +3103,7 @@ const PhotoGallery = ({
             fontFamily: '"Permanent Marker", cursive',
             color: 'white'
           }}>
-            Or select a style ↓
+            Or select a specific vibe ↓
           </span>
         </div>
       )}

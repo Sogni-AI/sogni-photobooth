@@ -1,4 +1,4 @@
-// Cache Service for Sogni Style Explorer Extension
+// Cache Service for Sogni Vibe Explorer Extension
 // Manages caching of styled images per site with localStorage
 
 class StyleCacheService {

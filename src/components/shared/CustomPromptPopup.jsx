@@ -4,7 +4,7 @@ import PropTypes from 'prop-types';
 import '../../styles/custom-prompt-popup.css';
 
 /**
- * CustomPromptPopup - A popup dialog for entering custom prompts directly in Style Explorer
+ * CustomPromptPopup - A popup dialog for entering custom prompts directly in Vibe Explorer
  */
 const CustomPromptPopup = ({ 
   isOpen, 

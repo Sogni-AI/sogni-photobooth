@@ -714,7 +714,7 @@ function setupEventListeners() {
         setTimeout(() => {
           openStyleExplorerBtn.innerHTML = `
             <span class="btn-icon">🎨</span>
-            <span class="btn-text">Open Style Explorer</span>
+            <span class="btn-text">Open Vibe Explorer</span>
           `;
         }, 3000);
       }
@@ -1383,11 +1383,11 @@ function updateSessionStatsDisplay() {
 // Show help dialog
 function showHelp() {
   const helpText = `
-Sogni Style Explorer Help
+Sogni Vibe Explorer Help
 
 HOW TO USE:
 1. Navigate to a webpage with profile photos (like speaker listings, team pages, etc.)
-2. Click the Sogni logo in the top-left corner to open the Style Explorer
+2. Click the Sogni logo in the top-left corner to open the Vibe Explorer
 3. Browse hundreds of AI styles and click "Use This Style" on any photo
 4. Watch as all profile photos on the page transform with your chosen style!
 
@@ -1414,7 +1414,7 @@ TROUBLESHOOTING:
 // Show about dialog
 function showAbout() {
   const aboutText = `
-Sogni Style Explorer v1.0.0
+Sogni Vibe Explorer v1.0.0
 
 This browser extension brings the full power of Sogni Photobooth's AI style transformation to any webpage. Browse hundreds of artistic styles and transform profile photos with cutting-edge AI technology.
 

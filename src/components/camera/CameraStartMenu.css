@@ -505,6 +505,12 @@ body:has(.camera-start-menu) div[style*="position: fixed"][style*="top: 24"][sty
   color: #000000 !important;
 }
 
+/* Make regular spark balance black (but keep premium spark cyan #00D5FF) */
+/* Target the spark balance span - it will be white for regular spark, #00D5FF for premium */
+body:has(.camera-start-menu) div[style*="position: fixed"][style*="top: 24"][style*="left: 24"][style*="z-index: 1000"] > div > div[style*="display: flex"] > span[style*="color: white"] {
+  color: #000000 !important;
+}
+
 /* Hide help/settings/login buttons during intro phase */
 .camera-start-menu.phase-intro ~ .header-settings-btn,
 .camera-start-menu.phase-intro ~ .header-info-btn,
