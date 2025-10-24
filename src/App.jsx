@@ -6356,6 +6356,26 @@ const App = () => {
     // Scroll to top smoothly
     window.scrollTo({ top: 0, behavior: 'smooth' });
     
+    // Clear QR code when going back to menu
+    if (qrCodeData) {
+      console.log('Clearing QR code when returning to menu');
+      setQrCodeData(null);
+    }
+    
+    // Hide photo grid if it's visible
+    if (showPhotoGrid) {
+      const filmStrip = document.querySelector('.film-strip-container');
+      if (filmStrip) {
+        filmStrip.classList.remove('visible');
+        filmStrip.classList.add('hiding');
+      }
+      
+      setTimeout(() => {
+        setShowPhotoGrid(false);
+        setSelectedPhotoIndex(null);
+      }, 300);
+    }
+    
     // Hide slothicorn if visible
     if (slothicornReference.current) {
       slothicornReference.current.style.setProperty('bottom', '-360px', 'important');
