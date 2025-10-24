@@ -6009,7 +6009,7 @@ const App = () => {
           
 
           
-          {/* Move the corner button outside of CameraStartMenu */}
+          {/* Photos button - show when user has photos */}
           {showStartMenu && photos.length > 0 && !showPhotoGrid && (
             <button 
               className="corner-btn photos-corner-btn"
@@ -7594,7 +7594,7 @@ const App = () => {
           selectedPhotoIndex={selectedPhotoIndex}
           setSelectedPhotoIndex={setSelectedPhotoIndex}
           showPhotoGrid={showPhotoGrid}
-          handleBackToCamera={handleBackToCamera}
+          handleBackToCamera={handleBackToMenu}
           handlePreviousPhoto={handlePreviousPhoto}
           handleNextPhoto={handleNextPhoto}
           handlePhotoViewerClick={handlePhotoViewerClick}

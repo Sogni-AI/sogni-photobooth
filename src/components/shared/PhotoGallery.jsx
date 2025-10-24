@@ -2039,7 +2039,7 @@ const PhotoGallery = ({
         className="corner-btn"
         onClick={handleBackToCamera}
       >
-        ← 📸
+        ← Menu
       </button>
       {/* Settings button - always show in photo grid */}
       {selectedPhotoIndex === null && (

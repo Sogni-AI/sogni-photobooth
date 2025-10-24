@@ -267,15 +267,15 @@
 }
 
 .intro-section.exiting .intro-camera-container {
-  animation: exitLeft 1.5s cubic-bezier(0.6, 0, 0.9, 0.4) forwards;
+  animation: exitLeft 0.75s cubic-bezier(0.6, 0, 0.9, 0.4) forwards;
 }
 
 .intro-section.exiting .intro-video-wrapper {
-  animation: exitRight 1.5s cubic-bezier(0.6, 0, 0.9, 0.4) forwards;
+  animation: exitRight 0.75s cubic-bezier(0.6, 0, 0.9, 0.4) forwards;
 }
 
 .intro-section.exiting .shoot-your-own-btn {
-  animation: exitDown 1.5s cubic-bezier(0.6, 0, 0.9, 0.4) forwards;
+  animation: exitDown 0.75s cubic-bezier(0.6, 0, 0.9, 0.4) forwards;
 }
 
 @keyframes exitLeft {
@@ -514,6 +514,29 @@ body:has(.camera-start-menu.phase-intro) div[style*="position: fixed"][style*="t
   display: none !important;
 }
 
+/* Slide in header buttons from top after polaroids finish on options screen */
+.camera-start-menu.phase-options ~ .header-settings-btn,
+.camera-start-menu.phase-options ~ .header-info-btn,
+body:has(.camera-start-menu.phase-options) .header-settings-btn,
+body:has(.camera-start-menu.phase-options) .header-info-btn,
+body:has(.camera-start-menu.phase-options) div[style*="position: fixed"][style*="top: 24"][style*="left: 24"][style*="z-index: 1000"] {
+  animation: slideDownFromTop 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation-delay: 2.7s;
+  opacity: 0;
+  transform: translateY(-100px);
+}
+
+@keyframes slideDownFromTop {
+  0% {
+    opacity: 0;
+    transform: translateY(-100px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 /* Options Section */
 .options-section {
   width: 100%;
@@ -556,17 +579,17 @@ body:has(.camera-start-menu.phase-intro) div[style*="position: fixed"][style*="t
   flex-direction: column;
   align-items: center;
   gap: 20px;
-  opacity: 0;
-  transform: translateY(200px);
-  animation: slideUpFade 0.9s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  opacity: 1;
+  transform: translateY(100vh);
+  animation: slideUpFade 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 .polaroid-1 {
-  animation-delay: 0.2s;
+  animation-delay: 0.1s;
 }
 
 .polaroid-2 {
-  animation-delay: 0.5s;
+  animation-delay: 1.5s;
 }
 
 .polaroid-2 .polaroid-button {
@@ -578,7 +601,7 @@ body:has(.camera-start-menu.phase-intro) div[style*="position: fixed"][style*="t
 }
 
 .polaroid-3 {
-  animation-delay: 0.8s;
+  animation-delay: 1.5s;
 }
 
 .polaroid-3 .polaroid-button {
@@ -591,11 +614,8 @@ body:has(.camera-start-menu.phase-intro) div[style*="position: fixed"][style*="t
 
 @keyframes slideUpFade {
   0% {
-    opacity: 0;
-    transform: translateY(200px);
-  }
-  60% {
     opacity: 1;
+    transform: translateY(100vh);
   }
   100% {
     opacity: 1;
@@ -612,11 +632,37 @@ body:has(.camera-start-menu.phase-intro) div[style*="position: fixed"][style*="t
   margin: 0 14px;
   align-self: center;
   flex-shrink: 0;
-  opacity: 0;
-  transform: translateY(30px);
-  animation: fadeInUp 0.7s ease-out forwards;
-  animation-delay: 0.6s;
+  opacity: 1;
+  transform: translateY(100vh);
+  animation: slideUpSeparator 1.0s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation-delay: 0.9s;
   margin-bottom: 35px; /* Offset for caption height to center with polaroid frames */
+}
+
+/* "or" separator inside photo-options-group slides in with second two polaroids */
+.photo-options-group .step-separator {
+  animation-delay: 1.5s;
+  animation-duration: 1.2s;
+}
+
+@keyframes slideUpSeparator {
+  0% {
+    opacity: 1;
+    transform: translateY(100vh);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(-17.5px); /* Center to polaroid frame, accounting for caption */
+  }
+}
+
+@keyframes fadeIn {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
 }
 
 @keyframes fadeInUp {

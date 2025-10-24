@@ -271,7 +271,7 @@ const CameraStartMenu: React.FC<CameraStartMenuProps> = ({
     setTimeout(() => {
       setShowIntro(false);
       setIsTransitioning(false);
-    }, 1500);
+    }, 750);
   };
 
   // Handle return to splash screen
@@ -357,6 +357,14 @@ const CameraStartMenu: React.FC<CameraStartMenuProps> = ({
 
             <button className="shoot-your-own-btn" onClick={handleStartClick}>
               <span className="serve-face-text">Time to serve face</span> 🙂
+            </button>
+
+            {/* Continue button on intro screen */}
+            <button
+              className="continue-corner-btn corner-btn intro-continue-btn"
+              onClick={handleStartClick}
+            >
+              Continue
             </button>
           </div>
         ) : (
@@ -483,6 +491,16 @@ const CameraStartMenu: React.FC<CameraStartMenuProps> = ({
                 title="Return to intro"
               >
                 ← 🎬
+              </button>
+            )}
+
+            {/* Continue button - shows on options screen */}
+            {!showIntro && (
+              <button
+                className="continue-corner-btn corner-btn"
+                onClick={onTakePhoto}
+              >
+                Continue
               </button>
             )}
           </div>
