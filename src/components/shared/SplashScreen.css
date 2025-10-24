@@ -130,7 +130,7 @@
 }
 
 .splash-tagline {
-  font-family: 'Permanent Marker', cursive;
+  font-family: 'Permanent Marker', 'Comic Sans MS', cursive;
   font-size: 60px;
   color: #ff3366;
   margin: 20px 0;
@@ -141,6 +141,7 @@
   padding: 10px 25px;
   border-radius: 10px;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
+  font-display: swap; /* Ensure font swap behavior */
 }
 
 @keyframes polaroidFlyLeft {
@@ -201,11 +202,15 @@
   position: relative;
   margin: 0;
   width: 340px; /* Match video's native width */
+  aspect-ratio: 2 / 3; /* Reserve space for video to prevent layout shift */
 }
 
 .splash-video {
   width: 340px; /* Set to native video width */
+  height: auto;
+  aspect-ratio: 2 / 3; /* Prevent layout shift while video loads */
   object-fit: contain;
+  background: rgba(255, 237, 78, 0.1); /* Subtle placeholder background */
 }
 
 @keyframes textSlideIn {
@@ -351,6 +356,11 @@
 
   .video-container {
     width: 400px;
+    aspect-ratio: 2 / 3; /* Maintain aspect ratio on iPad portrait */
+  }
+  
+  .splash-video {
+    width: 400px;
   }
 
   .splash-tagline {
@@ -383,7 +393,11 @@
 
   .video-container {
     width: 280px;
-    height: 420px; /* Proportional to 340x510 */
+    aspect-ratio: 2 / 3; /* Maintain aspect ratio on mobile */
+  }
+  
+  .splash-video {
+    width: 280px;
   }
 
   .splash-tagline {
@@ -454,7 +468,11 @@
 
   .video-container {
     width: 240px;
-    height: 360px; /* Proportional to 340x510 */
+    aspect-ratio: 2 / 3; /* Maintain aspect ratio on small mobile */
+  }
+  
+  .splash-video {
+    width: 240px;
   }
 
   .splash-tagline {
@@ -532,7 +550,11 @@
 
   .video-container {
     width: 200px;
-    height: 300px; /* Proportional to 340x510 */
+    aspect-ratio: 2 / 3; /* Maintain aspect ratio on short screens */
+  }
+  
+  .splash-video {
+    width: 200px;
   }
 
   .splash-cta-section {
@@ -570,7 +592,11 @@
 
   .video-container {
     width: 160px;
-    height: 240px; /* Proportional to 340x510 */
+    aspect-ratio: 2 / 3; /* Maintain aspect ratio on extra small screens */
+  }
+  
+  .splash-video {
+    width: 160px;
   }
 
   .splash-tagline {
