@@ -37,6 +37,7 @@ const TwitterShareModal = ({
   const [isLoadingPreview, setIsLoadingPreview] = useState(true);
   const textareaRef = useRef(null);
   const modalRef = useRef(null);
+  const overlayRef = useRef(null);
   
   // Get settings from context
   const { settings } = useApp();
@@ -159,22 +160,18 @@ const TwitterShareModal = ({
     };
   }, [isOpen, imageUrl, photoLabel, tezdevTheme, aspectRatio]);
 
-  // Handle click outside to close
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (modalRef.current && !modalRef.current.contains(e.target)) {
-        onClose();
-      }
-    };
-
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
+  // Handle overlay click to close (more reliable on iOS/touch devices)
+  const handleOverlayClick = (e) => {
+    // Only close if clicking directly on the overlay, not on modal content
+    if (e.target === e.currentTarget) {
+      onClose();
     }
-    
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isOpen, onClose]);
+  };
+
+  // Prevent modal content clicks from bubbling to overlay
+  const handleModalClick = (e) => {
+    e.stopPropagation();
+  };
 
   const handleShare = async () => {
     if (!message.trim()) return;
@@ -193,8 +190,8 @@ const TwitterShareModal = ({
   if (!isOpen) return null;
 
   return (
-    <div className="twitter-modal-overlay">
-      <div className="twitter-modal" ref={modalRef}>
+    <div className="twitter-modal-overlay" ref={overlayRef} onClick={handleOverlayClick}>
+      <div className="twitter-modal" ref={modalRef} onClick={handleModalClick}>
         <button className="twitter-modal-close" onClick={onClose}>×</button>
         
         <div className="twitter-modal-header">

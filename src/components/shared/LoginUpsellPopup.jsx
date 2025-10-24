@@ -9,22 +9,18 @@ const LoginUpsellPopup = ({ isOpen, onClose }) => {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [loginModalMode, setLoginModalMode] = useState('signup');
 
-  // Handle click outside to close
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (modalRef.current && !modalRef.current.contains(e.target)) {
-        onClose();
-      }
-    };
-
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
+  // Handle overlay click to close (more reliable on iOS/touch devices)
+  const handleOverlayClick = (e) => {
+    // Only close if clicking directly on the overlay, not on modal content
+    if (e.target === e.currentTarget) {
+      onClose();
     }
+  };
 
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isOpen, onClose]);
+  // Prevent modal content clicks from bubbling to overlay
+  const handleModalClick = (e) => {
+    e.stopPropagation();
+  };
 
   // Handle escape key
   useEffect(() => {
@@ -100,8 +96,8 @@ const LoginUpsellPopup = ({ isOpen, onClose }) => {
 
   return (
     <>
-    <div className="out-of-credits-modal-overlay" ref={overlayRef}>
-      <div className="out-of-credits-modal" ref={modalRef}>
+    <div className="out-of-credits-modal-overlay" ref={overlayRef} onClick={handleOverlayClick}>
+      <div className="out-of-credits-modal" ref={modalRef} onClick={handleModalClick}>
         <button className="out-of-credits-modal-close" onClick={onClose}>×</button>
 
         <div className="out-of-credits-modal-header">

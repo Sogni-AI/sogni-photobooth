@@ -18,7 +18,7 @@ const OutOfCreditsPopup = ({ isOpen, onClose, onPurchase, balances, currentToken
 
     // Determine the alternative token type
     const altTokenType = currentTokenType === 'spark' ? 'sogni' : 'spark';
-    
+
     // Get current and alternative balances
     const currentBalance = parseFloat(balances[currentTokenType]?.net || '0');
     const alternativeBalance = parseFloat(balances[altTokenType]?.net || '0');
@@ -33,22 +33,18 @@ const OutOfCreditsPopup = ({ isOpen, onClose, onPurchase, balances, currentToken
     }
   }, [isOpen, balances, currentTokenType, estimatedCost, onSwitchPaymentMethod]);
 
-  // Handle click outside to close
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (modalRef.current && !modalRef.current.contains(e.target)) {
-        onClose();
-      }
-    };
-
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
+  // Handle overlay click to close (more reliable on iOS/touch devices)
+  const handleOverlayClick = (e) => {
+    // Only close if clicking directly on the overlay, not on modal content
+    if (e.target === e.currentTarget) {
+      onClose();
     }
+  };
 
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isOpen, onClose]);
+  // Prevent modal content clicks from bubbling to overlay
+  const handleModalClick = (e) => {
+    e.stopPropagation();
+  };
 
   // Handle escape key
   useEffect(() => {
@@ -141,8 +137,8 @@ const OutOfCreditsPopup = ({ isOpen, onClose, onPurchase, balances, currentToken
   if (!isOpen) return null;
 
   return (
-    <div className="out-of-credits-modal-overlay" ref={overlayRef}>
-      <div className="out-of-credits-modal" ref={modalRef}>
+    <div className="out-of-credits-modal-overlay" ref={overlayRef} onClick={handleOverlayClick}>
+      <div className="out-of-credits-modal" ref={modalRef} onClick={handleModalClick}>
         <button className="out-of-credits-modal-close" onClick={onClose}>×</button>
 
         <div className="out-of-credits-modal-header">
