@@ -800,6 +800,12 @@ html body .photo-action-buttons .action-button,
     pointer-events: auto !important;
   }
 
+  .film-frame:not(.selected):hover .photo-video-btn {
+    opacity: 1 !important;
+    transform: scale(1) !important;
+    pointer-events: auto !important;
+  }
+
   .film-frame:not(.selected):hover .photo-favorite-btn-batch {
     opacity: 1 !important;
     transform: scale(1) !important;

@@ -5956,7 +5956,6 @@ const App = () => {
                 onOneOfEachSelect={handleOneOfEachFromPage}
                 onCustomSelect={handleCustomFromSampleGallery}
                 onThemeChange={handleThemeChange}
-                onBackToPhotos={handleBackToPhotosFromPromptSelector}
                 initialThemeGroupState={currentThemeState}
                 onSearchChange={handleSearchChange}
                 initialSearchTerm={urlSearchTerm}

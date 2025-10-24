@@ -8,6 +8,7 @@ import '../../styles/components/PhotoGallery.css';
 import { createPolaroidImage } from '../../utils/imageProcessing';
 import { downloadImageMobile, enableMobileImageDownload } from '../../utils/mobileDownload';
 import { isMobile, styleIdToDisplay } from '../../utils/index';
+import promptsDataRaw from '../../prompts.json';
 import { THEME_GROUPS, getDefaultThemeGroupState, getEnabledPrompts } from '../../constants/themeGroups';
 import { getThemeGroupPreferences, saveThemeGroupPreferences, getFavoriteImages, toggleFavoriteImage, saveFavoriteImages, getBlockedPrompts, blockPrompt } from '../../utils/cookies';
 import { isFluxKontextModel, SAMPLE_GALLERY_CONFIG, getQRWatermarkConfig } from '../../constants/settings';
@@ -114,7 +115,6 @@ const PhotoGallery = ({
   onOneOfEachSelect = null,
   onCustomSelect = null,
   onThemeChange = null,
-  onBackToPhotos = null,
   initialThemeGroupState = null,
   onSearchChange = null,
   initialSearchTerm = '',
@@ -220,29 +220,32 @@ const PhotoGallery = ({
   // State for blocked prompts
   const [blockedPromptIds, setBlockedPromptIds] = useState(() => getBlockedPrompts());
 
-  // State for video overlay
-  const [showVideo, setShowVideo] = useState(false);
+  // State for video overlay - track which photo's video is playing by photo ID
+  const [activeVideoPhotoId, setActiveVideoPhotoId] = useState(null);
   const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
   
   // Helper function to check if a prompt has a video easter egg
   const hasVideoEasterEgg = useCallback((promptKey) => {
-    return ['jazzSaxophonist', 'kittySwarm', 'stoneMoss', 'dapperVictorian', 'prismKaleidoscope', 'apocalypseRooftop', 'anime1990s', 'nftBoredApe', 'clownPastel'].includes(promptKey);
+    // Check if the promptKey exists in the videos category in prompts.json
+    if (!promptKey) return false;
+    const videosCategory = promptsDataRaw.videos;
+    return videosCategory && videosCategory.prompts && Object.prototype.hasOwnProperty.call(videosCategory.prompts, promptKey);
   }, []);
   
   // Cleanup video when leaving the view
   useEffect(() => {
     if (selectedPhotoIndex === null) {
-      setShowVideo(false);
+      setActiveVideoPhotoId(null);
       setCurrentVideoIndex(0);
     }
   }, [selectedPhotoIndex]);
 
   // Reset video index when video is hidden or photo changes
   useEffect(() => {
-    if (!showVideo) {
+    if (!activeVideoPhotoId) {
       setCurrentVideoIndex(0);
     }
-  }, [showVideo, selectedPhotoIndex]);
+  }, [activeVideoPhotoId, selectedPhotoIndex]);
 
   // Update theme group state when initialThemeGroupState prop changes
   useEffect(() => {
@@ -1454,6 +1457,9 @@ const PhotoGallery = ({
     }
   }, [onFramedImageCacheUpdate, framedImageUrls]);
 
+  // Check if we're in extension mode - must be defined before handlePhotoSelect
+  const isExtensionMode = window.extensionMode;
+
   const handlePhotoSelect = useCallback(async (index, e) => {
     // Ignore clicks on the favorite button or its children
     const target = e.target;
@@ -1475,27 +1481,55 @@ const PhotoGallery = ({
     
     const element = currentTarget;
     
-    // In prompt selector mode, just show selected state - don't immediately set style
-    // The "Use this Style" button will handle the actual style selection
-    
-    console.log('🔍 isPromptSelectorMode:', isPromptSelectorMode);
-    
-    // Reset scroll position to top in extension mode to prevent CSS layout issues
-    if (isExtensionMode) {
-      console.log('✅ EXTENSION MODE DETECTED - EXECUTING SCROLL RESET');
+    // In prompt selector mode, handle style selection
+    if (isPromptSelectorMode) {
+      console.log('🔍 Prompt Selector Mode - style selection');
       
-      // Direct approach - just scroll the film strip container to top
-      const filmStripContainer = document.querySelector('.film-strip-container');
-      if (filmStripContainer) {
-        console.log('📍 Found .film-strip-container, scrollTop before:', filmStripContainer.scrollTop);
-        filmStripContainer.scrollTop = 0;
-        console.log('📍 Set scrollTop to 0, scrollTop after:', filmStripContainer.scrollTop);
-        filmStripContainer.scrollTo({ top: 0, behavior: 'instant' });
-        console.log('📍 Called scrollTo({top: 0, behavior: instant})');
-      } else {
-        console.log('❌ .film-strip-container NOT FOUND');
+      // Get the photo from the appropriate array
+      const currentPhotosArray = isPromptSelectorMode ? filteredPhotos : photos;
+      const selectedPhoto = currentPhotosArray[index];
+      
+      if (selectedPhoto && selectedPhoto.isGalleryImage && selectedPhoto.promptKey) {
+        // Detect if this is a touch device or event
+        const isTouchEvent = e.type === 'touchend' || (e.nativeEvent && e.nativeEvent.sourceCapabilities && e.nativeEvent.sourceCapabilities.firesTouchEvents);
+        const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+        
+        // On touch devices, first tap shows overlay, second tap (when overlay is visible) confirms
+        if ((isTouchEvent || isTouchDevice) && selectedPhotoIndex !== index) {
+          console.log('📱 Touch device - showing overlay first');
+          // First tap: show the overlay by setting selected index
+          setSelectedPhotoIndex(index);
+          return;
+        }
+        
+        // Desktop or second tap on touch device: immediately select the style
+        console.log('🖱️ Selecting style immediately');
+        
+        // Reset scroll position to top in extension mode before style selection
+        if (isExtensionMode) {
+          console.log('✅ EXTENSION MODE DETECTED - EXECUTING SCROLL RESET');
+          const filmStripContainer = document.querySelector('.film-strip-container');
+          if (filmStripContainer) {
+            filmStripContainer.scrollTop = 0;
+            filmStripContainer.scrollTo({ top: 0, behavior: 'instant' });
+          }
+        }
+        
+        // Select the style
+        if (onPromptSelect) {
+          onPromptSelect(selectedPhoto.promptKey);
+        }
+        
+        // Navigate back to menu (unless in extension mode)
+        if (!isExtensionMode && handleBackToCamera) {
+          handleBackToCamera();
+        }
       }
+      return;
     }
+    
+    // For non-prompt-selector mode, use regular photo viewer behavior
+    console.log('🔍 Regular mode - photo viewer');
     
     if (selectedPhotoIndex === index) {
       // Capture current position before removing selected state
@@ -1539,7 +1573,7 @@ const PhotoGallery = ({
         });
       });
     }
-  }, [selectedPhotoIndex, setSelectedPhotoIndex, preGenerateAdjacentFrames]);
+  }, [selectedPhotoIndex, setSelectedPhotoIndex, preGenerateAdjacentFrames, isPromptSelectorMode, filteredPhotos, photos, onPromptSelect, handleBackToCamera, isExtensionMode]);
 
 
   // Detect if running as PWA - MUST be called before any early returns to maintain hook order
@@ -1663,9 +1697,6 @@ const PhotoGallery = ({
   // Exception: In prompt selector mode, we need to render even with empty photos while they're loading
   // This MUST come after all hooks to maintain hook order
   if ((photos.length === 0 && !isPromptSelectorMode) || !showPhotoGrid) return null;
-  
-  // Check if we're in extension mode for transparent overlay
-  const isExtensionMode = window.extensionMode;
   
   // Calculate proper aspect ratio style based on the selected aspect ratio
   const getAspectRatioStyle = () => {
@@ -2243,18 +2274,16 @@ const PhotoGallery = ({
           }}
           title={isGenerating ? 'Cancel current generation and start new batch' : 'Adjust and generate next batch'}
         >
-          {isGenerating ? 'CANCEL + NEXT BATCH' : 'NEXT BATCH'}
+          {isGenerating ? 'CANCEL + NEW BATCH' : 'NEW BATCH'}
         </button>
       )}
-      {/* Continue button - only show in prompt selector mode when reference photo exists */}
-      {isPromptSelectorMode && onBackToPhotos && lastPhotoData && lastPhotoData.blob && selectedPhotoIndex === null && (
+      {/* Continue button - only show in prompt selector mode - navigates back to menu */}
+      {isPromptSelectorMode && handleBackToCamera && selectedPhotoIndex === null && (
         <button
           className="view-photos-btn corner-btn"
           onClick={() => {
-            // Just open ImageAdjuster over current view - don't navigate away
-            if (handleOpenImageAdjusterForNextBatch) {
-              handleOpenImageAdjusterForNextBatch();
-            }
+            // Navigate back to menu
+            handleBackToCamera();
           }}
           style={{
             position: 'fixed',
@@ -2263,7 +2292,7 @@ const PhotoGallery = ({
             left: 'auto',
             zIndex: 9999,
           }}
-          title="Adjust and generate batch with current settings"
+          title="Return to main menu"
         >
           <span className="view-photos-label">
             Continue
@@ -2416,26 +2445,6 @@ const PhotoGallery = ({
                   <svg fill="currentColor" width="16" height="16" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
                   Use this Style
                 </button>
-                
-                {/* Video Button - Only show for styles with video easter eggs */}
-                {hasVideoEasterEgg(selectedPhoto.promptKey) && (
-                  <button
-                    className="action-button video-btn"
-                    onClick={(e) => {
-                      setShowVideo(!showVideo);
-                      e.stopPropagation();
-                    }}
-                  >
-                    <svg fill="currentColor" width="16" height="16" viewBox="0 0 24 24">
-                      {showVideo ? (
-                        <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
-                      ) : (
-                        <path d="M8 5v14l11-7z"/>
-                      )}
-                    </svg>
-                    {showVideo ? 'Hide Video' : 'Video'}
-                  </button>
-                )}
               </>
             ) : (
               <button
@@ -3859,8 +3868,8 @@ const PhotoGallery = ({
                   )}
                 </div>
 
-                {/* Block prompt button - show in prompt selector mode for desktop (only if photo has promptKey) */}
-                {isPromptSelectorMode && !isMobile() && photo.promptKey && (
+                {/* Block prompt button - show in prompt selector mode for desktop (only if photo has promptKey, hide when video is playing) */}
+                {isPromptSelectorMode && !isMobile() && photo.promptKey && (activeVideoPhotoId !== (photo.id || photo.promptKey)) && (
                   <div
                     className="photo-block-btn"
                     onClickCapture={(e) => {
@@ -4362,8 +4371,83 @@ const PhotoGallery = ({
                   })()}
                 />
 
+                {/* "Use this vibe" button overlay - Only show in prompt selector mode on gallery images (hide when video is playing) */}
+                {isPromptSelectorMode && photo.isGalleryImage && (activeVideoPhotoId !== (photo.id || photo.promptKey)) && (
+                  <div 
+                    className="use-vibe-overlay-container"
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      opacity: isSelected ? 1 : 0,
+                      transition: 'opacity 0.2s ease',
+                      pointerEvents: 'auto',
+                      zIndex: 10
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!isSelected) e.currentTarget.style.opacity = '1';
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isSelected) e.currentTarget.style.opacity = '0';
+                    }}
+                  >
+                    <button
+                      style={{
+                        background: '#ff5252',
+                        color: 'white',
+                        border: 'none',
+                        padding: '12px 24px',
+                        borderRadius: '8px',
+                        fontSize: '16px',
+                        fontWeight: 'bold',
+                        cursor: 'pointer',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                        transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+                        fontFamily: '"Permanent Marker", cursive'
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        // Select the style
+                        if (photo.promptKey && onPromptSelect) {
+                          // Reset scroll position to top in extension mode before style selection
+                          if (isExtensionMode) {
+                            const filmStripContainer = document.querySelector('.film-strip-container');
+                            if (filmStripContainer) {
+                              filmStripContainer.scrollTop = 0;
+                              filmStripContainer.scrollTo({ top: 0, behavior: 'instant' });
+                            }
+                          }
+                          
+                          // Select the style
+                          onPromptSelect(photo.promptKey);
+                          
+                          // Navigate back to menu (unless in extension mode)
+                          if (!isExtensionMode && handleBackToCamera) {
+                            handleBackToCamera();
+                          }
+                        }
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.transform = 'scale(1.05)';
+                        e.currentTarget.style.boxShadow = '0 6px 16px rgba(0,0,0,0.4)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = 'scale(1)';
+                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
+                      }}
+                    >
+                      {isSelected ? 'Use this Style' : 'Use this vibe'}
+                    </button>
+                  </div>
+                )}
+
                 {/* Video Overlay - Only show for styles with video easter eggs when video is enabled */}
-                {isSelected && hasVideoEasterEgg(photo.promptKey) && showVideo && (
+                {((isSelected && !isPromptSelectorMode) || (isPromptSelectorMode && photo.isGalleryImage)) && hasVideoEasterEgg(photo.promptKey) && (activeVideoPhotoId === (photo.id || photo.promptKey)) && (
                   <video
                     src={(() => {
                       if (photo.promptKey === 'jazzSaxophonist') {
@@ -4388,6 +4472,8 @@ const PhotoGallery = ({
                         return "https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/videos/sogni-photobooth-nft-bored-ape-raw.mp4";
                       } else if (photo.promptKey === 'clownPastel') {
                         return "https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/videos/sogni-photobooth-clown-pastel-raw.mp4";
+                      } else if (photo.promptKey === 'jojoStandAura') {
+                        return "https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/videos/sogni-photobooth-jojo-stand-aura-raw.mp4";
                       }
                       return "";
                     })()}
@@ -4421,7 +4507,7 @@ const PhotoGallery = ({
                     }}
                     onError={(e) => {
                       console.error(`${photo.promptKey} video failed to load:`, e);
-                      setShowVideo(false); // Hide video on error
+                      setActiveVideoPhotoId(null); // Hide video on error
                     }}
                   />
                 )}
@@ -4791,8 +4877,8 @@ const PhotoGallery = ({
                 )}
               </div>
 
-              {/* Block prompt button - show in prompt selector mode for desktop */}
-              {isPromptSelectorMode && !isMobile() && photo.promptKey && (
+              {/* Block prompt button - show in prompt selector mode for desktop (hide when video is playing) */}
+              {isPromptSelectorMode && !isMobile() && photo.promptKey && (activeVideoPhotoId !== (photo.id || photo.promptKey)) && (
               <div
                 className="photo-block-btn"
                 onClickCapture={(e) => {
@@ -4846,8 +4932,68 @@ const PhotoGallery = ({
               </div>
               )}
 
-              {/* Favorite heart button - show in prompt selector mode for desktop */}
-              {isPromptSelectorMode && !isMobile() && (
+              {/* Video button - show in prompt selector mode for gallery images with videos */}
+              {isPromptSelectorMode && !isMobile() && photo.isGalleryImage && hasVideoEasterEgg(photo.promptKey) && (
+              <div
+                className="photo-video-btn"
+                onClickCapture={(e) => {
+                  e.stopPropagation();
+                  const photoId = photo.id || photo.promptKey;
+                  setActiveVideoPhotoId(activeVideoPhotoId === photoId ? null : photoId);
+                }}
+                onMouseDownCapture={(e) => {
+                  e.stopPropagation();
+                }}
+                  style={{
+                    position: 'absolute',
+                    top: '10px',
+                    right: (activeVideoPhotoId === (photo.id || photo.promptKey)) ? '10px' : '60px',
+                    width: '40px',
+                    height: '40px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    zIndex: 99999,
+                    opacity: (activeVideoPhotoId === (photo.id || photo.promptKey)) ? '1' : '0',
+                    transition: 'opacity 0.2s ease, right 0.3s ease',
+                    pointerEvents: 'all'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.opacity = '1';
+                  }}
+                  onMouseLeave={(e) => {
+                    const isPlaying = activeVideoPhotoId === (photo.id || photo.promptKey);
+                    // Keep visible if video is playing, otherwise hide
+                    e.currentTarget.style.opacity = isPlaying ? '1' : '0';
+                  }}
+                  title={(activeVideoPhotoId === (photo.id || photo.promptKey)) ? 'Hide video' : 'Show video'}
+                >
+                  <div style={{
+                    width: '20px',
+                    height: '20px',
+                    borderRadius: '50%',
+                    background: (activeVideoPhotoId === (photo.id || photo.promptKey)) ? 'rgba(52, 152, 219, 0.9)' : 'rgba(0, 0, 0, 0.7)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.5)',
+                    transition: 'background 0.2s ease',
+                    pointerEvents: 'none'
+                  }}>
+                    <svg fill="white" width="10" height="10" viewBox="0 0 24 24" style={{ pointerEvents: 'none' }}>
+                      {(activeVideoPhotoId === (photo.id || photo.promptKey)) ? (
+                        <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+                      ) : (
+                        <path d="M8 5v14l11-7z"/>
+                      )}
+                    </svg>
+                  </div>
+                </div>
+              )}
+
+              {/* Favorite heart button - show in prompt selector mode for desktop (hide when video is playing) */}
+              {isPromptSelectorMode && !isMobile() && (activeVideoPhotoId !== (photo.id || photo.promptKey)) && (
               <div
                 className="photo-favorite-btn"
                 onClickCapture={(e) => {
@@ -5178,7 +5324,6 @@ PhotoGallery.propTypes = {
   onOneOfEachSelect: PropTypes.func,
   onCustomSelect: PropTypes.func,
   onThemeChange: PropTypes.func,
-  onBackToPhotos: PropTypes.func,
   initialThemeGroupState: PropTypes.object,
   onSearchChange: PropTypes.func,
   initialSearchTerm: PropTypes.string,
