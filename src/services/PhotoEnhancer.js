@@ -14,6 +14,7 @@
  * @param {Object} options.sogniClient - Sogni client instance
  * @param {(updater: (prev: any[]) => any[]) => void} options.setPhotos - React setState function for photos
  * @param {(projectId: string | null) => void} options.onSetActiveProject - Callback to set active project reference
+ * @param {() => void} options.onOutOfCredits - Callback to trigger out of credits popup
  * @returns {Promise<void>}
  */
 export const enhancePhoto = async (options) => {
@@ -30,7 +31,8 @@ export const enhancePhoto = async (options) => {
     clearQrCode, // New option to clear QR codes when enhancement starts
     // onSetActiveProject - not used for enhancement to avoid interfering with main generation
     useKontext = false,
-    customPrompt = ''
+    customPrompt = '',
+    onOutOfCredits // Callback to show out of credits popup
   } = options;
 
   // Input validation
@@ -464,6 +466,45 @@ export const enhancePhoto = async (options) => {
         console.error('Enhance jobFailed full payload:', job);
         // Clear timeout since enhancement is failing
         clearTimeout(timeoutId);
+        
+        // Check for insufficient funds error
+        const isInsufficientFunds = job?.error && (
+          job.error.code === 4024 ||
+          (job.error.message && (
+            job.error.message.toLowerCase().includes('insufficient funds') ||
+            (job.error.message.toLowerCase().includes('insufficient') && job.error.message.toLowerCase().includes('credits'))
+          ))
+        );
+        
+        if (isInsufficientFunds) {
+          console.error('[ENHANCE] ❌ Insufficient funds - triggering out of credits popup');
+          
+          // Update photo state with out of credits error
+          setPhotos(prev => {
+            const current = prev[photoIndex];
+            if (!current) return prev;
+            if (current.projectId && current.projectId !== project.id) return prev;
+            if (!current.enhancing) return prev;
+            
+            const updated = [...prev];
+            updated[photoIndex] = {
+              ...current,
+              loading: false,
+              enhancing: false,
+              error: 'INSUFFICIENT CREDITS',
+              enhancementError: 'Insufficient credits. Please replenish your account.',
+              enhanceTimeoutId: null
+            };
+            return updated;
+          });
+          
+          // Trigger out of credits popup
+          if (onOutOfCredits) {
+            onOutOfCredits();
+          }
+          return;
+        }
+        
         // Don't clear activeProjectReference since we didn't set it for enhancement
         // onSetActiveProject(null); // Commented out since we don't set it
         setPhotos(prev => {
@@ -493,6 +534,37 @@ export const enhancePhoto = async (options) => {
     console.error(`[ENHANCE] Error enhancing image:`, error);
     // Clear timeout since enhancement is failing
     clearTimeout(timeoutId);
+    
+    // Check for insufficient funds error
+    const isInsufficientFunds = error?.message && (
+      error.message.toLowerCase().includes('insufficient funds') ||
+      (error.message.toLowerCase().includes('insufficient') && error.message.toLowerCase().includes('credits'))
+    );
+    
+    if (isInsufficientFunds) {
+      console.error('[ENHANCE] ❌ Insufficient funds - triggering out of credits popup');
+      
+      // Update photo state with out of credits error
+      setPhotos(prev => {
+        const updated = [...prev];
+        if (!updated[photoIndex]) return prev;
+        
+        updated[photoIndex] = {
+          ...updated[photoIndex],
+          loading: false,
+          enhancing: false,
+          error: 'INSUFFICIENT CREDITS',
+          enhancementError: 'Insufficient credits. Please replenish your account.'
+        };
+        return updated;
+      });
+      
+      // Trigger out of credits popup
+      if (onOutOfCredits) {
+        onOutOfCredits();
+      }
+      return;
+    }
     
     setPhotos(prev => {
       const updated = [...prev];

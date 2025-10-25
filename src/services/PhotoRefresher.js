@@ -15,6 +15,7 @@ import { styleIdToDisplay } from '../utils';
  * @param {Object} options.settings - Current settings from context
  * @param {Object} options.lastPhotoData - Last photo data with blob and dataUrl
  * @param {Object} options.stylePrompts - Style prompts mapping for finding style display text
+ * @param {() => void} options.onOutOfCredits - Callback to trigger out of credits popup
  * @returns {Promise<void>}
  */
 export const refreshPhoto = async (options) => {
@@ -27,7 +28,8 @@ export const refreshPhoto = async (options) => {
     lastPhotoData,
     stylePrompts,
     tokenType, // Payment method (for frontend auth)
-    isPremiumSpark // Premium status (for frontend auth)
+    isPremiumSpark, // Premium status (for frontend auth)
+    onOutOfCredits // Callback to show out of credits popup
   } = options;
 
   // Input validation
@@ -505,6 +507,44 @@ export const refreshPhoto = async (options) => {
       console.error('[REFRESH] Project failed event received:', error);
       clearTimeout(timeoutId);
       
+      // Check for insufficient funds error (code 4024 or message containing "insufficient funds")
+      const isInsufficientFunds = error && typeof error === 'object' &&
+        (error.code === 4024 || 
+         (error.message && (
+           error.message.toLowerCase().includes('insufficient funds') ||
+           error.message.toLowerCase().includes('insufficient') && error.message.toLowerCase().includes('credits')
+         )));
+      
+      if (isInsufficientFunds) {
+        console.error('[REFRESH] ❌ Insufficient funds - triggering out of credits popup');
+        
+        // Update photo state with out of credits error
+        setPhotos(prev => {
+          const updated = [...prev];
+          const current = updated[photoIndex];
+          if (!current) return prev;
+          if (current.projectId && current.projectId !== project.id) return prev;
+          
+          updated[photoIndex] = {
+            ...current,
+            loading: false,
+            generating: false,
+            error: 'INSUFFICIENT CREDITS',
+            permanentError: true,
+            statusText: 'Out of Credits',
+            refreshTimeoutId: null,
+            currentRefreshJobId: null
+          };
+          return updated;
+        });
+        
+        // Trigger out of credits popup
+        if (onOutOfCredits) {
+          onOutOfCredits();
+        }
+        return;
+      }
+      
       setPhotos(prev => {
         const updated = [...prev];
         const current = updated[photoIndex];
@@ -546,6 +586,44 @@ export const refreshPhoto = async (options) => {
       console.error('[REFRESH] Project error event received:', error);
       clearTimeout(timeoutId);
       
+      // Check for insufficient funds error (code 4024 or message containing "insufficient funds")
+      const isInsufficientFunds = error && typeof error === 'object' &&
+        (error.code === 4024 || 
+         (error.message && (
+           error.message.toLowerCase().includes('insufficient funds') ||
+           error.message.toLowerCase().includes('insufficient') && error.message.toLowerCase().includes('credits')
+         )));
+      
+      if (isInsufficientFunds) {
+        console.error('[REFRESH] ❌ Insufficient funds - triggering out of credits popup');
+        
+        // Update photo state with out of credits error
+        setPhotos(prev => {
+          const updated = [...prev];
+          const current = updated[photoIndex];
+          if (!current) return prev;
+          if (current.projectId && current.projectId !== project.id) return prev;
+          
+          updated[photoIndex] = {
+            ...current,
+            loading: false,
+            generating: false,
+            error: 'INSUFFICIENT CREDITS',
+            permanentError: true,
+            statusText: 'Out of Credits',
+            refreshTimeoutId: null,
+            currentRefreshJobId: null
+          };
+          return updated;
+        });
+        
+        // Trigger out of credits popup
+        if (onOutOfCredits) {
+          onOutOfCredits();
+        }
+        return;
+      }
+      
       setPhotos(prev => {
         const updated = [...prev];
         const current = updated[photoIndex];
@@ -583,6 +661,39 @@ export const refreshPhoto = async (options) => {
   } catch (error) {
     console.error(`[REFRESH] Error refreshing image:`, error);
     clearTimeout(timeoutId);
+    
+    // Check for insufficient funds error
+    const isInsufficientFunds = error?.message && (
+      error.message.toLowerCase().includes('insufficient funds') ||
+      (error.message.toLowerCase().includes('insufficient') && error.message.toLowerCase().includes('credits'))
+    );
+    
+    if (isInsufficientFunds) {
+      console.error('[REFRESH] ❌ Insufficient funds - triggering out of credits popup');
+      
+      // Update photo state with out of credits error
+      setPhotos(prev => {
+        const updated = [...prev];
+        if (!updated[photoIndex]) return prev;
+        
+        updated[photoIndex] = {
+          ...updated[photoIndex],
+          loading: false,
+          generating: false,
+          error: 'INSUFFICIENT CREDITS',
+          permanentError: true,
+          statusText: 'Out of Credits',
+          refreshTimeoutId: null
+        };
+        return updated;
+      });
+      
+      // Trigger out of credits popup
+      if (onOutOfCredits) {
+        onOutOfCredits();
+      }
+      return;
+    }
     
     setPhotos(prev => {
       const updated = [...prev];

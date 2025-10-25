@@ -5945,6 +5945,10 @@ const App = () => {
                 }}
                 qrCodeData={qrCodeData}
                 onCloseQR={() => setQrCodeData(null)}
+                onOutOfCredits={() => {
+                  console.log('[ENHANCE] Triggering out of credits popup from PhotoGallery (prompt selector)');
+                  setShowOutOfCreditsPopup(true);
+                }}
                 // New props for prompt selector mode
                 isPromptSelectorMode={true}
                 selectedModel={selectedModel}
@@ -6646,7 +6650,11 @@ const App = () => {
         lastPhotoData,
         stylePrompts,
         tokenType: walletTokenType, // Pass payment method for frontend auth
-        isPremiumSpark: hasPremiumSpark // Pass premium status for frontend auth
+        isPremiumSpark: hasPremiumSpark, // Pass premium status for frontend auth
+        onOutOfCredits: () => {
+          console.log('[REFRESH] Triggering out of credits popup from handleRefreshPhoto');
+          setShowOutOfCreditsPopup(true);
+        }
       });
     } catch (error) {
       console.error('Refresh failed:', error);
@@ -7659,6 +7667,10 @@ const App = () => {
           }}
           qrCodeData={qrCodeData}
           onCloseQR={() => setQrCodeData(null)}
+          onOutOfCredits={() => {
+            console.log('[ENHANCE] Triggering out of credits popup from PhotoGallery (main)');
+            setShowOutOfCreditsPopup(true);
+          }}
           numImages={numImages}
           authState={authState}
         />

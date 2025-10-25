@@ -121,7 +121,8 @@ const PhotoGallery = ({
   // eslint-disable-next-line no-unused-vars
   numImages = 1, // Intentionally unused - ImageAdjuster handles batch count selection
   authState = null,
-  handleRefreshPhoto = null
+  handleRefreshPhoto = null,
+  onOutOfCredits = null // Callback to trigger out of credits popup
 }) => {
   // Get settings from context
   const { settings, updateSetting } = useApp();
@@ -713,9 +714,10 @@ const PhotoGallery = ({
       clearQrCode: onClearQrCode, // Pass QR clearing function
       onSetActiveProject: (projectId) => {
         activeProjectReference.current = projectId;
-      }
+      },
+      onOutOfCredits: onOutOfCredits // Pass out of credits callback
     });
-  }, [selectedPhotoIndex, selectedSubIndex, desiredWidth, desiredHeight, sogniClient, setPhotos, outputFormat, clearFrameCacheForPhoto, activeProjectReference, enhancePhoto, photos, onClearQrCode]);
+  }, [selectedPhotoIndex, selectedSubIndex, desiredWidth, desiredHeight, sogniClient, setPhotos, outputFormat, clearFrameCacheForPhoto, activeProjectReference, enhancePhoto, photos, onClearQrCode, onOutOfCredits]);
 
   // Handle enhancement with Kontext (with custom prompt)
   const handleEnhanceWithKontext = useCallback(() => {
@@ -757,9 +759,10 @@ const PhotoGallery = ({
       },
       // Kontext-specific parameters
       useKontext: true,
-      customPrompt: trimmed
+      customPrompt: trimmed,
+      onOutOfCredits: onOutOfCredits // Pass out of credits callback
     });
-  }, [selectedPhotoIndex, selectedSubIndex, desiredWidth, desiredHeight, sogniClient, setPhotos, outputFormat, clearFrameCacheForPhoto, activeProjectReference, enhancePhoto, onClearQrCode, photos]);
+  }, [selectedPhotoIndex, selectedSubIndex, desiredWidth, desiredHeight, sogniClient, setPhotos, outputFormat, clearFrameCacheForPhoto, activeProjectReference, enhancePhoto, onClearQrCode, photos, onOutOfCredits]);
 
   // Handle prompt modal submission
   const handlePromptSubmit = useCallback(() => {
@@ -5497,7 +5500,8 @@ PhotoGallery.propTypes = {
   onPortraitTypeChange: PropTypes.func,
   numImages: PropTypes.number,
   authState: PropTypes.object,
-  handleRefreshPhoto: PropTypes.func
+  handleRefreshPhoto: PropTypes.func,
+  onOutOfCredits: PropTypes.func
 };
 
 export default PhotoGallery; 
