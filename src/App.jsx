@@ -5896,10 +5896,8 @@ const App = () => {
                 selectedPhotoIndex={selectedPhotoIndex}
                 setSelectedPhotoIndex={setSelectedPhotoIndex}
                 showPhotoGrid={true}
-                handleBackToCamera={handleBackToCameraFromPromptSelector}
-                handlePreviousPhoto={handlePreviousPhoto}
-                handleNextPhoto={handleNextPhoto}
-                handlePhotoViewerClick={handlePhotoViewerClick}
+          handleBackToCamera={handleBackToCameraFromPromptSelector}
+          handlePhotoViewerClick={handlePhotoViewerClick}
                 handleGenerateMorePhotos={handleGenerateMorePhotos}
                 handleOpenImageAdjusterForNextBatch={handleOpenImageAdjusterForNextBatch}
                 handleShowControlOverlay={() => setShowControlOverlay(!showControlOverlay)}
@@ -7614,8 +7612,6 @@ const App = () => {
           setSelectedPhotoIndex={setSelectedPhotoIndex}
           showPhotoGrid={showPhotoGrid}
           handleBackToCamera={handleBackToMenu}
-          handlePreviousPhoto={handlePreviousPhoto}
-          handleNextPhoto={handleNextPhoto}
           handlePhotoViewerClick={handlePhotoViewerClick}
           handleGenerateMorePhotos={handleGenerateMorePhotos}
           handleOpenImageAdjusterForNextBatch={handleOpenImageAdjusterForNextBatch}

@@ -53,6 +53,10 @@ export const refreshPhoto = async (options) => {
     return;
   }
 
+  // Preserve the original promptKey from the photo being refreshed
+  const originalPromptKey = photo.promptKey;
+  console.log(`[REFRESH] Original promptKey from photo: ${originalPromptKey}`);
+
   // Get the original data URL for the reference image
   const originalDataUrl = photo.originalDataUrl || lastPhotoData?.dataUrl;
   if (!originalDataUrl || !lastPhotoData?.blob) {
@@ -379,14 +383,16 @@ export const refreshPhoto = async (options) => {
             }
             
             // Find the style display name for statusText (same logic as main generation)
+            // Use the preserved originalPromptKey first, or try to find from prompt
+            const finalPromptKey = originalPromptKey || 
+              Object.entries(stylePrompts || {}).find(([, value]) => value === promptToUse)?.[0];
+            
             let statusText = '#SogniPhotobooth'; // Default fallback
-            if (promptToUse) {
-              // Try to find the style key from the prompt
-              const foundKey = Object.entries(stylePrompts || {}).find(([, value]) => value === promptToUse)?.[0];
-              if (foundKey && foundKey !== 'custom' && foundKey !== 'random' && foundKey !== 'randomMix') {
-                statusText = styleIdToDisplay(foundKey);
-              }
+            if (finalPromptKey && finalPromptKey !== 'custom' && finalPromptKey !== 'random' && finalPromptKey !== 'randomMix') {
+              statusText = styleIdToDisplay(finalPromptKey);
             }
+            
+            console.log(`[REFRESH] Setting statusText to: ${statusText}, promptKey to: ${finalPromptKey}`);
             
             updated[photoIndex] = {
               ...current,
@@ -399,7 +405,8 @@ export const refreshPhoto = async (options) => {
               refreshTimeoutId: null,
               currentRefreshJobId: null,
               positivePrompt: promptToUse, // Keep the prompt for future refreshes
-              stylePrompt: promptToUse // Also set stylePrompt for label display via getStyleDisplayText
+              stylePrompt: promptToUse, // Also set stylePrompt for label display via getStyleDisplayText
+              promptKey: finalPromptKey // Preserve promptKey for proper label display
             };
             return updated;
           });
@@ -410,14 +417,16 @@ export const refreshPhoto = async (options) => {
           // Still update the state
           
           // Find the style display name for statusText (same logic as main generation)
+          // Use the preserved originalPromptKey first, or try to find from prompt
+          const finalPromptKey = originalPromptKey || 
+            Object.entries(stylePrompts || {}).find(([, value]) => value === promptToUse)?.[0];
+          
           let statusText = '#SogniPhotobooth'; // Default fallback
-          if (promptToUse) {
-            // Try to find the style key from the prompt
-            const foundKey = Object.entries(stylePrompts || {}).find(([, value]) => value === promptToUse)?.[0];
-            if (foundKey && foundKey !== 'custom' && foundKey !== 'random' && foundKey !== 'randomMix') {
-              statusText = styleIdToDisplay(foundKey);
-            }
+          if (finalPromptKey && finalPromptKey !== 'custom' && finalPromptKey !== 'random' && finalPromptKey !== 'randomMix') {
+            statusText = styleIdToDisplay(finalPromptKey);
           }
+          
+          console.log(`[REFRESH] (error path) Setting statusText to: ${statusText}, promptKey to: ${finalPromptKey}`);
           
           setPhotos(prev => {
             const updated = [...prev];
@@ -436,7 +445,8 @@ export const refreshPhoto = async (options) => {
               refreshTimeoutId: null,
               currentRefreshJobId: null,
               positivePrompt: promptToUse,
-              stylePrompt: promptToUse // Also set stylePrompt for label display via getStyleDisplayText
+              stylePrompt: promptToUse, // Also set stylePrompt for label display via getStyleDisplayText
+              promptKey: finalPromptKey // Preserve promptKey for proper label display
             };
             return updated;
           });

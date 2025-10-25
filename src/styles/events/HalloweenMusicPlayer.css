@@ -398,7 +398,7 @@
   z-index: 100;
 }
 
-.download-btn {
+.halloween-music-player .download-btn {
   background: transparent;
   border: none;
   padding: 0.2rem;
@@ -417,13 +417,13 @@
   filter: drop-shadow(0 2px 3px rgba(255, 255, 255, 0.5));
 }
 
-.download-btn:hover {
+.halloween-music-player .download-btn:hover {
   transform: scale(1.2);
   opacity: 1;
   filter: drop-shadow(0 3px 4px rgba(255, 255, 255, 0.8));
 }
 
-.download-btn:active {
+.halloween-music-player .download-btn:active {
   transform: scale(1);
 }
 

@@ -638,7 +638,7 @@ const ImageAdjuster = ({
               }
             }}
           >
-            Your style
+            Your selected vibe
           </div>
           <button 
             className="image-adjuster-style-selector-button"

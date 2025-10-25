@@ -800,20 +800,63 @@ html body .photo-action-buttons .action-button,
     pointer-events: auto !important;
   }
 
-  .film-frame:not(.selected):hover .photo-video-btn {
+
+  /* Show "Use this vibe" overlay on hover for desktop or touch-hovered for mobile in Style Explorer */
+  .film-frame:not(.selected):hover .use-vibe-overlay-container,
+  .film-frame.touch-hovered .use-vibe-overlay-container {
+    display: flex !important;
     opacity: 1 !important;
-    transform: scale(1) !important;
     pointer-events: auto !important;
+  }
+
+  /* Show vibe icons container on hover for desktop in Style Explorer */
+  .film-frame:not(.selected):hover .vibe-icons-container,
+  .film-frame.touch-hovered .vibe-icons-container {
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    top: 20px !important;
+    right: 20px !important;
+  }
+  
+  .vibe-icons-container {
+    top: 20px !important;
+    right: 20px !important;
+  }
+
+  /* On mobile, move icons closer to corner with proper padding */
+  @media (max-width: 768px), (orientation: portrait) and (max-device-width: 1024px) {
+    .vibe-icons-container {
+      top: 10px !important;
+      right: 10px !important;
+    }
+    
+    .film-frame:not(.selected):hover .vibe-icons-container,
+    .film-frame.touch-hovered .vibe-icons-container {
+      top: 10px !important;
+      right: 10px !important;
+    }
+  }
+
+  /* When favorited but not hovering or touch-hovered, hide all icons except heart */
+  .film-frame:not(.selected):not(:hover):not(.touch-hovered) .vibe-icons-container .photo-fullscreen-btn,
+  .film-frame:not(.selected):not(:hover):not(.touch-hovered) .vibe-icons-container .photo-video-btn,
+  .film-frame:not(.selected):not(:hover):not(.touch-hovered) .vibe-icons-container .photo-block-btn {
+    display: none !important;
+  }
+
+  /* Ensure current-style photos don't show overlay or icons unless explicitly hovered/touched */
+  .film-frame.current-style:not(:hover):not(.touch-hovered) .use-vibe-overlay-container {
+    display: none !important;
+    opacity: 0 !important;
+  }
+  
+  .film-frame.current-style:not(:hover):not(.touch-hovered) .vibe-icons-container {
+    opacity: 0 !important;
   }
 
   .film-frame:not(.selected):hover .photo-favorite-btn-batch {
     opacity: 1 !important;
     transform: scale(1) !important;
-    pointer-events: auto !important;
-  }
-
-  .film-frame:not(.selected):hover .photo-block-btn {
-    opacity: 1 !important;
     pointer-events: auto !important;
   }
 }

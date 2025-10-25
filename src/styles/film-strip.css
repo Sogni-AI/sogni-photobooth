@@ -608,7 +608,8 @@ body:has(.photos-corner-btn) .options-section .corner-btn.continue-corner-btn {
 /* Remove the "hovered" class approach completely and use only pure CSS - but don't interfere with loading animations or selected frames */
 /* Only apply hover effects on devices that support hover (not touch devices) */
 @media (hover: hover) and (pointer: fine) {
-  .film-frame:not(.loading):not(.selected):hover {
+  .film-frame:not(.loading):not(.selected):hover,
+  .film-frame:not(.loading):not(.selected):hover:active {
     transform: translateY(-10px) translateZ(0) !important;
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4) !important;
     z-index: 10 !important;
@@ -683,6 +684,30 @@ body .film-frame.selected,
   overflow: visible !important;
 }
 
+/* In Style Explorer mode, keep selected photos in grid as thumbnails (no fullscreen) */
+/* UNLESS user explicitly clicked fullscreen button */
+.film-strip-container.prompt-selector-mode .film-frame.selected:not(.fullscreen-mode) {
+  position: relative !important;
+  top: auto !important;
+  left: auto !important;
+  transform: none !important;
+  -webkit-transform: none !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  max-height: none !important;
+  cursor: default !important;
+  z-index: 1 !important;
+}
+
+/* Keep selected image at normal grid size in Style Explorer */
+.film-strip-container.prompt-selector-mode .film-frame.selected:not(.fullscreen-mode) img {
+  width: 100% !important;
+  height: auto !important;
+  max-width: 100% !important;
+  max-height: none !important;
+  object-fit: cover !important;
+}
+
 /* Add inner bevel/shadow effect to all selected photos (desktop and mobile) */
 .film-frame.selected::after {
   content: "";
@@ -746,6 +771,20 @@ body .film-frame.selected,
   filter: blur(4px) brightness(0.7);
   pointer-events: none;
   transition: filter 0.5s cubic-bezier(0.2, 0, 0.2, 1);
+  opacity: 0.3;
+}
+
+/* In Style Explorer mode, keep all photos visible and clickable when not in fullscreen mode */
+.film-strip-container.prompt-selector-mode .film-strip-content.has-selected .film-frame:not(.selected):not(.fullscreen-mode) {
+  filter: none;
+  pointer-events: auto;
+  opacity: 1;
+}
+
+/* When in fullscreen mode in Style Explorer, blur background like normal */
+.film-strip-container.prompt-selector-mode .film-strip-content.has-selected .film-frame.fullscreen-mode ~ .film-frame:not(.selected) {
+  filter: blur(4px) brightness(0.7);
+  pointer-events: none;
   opacity: 0.3;
 }
 
@@ -961,10 +1000,18 @@ html body.has-selected-photo .film-strip-container.visible .film-frame.selected[
   z-index: 9990;
 }
 
+/* Show dark overlay for regular gallery and for fullscreen in Style Explorer */
 .film-strip-container.has-selected::before {
   opacity: 1;
   visibility: visible;
   pointer-events: auto;
+}
+
+/* Hide dark overlay in Style Explorer UNLESS fullscreen mode is active */
+.film-strip-container.prompt-selector-mode.has-selected:not(.fullscreen-active)::before {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
 }
 
 /* Create a loading indicator that covers the image only, not the border */

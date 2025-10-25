@@ -117,7 +117,7 @@ const CustomPromptPopup = ({
     if (length < 50) return "🎨 Love it! Add more details if you'd like!";
     if (length < 100) return "🚀 Wow! That sounds amazing!";
     if (length < 200) return "🌈 Incredible detail! This will be epic!";
-    return "💫 You're a prompt wizard! ✨";
+    return "💫 You're a prompt wizard Harry! ✨";
   };
 
   if (!isOpen) return null;

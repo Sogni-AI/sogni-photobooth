@@ -70,8 +70,6 @@ const PhotoGallery = ({
   setSelectedPhotoIndex,
   showPhotoGrid,
   handleBackToCamera,
-  handlePreviousPhoto,
-  handleNextPhoto,
   handlePhotoViewerClick,
   handleOpenImageAdjusterForNextBatch,
   handleShowControlOverlay,
@@ -174,6 +172,9 @@ const PhotoGallery = ({
 
   // State to track concurrent refresh operations
   const [refreshingPhotos, setRefreshingPhotos] = useState(new Set());
+
+  // State to track touch hover in Vibe Explorer (separate from selectedPhotoIndex to avoid slideshow state)
+  const [touchHoveredPhotoIndex, setTouchHoveredPhotoIndex] = useState(null);
   
   // State to track composite framed images for right-click save compatibility
   const [framedImageUrls, setFramedImageUrls] = useState({});
@@ -224,6 +225,9 @@ const PhotoGallery = ({
   const [activeVideoPhotoId, setActiveVideoPhotoId] = useState(null);
   const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
   
+  // State to track if user wants fullscreen mode in Style Explorer
+  const [wantsFullscreen, setWantsFullscreen] = useState(false);
+  
   // Helper function to check if a prompt has a video easter egg
   const hasVideoEasterEgg = useCallback((promptKey) => {
     // Check if the promptKey exists in the videos category in prompts.json
@@ -232,11 +236,12 @@ const PhotoGallery = ({
     return videosCategory && videosCategory.prompts && Object.prototype.hasOwnProperty.call(videosCategory.prompts, promptKey);
   }, []);
   
-  // Cleanup video when leaving the view
+  // Cleanup video and fullscreen when leaving the view
   useEffect(() => {
     if (selectedPhotoIndex === null) {
       setActiveVideoPhotoId(null);
       setCurrentVideoIndex(0);
+      setWantsFullscreen(false);
     }
   }, [selectedPhotoIndex]);
 
@@ -662,6 +667,24 @@ const PhotoGallery = ({
       cleanupFramedImageCache();
     }
   }, [framedImageUrls]); // Removed cleanupFramedImageCache function from dependencies
+
+  // Clear touch hover when clicking anywhere outside in Vibe Explorer
+  useEffect(() => {
+    if (!isPromptSelectorMode) return;
+    
+    const handleGlobalClick = (e) => {
+      // Check if click is inside a film-frame or icon
+      const clickedFilmFrame = e.target.closest('.film-frame');
+      const clickedIcon = e.target.closest('.vibe-icons-container, .photo-favorite-btn, .photo-fullscreen-btn, .photo-video-btn, .photo-block-btn');
+      
+      if (!clickedFilmFrame && !clickedIcon && touchHoveredPhotoIndex !== null) {
+        setTouchHoveredPhotoIndex(null);
+      }
+    };
+    
+    document.addEventListener('click', handleGlobalClick);
+    return () => document.removeEventListener('click', handleGlobalClick);
+  }, [isPromptSelectorMode, touchHoveredPhotoIndex]);
 
   // Handle enhancement with Krea (default behavior)
   const handleEnhanceWithKrea = useCallback(() => {
@@ -1481,57 +1504,12 @@ const PhotoGallery = ({
     
     const element = currentTarget;
     
-    // In prompt selector mode, handle style selection
+    // In prompt selector mode, clicking the image does nothing
+    // Overlay shows on hover (desktop) via CSS
+    // Only buttons/icons trigger actions
     if (isPromptSelectorMode) {
-      console.log('🔍 Prompt Selector Mode - style selection');
-      
-      // Get the photo from the appropriate array
-      const currentPhotosArray = isPromptSelectorMode ? filteredPhotos : photos;
-      const selectedPhoto = currentPhotosArray[index];
-      
-      if (selectedPhoto && selectedPhoto.isGalleryImage && selectedPhoto.promptKey) {
-        // Detect if this is a touch device (more reliable detection)
-        const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0 || navigator.msMaxTouchPoints > 0;
-        
-        // On touch devices, first tap shows overlay, second tap deselects
-        // Only the "Use This Style" button should confirm the selection
-        if (isTouchDevice) {
-          if (selectedPhotoIndex !== index) {
-            console.log('📱 Touch device - first tap, showing overlay with buttons');
-            // First tap: show the overlay by setting selected index
-            setSelectedPhotoIndex(index);
-            return;
-          } else {
-            console.log('📱 Touch device - second tap on same photo, deselecting to allow re-selection');
-            // Second tap on same photo: deselect it
-            setSelectedPhotoIndex(null);
-            return;
-          }
-        }
-        
-        // Desktop: clicking photo directly selects the style
-        console.log('🖱️ Desktop - selecting style immediately');
-        
-        // Reset scroll position to top in extension mode before style selection
-        if (isExtensionMode) {
-          console.log('✅ EXTENSION MODE DETECTED - EXECUTING SCROLL RESET');
-          const filmStripContainer = document.querySelector('.film-strip-container');
-          if (filmStripContainer) {
-            filmStripContainer.scrollTop = 0;
-            filmStripContainer.scrollTo({ top: 0, behavior: 'instant' });
-          }
-        }
-        
-        // Select the style
-        if (onPromptSelect) {
-          onPromptSelect(selectedPhoto.promptKey);
-        }
-        
-        // Navigate back to menu (unless in extension mode)
-        if (!isExtensionMode && handleBackToCamera) {
-          handleBackToCamera();
-        }
-      }
+      console.log('🔍 Prompt Selector Mode - image click does nothing');
+      // Don't set any state - let CSS hover handle overlay visibility
       return;
     }
     
@@ -1591,7 +1569,10 @@ const PhotoGallery = ({
   }, []);
 
   useEffect(() => {
-    if (selectedPhotoIndex !== null) {
+    // Only add has-selected-photo class when:
+    // - Not in prompt selector mode, OR
+    // - In prompt selector mode AND user wants fullscreen
+    if (selectedPhotoIndex !== null && (!isPromptSelectorMode || wantsFullscreen)) {
       document.body.classList.add('has-selected-photo');
     } else {
       document.body.classList.remove('has-selected-photo');
@@ -1599,7 +1580,7 @@ const PhotoGallery = ({
     return () => {
       document.body.classList.remove('has-selected-photo');
     };
-  }, [selectedPhotoIndex]);
+  }, [selectedPhotoIndex, isPromptSelectorMode, wantsFullscreen]);
 
   // Generate composite framed image when photo is selected with decorative theme
   useEffect(() => {
@@ -2061,7 +2042,13 @@ const PhotoGallery = ({
 
 
   return (
-    <div className={`film-strip-container ${showPhotoGrid ? 'visible' : 'hiding'} ${selectedPhotoIndex === null ? '' : 'has-selected'} ${isPWA ? 'pwa-mode' : ''} ${isExtensionMode ? 'extension-mode' : ''} ${isPromptSelectorMode ? 'prompt-selector-mode' : ''}`}
+    <div className={`film-strip-container ${showPhotoGrid ? 'visible' : 'hiding'} ${selectedPhotoIndex !== null && (!isPromptSelectorMode || wantsFullscreen) ? 'has-selected' : ''} ${wantsFullscreen ? 'fullscreen-active' : ''} ${isPWA ? 'pwa-mode' : ''} ${isExtensionMode ? 'extension-mode' : ''} ${isPromptSelectorMode ? 'prompt-selector-mode' : ''}`}
+      onClick={(e) => {
+        // Dismiss touch hover state when clicking outside images in Vibe Explorer
+        if (isPromptSelectorMode && touchHoveredPhotoIndex !== null && e.target === e.currentTarget) {
+          setTouchHoveredPhotoIndex(null);
+        }
+      }}
       style={{
         background: isExtensionMode ? 'transparent' : 'rgba(248, 248, 248, 0.85)',
         backgroundImage: isExtensionMode ? 'none' : `
@@ -2307,12 +2294,28 @@ const PhotoGallery = ({
         </button>
       )}
       {/* Navigation buttons - only show when a photo is selected */}
-      {selectedPhotoIndex !== null && photos.length > 1 && (
+      {selectedPhotoIndex !== null && (isPromptSelectorMode ? filteredPhotos.length > 1 : photos.length > 1) && (
         <>
-          <button className="photo-nav-btn prev" onClick={handlePreviousPhoto}>
+          <button className="photo-nav-btn prev" onClick={() => {
+            // Use filtered photos in prompt selector mode, regular photos otherwise
+            const currentPhotosArray = isPromptSelectorMode ? filteredPhotos : photos;
+            let prevIndex = selectedPhotoIndex - 1;
+            if (prevIndex < 0) {
+              prevIndex = currentPhotosArray.length - 1; // Loop to end
+            }
+            setSelectedPhotoIndex(prevIndex);
+          }}>
             &#8249;
           </button>
-          <button className="photo-nav-btn next" onClick={handleNextPhoto}>
+          <button className="photo-nav-btn next" onClick={() => {
+            // Use filtered photos in prompt selector mode, regular photos otherwise
+            const currentPhotosArray = isPromptSelectorMode ? filteredPhotos : photos;
+            let nextIndex = selectedPhotoIndex + 1;
+            if (nextIndex >= currentPhotosArray.length) {
+              nextIndex = 0; // Loop to beginning
+            }
+            setSelectedPhotoIndex(nextIndex);
+          }}>
             &#8250;
           </button>
           <button 
@@ -2473,7 +2476,8 @@ const PhotoGallery = ({
               </button>
             )}
 
-          {/* Download Framed Button - Always show */}
+          {/* Download Framed Button - Hide in Vibe Explorer */}
+          {!isPromptSelectorMode && (
           <button
             className="action-button download-btn"
             onClick={(e) => {
@@ -2491,8 +2495,10 @@ const PhotoGallery = ({
             <span>💾</span>
             Framed
           </button>
+          )}
 
-          {/* Download Raw Button - Always show */}
+          {/* Download Raw Button - Hide in Vibe Explorer */}
+          {!isPromptSelectorMode && (
           <button
             className="action-button download-raw-btn"
             onClick={(e) => {
@@ -2510,6 +2516,28 @@ const PhotoGallery = ({
             <span>💾</span>
             Raw
           </button>
+          )}
+
+          {/* Video Button - Show in Vibe Explorer slideshow for styles with videos */}
+          {isPromptSelectorMode && selectedPhoto.isGalleryImage && hasVideoEasterEgg(selectedPhoto.promptKey) && (
+            <button
+              className="action-button video-btn"
+              onClick={(e) => {
+                const photoId = selectedPhoto.id || selectedPhoto.promptKey;
+                setActiveVideoPhotoId(activeVideoPhotoId === photoId ? null : photoId);
+                e.stopPropagation();
+              }}
+            >
+              <svg fill="currentColor" width="16" height="16" viewBox="0 0 24 24">
+                {(activeVideoPhotoId === (selectedPhoto.id || selectedPhoto.promptKey)) ? (
+                  <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+                ) : (
+                  <path d="M8 5v14l11-7z"/>
+                )}
+              </svg>
+              {(activeVideoPhotoId === (selectedPhoto.id || selectedPhoto.promptKey)) ? 'Hide Video' : 'Video'}
+            </button>
+          )}
 
           {/* Enhanced Enhance Button with Undo/Redo functionality */}
           <div className="enhance-button-container">
@@ -3565,7 +3593,13 @@ const PhotoGallery = ({
 
       {/* Photo Grid - full width for both modes */}
       <div 
-        className={`film-strip-content ${selectedPhotoIndex === null ? '' : 'has-selected'} ${isPromptSelectorMode ? 'prompt-selector-mode' : ''}`} 
+        className={`film-strip-content ${selectedPhotoIndex !== null && (!isPromptSelectorMode || wantsFullscreen) ? 'has-selected' : ''} ${isPromptSelectorMode ? 'prompt-selector-mode' : ''}`}
+        onClick={(e) => {
+          // Dismiss touch hover state when clicking in the grid background
+          if (isPromptSelectorMode && touchHoveredPhotoIndex !== null && e.target === e.currentTarget) {
+            setTouchHoveredPhotoIndex(null);
+          }
+        }}
         style={{
           display: 'grid',
           // Remove inline gridTemplateColumns to let CSS media queries work
@@ -3586,6 +3620,7 @@ const PhotoGallery = ({
       >
         {(isPromptSelectorMode ? filteredPhotos : photos).map((photo, index) => {
           const isSelected = index === selectedPhotoIndex;
+          const isTouchHovered = isPromptSelectorMode && index === touchHoveredPhotoIndex;
           const isReference = photo.isOriginal;
           const placeholderUrl = photo.originalDataUrl;
           const progress = Math.floor(photo.progress || 0);
@@ -3600,7 +3635,7 @@ const PhotoGallery = ({
             return (
               <div
                 key={photo.id}
-                className={`film-frame loading ${isSelected ? 'selected' : ''} ${isCurrentStyle ? 'current-style' : ''} ${photo.newlyArrived ? 'newly-arrived' : ''} ${photo.hidden ? 'hidden' : ''} ${isSelected && isThemeSupported() && !photo.isGalleryImage && tezdevTheme === 'supercasual' ? 'super-casual-theme' : ''} ${isSelected && isThemeSupported() && !photo.isGalleryImage && tezdevTheme === 'tezoswebx' ? 'tezos-webx-theme' : ''} ${isSelected && isThemeSupported() && !photo.isGalleryImage && tezdevTheme === 'showup' ? 'showup-theme' : ''} ${isSelected && isThemeSupported() && !photo.isGalleryImage ? `${tezdevTheme}-theme` : ''}`}
+                className={`film-frame loading ${isSelected ? 'selected' : ''} ${isSelected && wantsFullscreen ? 'fullscreen-mode' : ''} ${isCurrentStyle ? 'current-style' : ''} ${photo.newlyArrived ? 'newly-arrived' : ''} ${photo.hidden ? 'hidden' : ''} ${isSelected && isThemeSupported() && !photo.isGalleryImage && tezdevTheme === 'supercasual' ? 'super-casual-theme' : ''} ${isSelected && isThemeSupported() && !photo.isGalleryImage && tezdevTheme === 'tezoswebx' ? 'tezos-webx-theme' : ''} ${isSelected && isThemeSupported() && !photo.isGalleryImage && tezdevTheme === 'showup' ? 'showup-theme' : ''} ${isSelected && isThemeSupported() && !photo.isGalleryImage ? `${tezdevTheme}-theme` : ''}`}
                 data-enhancing={photo.enhancing ? 'true' : undefined}
                 data-error={photo.error ? 'true' : undefined}
                 data-enhanced={photo.enhanced ? 'true' : undefined}
@@ -3663,18 +3698,29 @@ const PhotoGallery = ({
                     e.preventDefault();
                     e.stopPropagation();
                     
-                    if (deltaX > 0) {
-                      // Swipe right - go to previous photo
-                      handlePreviousPhoto();
-                    } else {
-                      // Swipe left - go to next photo
-                      handleNextPhoto();
-                    }
-                  }
+                  // Use filtered photos in prompt selector mode, regular photos otherwise
+                  const currentPhotosArray = isPromptSelectorMode ? filteredPhotos : photos;
                   
-                  // Clean up touch data
-                  delete e.currentTarget.touchStartData;
-                } : undefined}
+                  if (deltaX > 0) {
+                    // Swipe right - go to previous photo
+                    let prevIndex = selectedPhotoIndex - 1;
+                    if (prevIndex < 0) {
+                      prevIndex = currentPhotosArray.length - 1; // Loop to end
+                    }
+                    setSelectedPhotoIndex(prevIndex);
+                  } else {
+                    // Swipe left - go to next photo
+                    let nextIndex = selectedPhotoIndex + 1;
+                    if (nextIndex >= currentPhotosArray.length) {
+                      nextIndex = 0; // Loop to beginning
+                    }
+                    setSelectedPhotoIndex(nextIndex);
+                  }
+                }
+                
+                // Clean up touch data
+                delete e.currentTarget.touchStartData;
+              } : undefined}
                 style={{
                   width: '100%',
                   margin: '0 auto',
@@ -3921,7 +3967,7 @@ const PhotoGallery = ({
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      fontSize: '11px',
+                      fontSize: '10px',
                       boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
                       transition: 'background 0.2s ease'
                     }}>
@@ -4049,19 +4095,23 @@ const PhotoGallery = ({
           return (
             <div 
               key={photo.id}
-              className={`film-frame ${isSelected ? 'selected' : ''} ${isCurrentStyle ? 'current-style' : ''} ${photo.loading ? 'loading' : ''} ${isLoaded ? 'loaded' : ''} ${photo.newlyArrived ? 'newly-arrived' : ''} ${photo.hidden ? 'hidden' : ''} ${isSelected && isThemeSupported() && !photo.isGalleryImage && tezdevTheme === 'supercasual' ? 'super-casual-theme' : ''} ${isSelected && isThemeSupported() && !photo.isGalleryImage && tezdevTheme === 'tezoswebx' ? 'tezos-webx-theme' : ''} ${isSelected && isThemeSupported() && !photo.isGalleryImage && tezdevTheme === 'taipeiblockchain' ? 'taipei-blockchain-theme' : ''} ${isSelected && isThemeSupported() && !photo.isGalleryImage && tezdevTheme === 'showup' ? 'showup-theme' : ''} ${isSelected && isThemeSupported() && !photo.isGalleryImage ? `${tezdevTheme}-theme` : ''}`}
+              className={`film-frame ${(isSelected && (!isPromptSelectorMode || wantsFullscreen)) ? 'selected' : ''} ${isSelected && wantsFullscreen ? 'fullscreen-mode' : ''} ${isTouchHovered ? 'touch-hovered' : ''} ${isCurrentStyle ? 'current-style' : ''} ${photo.loading ? 'loading' : ''} ${isLoaded ? 'loaded' : ''} ${photo.newlyArrived ? 'newly-arrived' : ''} ${photo.hidden ? 'hidden' : ''} ${isSelected && isThemeSupported() && !photo.isGalleryImage && tezdevTheme === 'supercasual' ? 'super-casual-theme' : ''} ${isSelected && isThemeSupported() && !photo.isGalleryImage && tezdevTheme === 'tezoswebx' ? 'tezos-webx-theme' : ''} ${isSelected && isThemeSupported() && !photo.isGalleryImage && tezdevTheme === 'taipeiblockchain' ? 'taipei-blockchain-theme' : ''} ${isSelected && isThemeSupported() && !photo.isGalleryImage && tezdevTheme === 'showup' ? 'showup-theme' : ''} ${isSelected && isThemeSupported() && !photo.isGalleryImage ? `${tezdevTheme}-theme` : ''}`}
               onClick={e => {
                 // Don't open photo if clicking on action buttons
                 const target = e.target;
                 
-                // Check if click target or any parent is an action button
+                // Check if click target or any parent is an action button or icon container
                 let el = target;
                 while (el && el !== e.currentTarget) {
                   if (el.classList && (
                     el.classList.contains('photo-favorite-btn') || 
                     el.classList.contains('photo-favorite-btn-batch') ||
                     el.classList.contains('photo-refresh-btn') ||
-                    el.classList.contains('photo-hide-btn')
+                    el.classList.contains('photo-hide-btn') ||
+                    el.classList.contains('photo-fullscreen-btn') ||
+                    el.classList.contains('photo-video-btn') ||
+                    el.classList.contains('photo-block-btn') ||
+                    el.classList.contains('vibe-icons-container')
                   )) {
                     return;
                   }
@@ -4087,6 +4137,20 @@ const PhotoGallery = ({
                   }
                 }
                 
+                // In prompt selector mode, handle touch device clicks to toggle rollover state
+                if (isPromptSelectorMode) {
+                  const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+                  if (isTouchDevice) {
+                    // On touch devices, toggle touch hover to show/hide rollover overlay and icons
+                    if (touchHoveredPhotoIndex === index) {
+                      setTouchHoveredPhotoIndex(null);
+                    } else {
+                      setTouchHoveredPhotoIndex(index);
+                    }
+                  }
+                  // On desktop, do nothing (hover will show overlay)
+                  return;
+                }
                 isSelected ? handlePhotoViewerClick(e) : handlePhotoSelect(index, e);
               }}
               data-enhancing={photo.enhancing ? 'true' : undefined}
@@ -4138,12 +4202,23 @@ const PhotoGallery = ({
                   e.preventDefault();
                   e.stopPropagation();
                   
+                  // Use filtered photos in prompt selector mode, regular photos otherwise
+                  const currentPhotosArray = isPromptSelectorMode ? filteredPhotos : photos;
+                  
                   if (deltaX > 0) {
                     // Swipe right - go to previous photo
-                    handlePreviousPhoto();
+                    let prevIndex = selectedPhotoIndex - 1;
+                    if (prevIndex < 0) {
+                      prevIndex = currentPhotosArray.length - 1; // Loop to end
+                    }
+                    setSelectedPhotoIndex(prevIndex);
                   } else {
                     // Swipe left - go to next photo
-                    handleNextPhoto();
+                    let nextIndex = selectedPhotoIndex + 1;
+                    if (nextIndex >= currentPhotosArray.length) {
+                      nextIndex = 0; // Loop to beginning
+                    }
+                    setSelectedPhotoIndex(nextIndex);
                   }
                 }
                 
@@ -4378,29 +4453,32 @@ const PhotoGallery = ({
                   })()}
                 />
 
-                {/* "Use this vibe" button overlay - Only show in prompt selector mode on gallery images (hide when video is playing) */}
-                {isPromptSelectorMode && photo.isGalleryImage && (activeVideoPhotoId !== (photo.id || photo.promptKey)) && (
+                {/* "Use this vibe" button overlay - shows on hover (desktop) or when selected (touch) */}
+                {isPromptSelectorMode && photo.isGalleryImage && !wantsFullscreen && (activeVideoPhotoId !== (photo.id || photo.promptKey)) && (
                   <div 
                     className="use-vibe-overlay-container"
+                    onClick={(e) => {
+                      // On touch devices, clicking the overlay background (not the button) dismisses it
+                      const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+                      if (isTouchDevice && e.target === e.currentTarget) {
+                        e.stopPropagation();
+                        setTouchHoveredPhotoIndex(null);
+                      }
+                    }}
                     style={{
                       position: 'absolute',
                       top: 0,
                       left: 0,
                       right: 0,
                       bottom: 0,
-                      display: 'flex',
+                      display: isTouchHovered ? 'flex' : 'none',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      opacity: isSelected ? 1 : 0,
+                      opacity: isTouchHovered ? 1 : 0,
                       transition: 'opacity 0.2s ease',
-                      pointerEvents: 'auto',
-                      zIndex: 10
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!isSelected) e.currentTarget.style.opacity = '1';
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!isSelected) e.currentTarget.style.opacity = '0';
+                      pointerEvents: isTouchHovered ? 'auto' : 'none',
+                      zIndex: 10,
+                      background: 'rgba(0, 0, 0, 0.5)'
                     }}
                   >
                     <button
@@ -4415,10 +4493,13 @@ const PhotoGallery = ({
                         cursor: 'pointer',
                         boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
                         transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-                        fontFamily: '"Permanent Marker", cursive'
+                        fontFamily: '"Permanent Marker", cursive',
+                        minHeight: '44px',
+                        minWidth: '120px'
                       }}
                       onClick={(e) => {
                         e.stopPropagation();
+                        console.log('🎯 Use this vibe button clicked');
                         // Select the style
                         if (photo.promptKey && onPromptSelect) {
                           // Reset scroll position to top in extension mode before style selection
@@ -4439,6 +4520,14 @@ const PhotoGallery = ({
                           }
                         }
                       }}
+                      onTouchStart={(e) => {
+                        e.currentTarget.style.transform = 'scale(1.05)';
+                        e.currentTarget.style.boxShadow = '0 6px 16px rgba(0,0,0,0.4)';
+                      }}
+                      onTouchEnd={(e) => {
+                        e.currentTarget.style.transform = 'scale(1)';
+                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
+                      }}
                       onMouseEnter={(e) => {
                         e.currentTarget.style.transform = 'scale(1.05)';
                         e.currentTarget.style.boxShadow = '0 6px 16px rgba(0,0,0,0.4)';
@@ -4448,7 +4537,7 @@ const PhotoGallery = ({
                         e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
                       }}
                     >
-                      {isSelected ? 'Use this Style' : 'Use this vibe'}
+                      Use this vibe
                     </button>
                   </div>
                 )}
@@ -4884,145 +4973,29 @@ const PhotoGallery = ({
                 )}
               </div>
 
-              {/* Block prompt button - show in prompt selector mode for desktop (hide when video is playing) */}
-              {isPromptSelectorMode && !isMobile() && photo.promptKey && (activeVideoPhotoId !== (photo.id || photo.promptKey)) && (
-              <div
-                className="photo-block-btn"
-                onClickCapture={(e) => {
-                  e.stopPropagation();
-                  handleBlockPrompt(photo.promptKey, index);
-                }}
-                onMouseDownCapture={(e) => {
-                  e.stopPropagation();
-                }}
-                style={{
-                  position: 'absolute',
-                  top: '10px',
-                  right: '35px',
-                  width: '40px',
-                  height: '40px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                  zIndex: 99999,
-                  opacity: '0',
-                  transition: 'opacity 0.2s ease',
-                  pointerEvents: 'all'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.opacity = '1';
-                  const innerDiv = e.currentTarget.querySelector('div');
-                  if (innerDiv) innerDiv.style.background = 'rgba(220, 53, 69, 0.9)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.opacity = '0';
-                  const innerDiv = e.currentTarget.querySelector('div');
-                  if (innerDiv) innerDiv.style.background = 'rgba(0, 0, 0, 0.7)';
-                }}
-                title="Never use this prompt"
-              >
-                <div style={{
-                  width: '20px',
-                  height: '20px',
-                  borderRadius: '50%',
-                  background: 'rgba(0, 0, 0, 0.7)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '11px',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
-                  transition: 'background 0.2s ease'
-                }}>
-                  ⚠️
-                </div>
-              </div>
-              )}
-
-              {/* Video button - show in prompt selector mode for gallery images with videos */}
-              {isPromptSelectorMode && !isMobile() && photo.isGalleryImage && hasVideoEasterEgg(photo.promptKey) && (
-              <div
-                className="photo-video-btn"
-                onClickCapture={(e) => {
-                  e.stopPropagation();
-                  const photoId = photo.id || photo.promptKey;
-                  setActiveVideoPhotoId(activeVideoPhotoId === photoId ? null : photoId);
-                }}
-                onMouseDownCapture={(e) => {
-                  e.stopPropagation();
-                }}
+              {/* Icon container for Vibe Explorer - flexbox automatically removes gaps */}
+              {isPromptSelectorMode && !wantsFullscreen && photo.isGalleryImage && (
+                <div 
+                  className="vibe-icons-container"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                  }}
+                  onMouseDown={(e) => {
+                    e.stopPropagation();
+                  }}
+                  onTouchStart={(e) => {
+                    e.stopPropagation();
+                  }}
                   style={{
                     position: 'absolute',
-                    top: '10px',
-                    right: (activeVideoPhotoId === (photo.id || photo.promptKey)) ? '10px' : '60px',
-                    width: '40px',
-                    height: '40px',
+                    top: isMobile() ? '10px' : '20px',
+                    right: isMobile() ? '10px' : '20px',
                     display: 'flex',
+                    flexDirection: 'row-reverse',
+                    gap: '4px',
                     alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: 'pointer',
                     zIndex: 99999,
-                    opacity: (activeVideoPhotoId === (photo.id || photo.promptKey)) ? '1' : '0',
-                    transition: 'opacity 0.2s ease, right 0.3s ease',
-                    pointerEvents: 'all'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.opacity = '1';
-                  }}
-                  onMouseLeave={(e) => {
-                    const isPlaying = activeVideoPhotoId === (photo.id || photo.promptKey);
-                    // Keep visible if video is playing, otherwise hide
-                    e.currentTarget.style.opacity = isPlaying ? '1' : '0';
-                  }}
-                  title={(activeVideoPhotoId === (photo.id || photo.promptKey)) ? 'Hide video' : 'Show video'}
-                >
-                  <div style={{
-                    width: '20px',
-                    height: '20px',
-                    borderRadius: '50%',
-                    background: (activeVideoPhotoId === (photo.id || photo.promptKey)) ? 'rgba(52, 152, 219, 0.9)' : 'rgba(0, 0, 0, 0.7)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.5)',
-                    transition: 'background 0.2s ease',
-                    pointerEvents: 'none'
-                  }}>
-                    <svg fill="white" width="10" height="10" viewBox="0 0 24 24" style={{ pointerEvents: 'none' }}>
-                      {(activeVideoPhotoId === (photo.id || photo.promptKey)) ? (
-                        <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
-                      ) : (
-                        <path d="M8 5v14l11-7z"/>
-                      )}
-                    </svg>
-                  </div>
-                </div>
-              )}
-
-              {/* Favorite heart button - show in prompt selector mode for desktop (hide when video is playing) */}
-              {isPromptSelectorMode && !isMobile() && (activeVideoPhotoId !== (photo.id || photo.promptKey)) && (
-              <div
-                className="photo-favorite-btn"
-                onClickCapture={(e) => {
-                  e.stopPropagation();
-                  const photoId = photo.promptKey || photo.id || (photo.images && photo.images[0]);
-                  handleFavoriteToggle(photoId);
-                }}
-                onMouseDownCapture={(e) => {
-                  e.stopPropagation();
-                }}
-                  style={{
-                    position: 'absolute',
-                    top: '10px',
-                    right: '10px',
-                    width: '40px',
-                    height: '40px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: 'pointer',
-                    zIndex: 99999,
-                    opacity: isPhotoFavorited(photo) ? '1' : '0',
+                    opacity: ((activeVideoPhotoId === (photo.id || photo.promptKey)) || (isPhotoFavorited(photo) && !isMobile()) || (('ontouchstart' in window || navigator.maxTouchPoints > 0) && isTouchHovered)) ? '1' : '0',
                     transition: 'opacity 0.2s ease',
                     pointerEvents: 'all'
                   }}
@@ -5030,34 +5003,222 @@ const PhotoGallery = ({
                     e.currentTarget.style.opacity = '1';
                   }}
                   onMouseLeave={(e) => {
-                    const photoId = photo.promptKey || photo.id || (photo.images && photo.images[0]);
-                    const currentlyFavorited = favoriteImageIds.includes(photoId);
-                    e.currentTarget.style.opacity = currentlyFavorited ? '1' : '0';
+                    const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+                    const isPlaying = activeVideoPhotoId === (photo.id || photo.promptKey);
+                    e.currentTarget.style.opacity = (isPlaying || (isPhotoFavorited(photo) && !isMobile()) || (isTouchDevice && isTouchHovered)) ? '1' : '0';
                   }}
-                  title={isPhotoFavorited(photo) ? "Remove from favorites" : "Add to favorites"}
                 >
-                  <div style={{
-                    width: '20px',
-                    height: '20px',
-                    borderRadius: '50%',
-                    background: isPhotoFavorited(photo) ? 'rgba(255, 71, 87, 0.9)' : 'rgba(0, 0, 0, 0.7)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.5)',
-                    transition: 'background 0.2s ease',
-                    pointerEvents: 'none'
-                  }}>
-                    {isPhotoFavorited(photo) ? (
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg" style={{ pointerEvents: 'none' }}>
-                        <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-                      </svg>
-                    ) : (
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" xmlns="http://www.w3.org/2000/svg" style={{ pointerEvents: 'none' }}>
-                        <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-                      </svg>
-                    )}
+                  {/* Favorite heart - rightmost */}
+                  <div
+                    className="photo-favorite-btn"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                    }}
+                    onClickCapture={(e) => {
+                      e.stopPropagation();
+                      const photoId = photo.promptKey || photo.id || (photo.images && photo.images[0]);
+                      handleFavoriteToggle(photoId);
+                    }}
+                    onMouseDown={(e) => {
+                      e.stopPropagation();
+                    }}
+                    onMouseDownCapture={(e) => {
+                      e.stopPropagation();
+                    }}
+                    onTouchStart={(e) => {
+                      e.stopPropagation();
+                    }}
+                    style={{
+                      width: '26px',
+                      height: '26px',
+                      display: (activeVideoPhotoId === (photo.id || photo.promptKey)) ? 'none' : 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                    }}
+                    title={isPhotoFavorited(photo) ? "Remove from favorites" : "Add to favorites"}
+                  >
+                    <div style={{
+                      width: '20px',
+                      height: '20px',
+                      borderRadius: '50%',
+                      background: isPhotoFavorited(photo) ? 'rgba(255, 71, 87, 0.9)' : 'rgba(0, 0, 0, 0.7)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.5)',
+                      transition: 'background 0.2s ease',
+                      pointerEvents: 'none'
+                    }}>
+                      {isPhotoFavorited(photo) ? (
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg" style={{ pointerEvents: 'none' }}>
+                          <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                        </svg>
+                      ) : (
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" xmlns="http://www.w3.org/2000/svg" style={{ pointerEvents: 'none' }}>
+                          <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                        </svg>
+                      )}
+                    </div>
                   </div>
+
+                  {/* Video button - only if video exists */}
+                  {hasVideoEasterEgg(photo.promptKey) && (
+                    <div
+                      className="photo-video-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                      }}
+                      onClickCapture={(e) => {
+                        e.stopPropagation();
+                        const photoId = photo.id || photo.promptKey;
+                        setActiveVideoPhotoId(activeVideoPhotoId === photoId ? null : photoId);
+                      }}
+                      onMouseDown={(e) => {
+                        e.stopPropagation();
+                      }}
+                      onMouseDownCapture={(e) => {
+                        e.stopPropagation();
+                      }}
+                      onTouchStart={(e) => {
+                        e.stopPropagation();
+                      }}
+                      style={{
+                        width: '26px',
+                        height: '26px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                      }}
+                      title={(activeVideoPhotoId === (photo.id || photo.promptKey)) ? 'Hide video' : 'Show video'}
+                    >
+                      <div style={{
+                        width: '20px',
+                        height: '20px',
+                        borderRadius: '50%',
+                        background: (activeVideoPhotoId === (photo.id || photo.promptKey)) ? 'rgba(52, 152, 219, 0.9)' : 'rgba(0, 0, 0, 0.7)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.5)',
+                        transition: 'background 0.2s ease',
+                        pointerEvents: 'none'
+                      }}>
+                        <svg fill="white" width="10" height="10" viewBox="0 0 24 24" style={{ pointerEvents: 'none' }}>
+                          {(activeVideoPhotoId === (photo.id || photo.promptKey)) ? (
+                            <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+                          ) : (
+                            <path d="M8 5v14l11-7z"/>
+                          )}
+                        </svg>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Fullscreen button */}
+                  <div
+                    className="photo-fullscreen-btn"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                    }}
+                    onClickCapture={(e) => {
+                      e.stopPropagation();
+                      console.log('🖼️ Fullscreen button clicked, setting selected and fullscreen');
+                      setWantsFullscreen(true);
+                      setSelectedPhotoIndex(index);
+                    }}
+                    onMouseDown={(e) => {
+                      e.stopPropagation();
+                    }}
+                    onMouseDownCapture={(e) => {
+                      e.stopPropagation();
+                    }}
+                    onTouchStart={(e) => {
+                      e.stopPropagation();
+                    }}
+                    style={{
+                      width: '26px',
+                      height: '26px',
+                      display: (activeVideoPhotoId === (photo.id || photo.promptKey)) ? 'none' : 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                    }}
+                    title="View fullscreen"
+                  >
+                    <div style={{
+                      width: '20px',
+                      height: '20px',
+                      borderRadius: '50%',
+                      background: 'rgba(0, 0, 0, 0.7)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.5)',
+                      transition: 'background 0.2s ease',
+                      pointerEvents: 'none'
+                    }}>
+                      <svg fill="white" width="10" height="10" viewBox="0 0 24 24" style={{ pointerEvents: 'none' }}>
+                        <path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/>
+                      </svg>
+                    </div>
+                  </div>
+
+                  {/* Block prompt button - desktop only, leftmost */}
+                  {!isMobile() && photo.promptKey && (
+                    <div
+                      className="photo-block-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                      }}
+                      onClickCapture={(e) => {
+                        e.stopPropagation();
+                        handleBlockPrompt(photo.promptKey, index);
+                      }}
+                      onMouseDown={(e) => {
+                        e.stopPropagation();
+                      }}
+                      onMouseDownCapture={(e) => {
+                        e.stopPropagation();
+                      }}
+                      onTouchStart={(e) => {
+                        e.stopPropagation();
+                      }}
+                      style={{
+                        width: '26px',
+                        height: '26px',
+                        display: (activeVideoPhotoId === (photo.id || photo.promptKey)) ? 'none' : 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                      }}
+                      onMouseEnter={(e) => {
+                        const innerDiv = e.currentTarget.querySelector('div');
+                        if (innerDiv) innerDiv.style.background = 'rgba(220, 53, 69, 0.9)';
+                      }}
+                      onMouseLeave={(e) => {
+                        const innerDiv = e.currentTarget.querySelector('div');
+                        if (innerDiv) innerDiv.style.background = 'rgba(0, 0, 0, 0.7)';
+                      }}
+                      title="Never use this prompt"
+                    >
+                      <div style={{
+                        width: '20px',
+                        height: '20px',
+                        borderRadius: '50%',
+                        background: 'rgba(0, 0, 0, 0.7)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '10px',
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                        transition: 'background 0.2s ease'
+                      }}>
+                        ⚠️
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -5286,8 +5447,6 @@ PhotoGallery.propTypes = {
   setSelectedPhotoIndex: PropTypes.func.isRequired,
   showPhotoGrid: PropTypes.bool.isRequired,
   handleBackToCamera: PropTypes.func.isRequired,
-  handlePreviousPhoto: PropTypes.func.isRequired,
-  handleNextPhoto: PropTypes.func.isRequired,
   handlePhotoViewerClick: PropTypes.func.isRequired,
   handleOpenImageAdjusterForNextBatch: PropTypes.func,
   handleShowControlOverlay: PropTypes.func.isRequired,

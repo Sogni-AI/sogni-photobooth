@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import PropTypes from 'prop-types';
+import { useMusicPlayer } from '../../context/MusicPlayerContext';
 import '../../styles/HalloweenNotificationTooltip.css';
 
 const HALLOWEEN_IMAGES = [
@@ -11,7 +13,9 @@ const HALLOWEEN_IMAGES = [
 
 const HalloweenNotificationTooltip = ({ onNavigate }) => {
   const [isVisible, setIsVisible] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const { enable: enableMusic } = useMusicPlayer();
 
   useEffect(() => {
     // Check if we're past November 1, 2025
@@ -35,21 +39,28 @@ const HalloweenNotificationTooltip = ({ onNavigate }) => {
     }
   }, []);
 
-  // Rotate through images
+  // Rotate through images only when expanded
   useEffect(() => {
-    if (!isVisible) return;
+    if (!isVisible || !isExpanded) return;
 
     const imageInterval = setInterval(() => {
       setCurrentImageIndex((prevIndex) => (prevIndex + 1) % HALLOWEEN_IMAGES.length);
     }, 2000); // Change image every 2 seconds
 
     return () => clearInterval(imageInterval);
-  }, [isVisible]);
+  }, [isVisible, isExpanded]);
 
   const handleDismiss = (e) => {
     e.stopPropagation();
     sessionStorage.setItem('halloween-contest-dismissed', 'true');
     setIsVisible(false);
+  };
+
+  const handleExpand = (e) => {
+    e.stopPropagation();
+    setIsExpanded(true);
+    // Enable music player when expanding - start in open and playing state
+    enableMusic({ autoPlay: true, expand: true });
   };
 
   const handleClick = () => {
@@ -62,6 +73,31 @@ const HalloweenNotificationTooltip = ({ onNavigate }) => {
     return null;
   }
 
+  // Minimized pumpkin state
+  if (!isExpanded) {
+    return (
+      <button 
+        className="halloween-pumpkin-notification"
+        onClick={handleExpand}
+        aria-label="View Halloween contest information"
+      >
+        <button
+          className="pumpkin-dismiss-btn"
+          onClick={handleDismiss}
+          aria-label="Dismiss pumpkin notification"
+        >
+          ✕
+        </button>
+        <span className="pumpkin-emoji">🎃</span>
+        <span className="compete-bubble">
+          <span className="compete-text">Create your own costume and win!</span>
+          <span className="compete-emoji">🎁</span>
+        </span>
+      </button>
+    );
+  }
+
+  // Expanded state
   return (
     <div className="halloween-notification-tooltip" onClick={handleClick}>
       <button
@@ -87,6 +123,10 @@ const HalloweenNotificationTooltip = ({ onNavigate }) => {
       </div>
     </div>
   );
+};
+
+HalloweenNotificationTooltip.propTypes = {
+  onNavigate: PropTypes.func.isRequired
 };
 
 export default HalloweenNotificationTooltip;

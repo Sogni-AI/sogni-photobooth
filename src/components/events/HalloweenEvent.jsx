@@ -61,9 +61,9 @@ const HalloweenEvent = () => {
     updateSetting('selectedStyle', 'custom');
     updateSetting('halloweenContext', true); // Flag to enable Halloween-specific Twitter share message
 
-    // Navigate to main app (start menu will show by default)
+    // Navigate to main app (skip splash screen, go directly to start menu)
     console.log('🎃 Navigating to camera start menu');
-    window.location.href = '/';
+    window.location.href = '/?skipWelcome=true';
   };
 
   const handleStyleSelect = (styleKey) => {
@@ -100,9 +100,9 @@ const HalloweenEvent = () => {
     updateSetting('positivePrompt', prompt);
     updateSetting('halloweenContext', true); // Flag to enable Halloween-specific Twitter share message
 
-    // Navigate to main app (start menu will show by default)
+    // Navigate to main app (skip splash screen, go directly to start menu)
     console.log('🎃 Navigating to camera start menu');
-    window.location.href = '/';
+    window.location.href = '/?skipWelcome=true';
   };
 
   return (
