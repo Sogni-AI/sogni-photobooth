@@ -23,10 +23,9 @@ interface Props {
   defaults: Step1Fields;
   onLogin: () => void;
   onContinue: (fields: Step1Fields) => void;
-  lockReferral?: boolean;
 }
 
-function Step1({ defaults, lockReferral, onContinue, onLogin }: Props) {
+function Step1({ defaults, onContinue, onLogin }: Props) {
   const { ensureClient } = useSogniAuth();
 
   const proceed = useCallback(
@@ -79,7 +78,7 @@ function Step1({ defaults, lockReferral, onContinue, onLogin }: Props) {
 
   return (
     <FormPanel onSubmit={handleFormSubmit} disabled={isLoading} noValidate>
-      <FormContent subHeading="Choose your username">
+      <FormContent subHeading="Create free account">
         <FieldContainer>
           <FormField
             name="username"
@@ -101,17 +100,6 @@ function Step1({ defaults, lockReferral, onContinue, onLogin }: Props) {
             placeholder="your@email.com"
             onChange={handleFieldChange}
             error={fieldErrors.email}
-            size="lg"
-          />
-          <FormField
-            name="referralCode"
-            label="Referral code (Optional)"
-            value={fields.referralCode}
-            type="text"
-            disabled={lockReferral}
-            placeholder="Enter code here"
-            onChange={handleFieldChange}
-            error={fieldErrors.referralCode}
             size="lg"
           />
           <FormField

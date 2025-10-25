@@ -72,17 +72,30 @@
 }
 
 .login-modal-content-header {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 16px;
   margin-bottom: 8px;
+  padding-top: 40px;
 }
 
 .login-modal-logo {
-  width: 80px;
-  height: 80px;
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 150px;
+  height: 150px;
   object-fit: contain;
+  z-index: 0;
+  opacity: 0.9;
+}
+
+.login-modal-text {
+  position: relative;
+  z-index: 1;
 }
 
 .login-modal-text h1 {
@@ -450,9 +463,13 @@
     padding: 32px 24px;
   }
 
+  .login-modal-content-header {
+    padding-top: 35px;
+  }
+
   .login-modal-logo {
-    width: 64px;
-    height: 64px;
+    width: 110px;
+    height: 110px;
   }
 
   .login-modal-text h1 {

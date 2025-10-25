@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Step1Fields, Step2Fields } from '../types';
 import Step1 from './Step1';
 import Step2 from './Step2';
@@ -11,22 +11,13 @@ interface Props {
   onSignupComplete?: () => void;
 }
 
-// Get referral code from URL if present
-function getReferralFromURL(): string {
-  const urlParams = new URLSearchParams(window.location.search);
-  return urlParams.get('code') || urlParams.get('referral') || '';
-}
-
 function SignupForm({ onLogin, onClose, onSignupComplete }: Props) {
-  // Get referral code when form first mounts (default to PHOTOBOOTH)
-  const initialReferralCode = useMemo(() => getReferralFromURL() || 'PHOTOBOOTH', []);
-
   const [step1, setStep1] = useState<Step1Fields>({
     username: '',
     email: '',
     subscribe: false,
     remember: true,
-    referralCode: initialReferralCode // Initialize with code
+    referralCode: 'PHOTOBOOTH' // Hard-coded referral code
   });
 
   const [step2, setStep2] = useState<Step2Fields>({
