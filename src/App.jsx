@@ -2315,7 +2315,7 @@ const App = () => {
   };
   
   // Add a handler for the actual sharing with custom message
-  const handleTwitterShare = async (customMessage) => {
+  const handleTwitterShare = async (customMessage, submitToContest = false) => {
     // Store the message for potential retry
     setLastTwitterMessage(customMessage);
     
@@ -2344,6 +2344,7 @@ const App = () => {
       sogniWatermarkSize: settings.sogniWatermarkSize,
       sogniWatermarkMargin: settings.sogniWatermarkMargin,
       halloweenContext: settings.halloweenContext || false,
+      submitToContest, // Pass the explicit contest submission flag
       prompt: settings.positivePrompt || null,
       username: authState.user?.username || null,
       address: authState.user?.email || null, // Using email as identifier for now
@@ -2356,7 +2357,7 @@ const App = () => {
       },
       onSuccess: async () => {
         // Show success toast using the new toast system - special message for Halloween contest
-        if (settings.halloweenContext) {
+        if (submitToContest) {
           showToast({
             title: '🎃 Contest Entry Submitted!',
             message: 'Your Halloween creation has been shared and entered into the contest!',
@@ -2382,7 +2383,8 @@ const App = () => {
           aspectRatio,
           outputFormat,
           hasWatermark: settings.sogniWatermark,
-          halloweenContext: settings.halloweenContext || false
+          halloweenContext: settings.halloweenContext || false,
+          submitToContest
         });
       }
     });

@@ -172,7 +172,7 @@ const getSessionId = (req, res, next) => {
 router.post('/start', getSessionId, async (req, res) => {
   try {
     // Check for required data
-    const { imageUrl, message, shareUrl, halloweenContext, prompt, username, address, metadata } = req.body;
+    const { imageUrl, message, shareUrl, halloweenContext, submitToContest, prompt, username, address, metadata } = req.body;
     if (!imageUrl) {
       return res.status(400).json({ message: 'No image URL provided' });
     }
@@ -262,8 +262,8 @@ router.post('/start', getSessionId, async (req, res) => {
           
           console.log('[Twitter OAuth] Successfully shared directly using existing token');
           
-          // If this is a Halloween context share, submit to contest (direct share path)
-          if (halloweenContext && prompt && tweetResult?.data?.id) {
+          // If user explicitly wants to submit to contest, submit to contest (direct share path)
+          if (submitToContest && prompt && tweetResult?.data?.id) {
             try {
               console.log('[Contest] Submitting Halloween contest entry (direct share)');
               const tweetUrl = `https://twitter.com/i/web/status/${tweetResult.data.id}`;
@@ -329,6 +329,7 @@ router.post('/start', getSessionId, async (req, res) => {
       pendingMessage: message,
       pendingShareUrl: shareUrl,
       halloweenContext: halloweenContext || false,
+      submitToContest: submitToContest || false,
       prompt: prompt || null,
       username: username || null,
       address: address || null,
@@ -488,8 +489,8 @@ router.get('/callback', async (req, res) => {
       
       console.log('[Twitter OAuth] Image successfully shared to X, tweet ID:', tweetResult.data.id);
       
-      // If this is a Halloween context share, submit to contest (OAuth callback path)
-      if (oauthData.halloweenContext && oauthData.prompt) {
+      // If user explicitly wants to submit to contest, submit to contest (OAuth callback path)
+      if (oauthData.submitToContest && oauthData.prompt) {
         try {
           console.log('[Contest] Submitting Halloween contest entry (OAuth callback)');
           const tweetUrl = `https://twitter.com/i/web/status/${tweetResult.data.id}`;

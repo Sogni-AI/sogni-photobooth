@@ -44,6 +44,7 @@ export const getPhotoHashtag = (photo) => {
  * @param {number} [params.sogniWatermarkSize=100] - Size of the QR watermark
  * @param {number} [params.sogniWatermarkMargin=26] - Margin of the QR watermark from edge
  * @param {boolean} [params.halloweenContext=false] - Whether this is a Halloween contest entry
+ * @param {boolean} [params.submitToContest=false] - Whether to submit to Halloween contest (explicit user choice)
  * @param {string} [params.prompt] - User's prompt (for contest entries)
  * @param {string} [params.username] - User's username (for contest entries)
  * @param {string} [params.address] - User's wallet address (for contest entries)
@@ -65,6 +66,7 @@ export const shareToTwitter = async ({
   sogniWatermarkSize = 100,
   sogniWatermarkMargin = 26,
   halloweenContext = false,
+  submitToContest = false,
   prompt = null,
   username = null,
   address = null,
@@ -200,7 +202,12 @@ export const shareToTwitter = async ({
     } else {
       // For non-TezDev themes, use traditional polaroid frame
       const hashtag = getPhotoHashtag(photo);
-      const label = hashtag || photo.label || photo.style || '';
+      let label = hashtag || photo.label || photo.style || '';
+      
+      // Use Halloween label if submitting to contest
+      if (submitToContest) {
+        label = 'Sogni Halloween 2025';
+      }
       
       console.log('Creating polaroid image for sharing (always JPG for Twitter)');
       imageDataUrl = await createPolaroidImage(originalImageUrl, label, {
@@ -240,6 +247,7 @@ export const shareToTwitter = async ({
             message: twitterMessage, // Use the appropriate message format
             shareUrl: shareUrl, // Include the share URL if provided
             halloweenContext, // Include Halloween context flag
+            submitToContest, // Include explicit contest submission flag
             prompt, // Include user's prompt for contest
             username, // Include username for contest
             address, // Include wallet address for contest
