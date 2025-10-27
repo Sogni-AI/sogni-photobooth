@@ -564,6 +564,16 @@ export class FrontendSogniClientAdapter {
           delete sdkParams.sensitiveContentFilter; // Remove to avoid passing both
         }
         
+        // Debug log for enhancement jobs
+        if (params.sourceType === 'enhancement' || params.sourceType === 'enhancement-kontext') {
+          console.log('[FrontendAdapter] Enhancement job params:', {
+            modelId: params.modelId,
+            sourceType: params.sourceType,
+            sensitiveContentFilter_input: params.sensitiveContentFilter,
+            disableNSFWFilter_output: sdkParams.disableNSFWFilter
+          });
+        }
+        
         // Create the real project with converted parameters
         const realProject = await this.realClient.projects.create(sdkParams);
         
