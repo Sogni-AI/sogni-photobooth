@@ -122,8 +122,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     }
     
-    // Reset custom prompt to blank on page load
-    if (positivePrompt && positivePrompt.trim() !== '') {
+    // Reset custom prompt to blank on page load (but preserve if style is 'custom')
+    if (positivePrompt && positivePrompt.trim() !== '' && selectedStyle !== 'custom') {
       console.log('🔄 [INIT] Resetting custom prompt to blank');
       positivePrompt = '';
       saveSettingsToCookies({ positivePrompt });

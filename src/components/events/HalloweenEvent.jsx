@@ -4,6 +4,7 @@ import HalloweenPromptPopup from './HalloweenPromptPopup';
 import { AuthStatus } from '../auth/AuthStatus';
 import { useMusicPlayer } from '../../context/MusicPlayerContext';
 import { useApp } from '../../context/AppContext';
+import { useNavigation } from '../AppRouter';
 import { styleIdToDisplay } from '../../utils';
 import promptsDataRaw from '../../prompts.json';
 import '../../styles/film-strip.css'; // Reuse existing film-strip styles
@@ -16,6 +17,7 @@ const HalloweenEvent = () => {
   const [pumpkinDismissed, setPumpkinDismissed] = useState(false);
   const { isEnabled, enable: enableMusic } = useMusicPlayer();
   const { updateSetting, stylePrompts } = useApp();
+  const { navigateToCamera } = useNavigation();
 
   const handleDismissOverlay = () => {
     setShowOverlay(false);
@@ -66,7 +68,7 @@ const HalloweenEvent = () => {
 
     // Navigate to main app (skip splash screen, go directly to start menu)
     console.log('🎃 Navigating to camera start menu');
-    window.location.href = '/?skipWelcome=true';
+    navigateToCamera();
   };
 
   const handleStyleSelect = (styleKey) => {
@@ -108,7 +110,7 @@ const HalloweenEvent = () => {
 
     // Navigate to main app (skip splash screen, go directly to start menu)
     console.log('🎃 Navigating to camera start menu');
-    window.location.href = '/?skipWelcome=true';
+    navigateToCamera();
   };
 
   return (
