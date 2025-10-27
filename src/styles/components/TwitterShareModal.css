@@ -225,6 +225,11 @@
   margin: 0;
 }
 
+.halloween-contest-checkbox input[type="checkbox"]:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
 .halloween-contest-checkbox .checkbox-label {
   font-size: 14px;
   color: #333;
@@ -234,6 +239,15 @@
   gap: 3px;
   margin: 0;
   padding: 0;
+}
+
+.halloween-contest-checkbox input[type="checkbox"]:disabled ~ .checkbox-label {
+  color: #999;
+  opacity: 0.6;
+}
+
+.halloween-contest-checkbox label:has(input[type="checkbox"]:disabled) {
+  cursor: not-allowed;
 }
 
 .halloween-contest-checkbox .pumpkin-icon {

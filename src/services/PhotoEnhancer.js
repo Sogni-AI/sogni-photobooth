@@ -193,7 +193,7 @@ export const enhancePhoto = async (options) => {
         guidance: 5.5,
         numberOfImages: 1,
         outputFormat: outputFormat || 'jpg',
-        sensitiveContentFilter: false,
+        sensitiveContentFilter: false, // HARDCODED: Kontext model is not NSFW-aware, always disable filter
         contextImages: [new Uint8Array(arrayBuffer)], // Kontext uses contextImages array
         sourceType: 'enhancement-kontext', // Track Kontext enhancements separately
       };
@@ -211,7 +211,7 @@ export const enhancePhoto = async (options) => {
         guidance: 5.5,
         numberOfImages: 1,
         outputFormat: outputFormat || 'jpg',
-        sensitiveContentFilter: false,
+        sensitiveContentFilter: false, // HARDCODED: Krea model is not NSFW-aware, always disable filter
         startingImage: new Uint8Array(arrayBuffer),
         startingImageStrength: 0.75,
         sourceType: 'enhancement', // Add sourceType for backend tracking

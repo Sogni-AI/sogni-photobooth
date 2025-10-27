@@ -232,8 +232,7 @@ export const refreshPhoto = async (options) => {
       scheduler,
       timeStepSpacing,
       outputFormat: outputFormat || 'png',
-      disableNSFWFilter: sensitiveContentFilter ? false : true,
-      sensitiveContentFilter,
+      sensitiveContentFilter, // Adapters will convert to disableNSFWFilter for SDK
       sourceType: 'refresh', // Track refresh operations
       ...(seedParam !== undefined ? { seed: seedParam } : {})
     };

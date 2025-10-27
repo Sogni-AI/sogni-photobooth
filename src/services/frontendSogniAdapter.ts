@@ -556,8 +556,16 @@ export class FrontendSogniClientAdapter {
   get projects() {
     return {
       create: async (params: any) => {
-        // Create the real project
-        const realProject = await this.realClient.projects.create(params);
+        // Convert sensitiveContentFilter to disableNSFWFilter for SDK compatibility
+        // This matches the backend's conversion logic in server/services/sogni.js
+        const sdkParams = { ...params };
+        if ('sensitiveContentFilter' in params) {
+          sdkParams.disableNSFWFilter = params.sensitiveContentFilter ? false : true;
+          delete sdkParams.sensitiveContentFilter; // Remove to avoid passing both
+        }
+        
+        // Create the real project with converted parameters
+        const realProject = await this.realClient.projects.create(sdkParams);
         
         // Wrap it in our adapter, passing both project and client for global events
         const adaptedProject = new FrontendProjectAdapter(realProject, this.realClient);

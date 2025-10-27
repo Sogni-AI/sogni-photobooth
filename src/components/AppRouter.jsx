@@ -29,9 +29,9 @@ const AppRouter = () => {
   });
 
   const navigateToCamera = () => {
-    console.log('🎃 Navigating to camera view');
+    console.log('🎃 Navigating to camera start menu (picker view)');
     setCurrentRoute('main');
-    window.history.pushState({}, '', '/?page=camera&skipWelcome=true');
+    window.history.pushState({}, '', '/?skipWelcome=true');
   };
 
   const navigateToHalloween = () => {

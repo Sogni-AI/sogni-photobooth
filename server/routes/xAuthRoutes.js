@@ -25,6 +25,50 @@ const sessionIdIndex = new Map();
 const OAUTH_DATA_TTL = 15 * 60 * 1000; // 15 minutes TTL for OAuth data (in-memory fallback)
 const OAUTH_DATA_TTL_SECONDS = 15 * 60; // 15 minutes TTL for Redis
 
+// Twitter character limits
+const TWITTER_MAX_TWEET_LENGTH = 280; // Non-premium account limit
+const TWITTER_URL_LENGTH = 23; // Twitter counts all URLs as 23 characters (t.co shortening)
+
+/**
+ * Truncate tweet text to fit within Twitter's character limit
+ * Twitter counts all URLs as exactly 23 characters regardless of actual length (via t.co shortening)
+ * @param {string} message - The message to include in the tweet
+ * @param {string} shareUrl - Optional URL to append to the tweet
+ * @returns {string} - Truncated tweet text that fits within Twitter's limits
+ */
+const truncateTweetText = (message, shareUrl = null) => {
+  // Ensure message is a string
+  const messageStr = message || "Created in #SogniPhotobooth";
+  
+  // Calculate how Twitter will count the final tweet
+  // Twitter counts URLs as 23 chars, but we need to account for actual message length
+  let maxMessageLength = TWITTER_MAX_TWEET_LENGTH;
+  
+  // If we have a URL, reserve space for it (23 chars for URL + 1 space)
+  if (shareUrl) {
+    maxMessageLength -= (TWITTER_URL_LENGTH + 1); // 280 - 24 = 256 chars for message
+  }
+  
+  // Check if message fits within available space
+  let finalMessage = messageStr;
+  if (messageStr.length > maxMessageLength) {
+    // Truncate message with ellipsis (reserve 3 chars for "...")
+    finalMessage = messageStr.substring(0, maxMessageLength - 3) + '...';
+  }
+  
+  // Build final tweet text
+  const tweetText = shareUrl ? `${finalMessage} ${shareUrl}` : finalMessage;
+  
+  // Validate the result will fit in Twitter's limit
+  // For validation: count message + (URL as 23 chars if present)
+  const twitterCharCount = finalMessage.length + (shareUrl ? TWITTER_URL_LENGTH + 1 : 0);
+  if (twitterCharCount > TWITTER_MAX_TWEET_LENGTH) {
+    console.warn(`[Tweet Truncation] Warning: Tweet may exceed limit. Message: ${finalMessage.length}, Twitter count: ${twitterCharCount}`);
+  }
+  
+  return tweetText;
+};
+
 // Debug endpoint to verify Redis is working properly
 // Only enable in development or when explicitly allowed
 router.get('/debug', async (req, res) => {
@@ -236,10 +280,12 @@ router.post('/start', getSessionId, async (req, res) => {
           // Create Twitter client from the stored token
           const loggedUserClient = getClientFromToken(existingOAuthData.accessToken);
           
-          // Construct tweet text with custom message and shareUrl
-          const tweetText = shareUrl
-            ? `${message || "Created in #SogniPhotobooth"} ${shareUrl}`
-            : message || "Created in #SogniPhotobooth https://photobooth.sogni.ai";
+          // Construct tweet text with custom message and shareUrl, truncated to Twitter's character limit
+          const fallbackUrl = shareUrl || "https://photobooth.sogni.ai";
+          const tweetText = truncateTweetText(
+            message || "Created in #SogniPhotobooth",
+            shareUrl || (message ? fallbackUrl : null) // Only add fallback URL if no shareUrl and we have a custom message
+          );
           
           // Attempt to share the image directly
           const tweetResult = await shareImageToX(loggedUserClient, imageUrl, tweetText);
@@ -468,10 +514,12 @@ router.get('/callback', async (req, res) => {
         throw new Error('No pending image URL found in session data');
       }
       
-      // Construct tweet text with custom message and shareUrl
-      const tweetText = shareUrl
-        ? `${message || "Created in #SogniPhotobooth"} ${shareUrl}`
-        : message || "Created in #SogniPhotobooth https://photobooth.sogni.ai";
+      // Construct tweet text with custom message and shareUrl, truncated to Twitter's character limit
+      const fallbackUrl = shareUrl || "https://photobooth.sogni.ai";
+      const tweetText = truncateTweetText(
+        message || "Created in #SogniPhotobooth",
+        shareUrl || (message ? fallbackUrl : null) // Only add fallback URL if no shareUrl and we have a custom message
+      );
       
       // Share the image on Twitter with the logged in user
       const tweetResult = await shareImageToX(loggedUserClient, imageUrl, tweetText);

@@ -4157,8 +4157,7 @@ const App = () => {
         scheduler: scheduler,
         timeStepSpacing: timeStepSpacing,
         outputFormat: outputFormat, // Add output format setting
-        disableNSFWFilter: sensitiveContentFilter ? false : true, // Translate to SDK parameter (matches backend logic)
-        sensitiveContentFilter: sensitiveContentFilter, // Keep for backend compatibility
+        sensitiveContentFilter: sensitiveContentFilter, // Adapters will convert to disableNSFWFilter for SDK
         sourceType: sourceType, // Add sourceType for analytics tracking
         ...(seedParam !== undefined ? { seed: seedParam } : {})
       };

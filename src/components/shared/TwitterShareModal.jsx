@@ -7,6 +7,7 @@ import { themeConfigService } from '../../services/themeConfig';
 import { styleIdToDisplay } from '../../utils';
 import { TWITTER_SHARE_CONFIG, getQRWatermarkConfig } from '../../constants/settings';
 import { useApp } from '../../context/AppContext';
+import { useSogniAuth } from '../../services/sogniAuth';
 
 // Helper to ensure Permanent Marker font is loaded
 const ensureFontLoaded = () => {
@@ -41,6 +42,9 @@ const TwitterShareModal = ({
   
   // Get settings from context
   const { settings } = useApp();
+  
+  // Get authentication state
+  const { isAuthenticated } = useSogniAuth();
   
   // Get style display text (spaced format, no hashtags) from photo data if available
   const styleDisplayText = photoData?.promptDisplay || 
@@ -84,7 +88,8 @@ const TwitterShareModal = ({
     const loadMessage = async () => {
       if (isOpen) {
         // Check if user came from Halloween event and set contest checkbox accordingly
-        const shouldSubmitToContest = settings.halloweenContext || false;
+        // But only if user is authenticated - otherwise force it to false
+        const shouldSubmitToContest = isAuthenticated && (settings.halloweenContext || false);
         setSubmitToContest(shouldSubmitToContest);
         
         // Generate appropriate message
@@ -102,7 +107,7 @@ const TwitterShareModal = ({
     };
 
     loadMessage();
-  }, [isOpen, settings.halloweenContext, generateMessage]);
+  }, [isOpen, settings.halloweenContext, isAuthenticated, generateMessage]);
 
   // Handle contest checkbox toggle - update message template
   const handleContestToggle = async (checked) => {
@@ -272,9 +277,10 @@ const TwitterShareModal = ({
                 type="checkbox"
                 checked={submitToContest}
                 onChange={(e) => handleContestToggle(e.target.checked)}
+                disabled={!isAuthenticated}
               />
               <span className="checkbox-label">
-                <span className="pumpkin-icon">🎃</span>Submit to Halloween Contest
+                <span className="pumpkin-icon">🎃</span>Submit to Halloween Contest{!isAuthenticated && ' (must be logged in)'}
               </span>
             </label>
           </div>
