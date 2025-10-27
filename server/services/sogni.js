@@ -407,6 +407,10 @@ export async function generateImage(client, params, progressCallback, localProje
     // Prepare project options in the correct format for the Sogni SDK
     const isEnhancement = params.startingImage !== undefined;
     const isKreaUpscaling = isEnhancement && params.selectedModel === 'flux1-krea-dev_fp8_scaled';
+    const isKontextEnhancement = params.selectedModel === 'flux1-dev-kontext_fp8_scaled';
+    
+    // CRITICAL: Krea and Kontext models are not NSFW-aware, must always disable filter
+    const isNsfwUnawareModel = isKreaUpscaling || isKontextEnhancement;
     
     const projectOptions = {
       modelId: params.selectedModel,
@@ -422,7 +426,8 @@ export async function generateImage(client, params, progressCallback, localProje
       numberOfPreviews: isKreaUpscaling ? 0 : 10, // Disable previews for Krea upscaling
       scheduler: params.scheduler || 'DPM++ SDE',
       timeStepSpacing: params.timeStepSpacing || 'Karras',
-      disableNSFWFilter: params.sensitiveContentFilter ? false : true,
+      // FORCE disable NSFW filter for Krea/Kontext (not NSFW-aware), otherwise use user setting
+      disableNSFWFilter: isNsfwUnawareModel ? true : (params.sensitiveContentFilter ? false : true),
       outputFormat: params.outputFormat || 'jpg',
       tokenType: params.tokenType || 'spark',
       ...(params.seed !== undefined ? { seed: params.seed } : {})
