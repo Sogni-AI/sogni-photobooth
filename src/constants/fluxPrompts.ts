@@ -1,5 +1,7 @@
 // Flux.1 Kontext specific prompts
 export const FLUX_KONTEXT_PROMPTS = {
+  custom: '', // Custom Prompt - user provides their own text
+  copyImageStyle: "SUBJECT (portrait image): Keep the person's facial identity, head shape, key features, and expression recognizable.\n\nSTYLE (style reference image): Apply this image's aesthetic — color palette, lighting direction/contrast, material/texture treatment, and overall finish.\n\nINTENT: Recreate the portrait with the style reference's aesthetic treatment while maintaining recognizable likeness and natural proportions.",
   makeMeLegos: "Preserve the person's face and identify, make them into a lego character while keeping the person's identity and facial characteristics identical",
   astronaut: "Replace their clothes with a realistic NASA astronaut suit while keeping their face and identity the same",
   bodybuilder: "keep the person's face the same, keep hair the same, keep nose and mouth the same, same face shape, same expression, Make the person have huge muscles that blend naturally into their face realistically while keeping their existing identity and characteristics",

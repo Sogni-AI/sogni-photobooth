@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useRef, useMemo } from 'react';
 
 import { Photo, ProjectState, Settings } from '../types/index';
-import { DEFAULT_SETTINGS, getModelDefaults, isFluxKontextModel } from '../constants/settings';
+import { DEFAULT_SETTINGS, getModelDefaults, isFluxKontextModel, DEFAULT_MODEL_ID } from '../constants/settings';
 import { getSettingFromCookie, saveSettingsToCookies, getSettingsForModel, saveModelSpecificSettings } from '../utils/cookies';
 
 // Helper function to handle TezDev theme cookie migration
@@ -89,14 +89,53 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [settings, setSettings] = useState<Settings>(() => {
     const theme = getTezDevThemeFromCookie();
     const aspectRatio = getSettingFromCookie('aspectRatio', DEFAULT_SETTINGS.aspectRatio);
-    const selectedModel = getSettingFromCookie('selectedModel', DEFAULT_SETTINGS.selectedModel);
+    let selectedModel = getSettingFromCookie('selectedModel', DEFAULT_SETTINGS.selectedModel);
+    let selectedStyle = getSettingFromCookie('selectedStyle', DEFAULT_SETTINGS.selectedStyle);
+    let positivePrompt = getSettingFromCookie('positivePrompt', DEFAULT_SETTINGS.positivePrompt);
     
-    // Get model-specific settings for the current model
+    // Reset Flux Kontext to Sogni Turbo on initialization
+    // (Flux Kontext is only for Copy Image Style mode which user must explicitly activate)
+    if (isFluxKontextModel(selectedModel)) {
+      console.log('🔄 [INIT] Resetting model from Flux Kontext to Sogni Turbo');
+      selectedModel = DEFAULT_MODEL_ID;
+      
+      // Save to cookies and also ensure model-specific settings are loaded for Sogni Turbo
+      saveSettingsToCookies({ selectedModel: DEFAULT_MODEL_ID });
+      const sogniTurboSettings = getSettingsForModel(DEFAULT_MODEL_ID);
+      saveModelSpecificSettings(DEFAULT_MODEL_ID, sogniTurboSettings);
+      console.log('🔄 [INIT] Saved Sogni Turbo settings:', sogniTurboSettings);
+      
+      // Clear any cached Flux Kontext model-specific settings to prevent conflicts
+      try {
+        localStorage.removeItem('sogni_model_flux1-dev-kontext_fp8_scaled');
+        console.log('🔄 [INIT] Cleared Flux Kontext model cache');
+      } catch (e) {
+        console.warn('Failed to clear Flux Kontext cache:', e);
+      }
+      
+      // Also reset copyImageStyle to randomMix when resetting the model
+      // This ensures they're in sync
+      if (selectedStyle === 'copyImageStyle') {
+        console.log('🔄 [INIT] Also resetting style from Copy Image Style to Random Mix (model was reset)');
+        selectedStyle = 'randomMix';
+        saveSettingsToCookies({ selectedStyle });
+      }
+    }
+    
+    // Reset custom prompt to blank on page load
+    if (positivePrompt && positivePrompt.trim() !== '') {
+      console.log('🔄 [INIT] Resetting custom prompt to blank');
+      positivePrompt = '';
+      saveSettingsToCookies({ positivePrompt });
+    }
+    
+    // Get model-specific settings for the (possibly reset) model
     const modelSettings = getSettingsForModel(selectedModel);
     
     return {
-      selectedStyle: getSettingFromCookie('selectedStyle', DEFAULT_SETTINGS.selectedStyle),
+      selectedStyle,
       selectedModel,
+      positivePrompt,
       numImages: modelSettings.numImages || DEFAULT_SETTINGS.numImages,
       promptGuidance: modelSettings.promptGuidance || DEFAULT_SETTINGS.promptGuidance,
       controlNetStrength: getSettingFromCookie('controlNetStrength', DEFAULT_SETTINGS.controlNetStrength),
@@ -107,7 +146,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       guidance: modelSettings.guidance || DEFAULT_SETTINGS.guidance,
       flashEnabled: getSettingFromCookie('flashEnabled', DEFAULT_SETTINGS.flashEnabled),
       keepOriginalPhoto: getSettingFromCookie('keepOriginalPhoto', DEFAULT_SETTINGS.keepOriginalPhoto),
-      positivePrompt: getSettingFromCookie('positivePrompt', DEFAULT_SETTINGS.positivePrompt),
       stylePrompt: getSettingFromCookie('stylePrompt', DEFAULT_SETTINGS.stylePrompt),
       negativePrompt: getSettingFromCookie('negativePrompt', DEFAULT_SETTINGS.negativePrompt),
       seed: getSettingFromCookie('seed', DEFAULT_SETTINGS.seed),
@@ -217,7 +255,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       promptGuidance: newSettings.promptGuidance,
       guidance: newSettings.guidance,
       numImages: newSettings.numImages,
+      selectedStyle: newSettings.selectedStyle, // LOG THIS
     });
+    
+    console.log(`🔍 [switchToModel] selectedStyle before: ${settings.selectedStyle}, after: ${newSettings.selectedStyle}`);
     
     setSettings(newSettings);
     

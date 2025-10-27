@@ -399,6 +399,7 @@ export async function generateImage(client, params, progressCallback, localProje
       model: params.selectedModel,
       outputFormat: params.outputFormat,
       sensitiveContentFilter: params.sensitiveContentFilter,
+      sourceType: params.sourceType
       // prompt: params.prompt?.substring(0, 50) + '...',
       //...Object.fromEntries(Object.entries(params).filter(([key]) => key !== 'prompt'))
     });
@@ -426,6 +427,8 @@ export async function generateImage(client, params, progressCallback, localProje
       tokenType: params.tokenType || 'spark',
       ...(params.seed !== undefined ? { seed: params.seed } : {})
     };
+    
+
     
 
     

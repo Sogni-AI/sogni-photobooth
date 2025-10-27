@@ -24,11 +24,13 @@ const ImageAdjuster = ({
   initialPosition = { x: 0, y: 0 },
   defaultScale = 1,
   numImages = 1,
-  stylePrompts = {}
+  stylePrompts = {},
+  headerText = 'Adjust Your Image',
+  onUploadNew = null
 }) => {
 
   
-  const { settings, updateSetting } = useApp();
+  const { settings, updateSetting, switchToModel } = useApp();
   const { aspectRatio, tezdevTheme, selectedModel, inferenceSteps, promptGuidance, scheduler, numImages: contextNumImages, selectedStyle, portraitType } = settings;
   const { isAuthenticated } = useSogniAuth();
   const { tokenType } = useWallet();
@@ -41,7 +43,7 @@ const ImageAdjuster = ({
   const stylePreviewImage = useMemo(() => {
     // Check if it's an individual style (not a prompt sampler mode)
     const isIndividualStyle = selectedStyle && 
-      !['custom', 'random', 'randomMix', 'oneOfEach', 'browseGallery'].includes(selectedStyle);
+      !['custom', 'random', 'randomMix', 'oneOfEach', 'browseGallery', 'copyImageStyle'].includes(selectedStyle);
     
     if (isIndividualStyle) {
       try {
@@ -671,8 +673,42 @@ const ImageAdjuster = ({
           </button>
         </div>
         
-        <h2>Adjust Your Image</h2>
-        <p className="image-adjuster-subtitle">Smaller faces can give more room for creativity.</p>
+        <h2>{headerText}</h2>
+        <p className="image-adjuster-subtitle">
+          {headerText === 'Adjust Your Style Reference' 
+            ? 'Crop and position your style reference image.' 
+            : 'Smaller faces can give more room for creativity.'}
+        </p>
+
+        {/* Show "Upload new image" button if callback is provided */}
+        {onUploadNew && (
+          <button
+            onClick={onUploadNew}
+            style={{
+              marginBottom: '16px',
+              padding: '10px 20px',
+              background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+              border: 'none',
+              borderRadius: '12px',
+              color: 'white',
+              fontSize: '14px',
+              fontFamily: '"Permanent Marker", cursive',
+              cursor: 'pointer',
+              boxShadow: '0 2px 8px rgba(16, 185, 129, 0.3)',
+              transition: 'all 0.2s ease'
+            }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.transform = 'scale(1.05)';
+              e.currentTarget.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.4)';
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.transform = 'scale(1)';
+              e.currentTarget.style.boxShadow = '0 2px 8px rgba(16, 185, 129, 0.3)';
+            }}
+          >
+            📁 Upload New Image
+          </button>
+        )}
         
         <div 
           className="image-frame"
@@ -790,19 +826,22 @@ const ImageAdjuster = ({
             <button 
               className="confirm-button confirm-button-main" 
               onClick={handleConfirm}
+              style={headerText === 'Adjust Your Style Reference' ? { borderRadius: '12px' } : {}}
             >
-              Imagine ({selectedBatchCount}x)
-              {isAuthenticated && !costLoading && formattedCost && formattedCost !== '—' && (
+              {headerText === 'Adjust Your Style Reference' ? 'Continue' : `Imagine (${selectedBatchCount}x)`}
+              {headerText !== 'Adjust Your Style Reference' && isAuthenticated && !costLoading && formattedCost && formattedCost !== '—' && (
                 <span className="cost-estimate"> {formattedCost} {tokenLabel}</span>
               )}
             </button>
-            <button
-              className="confirm-button confirm-button-dropdown"
-              onClick={() => setIsBatchDropdownOpen(!isBatchDropdownOpen)}
+            {headerText !== 'Adjust Your Style Reference' && (
+              <button
+                className="confirm-button confirm-button-dropdown"
+                onClick={() => setIsBatchDropdownOpen(!isBatchDropdownOpen)}
               aria-label="Select batch count"
             >
               <span className="dropdown-caret">▼</span>
             </button>
+            )}
             {isBatchDropdownOpen && (
               <div className="batch-dropdown-menu">
                 {batchOptions.map(count => (
@@ -837,6 +876,12 @@ const ImageAdjuster = ({
             dropdownPosition="top"
             triggerButtonClass=".image-adjuster-style-selector-button"
             selectedModel={selectedModel}
+            onModelSelect={(model) => {
+              console.log('ImageAdjuster: Switching model to', model);
+              if (switchToModel) {
+                switchToModel(model);
+              }
+            }}
             portraitType={portraitType}
           />
         )}
@@ -855,7 +900,9 @@ ImageAdjuster.propTypes = {
   }),
   defaultScale: PropTypes.number,
   numImages: PropTypes.number,
-  stylePrompts: PropTypes.object
+  stylePrompts: PropTypes.object,
+  headerText: PropTypes.string,
+  onUploadNew: PropTypes.func
 };
 
 export default ImageAdjuster; 

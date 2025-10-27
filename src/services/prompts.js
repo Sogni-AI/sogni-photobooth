@@ -79,8 +79,10 @@ export const initializeStylePrompts = async (modelId = null) => {
     }
     
     // Create sorted object with custom first
+    // For Flux Kontext, custom and copyImageStyle are already in prompts
+    const hasCustom = 'custom' in prompts;
     const stylePrompts = {
-      custom: '',
+      ...(hasCustom ? {} : { custom: '' }), // Only add custom if not already in prompts
       ...Object.fromEntries(
         Object.entries(prompts)
           .sort(([keyA], [keyB]) => keyA.localeCompare(keyB))
@@ -111,7 +113,7 @@ export const initializeStylePrompts = async (modelId = null) => {
 export const generateRandomPrompts = (count, stylePrompts) => {
   // Get all prompts except 'custom' and 'random'
   const availablePrompts = Object.entries(stylePrompts)
-    .filter(([key]) => key !== 'custom' && key !== 'random')
+    .filter(([key]) => key !== 'custom' && key !== 'random' && key !== 'copyImageStyle')
     .map(([key, value]) => ({ key, value }));
   
   // Shuffle array using Fisher-Yates algorithm
@@ -130,7 +132,7 @@ export const generateRandomPrompts = (count, stylePrompts) => {
  */
 export const getRandomStyle = (stylePrompts) => {
   const availableStyles = Object.keys(stylePrompts)
-    .filter(key => key !== 'custom' && key !== 'random' && key !== 'randomMix' && key !== 'oneOfEach');
+    .filter(key => key !== 'custom' && key !== 'random' && key !== 'randomMix' && key !== 'oneOfEach' && key !== 'copyImageStyle');
   
   if (availableStyles.length === 0) {
     console.warn('No styles available for random selection');
@@ -145,7 +147,7 @@ export const getRandomStyle = (stylePrompts) => {
  */
 export const getRandomMixPrompts = (count, stylePrompts) => {
   const availableStyles = Object.keys(stylePrompts)
-    .filter(key => key !== 'custom' && key !== 'random' && key !== 'randomMix' && key !== 'oneOfEach');
+    .filter(key => key !== 'custom' && key !== 'random' && key !== 'randomMix' && key !== 'oneOfEach' && key !== 'copyImageStyle');
   
   if (availableStyles.length === 0) {
     console.warn('No styles available for random mix');

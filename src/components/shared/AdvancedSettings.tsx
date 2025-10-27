@@ -180,7 +180,7 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
   const handleSogniWatermarkChange = useCallback((enabled: boolean) => {
     updateSetting('sogniWatermark', enabled);
     // Clear caches immediately when toggling QR code overlay on/off
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+     
     clearImageCaches();
   }, [updateSetting, clearImageCaches]);
   
@@ -237,7 +237,7 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
         if (sanitized) {
           updateSetting('qrCodeUrl', sanitized);
           // Clear caches when URL changes to regenerate QR code
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+           
           clearImageCaches();
           console.log('Debounced QR URL update applied:', sanitized);
         }

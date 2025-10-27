@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 
-import { getModelOptions, defaultStylePrompts as initialStylePrompts, TIMEOUT_CONFIG, isFluxKontextModel, TWITTER_SHARE_CONFIG, getQRWatermarkConfig } from './constants/settings';
+import { getModelOptions, defaultStylePrompts as initialStylePrompts, TIMEOUT_CONFIG, isFluxKontextModel, TWITTER_SHARE_CONFIG, getQRWatermarkConfig, DEFAULT_MODEL_ID, FLUX_KONTEXT_MODEL_ID } from './constants/settings';
 import { photoThoughts, randomThoughts } from './constants/thoughts';
 import { saveSettingsToCookies, shouldShowPromoPopup, markPromoPopupShown, hasDoneDemoRender, markDemoRenderDone } from './utils/cookies';
 import { styleIdToDisplay } from './utils';
@@ -101,13 +101,13 @@ const updateUrlParams = (updates, options = {}) => {
 // Helper function to update URL with prompt parameter (backward compatibility)
 const updateUrlWithPrompt = (promptKey) => {
   updateUrlParams({ 
-    prompt: (!promptKey || ['randomMix', 'random', 'custom', 'oneOfEach'].includes(promptKey)) ? null : promptKey 
+    prompt: (!promptKey || ['randomMix', 'random', 'custom', 'oneOfEach', 'copyImageStyle'].includes(promptKey)) ? null : promptKey 
   });
 };
 
 // Helper function to get the hashtag for a style
 const getHashtagForStyle = (styleKey) => {
-  if (!styleKey || styleKey === 'random' || styleKey === 'randomMix' || styleKey === 'oneOfEach') {
+  if (!styleKey || styleKey === 'random' || styleKey === 'randomMix' || styleKey === 'oneOfEach' || styleKey === 'copyImageStyle') {
     return null;
   }
   // For custom prompts, use #SogniPhotobooth
@@ -239,6 +239,10 @@ const App = () => {
 
   // Add state to store the last used photo blob and data URL for "More" button
   const [lastPhotoData, setLastPhotoData] = useState({ blob: null, dataUrl: null }); // Keep this
+
+  // Add state for style reference image (for "Copy image style" mode)
+  const [styleReferenceImage, setStyleReferenceImage] = useState(null); // { blob, dataUrl, croppedBlob }
+  const [showStyleReferenceAdjuster, setShowStyleReferenceAdjuster] = useState(false); // Show adjuster for style reference
 
   // Helper function to load default Einstein photo
   const loadDefaultEinsteinPhoto = useCallback(async () => {
@@ -1004,17 +1008,28 @@ const App = () => {
       setUrlSearchTerm(searchParam);
     }
     
-    if (promptParam && stylePrompts && promptParam !== selectedStyle) {
-      // If the prompt exists in our style prompts, select it
-      if (stylePrompts[promptParam] || Object.keys(promptsData).includes(promptParam)) {
-        console.log(`Setting style from URL parameter: ${promptParam}`);
-        updateSetting('selectedStyle', promptParam);
-        // If we have the prompt value, set it too
-        if (stylePrompts[promptParam]) {
-          updateSetting('positivePrompt', stylePrompts[promptParam]);
+    // IMPORTANT: Don't process URL parameters if we're in copyImageStyle mode
+    // copyImageStyle should never be overridden by URL params
+    if (selectedStyle !== 'copyImageStyle') {
+      // Only process URL params if NOT in copyImageStyle mode
+      if (promptParam && stylePrompts && promptParam !== selectedStyle) {
+        // If the prompt exists in our style prompts, select it
+        if (stylePrompts[promptParam] || Object.keys(promptsData).includes(promptParam)) {
+          console.log(`Setting style from URL parameter: ${promptParam}`);
+          updateSetting('selectedStyle', promptParam);
+          // If we have the prompt value, set it too
+          if (stylePrompts[promptParam]) {
+            updateSetting('positivePrompt', stylePrompts[promptParam]);
+          }
+          // Update current hashtag
+          setCurrentHashtag(promptParam);
         }
-        // Update current hashtag
-        setCurrentHashtag(promptParam);
+      }
+    } else {
+      // We're in copyImageStyle mode - clear any URL prompt parameters
+      console.log(`⚠️ selectedStyle is copyImageStyle - ensuring URL prompt parameter is cleared`);
+      if (promptParam) {
+        updateUrlWithPrompt('copyImageStyle');
       }
     }
   }, [stylePrompts, updateSetting, selectedStyle, promptsData, currentPage]);
@@ -1168,6 +1183,49 @@ const App = () => {
     };
 
     loadDefaultTheme();
+  }, []); // Only run on mount
+
+  // Note: Model/style/prompt resets now happen in AppContext initialization
+  // This ensures they happen before any useEffect runs, preventing race conditions
+
+  // Load style reference image from localStorage on app initialization
+  useEffect(() => {
+    const loadStyleReference = async () => {
+      try {
+        const savedStyleRef = localStorage.getItem('sogni_styleReferenceImage');
+        if (savedStyleRef) {
+          const { croppedDataUrl, originalDataUrl } = JSON.parse(savedStyleRef);
+          console.log('💾 Loading style reference from localStorage');
+          
+          // Convert data URLs back to blobs
+          const croppedResponse = await fetch(croppedDataUrl);
+          const croppedBlob = await croppedResponse.blob();
+          
+          const originalResponse = await fetch(originalDataUrl);
+          const originalBlob = await originalResponse.blob();
+          
+          // Recreate the style reference object
+          // Use the croppedDataUrl for display since it's a persistent data URL
+          setStyleReferenceImage({
+            blob: originalBlob,
+            dataUrl: croppedDataUrl, // Use croppedDataUrl for display (it's a persistent data URL)
+            croppedBlob: croppedBlob,
+            croppedDataUrl: croppedDataUrl
+          });
+          
+          // Note: We don't auto-restore copyImageStyle mode on page refresh
+          // The user needs to manually select it again after refresh
+          // This is because we reset the model to Sogni Turbo on refresh
+          console.log('💾 Style reference loaded from localStorage (mode not auto-restored)');
+        }
+      } catch (error) {
+        console.warn('Failed to load style reference from localStorage:', error);
+        // Clear corrupted data
+        localStorage.removeItem('sogni_styleReferenceImage');
+      }
+    };
+
+    loadStyleReference();
   }, []); // Only run on mount
 
   // Update CSS variables when theme changes
@@ -1536,12 +1594,24 @@ const App = () => {
     const fromPopState = fromPopStateOrEvent?.nativeEvent !== undefined ? false : fromPopStateOrEvent;
     
     console.log('📸 Navigating from Style Explorer to start menu, fromPopState:', fromPopState);
+    console.log('📸 Current selectedStyle:', selectedStyle);
+    console.log('📸 Has styleReferenceImage:', !!styleReferenceImage?.croppedBlob);
+    console.log('📸 Current model:', selectedModel);
+    
+    // FAILSAFE: If we have a style reference image and model is Flux Kontext, ensure copyImageStyle is set
+    if (styleReferenceImage?.croppedBlob && isFluxKontextModel(selectedModel) && selectedStyle !== 'copyImageStyle') {
+      console.warn('🚨 FAILSAFE: Style reference exists and model is Flux Kontext but style is not copyImageStyle!');
+      console.warn('🚨 Forcing selectedStyle to copyImageStyle');
+      updateSetting('selectedStyle', 'copyImageStyle');
+      saveSettingsToCookies({ selectedStyle: 'copyImageStyle' });
+    }
     
     // Update URL FIRST before changing state
     // Use replaceState (not pushState) to avoid creating redundant history entries
     if (!fromPopState) {
-      updateUrlParams({ page: null }, { usePushState: false });
-      console.log('📸 URL updated, removed page param. New URL:', window.location.href);
+      // Clear both page and prompt parameters
+      updateUrlParams({ page: null, prompt: null }, { usePushState: false });
+      console.log('📸 URL updated, removed page and prompt params. New URL:', window.location.href);
     }
 
     // Clear selected photo state when leaving Sample Gallery mode
@@ -3867,7 +3937,18 @@ const App = () => {
       let finalPositivePrompt = positivePrompt.trim();
       
       // Handle special style modes (these override any existing prompt text)
-      if (selectedStyle === 'custom') {
+      if (selectedStyle === 'copyImageStyle') {
+        // Validate that we have a style reference image
+        if (!styleReferenceImage?.croppedBlob) {
+          console.error('❌ copyImageStyle mode is active but no style reference image is available');
+          setBackendError('No style reference image found. Please upload a style reference by clicking "Copy Image Style".');
+          return;
+        }
+        
+        // Special prompt for style reference mode
+        finalPositivePrompt = "SUBJECT (portrait image): Keep the person's facial identity, head shape, key features, and expression recognizable.\n\nSTYLE (style reference image): Apply this image's aesthetic — color palette, lighting direction/contrast, material/texture treatment, and overall finish.\n\nINTENT: Recreate the portrait with the style reference's aesthetic treatment while maintaining recognizable likeness and natural proportions.";
+        console.log('🎨 Using Copy Image Style mode with special prompt');
+      } else if (selectedStyle === 'custom') {
         finalPositivePrompt = finalPositivePrompt || '';
       } else if (selectedStyle === 'random') {
         // Pick one random style and use it for all images in the batch
@@ -4066,6 +4147,7 @@ const App = () => {
         steps: inferenceSteps,
         guidance: isFluxKontext ? guidance : promptGuidance, // Use guidance for Flux.1 Kontext, promptGuidance for others
         numberOfImages: numImages, // Use context state
+        numberOfPreviews: authState.authMode === 'frontend' && isFluxKontext ? 5 : 10, // Frontend Flux gets 5 previews, backend gets 10
         scheduler: scheduler,
         timeStepSpacing: timeStepSpacing,
         outputFormat: outputFormat, // Add output format setting
@@ -4078,7 +4160,25 @@ const App = () => {
       // Add image configuration based on model type
       if (isFluxKontext) {
         // For Flux.1 Kontext, use contextImages array (SDK expects array)
-        projectConfig.contextImages = [new Uint8Array(blobArrayBuffer)];
+        // Check if we're in Copy Image Style mode
+        if (selectedStyle === 'copyImageStyle') {
+          if (!styleReferenceImage?.croppedBlob) {
+            console.error('❌ Copy Image Style mode active but no style reference blob available');
+            throw new Error('Please select a style reference image first by clicking "Copy Image Style"');
+          }
+          
+          // In style reference mode, use both images: [userPhoto, styleReference]
+          const styleRefArrayBuffer = await styleReferenceImage.croppedBlob.arrayBuffer();
+          projectConfig.contextImages = [
+            new Uint8Array(blobArrayBuffer),      // First image: user's photo (subject)
+            new Uint8Array(styleRefArrayBuffer)   // Second image: style reference
+          ];
+          console.log('🎨 Using both user photo and style reference for Flux Kontext');
+          console.log(`📊 Context images: User photo (${blobArrayBuffer.byteLength} bytes) + Style ref (${styleRefArrayBuffer.byteLength} bytes)`);
+        } else {
+          // Normal Flux Kontext mode - just use the user's photo
+          projectConfig.contextImages = [new Uint8Array(blobArrayBuffer)];
+        }
       } else {
         // For other models, use controlNet
         projectConfig.controlNet = {
@@ -4103,8 +4203,8 @@ const App = () => {
             guidance: isFluxKontext ? guidance : promptGuidance,
             scheduler: scheduler,
             network: 'fast',
-            previewCount: 10,
-            contextImages: isFluxKontext ? 1 : 0,
+            previewCount: authState.authMode === 'frontend' && isFluxKontext ? 5 : 10, // Frontend Flux gets 5 previews
+            contextImages: isFluxKontext ? (selectedStyle === 'copyImageStyle' && styleReferenceImage ? 2 : 1) : 0,
             cnEnabled: !isFluxKontext,
             tokenType: walletTokenType
           });
@@ -5945,6 +6045,10 @@ const App = () => {
                 onRegisterFrameCacheClear={(clearFunction) => {
                   photoGalleryFrameClearRef.current = clearFunction;
                 }}
+                onCopyImageStyleSelect={handleStyleReferenceUpload}
+                styleReferenceImage={styleReferenceImage}
+                onRemoveStyleReference={handleRemoveStyleReference}
+                onEditStyleReference={handleEditStyleReference}
                 qrCodeData={qrCodeData}
                 onCloseQR={() => setQrCodeData(null)}
                 onOutOfCredits={() => {
@@ -5983,12 +6087,15 @@ const App = () => {
             onStyleSelect={handleUpdateStyle}
             stylePrompts={stylePrompts}
             selectedModel={selectedModel}
+            onModelSelect={switchToModel}
             onNavigateToGallery={handleNavigateToPromptSelector}
             onShowControlOverlay={() => setShowControlOverlay(true)}
             onThemeChange={handleThemeChange}
             onCustomPromptChange={(prompt) => updateSetting('positivePrompt', prompt)}
             currentCustomPrompt={positivePrompt}
             portraitType={portraitType}
+            styleReferenceImage={styleReferenceImage}
+            onEditStyleReference={handleEditStyleReference}
             // Photo tracking props
             originalPhotoUrl={photos.find(p => p.isOriginal)?.originalDataUrl || null}
             photoSourceType={photos.find(p => p.isOriginal)?.sourceType || null}
@@ -6337,6 +6444,153 @@ const App = () => {
     // Show an overlay or instructions for drag and drop
     setDragActive(true);
     // This will use the existing drag and drop handlers which now use the image adjuster
+  };
+
+  // Handler for uploading a style reference image (for "Copy image style" mode)
+  const handleStyleReferenceUpload = async (file) => {
+    console.log('📸 Style reference image upload started');
+    
+    // Make sure we have a valid file
+    if (!file) return;
+    
+    // Create a temporary URL for the file
+    const tempUrl = URL.createObjectURL(file);
+    
+    // Store the original file
+    setStyleReferenceImage({
+      blob: file,
+      dataUrl: tempUrl,
+      croppedBlob: null // Will be set after cropping
+    });
+    
+    // Set the uploaded image URL for the adjuster
+    setCurrentUploadedImageUrl(tempUrl);
+    setCurrentUploadedSource('style-reference');
+    
+    // Show the style reference adjuster
+    setShowStyleReferenceAdjuster(true);
+  };
+
+  // Handler for when style reference image is cropped and confirmed in ImageAdjuster
+  const handleStyleReferenceConfirm = async (croppedBlob) => {
+    console.log('✅ Style reference image cropped and confirmed');
+    
+    // Convert both original and cropped blobs to data URLs for persistent storage
+    const croppedReader = new FileReader();
+    const originalReader = new FileReader();
+    
+    // Wait for both conversions to complete
+    const croppedDataUrlPromise = new Promise((resolve) => {
+      croppedReader.onloadend = () => resolve(croppedReader.result);
+      croppedReader.readAsDataURL(croppedBlob);
+    });
+    
+    const originalDataUrlPromise = new Promise((resolve) => {
+      originalReader.onloadend = () => resolve(originalReader.result);
+      originalReader.readAsDataURL(styleReferenceImage.blob);
+    });
+    
+    const [croppedDataUrl, originalDataUrl] = await Promise.all([
+      croppedDataUrlPromise,
+      originalDataUrlPromise
+    ]);
+    
+    // Update the style reference with the cropped version
+    const updatedStyleRef = {
+      blob: styleReferenceImage.blob,
+      dataUrl: croppedDataUrl, // Use cropped data URL for display
+      croppedBlob: croppedBlob,
+      croppedDataUrl: croppedDataUrl
+    };
+    
+    setStyleReferenceImage(updatedStyleRef);
+    
+    // Save to localStorage for persistence (both as data URLs, not blob URLs)
+    try {
+      localStorage.setItem('sogni_styleReferenceImage', JSON.stringify({
+        croppedDataUrl: croppedDataUrl,
+        originalDataUrl: originalDataUrl // Now saving as data URL, not blob URL
+      }));
+      console.log('💾 Saved style reference to localStorage');
+    } catch (e) {
+      console.warn('Failed to save style reference to localStorage:', e);
+    }
+    
+    // Hide the adjuster
+    setShowStyleReferenceAdjuster(false);
+    
+    // IMPORTANT: Switch model FIRST, then set style
+    // This prevents race conditions where switchToModel might use old settings
+    console.log('🔄 Switching to Flux Kontext for image style copy mode');
+    switchToModel(FLUX_KONTEXT_MODEL_ID);
+    
+    // Then set the selected style to 'copyImageStyle' 
+    // Use setTimeout to ensure model switch state update completes first
+    setTimeout(() => {
+      updateSetting('selectedStyle', 'copyImageStyle');
+      saveSettingsToCookies({ selectedStyle: 'copyImageStyle' });
+      console.log('💾 Explicitly saved copyImageStyle to cookies');
+      
+      // Clear any URL prompt parameter that might override our selection
+      updateUrlWithPrompt('copyImageStyle');
+      console.log('🔗 Cleared URL prompt parameter');
+      
+      // Inform user about the model switch
+      showToast({
+        type: 'info',
+        title: 'Model Switched',
+        message: 'Automatically switched to Flux Kontext for Copy Image Style. You can change the model in Photobooth Settings.',
+        timeout: 5000
+      });
+    }, 0);
+  };
+
+  // Handler to remove style reference image
+  const handleRemoveStyleReference = () => {
+    console.log('🗑️ Removing style reference image');
+    
+    // Clean up blob URLs
+    if (styleReferenceImage?.dataUrl) {
+      URL.revokeObjectURL(styleReferenceImage.dataUrl);
+    }
+    
+    // Clear the style reference
+    setStyleReferenceImage(null);
+    
+    // Clear from localStorage
+    try {
+      localStorage.removeItem('sogni_styleReferenceImage');
+      console.log('💾 Removed style reference from localStorage');
+    } catch (e) {
+      console.warn('Failed to remove style reference from localStorage:', e);
+    }
+    
+    // Reset to default style
+    updateSetting('selectedStyle', 'randomMix');
+    
+    // Switch back to Sogni Turbo
+    console.log('🔄 Switching back to Sogni Turbo');
+    switchToModel(DEFAULT_MODEL_ID);
+  };
+
+  // Handler to open existing style reference in adjuster for editing
+  const handleEditStyleReference = () => {
+    if (!styleReferenceImage?.dataUrl) {
+      console.warn('No style reference image to edit');
+      return;
+    }
+    
+    console.log('📝 Opening style reference in adjuster for editing');
+    
+    // Make sure regular image adjuster is closed
+    setShowImageAdjuster(false);
+    
+    // Set the uploaded image URL for the adjuster
+    setCurrentUploadedImageUrl(styleReferenceImage.dataUrl);
+    setCurrentUploadedSource('style-reference');
+    
+    // Show the style reference adjuster
+    setShowStyleReferenceAdjuster(true);
   };
 
   // Handle toggling between front and rear camera
@@ -7675,6 +7929,10 @@ const App = () => {
           }}
           numImages={numImages}
           authState={authState}
+          onCopyImageStyleSelect={handleStyleReferenceUpload}
+          styleReferenceImage={styleReferenceImage}
+          onRemoveStyleReference={handleRemoveStyleReference}
+          onEditStyleReference={handleEditStyleReference}
         />
           </div>
         )}
@@ -7807,6 +8065,43 @@ const App = () => {
           }
           numImages={numImages}
           stylePrompts={stylePrompts}
+        />
+      )}
+
+      {/* Style Reference Image Adjuster */}
+      {showStyleReferenceAdjuster && currentUploadedImageUrl && (
+        <ImageAdjuster
+          key={`style-ref-${currentUploadedImageUrl}`}
+          imageUrl={currentUploadedImageUrl}
+          onConfirm={handleStyleReferenceConfirm}
+          onCancel={() => {
+            setShowStyleReferenceAdjuster(false);
+            if (currentUploadedImageUrl) {
+              URL.revokeObjectURL(currentUploadedImageUrl);
+            }
+            setCurrentUploadedImageUrl('');
+          }}
+          initialPosition={{ x: 0, y: 0 }}
+          defaultScale={1}
+          numImages={1}
+          stylePrompts={stylePrompts}
+          headerText="Adjust Your Style Reference"
+          onUploadNew={() => {
+            // Trigger file input to upload a new style reference image
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            input.onchange = async (e) => {
+              const file = e.target.files?.[0];
+              if (file) {
+                // Close the current adjuster
+                setShowStyleReferenceAdjuster(false);
+                // Upload the new file (will reopen adjuster with new image)
+                await handleStyleReferenceUpload(file);
+              }
+            };
+            input.click();
+          }}
         />
       )}
 

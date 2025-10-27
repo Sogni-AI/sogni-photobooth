@@ -1,5 +1,47 @@
 import { Settings, AspectRatioOption, OutputFormat } from '../types/index';
 
+// Default model IDs
+export const DEFAULT_MODEL_ID = 'coreml-sogniXLturbo_alpha1_ad'; // Sogni Turbo
+export const FLUX_KONTEXT_MODEL_ID = 'flux1-dev-kontext_fp8_scaled';
+
+// Special style modes that are not individual library styles
+export const SPECIAL_STYLE_MODES = [
+  'custom',
+  'random',
+  'randomMix',
+  'oneOfEach',
+  'browseGallery',
+  'copyImageStyle'
+] as const;
+
+// Styles that should not appear in URL parameters (sampler modes + special modes)
+export const URL_EXCLUDED_STYLES = [
+  'randomMix',
+  'random',
+  'custom',
+  'oneOfEach',
+  'copyImageStyle'
+] as const;
+
+// Styles that should not have hashtags
+export const HASHTAG_EXCLUDED_STYLES = [
+  'random',
+  'randomMix',
+  'oneOfEach',
+  'copyImageStyle'
+] as const;
+
+// Helper function to check if a style is a special mode (not a library style)
+export const isSpecialStyleMode = (styleKey: string): boolean => {
+  return (SPECIAL_STYLE_MODES as readonly string[]).includes(styleKey);
+};
+
+// Helper function to check if a style is an individual library style
+export const isIndividualLibraryStyle = (styleKey: string | null | undefined): boolean => {
+  if (!styleKey) return false;
+  return !(SPECIAL_STYLE_MODES as readonly string[]).includes(styleKey);
+};
+
 // Helper function to safely get model options
 export const getModelOptions = () => {
   return [
@@ -58,7 +100,7 @@ export const getValidModelValue = (selectedValue: string) => {
 
 // Helper function to check if the current model is Flux.1 Kontext
 export const isFluxKontextModel = (modelValue: string): boolean => {
-  return modelValue === "flux1-dev-kontext_fp8_scaled";
+  return modelValue === FLUX_KONTEXT_MODEL_ID;
 };
 
 // Helper function to identify Stable Diffusion models (SDXL-based models)
@@ -140,11 +182,10 @@ export const getDefaultAspectRatio = (): AspectRatioOption => {
 
 // Create DEFAULT_SETTINGS using centralized defaults
 const createDefaultSettings = (): Settings => {
-  const defaultModel = "coreml-sogniXLturbo_alpha1_ad";
-  const modelDefaults = getModelDefaults(defaultModel);
+  const modelDefaults = getModelDefaults(DEFAULT_MODEL_ID);
   
   return {
-    selectedModel: defaultModel,
+    selectedModel: DEFAULT_MODEL_ID,
     numImages: modelDefaults.numImages,
     promptGuidance: modelDefaults.promptGuidance || 2,
     controlNetStrength: modelDefaults.controlNetStrength || 0.7,

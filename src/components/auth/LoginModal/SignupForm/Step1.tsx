@@ -44,13 +44,13 @@ function Step1({ defaults, onContinue, onLogin }: Props) {
         errors.username = 'Username is required';
       } else {
         try {
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
+           
           const client = await ensureClient();
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+           
           const result = await client.account.validateUsername(fields.username);
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+           
           if (result.status === 'error') {
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+             
             errors.username = result.message;
           }
         } catch (err: unknown) {

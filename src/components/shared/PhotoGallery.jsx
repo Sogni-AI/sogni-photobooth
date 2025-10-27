@@ -122,7 +122,12 @@ const PhotoGallery = ({
   numImages = 1, // Intentionally unused - ImageAdjuster handles batch count selection
   authState = null,
   handleRefreshPhoto = null,
-  onOutOfCredits = null // Callback to trigger out of credits popup
+  onOutOfCredits = null, // Callback to trigger out of credits popup
+  // New props for Copy image style feature
+  onCopyImageStyleSelect = null,
+  styleReferenceImage = null,
+  onRemoveStyleReference = null,
+  onEditStyleReference = null // Callback to open existing style reference in adjuster
 }) => {
   // Get settings from context
   const { settings, updateSetting } = useApp();
@@ -356,14 +361,19 @@ const PhotoGallery = ({
   
   // Handler for applying custom prompt from popup
   const handleApplyCustomPrompt = useCallback((promptText) => {
-    // Call the onCustomSelect callback with no args - it will set style to custom
-    if (onCustomSelect) {
-      onCustomSelect();
+    // Don't override copyImageStyle mode when applying custom prompts
+    // copyImageStyle has its own special prompt that should not be changed
+    if (selectedStyle !== 'copyImageStyle') {
+      // Call the onCustomSelect callback with no args - it will set style to custom
+      if (onCustomSelect) {
+        onCustomSelect();
+      }
     }
     
     // Then update the positive prompt separately via App's updateSetting
+    // Note: This won't affect copyImageStyle mode since that uses a hardcoded prompt
     updateSetting('positivePrompt', promptText);
-  }, [onCustomSelect, updateSetting]);
+  }, [onCustomSelect, updateSetting, selectedStyle]);
 
   // Clear framed image cache when new photos are generated or theme changes
   // Use a ref to track previous length to avoid effect dependency on photos.length
@@ -2490,7 +2500,6 @@ const PhotoGallery = ({
             disabled={
               selectedPhoto.loading || 
               selectedPhoto.enhancing ||
-              selectedPhoto.error ||
               !selectedPhoto.images ||
               selectedPhoto.images.length === 0
             }
@@ -2511,7 +2520,6 @@ const PhotoGallery = ({
             disabled={
               selectedPhoto.loading || 
               selectedPhoto.enhancing ||
-              selectedPhoto.error ||
               !selectedPhoto.images ||
               selectedPhoto.images.length === 0
             }
@@ -3082,7 +3090,38 @@ const PhotoGallery = ({
                 <span>🙏</span>
                 <span>One of Each</span>
               </button>
-              
+            </div>
+
+            {/* Visual divider between random options and custom options */}
+            <div style={{
+              width: '100%',
+              height: '1px',
+              background: 'linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.3) 50%, transparent 100%)',
+              margin: '16px 0'
+            }} />
+
+            {/* Label for custom options */}
+            <div style={{
+              textAlign: 'center',
+              marginBottom: '12px'
+            }}>
+              <span style={{
+                fontSize: '16px',
+                fontFamily: '"Permanent Marker", cursive',
+                color: 'rgba(255, 255, 255, 0.9)'
+              }}>
+                Or use your own prompt or image
+              </span>
+            </div>
+
+            {/* Custom prompt and style reference options */}
+            <div style={{
+              display: 'flex',
+              gap: '8px',
+              marginBottom: '16px',
+              flexWrap: 'wrap',
+              justifyContent: 'center'
+            }}>
               <button 
                 onClick={() => setShowCustomPromptPopup(true)}
                 style={{
@@ -3113,9 +3152,137 @@ const PhotoGallery = ({
                 }}
               >
                 <span>✏️</span>
-                <span>Custom...</span>
+                <span>Custom prompt</span>
+              </button>
+              
+              <button 
+                onClick={() => {
+                  // If style reference already exists, open it in the adjuster for editing
+                  if (styleReferenceImage?.dataUrl && onEditStyleReference) {
+                    onEditStyleReference();
+                  } else {
+                    // No style reference yet, trigger file input to upload new one
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.accept = 'image/*';
+                    input.onchange = (e) => {
+                      const file = e.target.files?.[0];
+                      if (file && onCopyImageStyleSelect) {
+                        onCopyImageStyleSelect(file);
+                      }
+                    };
+                    input.click();
+                  }
+                }}
+                style={{
+                  background: selectedStyle === 'copyImageStyle' ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' : 'linear-gradient(135deg, #34d399 0%, #10b981 100%)',
+                  border: selectedStyle === 'copyImageStyle' ? '3px solid #10b981' : '3px solid transparent',
+                  borderRadius: '20px',
+                  padding: '10px 16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  boxShadow: selectedStyle === 'copyImageStyle' ? '0 4px 15px rgba(16, 185, 129, 0.5)' : '0 3px 10px rgba(16, 185, 129, 0.3)',
+                  color: 'white',
+                  fontSize: '12px',
+                  fontFamily: '"Permanent Marker", cursive',
+                  fontWeight: '600'
+                }}
+                onMouseOver={e => {
+                  e.currentTarget.style.transform = 'scale(1.05)';
+                  e.currentTarget.style.boxShadow = '0 5px 15px rgba(16, 185, 129, 0.4)';
+                  e.currentTarget.style.background = 'linear-gradient(135deg, #059669 0%, #047857 100%)';
+                }}
+                onMouseOut={e => {
+                  e.currentTarget.style.transform = 'scale(1)';
+                  e.currentTarget.style.boxShadow = '0 3px 10px rgba(16, 185, 129, 0.3)';
+                  e.currentTarget.style.background = selectedStyle === 'copyImageStyle' ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' : 'linear-gradient(135deg, #34d399 0%, #10b981 100%)';
+                }}
+              >
+                {/* Show circular preview thumbnail if style reference exists, otherwise show emoji */}
+                {styleReferenceImage?.dataUrl ? (
+                  <div style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '50%',
+                    overflow: 'visible',
+                    border: '2px solid rgba(255, 255, 255, 0.9)',
+                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
+                    flexShrink: 0,
+                    background: '#fff',
+                    position: 'relative'
+                  }}>
+                    <img 
+                      src={styleReferenceImage.dataUrl} 
+                      alt="Style reference"
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                        borderRadius: '50%'
+                      }}
+                    />
+                    {/* X button to remove style reference */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (onRemoveStyleReference) {
+                          onRemoveStyleReference();
+                        }
+                      }}
+                      style={{
+                        position: 'absolute',
+                        top: '-6px',
+                        right: '-6px',
+                        width: '18px',
+                        height: '18px',
+                        borderRadius: '50%',
+                        background: '#ef4444',
+                        border: '2px solid white',
+                        color: 'white',
+                        fontSize: '10px',
+                        fontWeight: 'bold',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: 0,
+                        lineHeight: 1,
+                        boxShadow: '0 2px 4px rgba(0, 0, 0, 0.3)',
+                        transition: 'all 0.2s ease',
+                        zIndex: 1
+                      }}
+                      onMouseOver={(e) => {
+                        e.stopPropagation();
+                        e.currentTarget.style.background = '#dc2626';
+                        e.currentTarget.style.transform = 'scale(1.15)';
+                      }}
+                      onMouseOut={(e) => {
+                        e.stopPropagation();
+                        e.currentTarget.style.background = '#ef4444';
+                        e.currentTarget.style.transform = 'scale(1)';
+                      }}
+                      title="Remove style reference"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ) : (
+                  <span>🎨</span>
+                )}
+                <span>Copy image style</span>
               </button>
             </div>
+
+            {/* Visual divider before style library */}
+            <div style={{
+              width: '100%',
+              height: '1px',
+              background: 'linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.3) 50%, transparent 100%)',
+              margin: '16px 0'
+            }} />
           </div>
         </div>
       )}
@@ -5501,7 +5668,12 @@ PhotoGallery.propTypes = {
   numImages: PropTypes.number,
   authState: PropTypes.object,
   handleRefreshPhoto: PropTypes.func,
-  onOutOfCredits: PropTypes.func
+  onOutOfCredits: PropTypes.func,
+  // Copy image style feature props
+  onCopyImageStyleSelect: PropTypes.func,
+  styleReferenceImage: PropTypes.object,
+  onRemoveStyleReference: PropTypes.func,
+  onEditStyleReference: PropTypes.func
 };
 
 export default PhotoGallery; 

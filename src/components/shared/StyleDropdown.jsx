@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom';
 import { styleIdToDisplay } from '../../utils';
 import { THEME_GROUPS, getDefaultThemeGroupState, getEnabledPrompts } from '../../constants/themeGroups';
 import { getThemeGroupPreferences, saveThemeGroupPreferences } from '../../utils/cookies';
-import { isFluxKontextModel } from '../../constants/settings';
+import { isFluxKontextModel, getModelOptions } from '../../constants/settings';
 import { generateGalleryFilename } from '../../utils/galleryLoader';
 import CustomPromptPopup from './CustomPromptPopup';
 import '../../styles/style-dropdown.css';
@@ -21,10 +21,13 @@ const StyleDropdown = ({
   triggerButtonClass = '.bottom-style-select', // Default class for the main toolbar
   onThemeChange = null, // Callback when theme preferences change
   selectedModel = null, // Current selected model to determine UI behavior
+  onModelSelect = null, // Callback for model selection
   onGallerySelect = null, // Callback for gallery selection
   onCustomPromptChange = null, // Callback for custom prompt changes
   currentCustomPrompt = '', // Current custom prompt value
-  portraitType = 'medium' // Portrait type for gallery preview images
+  portraitType = 'medium', // Portrait type for gallery preview images
+  styleReferenceImage = null, // Style reference image for Copy Image Style mode
+  onEditStyleReference = null // Callback to edit existing style reference
 }) => {
   const [position, setPosition] = useState({ top: 0, left: 0, width: 0 });
   const [mounted, setMounted] = useState(false);
@@ -253,6 +256,54 @@ const StyleDropdown = ({
             width: position.width,
           }}
         >
+      {/* Model Selector - First item in dropdown */}
+      {onModelSelect && selectedModel && (
+        <>
+          <div className="style-section model-selector">
+            <div className="section-header" style={{ color: '#333' }}>
+              <span>🤖 Model</span>
+            </div>
+            <select
+              value={selectedModel}
+              onChange={(e) => {
+                console.log('StyleDropdown: Model changed to', e.target.value);
+                onModelSelect(e.target.value);
+              }}
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                width: '100%',
+                padding: '10px 12px',
+                fontSize: '14px',
+                fontFamily: 'inherit',
+                background: 'rgba(255, 255, 255, 0.95)',
+                border: '2px solid rgba(114, 227, 242, 0.3)',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                outline: 'none',
+                transition: 'all 0.2s ease',
+                marginBottom: '8px',
+                color: '#333'
+              }}
+              onMouseOver={(e) => {
+                e.target.style.borderColor = 'rgba(114, 227, 242, 0.6)';
+                e.target.style.background = 'rgba(255, 255, 255, 1)';
+              }}
+              onMouseOut={(e) => {
+                e.target.style.borderColor = 'rgba(114, 227, 242, 0.3)';
+                e.target.style.background = 'rgba(255, 255, 255, 0.95)';
+              }}
+            >
+              {getModelOptions().map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="style-section-divider"></div>
+        </>
+      )}
+      
       <div className="style-section featured">      
         {/* Featured options */}
         {/* Browse Gallery option - only show for non-Flux models */}
@@ -311,7 +362,49 @@ const StyleDropdown = ({
           }}
         >
           <span>✏️</span>
-          <span>Custom...</span>
+          <span>Custom Prompt</span>
+        </div>
+        
+        {/* Copy Image Style option - available for all models (triggers Flux Kontext switch) */}
+        <div 
+          className={`style-option ${selectedStyle === 'copyImageStyle' ? 'selected' : ''}`} 
+          onClick={() => {
+            // If style reference exists and already selected, open for editing
+            if (selectedStyle === 'copyImageStyle' && styleReferenceImage?.dataUrl && onEditStyleReference) {
+              onEditStyleReference();
+              onClose();
+            } else {
+              // Otherwise just select this style (will prompt user to upload via PhotoGallery button)
+              updateStyle('copyImageStyle');
+              onClose();
+            }
+          }}
+        >
+          {styleReferenceImage?.dataUrl ? (
+            <div style={{
+              width: '32px',
+              height: '32px',
+              borderRadius: '50%',
+              overflow: 'hidden',
+              flexShrink: 0,
+              border: '2px solid rgba(255, 255, 255, 0.3)',
+              boxShadow: '0 2px 4px rgba(0, 0, 0, 0.2)',
+              background: '#fff'
+            }}>
+              <img 
+                src={styleReferenceImage.dataUrl} 
+                alt="Style reference"
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover'
+                }}
+              />
+            </div>
+          ) : (
+            <span>🎨</span>
+          )}
+          <span>Copy Image Style</span>
         </div>
       </div>
       
@@ -346,7 +439,7 @@ const StyleDropdown = ({
 
       <div className="style-section regular">
         {Object.keys(enabledPrompts)
-          .filter(key => key !== 'random' && key !== 'custom' && key !== 'randomMix' && key !== 'oneOfEach')
+          .filter(key => key !== 'random' && key !== 'custom' && key !== 'randomMix' && key !== 'oneOfEach' && key !== 'copyImageStyle')
           .sort((a, b) => {
             const displayA = styleIdToDisplay(a);
             const displayB = styleIdToDisplay(b);
@@ -365,21 +458,33 @@ const StyleDropdown = ({
           .map(styleKey => {
             // Generate preview image path for this style
             let previewImagePath = null;
-            try {
-              const expectedFilename = generateGalleryFilename(styleKey);
-              previewImagePath = `/gallery/prompts/${portraitType}/${expectedFilename}`;
-            } catch (error) {
-              // If filename generation fails, we'll just show no preview
-              previewImagePath = null;
+            
+            // Special handling for Copy Image Style - use uploaded reference image
+            if (styleKey === 'copyImageStyle' && styleReferenceImage?.dataUrl) {
+              previewImagePath = styleReferenceImage.dataUrl;
+            } else {
+              try {
+                const expectedFilename = generateGalleryFilename(styleKey);
+                previewImagePath = `/gallery/prompts/${portraitType}/${expectedFilename}`;
+              } catch (error) {
+                // If filename generation fails, we'll just show no preview
+                previewImagePath = null;
+              }
             }
             
             return (
               <div 
                 key={styleKey}
                 className={`style-option ${selectedStyle === styleKey ? 'selected' : ''}`} 
-                onClick={() => { 
-                  updateStyle(styleKey);
-                  onClose();
+                onClick={() => {
+                  // Special handling for copyImageStyle - allow clicking when selected to edit
+                  if (styleKey === 'copyImageStyle' && selectedStyle === 'copyImageStyle' && onEditStyleReference) {
+                    onEditStyleReference();
+                    onClose();
+                  } else {
+                    updateStyle(styleKey);
+                    onClose();
+                  }
                 }}
               >
                 {previewImagePath && (
@@ -427,10 +532,13 @@ StyleDropdown.propTypes = {
   triggerButtonClass: PropTypes.string,
   onThemeChange: PropTypes.func,
   selectedModel: PropTypes.string,
+  onModelSelect: PropTypes.func,
   onGallerySelect: PropTypes.func,
   onCustomPromptChange: PropTypes.func,
   currentCustomPrompt: PropTypes.string,
   portraitType: PropTypes.oneOf(['headshot', 'medium', 'fullbody']),
+  styleReferenceImage: PropTypes.object,
+  onEditStyleReference: PropTypes.func
 };
 
 export default StyleDropdown; 

@@ -128,7 +128,7 @@ export const getOneOfEachPrompts = (themeGroupState, allPrompts, count) => {
   // If no themes are checked, use alphabetical order from full list
   if (enabledGroups.length === 0) {
     const allPromptKeys = Object.keys(allPrompts)
-      .filter(key => key !== 'custom' && key !== 'random' && key !== 'randomMix' && key !== 'oneOfEach')
+      .filter(key => key !== 'custom' && key !== 'random' && key !== 'randomMix' && key !== 'oneOfEach' && key !== 'copyImageStyle')
       .filter(key => !blockedPrompts.includes(key)) // Filter out blocked prompts
       .sort();
     

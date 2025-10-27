@@ -48,12 +48,15 @@ interface CameraStartMenuProps {
   onStyleSelect?: (style: string) => void;
   stylePrompts?: Record<string, string>;
   selectedModel?: string;
+  onModelSelect?: (model: string) => void;
   onNavigateToGallery?: () => void;
   onShowControlOverlay?: () => void;
   onThemeChange?: (themeState: Record<string, boolean>) => void;
   onCustomPromptChange?: (prompt: string) => void;
   currentCustomPrompt?: string;
   portraitType?: 'headshot' | 'medium' | 'fullbody';
+  styleReferenceImage?: { blob: File; dataUrl: string; croppedBlob: Blob | null } | null;
+  onEditStyleReference?: () => void;
   // Photo tracking props
   originalPhotoUrl?: string | null;
   photoSourceType?: 'camera' | 'upload' | null;
@@ -68,12 +71,15 @@ const CameraStartMenu: React.FC<CameraStartMenuProps> = ({
   onStyleSelect,
   stylePrompts = {},
   selectedModel = '',
+  onModelSelect,
   onNavigateToGallery,
   onShowControlOverlay,
   onThemeChange,
   onCustomPromptChange,
   currentCustomPrompt = '',
   portraitType = 'medium',
+  styleReferenceImage = null,
+  onEditStyleReference,
   originalPhotoUrl = null,
   photoSourceType = null,
   reusablePhotoUrl = null,
@@ -143,6 +149,8 @@ const CameraStartMenu: React.FC<CameraStartMenuProps> = ({
         return '🙏';
       case 'custom':
         return '✏️';
+      case 'copyImageStyle':
+        return '🎨';
       case 'browseGallery':
         return '🖼️';
       default:
@@ -152,6 +160,14 @@ const CameraStartMenu: React.FC<CameraStartMenuProps> = ({
 
   // Generate preview image path for selected style
   const stylePreviewImage = useMemo(() => {
+    console.log('🖼️ stylePreviewImage recalculating - selectedStyle:', selectedStyle, 'hasStyleRef:', !!styleReferenceImage?.dataUrl);
+    
+    // Special handling for Copy Image Style - show uploaded reference image
+    if (selectedStyle === 'copyImageStyle' && styleReferenceImage?.dataUrl) {
+      console.log('🎨 Using style reference image for preview:', styleReferenceImage.dataUrl.substring(0, 50));
+      return styleReferenceImage.dataUrl;
+    }
+    
     // For random sampler modes, show a random style image in the background
     const isSamplerMode = selectedStyle && ['random', 'randomMix', 'oneOfEach'].includes(selectedStyle);
     
@@ -174,9 +190,9 @@ const CameraStartMenu: React.FC<CameraStartMenuProps> = ({
       }
     }
     
-    // Check if it's an individual style (not a prompt sampler mode)
+    // Check if it's an individual style (not a prompt sampler mode or special mode)
     const isIndividualStyle = selectedStyle &&
-      !['custom', 'random', 'randomMix', 'oneOfEach', 'browseGallery'].includes(selectedStyle);
+      !['custom', 'random', 'randomMix', 'oneOfEach', 'browseGallery', 'copyImageStyle'].includes(selectedStyle);
 
     if (isIndividualStyle) {
       try {
@@ -192,7 +208,7 @@ const CameraStartMenu: React.FC<CameraStartMenuProps> = ({
 
     console.log('⚪ No preview image (returning null)');
     return null;
-  }, [selectedStyle, portraitType, randomStyleForSamplers]);
+  }, [selectedStyle, portraitType, randomStyleForSamplers, styleReferenceImage]);
 
   const handleBrowseClick = () => {
     fileInputRef.current?.click();
@@ -419,7 +435,9 @@ const CameraStartMenu: React.FC<CameraStartMenuProps> = ({
                           const text = selectedStyle ? styleIdToDisplay(selectedStyle) : 'Select Style';
                           return <>{getStyleIcon} {text}</>;
                         }
-                        return selectedStyle === 'custom' ? 'Custom...' : selectedStyle ? styleIdToDisplay(selectedStyle) : 'Select Style';
+                        if (selectedStyle === 'custom') return 'Custom Prompt';
+                        if (selectedStyle === 'copyImageStyle') return 'Copy Image Style';
+                        return selectedStyle ? styleIdToDisplay(selectedStyle) : 'Select Style';
                       })()}
                     </div>
                   </button>
@@ -528,10 +546,13 @@ const CameraStartMenu: React.FC<CameraStartMenuProps> = ({
           triggerButtonClass=".style-selector-button"
           onThemeChange={onThemeChange as any}
           selectedModel={selectedModel as any}
+          onModelSelect={onModelSelect as any}
           onGallerySelect={undefined}
           onCustomPromptChange={onCustomPromptChange as any}
           currentCustomPrompt={currentCustomPrompt}
           portraitType={portraitType}
+          styleReferenceImage={styleReferenceImage as any}
+          onEditStyleReference={onEditStyleReference as any}
         />
       )}
     </div>
