@@ -625,9 +625,7 @@ export const undoEnhancement = ({ photoIndex, subIndex, setPhotos, clearFrameCac
 
     // Restore the original image if we have it
     if (photo.originalEnhancedImage) {
-      console.log(`[ENHANCE] Restoring original image: ${photo.originalEnhancedImage.substring(0, 100)}...`);
       const updatedImages = [...photo.images];
-      console.log(`[ENHANCE] Current enhanced image being replaced: ${updatedImages[subIndex]?.substring(0, 100)}...`);
       
       // Make sure we have a valid subIndex
       const indexToRestore = subIndex < updatedImages.length 
@@ -642,12 +640,9 @@ export const undoEnhancement = ({ photoIndex, subIndex, setPhotos, clearFrameCac
       // Store the enhanced image URL for redo functionality BEFORE restoring
       // Prioritize existing enhancedImageUrl, fallback to current image in array
       const enhancedImageUrl = photo.enhancedImageUrl || (indexToRestore >= 0 ? updatedImages[indexToRestore] : null);
-      console.log(`[ENHANCE] Storing enhanced image URL for redo: ${enhancedImageUrl?.substring(0, 100)}...`);
-      console.log(`[ENHANCE] Source: ${photo.enhancedImageUrl ? 'existing enhancedImageUrl' : 'current image in array'}`);
       
       if (indexToRestore >= 0) {
         updatedImages[indexToRestore] = photo.originalEnhancedImage;
-        console.log(`[ENHANCE] Restored image at index ${indexToRestore}`);
       }
       
       updated[photoIndex] = {
@@ -684,9 +679,6 @@ export const undoEnhancement = ({ photoIndex, subIndex, setPhotos, clearFrameCac
  * @returns {void}
  */
 export const redoEnhancement = ({ photoIndex, subIndex, setPhotos, clearFrameCache }) => {
-  console.log(`[ENHANCE] ✅ STARTED redo operation for photo #${photoIndex}`);
-  
-  console.log(`[ENHANCE] Redoing enhancement for photo #${photoIndex}`);
   
   // Clear frame cache for this photo since the image is changing
   if (clearFrameCache) {
@@ -700,9 +692,7 @@ export const redoEnhancement = ({ photoIndex, subIndex, setPhotos, clearFrameCac
     if (!photo) return prev;
 
     // Restore the enhanced image if we have it
-    console.log(`[ENHANCE] Redo check: enhancedImageUrl=${!!photo.enhancedImageUrl}, canRedo=${photo.canRedo}`);
     if (photo.enhancedImageUrl && photo.canRedo) {
-      console.log(`[ENHANCE] Restoring enhanced image: ${photo.enhancedImageUrl.substring(0, 100)}...`);
       const updatedImages = [...photo.images];
       
       // Make sure we have a valid subIndex
@@ -717,7 +707,6 @@ export const redoEnhancement = ({ photoIndex, subIndex, setPhotos, clearFrameCac
 
       if (indexToRestore >= 0) {
         updatedImages[indexToRestore] = photo.enhancedImageUrl;
-        console.log(`[ENHANCE] Restored enhanced image at index ${indexToRestore}`);
       }
       
       // Clear any pending enhancement timeout to prevent false timeout errors during redo
@@ -736,12 +725,6 @@ export const redoEnhancement = ({ photoIndex, subIndex, setPhotos, clearFrameCac
         enhanceTimeoutId: null
       };
       updated[photoIndex] = next;
-      console.log('[ENHANCE] ✅ REDO applied state:', {
-        enhanced: next.enhanced,
-        canRedo: next.canRedo,
-        imageAtIndex: updatedImages[indexToRestore]?.substring(0, 100),
-        enhancedImageUrl: next.enhancedImageUrl?.substring(0, 100)
-      });
     }
     return updated;
   });
