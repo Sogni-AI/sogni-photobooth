@@ -60,6 +60,9 @@ const HalloweenEvent = () => {
     updateSetting('positivePrompt', prompt);
     updateSetting('selectedStyle', 'custom');
     updateSetting('halloweenContext', true); // Flag to enable Halloween-specific Twitter share message
+    
+    // Mark that user has explicitly selected a style (for checkmark in CameraStartMenu)
+    localStorage.setItem('sogni_style_explicitly_selected', 'true');
 
     // Navigate to main app (skip splash screen, go directly to start menu)
     console.log('🎃 Navigating to camera start menu');
@@ -99,6 +102,9 @@ const HalloweenEvent = () => {
     updateSetting('selectedStyle', styleKey);
     updateSetting('positivePrompt', prompt);
     updateSetting('halloweenContext', true); // Flag to enable Halloween-specific Twitter share message
+    
+    // Mark that user has explicitly selected a style (for checkmark in CameraStartMenu)
+    localStorage.setItem('sogni_style_explicitly_selected', 'true');
 
     // Navigate to main app (skip splash screen, go directly to start menu)
     console.log('🎃 Navigating to camera start menu');

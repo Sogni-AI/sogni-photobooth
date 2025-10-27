@@ -937,6 +937,12 @@ const App = () => {
     // Skip welcome screen if requested (e.g., from browser extension)
     if (skipWelcomeParam === 'true') {
       setShowSplashScreen(false);
+      
+      // Remove skipWelcome parameter from URL to prevent it from persisting
+      url.searchParams.delete('skipWelcome');
+      const newUrl = url.pathname + url.search;
+      const currentState = window.history.state || {};
+      window.history.replaceState(currentState, '', newUrl);
     }
     
     // Handle page=camera parameter to skip start menu and go to camera

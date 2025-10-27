@@ -94,10 +94,11 @@ const CameraStartMenu: React.FC<CameraStartMenuProps> = ({
   });
   const [videoRef, setVideoRef] = useState<HTMLVideoElement | null>(null);
   const [showIntro, setShowIntro] = useState(() => {
-    // Check if user has seen splash before or came from halloween link
+    // Check if user has seen splash before or came from halloween link or skipWelcome param
     const splashSeen = localStorage.getItem(SPLASH_SEEN_KEY) === 'true';
     const isHalloweenLink = window.location.pathname.includes('/event/halloween');
-    return !splashSeen && !isHalloweenLink;
+    const skipWelcome = new URL(window.location.href).searchParams.get('skipWelcome') === 'true';
+    return !splashSeen && !isHalloweenLink && !skipWelcome;
   });
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [randomTagline] = useState(() => {
