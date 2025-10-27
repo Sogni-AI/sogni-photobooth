@@ -2479,7 +2479,8 @@ const PhotoGallery = ({
                 disabled={
                   selectedPhoto.loading || 
                   selectedPhoto.enhancing ||
-                  selectedPhoto.error ||
+                  // Only disable for generation errors, not enhancement errors (original photo is still shareable)
+                  (selectedPhoto.error && !selectedPhoto.enhancementError) ||
                   !selectedPhoto.images ||
                   selectedPhoto.images.length === 0
                 }
@@ -2568,7 +2569,7 @@ const PhotoGallery = ({
                       });
                     }
                   }}
-                  disabled={selectedPhoto.loading || selectedPhoto.enhancing || selectedPhoto.error}
+                  disabled={selectedPhoto.loading || selectedPhoto.enhancing}
                 >
                   ↩️ Undo
                 </button>
