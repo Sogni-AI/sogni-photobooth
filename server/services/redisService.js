@@ -454,36 +454,48 @@ export const getContestEntries = async (contestId, options = {}) => {
     page = 1,
     limit = 20,
     sortBy = 'timestamp',
-    order = 'desc'
+    order = 'desc',
+    moderationStatus = null
   } = options;
 
   try {
     const indexKey = `${CONTEST_INDEX_PREFIX}${contestId}`;
 
-    // Get total count
-    const total = await redisClient.zCard(indexKey);
+    // Get all entry IDs from sorted set (we'll filter after)
+    const allEntryIds = order === 'desc'
+      ? await redisClient.zRange(indexKey, 0, -1, { REV: true })
+      : await redisClient.zRange(indexKey, 0, -1);
 
-    // Calculate pagination
-    const start = (page - 1) * limit;
-    const end = start + limit - 1;
-
-    // Get entry IDs from sorted set
-    const entryIds = order === 'desc'
-      ? await redisClient.zRange(indexKey, start, end, { REV: true })
-      : await redisClient.zRange(indexKey, start, end);
-
-    // Fetch entry data
-    const entries = [];
-    for (const entryId of entryIds) {
+    // Fetch all entry data and filter
+    let entries = [];
+    for (const entryId of allEntryIds) {
       const entryKey = `${CONTEST_ENTRY_PREFIX}${contestId}:${entryId}`;
       const data = await redisClient.get(entryKey);
       if (data) {
-        entries.push(JSON.parse(data));
+        const entry = JSON.parse(data);
+        // Filter by moderation status if specified
+        if (!moderationStatus || entry.moderationStatus === moderationStatus) {
+          entries.push(entry);
+        }
       }
     }
 
-    // Sort by other fields if needed
-    if (sortBy !== 'timestamp') {
+    // Sort by votes if needed
+    if (sortBy === 'votes') {
+      entries.sort((a, b) => {
+        const aVotes = (a.votes || []).length;
+        const bVotes = (b.votes || []).length;
+        
+        // Primary sort by vote count
+        if (aVotes !== bVotes) {
+          return order === 'asc' ? aVotes - bVotes : bVotes - aVotes;
+        }
+        
+        // Secondary sort by timestamp (newest first) when votes are equal
+        return b.timestamp - a.timestamp;
+      });
+    } else if (sortBy !== 'timestamp') {
+      // Sort by other fields if needed
       entries.sort((a, b) => {
         const aVal = a[sortBy];
         const bVal = b[sortBy];
@@ -495,8 +507,16 @@ export const getContestEntries = async (contestId, options = {}) => {
       });
     }
 
+    // Get total after filtering
+    const total = entries.length;
+
+    // Apply pagination after filtering
+    const start = (page - 1) * limit;
+    const end = start + limit;
+    const paginatedEntries = entries.slice(start, end);
+
     return {
-      entries,
+      entries: paginatedEntries,
       total,
       page,
       limit,

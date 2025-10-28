@@ -179,7 +179,21 @@ export const shareToTwitter = async ({
     
     let imageDataUrl;
     
-    if (tezdevTheme !== 'off') {
+    // For contest submissions, use raw image without any frames
+    if (submitToContest) {
+      console.log('Using raw image for contest submission (no polaroid frame, always JPG for Twitter)');
+      // Convert the original image to JPG format without any frames
+      imageDataUrl = await createPolaroidImage(originalImageUrl, '', {
+        tezdevTheme: 'off',
+        aspectRatio,
+        frameWidth: 0,
+        frameTopWidth: 0,
+        frameBottomWidth: 0,
+        frameColor: 'transparent',
+        outputFormat: 'jpg',
+        watermarkOptions: null // No watermark for contest entries
+      });
+    } else if (tezdevTheme !== 'off') {
       // For TezDev themes, create full frame version (no polaroid frame, just TezDev overlay)
       // Custom frames should not include labels - they have their own styling
       console.log('Creating TezDev full frame version for sharing (always JPG for Twitter)');
@@ -202,12 +216,7 @@ export const shareToTwitter = async ({
     } else {
       // For non-TezDev themes, use traditional polaroid frame
       const hashtag = getPhotoHashtag(photo);
-      let label = hashtag || photo.label || photo.style || '';
-      
-      // Use Halloween label if submitting to contest
-      if (submitToContest) {
-        label = 'Sogni Halloween 2025';
-      }
+      const label = hashtag || photo.label || photo.style || '';
       
       console.log('Creating polaroid image for sharing (always JPG for Twitter)');
       imageDataUrl = await createPolaroidImage(originalImageUrl, label, {

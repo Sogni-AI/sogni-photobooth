@@ -111,6 +111,7 @@ export async function saveContestEntry({
       imageFilename,
       imagePath: savedImagePath,
       imageUrl: imageFilename ? `${apiBaseUrl}/api/contest/${contestId}/image/${imageFilename}` : null,
+      moderationStatus: 'PENDING',
       metadata: {
         ...metadata,
         submittedAt: new Date(timestamp).toISOString()
@@ -144,6 +145,7 @@ export async function saveContestEntry({
  * @param {number} [options.limit=20] - Entries per page
  * @param {string} [options.sortBy='timestamp'] - Sort field
  * @param {string} [options.order='desc'] - Sort order (asc/desc)
+ * @param {string} [options.moderationStatus] - Filter by moderation status
  * @returns {Promise<Object>} Paginated entries
  */
 export async function getContestEntries(contestId, options = {}) {
@@ -151,12 +153,13 @@ export async function getContestEntries(contestId, options = {}) {
     page = 1,
     limit = 20,
     sortBy = 'timestamp',
-    order = 'desc'
+    order = 'desc',
+    moderationStatus = null
   } = options;
 
   try {
     if (redisReady()) {
-      return await redisGetEntries(contestId, { page, limit, sortBy, order });
+      return await redisGetEntries(contestId, { page, limit, sortBy, order, moderationStatus });
     } else {
       // Fallback to filesystem
       const contestDir = path.join(uploadsDir, 'contest', contestId);
@@ -178,20 +181,41 @@ export async function getContestEntries(contestId, options = {}) {
       const files = await fs.readdir(contestDir);
       const jsonFiles = files.filter(f => f.endsWith('.json'));
 
-      const entries = [];
+      let entries = [];
       for (const file of jsonFiles) {
         const content = await fs.readFile(path.join(contestDir, file), 'utf-8');
         entries.push(JSON.parse(content));
       }
 
+      // Filter by moderation status if specified
+      if (moderationStatus) {
+        entries = entries.filter(entry => entry.moderationStatus === moderationStatus);
+      }
+
       // Sort entries
       entries.sort((a, b) => {
-        const aVal = a[sortBy];
-        const bVal = b[sortBy];
-        if (order === 'asc') {
-          return aVal > bVal ? 1 : -1;
+        if (sortBy === 'votes') {
+          // Sort by vote count with timestamp as secondary sort
+          const aVotes = (a.votes || []).length;
+          const bVotes = (b.votes || []).length;
+          
+          // Primary sort by vote count
+          if (aVotes !== bVotes) {
+            return order === 'asc' ? aVotes - bVotes : bVotes - aVotes;
+          }
+          
+          // Secondary sort by timestamp (newest first) when votes are equal
+          return b.timestamp - a.timestamp;
         } else {
-          return aVal < bVal ? 1 : -1;
+          // Sort by other fields
+          const aVal = a[sortBy];
+          const bVal = b[sortBy];
+          
+          if (order === 'asc') {
+            return aVal > bVal ? 1 : -1;
+          } else {
+            return aVal < bVal ? 1 : -1;
+          }
         }
       });
 

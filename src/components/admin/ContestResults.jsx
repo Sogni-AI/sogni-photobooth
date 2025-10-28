@@ -1,13 +1,19 @@
 import React, { useState, useEffect } from 'react';
+import { useSogniAuth } from '../../services/sogniAuth';
+import LoginModal from '../auth/LoginModal';
+import { AuthStatus } from '../auth/AuthStatus';
 import '../../styles/admin/ContestResults.css';
 
 const CORRECT_PASSWORD = import.meta.env.VITE_CONTEST_RESULTS_PASSWORD || '';
 const AUTH_KEY = 'contest_results_auth';
 
 const ContestResults = () => {
+  const { isAuthenticated: isSogniAuthenticated, user } = useSogniAuth();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [passwordInput, setPasswordInput] = useState('');
   const [passwordError, setPasswordError] = useState('');
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [loginModalMode, setLoginModalMode] = useState('login');
 
   const [contestId, setContestId] = useState('halloween');
   const [entries, setEntries] = useState([]);
@@ -17,6 +23,7 @@ const ContestResults = () => {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
+  const [expandedPrompts, setExpandedPrompts] = useState(new Set());
   const limit = 20;
 
   // Check if already authenticated on mount
@@ -106,8 +113,28 @@ const ContestResults = () => {
     }
   }, [contestId, page, isAuthenticated]);
 
+  // Close login modal when user successfully authenticates
+  useEffect(() => {
+    if (isSogniAuthenticated && showLoginModal) {
+      console.log('User authenticated for moderation, closing login modal');
+      setShowLoginModal(false);
+    }
+  }, [isSogniAuthenticated, showLoginModal]);
+
   const formatDate = (timestamp) => {
     return new Date(timestamp).toLocaleString();
+  };
+
+  const togglePromptExpansion = (entryId) => {
+    setExpandedPrompts(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(entryId)) {
+        newSet.delete(entryId);
+      } else {
+        newSet.add(entryId);
+      }
+      return newSet;
+    });
   };
 
   const handleRefresh = () => {
@@ -139,6 +166,48 @@ const ContestResults = () => {
     } catch (err) {
       console.error('Error deleting entry:', err);
       alert('Failed to delete entry: ' + err.message);
+    }
+  };
+
+  const handleModerationChange = async (entryId, newStatus) => {
+    // Check if user is logged in via Sogni auth
+    if (!isSogniAuthenticated || !user?.username) {
+      console.log('User not authenticated for moderation, showing login modal');
+      setShowLoginModal(true);
+      return;
+    }
+
+    console.log(`Moderating entry ${entryId} to ${newStatus} by ${user.username}`);
+
+    try {
+      const response = await fetch(`/api/contest/${contestId}/entry/${entryId}/moderation`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          moderationStatus: newStatus,
+          moderatedBy: user.username
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update moderation status');
+      }
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Update the local state
+        setEntries(prevEntries =>
+          prevEntries.map(entry =>
+            entry.id === entryId ? { ...entry, moderationStatus: newStatus } : entry
+          )
+        );
+      }
+    } catch (err) {
+      console.error('Error updating moderation status:', err);
+      alert('Failed to update moderation status: ' + err.message);
     }
   };
 
@@ -174,6 +243,11 @@ const ContestResults = () => {
 
   return (
     <div className="contest-results">
+      {/* Auth Status Widget */}
+      <div className="contest-results-auth-status">
+        <AuthStatus />
+      </div>
+
       <header className="contest-results-header">
         <h1>🎃 Contest Results</h1>
         <div className="header-controls">
@@ -257,10 +331,55 @@ const ContestResults = () => {
                   </div>
                 )}
                 <div className="entry-details">
-                  <div className="entry-prompt">
-                    <strong>Prompt:</strong> {entry.prompt}
+                  <div 
+                    className={`entry-prompt ${expandedPrompts.has(entry.id) ? 'expanded' : 'collapsed'}`}
+                    onClick={() => togglePromptExpansion(entry.id)}
+                    title="Click to expand/collapse"
+                  >
+                    <strong>Prompt:</strong> 
+                    <span 
+                      className="prompt-text selectable"
+                      onClick={(e) => {
+                        if (expandedPrompts.has(entry.id)) {
+                          e.stopPropagation();
+                        }
+                      }}
+                    >
+                      {entry.prompt}
+                    </span>
                   </div>
-                  <div className="entry-meta">
+                  <div className="entry-moderation">
+                    <div className="moderation-info">
+                      <strong>Moderation Status:</strong>
+                      <span className={`status-badge status-${(entry.moderationStatus || 'PENDING').toLowerCase()}`}>
+                        {entry.moderationStatus || 'PENDING'}
+                      </span>
+                    </div>
+                    <div className="moderation-actions">
+                      <button
+                        onClick={() => handleModerationChange(entry.id, 'APPROVED')}
+                        className="quick-action-btn approve-btn"
+                        disabled={entry.moderationStatus === 'APPROVED'}
+                      >
+                        ✓ Approve
+                      </button>
+                      <button
+                        onClick={() => handleModerationChange(entry.id, 'REJECTED')}
+                        className="quick-action-btn reject-btn"
+                        disabled={entry.moderationStatus === 'REJECTED'}
+                      >
+                        ✗ Reject
+                      </button>
+                      <button
+                        onClick={() => handleModerationChange(entry.id, 'PENDING')}
+                        className="quick-action-btn pending-btn"
+                        disabled={entry.moderationStatus === 'PENDING'}
+                      >
+                        ⟲ Reset
+                      </button>
+                    </div>
+                  </div>
+                  <div className="entry-meta selectable">
                     <div className="entry-user">
                       <strong>User:</strong> {entry.username || 'Anonymous'}
                     </div>
@@ -297,11 +416,6 @@ const ContestResults = () => {
                         >
                           View Tweet →
                         </a>
-                      </div>
-                    )}
-                    {entry.address && (
-                      <div className="entry-address">
-                        <strong>Email:</strong> {entry.address}
                       </div>
                     )}
                   </div>
@@ -348,6 +462,20 @@ const ContestResults = () => {
           <p>No contest entries found.</p>
         </div>
       )}
+
+      {/* Login Modal */}
+      <LoginModal
+        open={showLoginModal}
+        mode={loginModalMode}
+        onModeChange={setLoginModalMode}
+        onClose={() => setShowLoginModal(false)}
+        onSignupComplete={() => {
+          setShowLoginModal(false);
+          // Refresh entries after signup
+          fetchEntries();
+          fetchStats();
+        }}
+      />
     </div>
   );
 };

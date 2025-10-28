@@ -2,10 +2,12 @@ import React, { useState, useEffect, createContext, useContext } from 'react';
 import App from '../App';
 import AnalyticsDashboard from './admin/AnalyticsDashboard';
 import ContestResults from './admin/ContestResults';
+import ContestVote from './contest/ContestVote';
 import HalloweenEvent from './events/HalloweenEvent';
 import { MusicPlayerProvider } from '../context/MusicPlayerContext';
 import GlobalMusicPlayer from './shared/GlobalMusicPlayer';
 import HalloweenNotificationTooltip from './notifications/HalloweenNotificationTooltip';
+import PageMetadata from './shared/PageMetadata';
 
 // Create navigation context
 const NavigationContext = createContext();
@@ -21,6 +23,9 @@ const AppRouter = () => {
     }
     if (hash === '#contest' || pathname === '/admin/contest/results') {
       return 'contest';
+    }
+    if (pathname === '/contest/vote') {
+      return 'contest-vote';
     }
     if (hash === '#halloween' || pathname === '/halloween' || pathname === '/event/halloween') {
       return 'halloween';
@@ -47,6 +52,8 @@ const AppRouter = () => {
         setCurrentRoute('analytics');
       } else if (hash === '#contest' || pathname === '/admin/contest/results') {
         setCurrentRoute('contest');
+      } else if (pathname === '/contest/vote') {
+        setCurrentRoute('contest-vote');
       } else if (hash === '#halloween' || pathname === '/halloween' || pathname === '/event/halloween') {
         setCurrentRoute('halloween');
       } else {
@@ -68,6 +75,9 @@ const AppRouter = () => {
   return (
     <NavigationContext.Provider value={{ navigateToCamera }}>
       <MusicPlayerProvider>
+        {/* Dynamic page metadata for SEO and social sharing */}
+        <PageMetadata />
+        
         {/* Global music player - shows on all pages when enabled */}
         <GlobalMusicPlayer />
 
@@ -80,6 +90,8 @@ const AppRouter = () => {
           <AnalyticsDashboard />
         ) : currentRoute === 'contest' ? (
           <ContestResults />
+        ) : currentRoute === 'contest-vote' ? (
+          <ContestVote />
         ) : currentRoute === 'halloween' ? (
           <HalloweenEvent />
         ) : (

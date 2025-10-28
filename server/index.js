@@ -65,7 +65,7 @@ app.use(cors({
     }
   },
   credentials: true, // Important for cookies
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'HEAD'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Cookie', 'X-Client-App-ID', 'Accept'],
   exposedHeaders: ['Set-Cookie']
 }));

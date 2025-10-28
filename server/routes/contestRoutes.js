@@ -75,14 +75,16 @@ router.get('/:contestId/entries', async (req, res) => {
     const { contestId } = req.params;
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 20;
-    const sortBy = req.query.sortBy || 'timestamp'; // timestamp, username
+    const sortBy = req.query.sortBy || 'timestamp'; // timestamp, username, votes
     const order = req.query.order || 'desc'; // asc, desc
+    const moderationStatus = req.query.moderationStatus; // Filter by moderation status
 
     const result = await getContestEntries(contestId, {
       page,
       limit,
       sortBy,
-      order
+      order,
+      moderationStatus
     });
 
     res.json({
@@ -186,6 +188,212 @@ router.get('/:contestId/image/:filename', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to serve image',
+      error: error.message
+    });
+  }
+});
+
+// PATCH /api/contest/:contestId/entry/:entryId/moderation - Update moderation status
+router.patch('/:contestId/entry/:entryId/moderation', async (req, res) => {
+  try {
+    const { contestId, entryId } = req.params;
+    const { moderationStatus, moderatedBy } = req.body;
+
+    // Validate moderation status
+    const validStatuses = ['PENDING', 'APPROVED', 'REJECTED'];
+    if (!validStatuses.includes(moderationStatus)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid moderation status. Must be PENDING, APPROVED, or REJECTED'
+      });
+    }
+
+    // Get the entry first
+    const entry = await getContestEntry(contestId, entryId);
+
+    if (!entry) {
+      return res.status(404).json({
+        success: false,
+        message: 'Contest entry not found'
+      });
+    }
+
+    // Update the moderation status
+    entry.moderationStatus = moderationStatus;
+    entry.moderatedAt = Date.now();
+    if (moderatedBy) {
+      entry.moderatedBy = moderatedBy;
+    }
+
+    // Update in Redis
+    const { redisReady, storeContestEntry } = await import('../services/redisService.js');
+    if (redisReady()) {
+      await storeContestEntry(contestId, entryId, entry);
+    }
+
+    // Update metadata JSON file
+    const uploadsDir = path.join(process.cwd(), 'uploads');
+    const metadataPath = path.join(uploadsDir, 'contest', contestId, `${entryId}.json`);
+    await fs.writeFile(metadataPath, JSON.stringify(entry, null, 2));
+
+    console.log(`[Contest] Updated moderation status for ${entryId} to ${moderationStatus}`);
+
+    res.json({
+      success: true,
+      message: 'Moderation status updated successfully',
+      entry
+    });
+  } catch (error) {
+    console.error('[Contest] Error updating moderation status:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update moderation status',
+      error: error.message
+    });
+  }
+});
+
+// POST /api/contest/:contestId/entry/:entryId/vote - Vote for an entry (requires authentication)
+router.post('/:contestId/entry/:entryId/vote', async (req, res) => {
+  try {
+    const { contestId, entryId } = req.params;
+    const { username } = req.body;
+
+    console.log(`[Contest] POST vote request for ${contestId}:${entryId}`, { body: req.body, username });
+
+    if (!username) {
+      console.log('[Contest] No username provided in POST request');
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required. Please provide username.'
+      });
+    }
+
+    // Get the entry
+    const entry = await getContestEntry(contestId, entryId);
+
+    if (!entry) {
+      return res.status(404).json({
+        success: false,
+        message: 'Contest entry not found'
+      });
+    }
+
+    // Initialize votes array if it doesn't exist
+    if (!entry.votes) {
+      entry.votes = [];
+    }
+
+    // Check if user already voted
+    const existingVoteIndex = entry.votes.findIndex(vote => vote.username === username);
+    if (existingVoteIndex !== -1) {
+      return res.status(400).json({
+        success: false,
+        message: 'You have already voted for this entry'
+      });
+    }
+
+    // Add the vote
+    entry.votes.push({
+      username,
+      timestamp: Date.now()
+    });
+
+    // Update in Redis
+    const { redisReady, storeContestEntry } = await import('../services/redisService.js');
+    if (redisReady()) {
+      await storeContestEntry(contestId, entryId, entry);
+    }
+
+    // Update metadata JSON file
+    const uploadsDir = path.join(process.cwd(), 'uploads');
+    const metadataPath = path.join(uploadsDir, 'contest', contestId, `${entryId}.json`);
+    await fs.writeFile(metadataPath, JSON.stringify(entry, null, 2));
+
+    console.log(`[Contest] User ${username} voted for entry ${entryId}`);
+
+    res.json({
+      success: true,
+      message: 'Vote recorded successfully',
+      voteCount: entry.votes.length,
+      votes: entry.votes
+    });
+  } catch (error) {
+    console.error('[Contest] Error recording vote:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to record vote',
+      error: error.message
+    });
+  }
+});
+
+// DELETE /api/contest/:contestId/entry/:entryId/vote - Remove vote (unheart)
+router.delete('/:contestId/entry/:entryId/vote', async (req, res) => {
+  try {
+    const { contestId, entryId } = req.params;
+    const { username } = req.body;
+
+    console.log(`[Contest] DELETE vote request for ${contestId}:${entryId}`, { body: req.body, username });
+
+    if (!username) {
+      console.log('[Contest] No username provided in DELETE request');
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required. Please provide username.'
+      });
+    }
+
+    // Get the entry
+    const entry = await getContestEntry(contestId, entryId);
+
+    if (!entry) {
+      return res.status(404).json({
+        success: false,
+        message: 'Contest entry not found'
+      });
+    }
+
+    // Initialize votes array if it doesn't exist
+    if (!entry.votes) {
+      entry.votes = [];
+    }
+
+    // Remove the vote
+    const initialLength = entry.votes.length;
+    entry.votes = entry.votes.filter(vote => vote.username !== username);
+
+    if (entry.votes.length === initialLength) {
+      return res.status(400).json({
+        success: false,
+        message: 'You have not voted for this entry'
+      });
+    }
+
+    // Update in Redis
+    const { redisReady, storeContestEntry } = await import('../services/redisService.js');
+    if (redisReady()) {
+      await storeContestEntry(contestId, entryId, entry);
+    }
+
+    // Update metadata JSON file
+    const uploadsDir = path.join(process.cwd(), 'uploads');
+    const metadataPath = path.join(uploadsDir, 'contest', contestId, `${entryId}.json`);
+    await fs.writeFile(metadataPath, JSON.stringify(entry, null, 2));
+
+    console.log(`[Contest] User ${username} removed vote for entry ${entryId}`);
+
+    res.json({
+      success: true,
+      message: 'Vote removed successfully',
+      voteCount: entry.votes.length,
+      votes: entry.votes
+    });
+  } catch (error) {
+    console.error('[Contest] Error removing vote:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to remove vote',
       error: error.message
     });
   }
