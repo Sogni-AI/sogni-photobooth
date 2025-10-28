@@ -222,11 +222,97 @@ const handleHalloweenRoute = (req, res) => {
   });
 };
 
+// Contest vote route handler with custom meta tags for social sharing
+const handleContestVoteRoute = (req, res) => {
+  const indexPath = path.join(staticDir, 'index.html');
+  const requestPath = req.path;
+  console.log(`[Contest Vote Route] Attempting to read: ${indexPath} for path: ${requestPath}`);
+
+  fs.readFile(indexPath, 'utf8', (err, html) => {
+    if (err) {
+      console.error('[Contest Vote Route] Error reading index.html:', err);
+      return res.status(500).send('Error loading page: ' + err.message);
+    }
+
+    console.log('[Contest Vote Route] Successfully read index.html, injecting meta tags...');
+
+    let modifiedHtml = html;
+
+    const contestTitle = '🎃 Halloween Contest - Vote Now! | Sogni AI Photobooth';
+    const contestDesc = 'Vote for your favorite AI-generated Halloween photos! Browse amazing AI art created by the community and support your favorites by voting.';
+    const contestOgTitle = '🎃 Vote for Your Favorite Halloween AI Photos!';
+    const contestOgDesc = 'Join the Sogni Halloween Contest! Vote for the most creative AI-generated photos and help choose the winners. Browse unique AI art and cast your vote now!';
+    const contestUrl = 'https://photobooth.sogni.ai/contest/vote';
+    const contestImage = 'https://photobooth.sogni.ai/halloween_bg.jpg';
+
+    // Replace meta tags with contest-specific content
+    modifiedHtml = modifiedHtml.replace('<title>Sogni AI Photobooth</title>', `<title>${contestTitle}</title>`);
+    modifiedHtml = modifiedHtml.replace('content="Sogni AI Photobooth" />', `content="${contestOgTitle}" />`);
+    modifiedHtml = modifiedHtml.replace('content="Sogni-AI/sogni-photobooth: Sogni Photobooth: Capture and transform your photos with AI styles"', `content="${contestOgTitle}"`);
+    modifiedHtml = modifiedHtml.replace(/Sogni Photobooth: Capture and transform your photos with AI styles/g, contestOgDesc);
+    modifiedHtml = modifiedHtml.replace(/content="https:\/\/photobooth\.sogni\.ai\/"/g, `content="${contestUrl}"`);
+    modifiedHtml = modifiedHtml.replace(/https:\/\/repository-images\.githubusercontent\.com\/945858402\/db2496be-4fcb-4471-ad36-4eed6ffd4a9e/g, contestImage);
+
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+
+    console.log('[Contest Vote Route] Successfully injected meta tags and sent response');
+    res.send(modifiedHtml);
+  });
+};
+
+// Admin contest results route handler with custom meta tags
+const handleAdminContestRoute = (req, res) => {
+  const indexPath = path.join(staticDir, 'index.html');
+  const requestPath = req.path;
+  console.log(`[Admin Contest Route] Attempting to read: ${indexPath} for path: ${requestPath}`);
+
+  fs.readFile(indexPath, 'utf8', (err, html) => {
+    if (err) {
+      console.error('[Admin Contest Route] Error reading index.html:', err);
+      return res.status(500).send('Error loading page: ' + err.message);
+    }
+
+    console.log('[Admin Contest Route] Successfully read index.html, injecting meta tags...');
+
+    let modifiedHtml = html;
+
+    const adminTitle = '🎃 Halloween Contest Results - Admin Dashboard | Sogni AI Photobooth';
+    const adminDesc = 'Contest administration dashboard for moderating Halloween AI photo contest entries, viewing submissions, and managing contest results.';
+    const adminOgTitle = '🎃 Halloween Contest Administration Dashboard';
+    const adminOgDesc = 'Moderate Halloween AI photo contest entries, review submissions, and manage contest results. View statistics and moderate community submissions.';
+    const adminUrl = 'https://photobooth.sogni.ai/admin/contest/results';
+    const adminImage = 'https://photobooth.sogni.ai/halloween_bg.jpg';
+
+    // Replace meta tags with admin-specific content
+    modifiedHtml = modifiedHtml.replace('<title>Sogni AI Photobooth</title>', `<title>${adminTitle}</title>`);
+    modifiedHtml = modifiedHtml.replace('content="Sogni AI Photobooth" />', `content="${adminOgTitle}" />`);
+    modifiedHtml = modifiedHtml.replace('content="Sogni-AI/sogni-photobooth: Sogni Photobooth: Capture and transform your photos with AI styles"', `content="${adminOgTitle}"`);
+    modifiedHtml = modifiedHtml.replace(/Sogni Photobooth: Capture and transform your photos with AI styles/g, adminOgDesc);
+    modifiedHtml = modifiedHtml.replace(/content="https:\/\/photobooth\.sogni\.ai\/"/g, `content="${adminUrl}"`);
+    modifiedHtml = modifiedHtml.replace(/https:\/\/repository-images\.githubusercontent\.com\/945858402\/db2496be-4fcb-4471-ad36-4eed6ffd4a9e/g, adminImage);
+
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+
+    console.log('[Admin Contest Route] Successfully injected meta tags and sent response');
+    res.send(modifiedHtml);
+  });
+};
+
 // Halloween event routes with custom meta tags for social sharing
 // Only enable on production/staging (local uses Vite dev server for everything)
 if (!isLocalEnv) {
   app.get('/halloween', handleHalloweenRoute);
   app.get('/event/halloween', handleHalloweenRoute);
+  app.get('/contest/vote', handleContestVoteRoute);
+  app.get('/admin/contest/results', handleAdminContestRoute);
 }
 
 // Mobile sharing page route
