@@ -3952,7 +3952,7 @@ const App = () => {
         }
         
         // Special prompt for style reference mode
-        finalPositivePrompt = "SUBJECT (portrait image): Keep the person's facial identity, head shape, key features, and expression recognizable.\n\nSTYLE (style reference image): Apply this image's aesthetic — color palette, lighting direction/contrast, material/texture treatment, and overall finish.\n\nINTENT: Recreate the portrait with the style reference's aesthetic treatment while maintaining recognizable likeness and natural proportions.";
+        finalPositivePrompt = "identify the two images in the scene and transform the main person image into the style of the second image, the result must be the transformed person image only, generate a dramatically transformed image";
         console.log('🎨 Using Copy Image Style mode with special prompt');
       } else if (selectedStyle === 'custom') {
         finalPositivePrompt = finalPositivePrompt || '';

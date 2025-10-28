@@ -123,10 +123,13 @@ const PhotoGallery = ({
   authState = null,
   handleRefreshPhoto = null,
   onOutOfCredits = null, // Callback to trigger out of credits popup
-  // New props for Copy image style feature
+  // New props for Copy image style feature (currently disabled - Coming soon)
+  // eslint-disable-next-line no-unused-vars
   onCopyImageStyleSelect = null,
   styleReferenceImage = null,
+  // eslint-disable-next-line no-unused-vars
   onRemoveStyleReference = null,
+  // eslint-disable-next-line no-unused-vars
   onEditStyleReference = null // Callback to open existing style reference in adjuster
 }) => {
   // Get settings from context
@@ -181,6 +184,9 @@ const PhotoGallery = ({
 
   // State to track touch hover in Vibe Explorer (separate from selectedPhotoIndex to avoid slideshow state)
   const [touchHoveredPhotoIndex, setTouchHoveredPhotoIndex] = useState(null);
+
+  // State to show "Coming soon" tooltip for Copy image style feature
+  const [showCopyStyleTooltip, setShowCopyStyleTooltip] = useState(false);
   
   // State to track composite framed images for right-click save compatibility
   const [framedImageUrls, setFramedImageUrls] = useState({});
@@ -3111,7 +3117,7 @@ const PhotoGallery = ({
                 fontFamily: '"Permanent Marker", cursive',
                 color: 'rgba(255, 255, 255, 0.9)'
               }}>
-                Or use your own prompt or image
+                Or use your own prompt or style reference image
               </span>
             </div>
 
@@ -3158,48 +3164,27 @@ const PhotoGallery = ({
               
               <button 
                 onClick={() => {
-                  // If style reference already exists, open it in the adjuster for editing
-                  if (styleReferenceImage?.dataUrl && onEditStyleReference) {
-                    onEditStyleReference();
-                  } else {
-                    // No style reference yet, trigger file input to upload new one
-                    const input = document.createElement('input');
-                    input.type = 'file';
-                    input.accept = 'image/*';
-                    input.onchange = (e) => {
-                      const file = e.target.files?.[0];
-                      if (file && onCopyImageStyleSelect) {
-                        onCopyImageStyleSelect(file);
-                      }
-                    };
-                    input.click();
-                  }
+                  // Feature disabled - show "Coming soon" tooltip
+                  setShowCopyStyleTooltip(true);
+                  setTimeout(() => setShowCopyStyleTooltip(false), 2500);
                 }}
                 style={{
-                  background: selectedStyle === 'copyImageStyle' ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' : 'linear-gradient(135deg, #34d399 0%, #10b981 100%)',
-                  border: selectedStyle === 'copyImageStyle' ? '3px solid #10b981' : '3px solid transparent',
+                  background: 'linear-gradient(135deg, #6b7280 0%, #4b5563 100%)',
+                  border: '3px solid transparent',
                   borderRadius: '20px',
                   padding: '10px 16px',
                   display: 'flex',
                   alignItems: 'center',
                   gap: '8px',
-                  cursor: 'pointer',
+                  cursor: 'not-allowed',
                   transition: 'all 0.2s ease',
-                  boxShadow: selectedStyle === 'copyImageStyle' ? '0 4px 15px rgba(16, 185, 129, 0.5)' : '0 3px 10px rgba(16, 185, 129, 0.3)',
+                  boxShadow: '0 3px 10px rgba(107, 114, 128, 0.3)',
                   color: 'white',
                   fontSize: '12px',
                   fontFamily: '"Permanent Marker", cursive',
-                  fontWeight: '600'
-                }}
-                onMouseOver={e => {
-                  e.currentTarget.style.transform = 'scale(1.05)';
-                  e.currentTarget.style.boxShadow = '0 5px 15px rgba(16, 185, 129, 0.4)';
-                  e.currentTarget.style.background = 'linear-gradient(135deg, #059669 0%, #047857 100%)';
-                }}
-                onMouseOut={e => {
-                  e.currentTarget.style.transform = 'scale(1)';
-                  e.currentTarget.style.boxShadow = '0 3px 10px rgba(16, 185, 129, 0.3)';
-                  e.currentTarget.style.background = selectedStyle === 'copyImageStyle' ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' : 'linear-gradient(135deg, #34d399 0%, #10b981 100%)';
+                  fontWeight: '600',
+                  opacity: 0.6,
+                  position: 'relative'
                 }}
               >
                 {/* Show circular preview thumbnail if style reference exists, otherwise show emoji */}
@@ -3225,13 +3210,12 @@ const PhotoGallery = ({
                         borderRadius: '50%'
                       }}
                     />
-                    {/* X button to remove style reference */}
+                    {/* X button disabled - feature not active */}
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        if (onRemoveStyleReference) {
-                          onRemoveStyleReference();
-                        }
+                        setShowCopyStyleTooltip(true);
+                        setTimeout(() => setShowCopyStyleTooltip(false), 2500);
                       }}
                       style={{
                         position: 'absolute',
@@ -3240,12 +3224,12 @@ const PhotoGallery = ({
                         width: '18px',
                         height: '18px',
                         borderRadius: '50%',
-                        background: '#ef4444',
+                        background: '#9ca3af',
                         border: '2px solid white',
                         color: 'white',
                         fontSize: '10px',
                         fontWeight: 'bold',
-                        cursor: 'pointer',
+                        cursor: 'not-allowed',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -3253,19 +3237,10 @@ const PhotoGallery = ({
                         lineHeight: 1,
                         boxShadow: '0 2px 4px rgba(0, 0, 0, 0.3)',
                         transition: 'all 0.2s ease',
-                        zIndex: 1
+                        zIndex: 1,
+                        opacity: 0.6
                       }}
-                      onMouseOver={(e) => {
-                        e.stopPropagation();
-                        e.currentTarget.style.background = '#dc2626';
-                        e.currentTarget.style.transform = 'scale(1.15)';
-                      }}
-                      onMouseOut={(e) => {
-                        e.stopPropagation();
-                        e.currentTarget.style.background = '#ef4444';
-                        e.currentTarget.style.transform = 'scale(1)';
-                      }}
-                      title="Remove style reference"
+                      title="Coming soon"
                     >
                       ×
                     </button>
@@ -3274,6 +3249,40 @@ const PhotoGallery = ({
                   <span>🎨</span>
                 )}
                 <span>Copy image style</span>
+                
+                {/* "Coming soon" tooltip */}
+                {showCopyStyleTooltip && (
+                  <div style={{
+                    position: 'absolute',
+                    bottom: '-45px',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    background: 'rgba(0, 0, 0, 0.9)',
+                    color: 'white',
+                    padding: '8px 14px',
+                    borderRadius: '8px',
+                    fontSize: '11px',
+                    fontFamily: '"Permanent Marker", cursive',
+                    whiteSpace: 'nowrap',
+                    zIndex: 1000,
+                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+                    pointerEvents: 'none',
+                    animation: 'fadeIn 0.2s ease-in'
+                  }}>
+                    Coming soon
+                    <div style={{
+                      position: 'absolute',
+                      top: '-5px',
+                      left: '50%',
+                      transform: 'translateX(-50%)',
+                      width: 0,
+                      height: 0,
+                      borderLeft: '6px solid transparent',
+                      borderRight: '6px solid transparent',
+                      borderBottom: '6px solid rgba(0, 0, 0, 0.9)'
+                    }} />
+                  </div>
+                )}
               </button>
             </div>
 
