@@ -468,7 +468,11 @@ const CameraStartMenu: React.FC<CameraStartMenuProps> = ({
                     >
                       <div className="polaroid-content">
                         <img
-                          src="/albert-einstein-sticks-out-his-tongue.jpg"
+                          src={
+                            (originalPhotoUrl && photoSourceType === 'camera')
+                              ? originalPhotoUrl
+                              : "/albert-einstein-sticks-out-his-tongue.jpg"
+                          }
                           alt="Snap a photo"
                           className="polaroid-bg-image"
                         />

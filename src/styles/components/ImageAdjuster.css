@@ -335,51 +335,42 @@
   background-color: #555;
 }
 
-/* Swap/Replace image button overlay - positioned on bottom right of image */
-.image-adjuster-swap-overlay-button {
-  position: absolute;
-  bottom: 12px;
-  right: 12px;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  color: white;
+/* Swap/Replace image button - now in button bar */
+.swap-image-button {
+  padding: 10px 20px;
+  border-radius: 8px;
   font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s ease;
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
   display: flex;
   align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  pointer-events: auto;
-  z-index: 100;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-  transition: all 0.3s ease;
-  padding: 0;
+  gap: 8px;
 }
 
-.image-adjuster-swap-overlay-button:hover {
-  background: rgba(16, 185, 129, 0.8);
-  border-color: rgba(16, 185, 129, 0.6);
-  transform: scale(1.15) rotate(180deg);
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+.swap-image-button:hover {
+  background: linear-gradient(135deg, #34d399, #10b981);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(16, 185, 129, 0.3);
 }
 
-.image-adjuster-swap-overlay-button:active {
-  transform: scale(1.05) rotate(180deg);
+.swap-image-button .button-label {
+  font-size: 16px;
+  font-weight: bold;
 }
 
 .confirm-button {
-  background: linear-gradient(135deg, #ff7eb3, #ff5e8a);
+  background: #ff5252;
   color: white;
 }
 
 .confirm-button:hover {
-  background: linear-gradient(135deg, #ff8eba, #ff6e9a);
+  background: #ff6b6b;
   transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(255, 94, 138, 0.3);
+  box-shadow: 0 4px 8px rgba(255, 82, 82, 0.4);
 }
 
 .confirm-button .cost-estimate {
@@ -397,14 +388,14 @@
   gap: 0 !important;
   border-radius: 8px;
   overflow: visible;
-  background: linear-gradient(135deg, #ff7eb3, #ff5e8a);
+  background: #ff5252;
   transition: all 0.2s ease;
 }
 
 .batch-dropdown-container:hover {
-  background: linear-gradient(135deg, #ff8eba, #ff6e9a);
+  background: #ff6b6b;
   transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(255, 94, 138, 0.3);
+  box-shadow: 0 4px 8px rgba(255, 82, 82, 0.4);
 }
 
 /* Split button styles */
@@ -483,11 +474,11 @@
 }
 
 .batch-dropdown-item.selected {
-  background: linear-gradient(135deg, rgba(255, 126, 179, 0.3), rgba(255, 94, 138, 0.3));
+  background: rgba(255, 82, 82, 0.3);
 }
 
 .batch-dropdown-item .checkmark {
-  color: #ff5e8a;
+  color: #ff5252;
   font-weight: bold;
   font-size: 0.9em;
 }
@@ -581,12 +572,13 @@
     padding: 12px 6px 12px 24px !important;
   }
   
-  .image-adjuster-swap-overlay-button {
-    width: 40px;
-    height: 40px;
+  .swap-image-button {
+    padding: 12px 24px;
     font-size: 18px;
-    bottom: 16px;
-    right: 16px;
+  }
+
+  .swap-image-button .button-label {
+    font-size: 18px;
   }
 
   .confirm-button-dropdown {
@@ -664,12 +656,13 @@
     padding: 8px 6px 8px 16px !important;
   }
   
-  .image-adjuster-swap-overlay-button {
-    width: 32px;
-    height: 32px;
+  .swap-image-button {
+    padding: 8px 16px;
     font-size: 14px;
-    bottom: 8px;
-    right: 8px;
+  }
+
+  .swap-image-button .button-label {
+    font-size: 14px;
   }
 
   .confirm-button-dropdown {

@@ -505,7 +505,7 @@ const App = () => {
 
   
   // Helper functions for localStorage persistence
-  const saveLastEditablePhotoToStorage = async (photoData) => {
+  const saveLastAdjustedPhotoToStorage = async (photoData) => {
     try {
       if (photoData.blob) {
         // Convert blob to base64 data URL for storage
@@ -518,45 +518,51 @@ const App = () => {
             // Remove blob since we have dataUrl now
             blob: null
           };
-          localStorage.setItem('sogni-lastEditablePhoto', JSON.stringify(dataToStore));
+          localStorage.setItem('sogni-lastAdjustedPhoto', JSON.stringify(dataToStore));
         };
         reader.readAsDataURL(photoData.blob);
       } else {
         // No blob, just store what we have
         // eslint-disable-next-line no-unused-vars
         const { blob, ...photoDataWithoutBlob } = photoData;
-        localStorage.setItem('sogni-lastEditablePhoto', JSON.stringify(photoDataWithoutBlob));
+        localStorage.setItem('sogni-lastAdjustedPhoto', JSON.stringify(photoDataWithoutBlob));
       }
     } catch (error) {
-      console.warn('Failed to save lastEditablePhoto to localStorage:', error);
+      console.warn('Failed to save lastAdjustedPhoto to localStorage:', error);
     }
   };
 
-  const loadLastEditablePhotoFromStorage = () => {
+  const loadLastAdjustedPhotoFromStorage = () => {
     try {
-      const stored = localStorage.getItem('sogni-lastEditablePhoto');
+      const stored = localStorage.getItem('sogni-lastAdjustedPhoto');
       return stored ? JSON.parse(stored) : null;
     } catch (error) {
-      console.warn('Failed to load lastEditablePhoto from localStorage:', error);
+      console.warn('Failed to load lastAdjustedPhoto from localStorage:', error);
       return null;
     }
   };
 
-  // Add state to store the last photo data for re-editing
-  const [lastEditablePhoto, setLastEditablePhotoState] = useState(null);
+  // Add state to store the last adjusted photo data for re-editing
+  const [lastAdjustedPhoto, setLastAdjustedPhotoState] = useState(null);
+  
+  // Add separate state for uploaded photos (separate from camera photos)
+  const [lastUploadedPhoto, setLastUploadedPhoto] = useState(null);
+  
+  // Add separate state for camera photos (separate from uploaded photos)
+  const [lastCameraPhoto, setLastCameraPhoto] = useState(null);
   
   // Custom setter that also saves to localStorage
-  const setLastEditablePhoto = (photoData) => {
-    setLastEditablePhotoState(photoData);
+  const setLastAdjustedPhoto = (photoData) => {
+    setLastAdjustedPhotoState(photoData);
     if (photoData) {
-      saveLastEditablePhotoToStorage(photoData);
+      saveLastAdjustedPhotoToStorage(photoData);
     } else {
-      localStorage.removeItem('sogni-lastEditablePhoto');
+      localStorage.removeItem('sogni-lastAdjustedPhoto');
     }
   };
 
-  // Helper function to load default Einstein photo for lastEditablePhoto
-  const loadDefaultEinsteinEditablePhoto = useCallback(async () => {
+  // Helper function to load default Einstein photo for lastAdjustedPhoto
+  const loadDefaultEinsteinAdjustedPhoto = useCallback(async () => {
     try {
       const response = await fetch('/albert-einstein-sticks-out-his-tongue.jpg');
       if (!response.ok) throw new Error('Failed to load default photo');
@@ -572,11 +578,11 @@ const App = () => {
         adjustments: null
       };
 
-      setLastEditablePhoto(defaultPhotoData);
-      console.log('✅ Loaded default Einstein photo as lastEditablePhoto');
+      setLastAdjustedPhoto(defaultPhotoData);
+      console.log('✅ Loaded default Einstein photo as lastAdjustedPhoto');
       return defaultPhotoData;
     } catch (error) {
-      console.warn('Failed to load default Einstein photo for lastEditablePhoto:', error);
+      console.warn('Failed to load default Einstein photo for lastAdjustedPhoto:', error);
       return null;
     }
   }, []);
@@ -587,7 +593,7 @@ const App = () => {
     contextResetSettings();
 
     // Clear any saved photo data from localStorage to ensure clean reset
-    localStorage.removeItem('sogni-lastEditablePhoto');
+    localStorage.removeItem('sogni-lastAdjustedPhoto');
     console.log('🗑️ Cleared saved photo data from localStorage');
 
     // Clear blocked prompts
@@ -597,27 +603,27 @@ const App = () => {
     // Then reset both photo states to the default Einstein photo
     // These functions will unconditionally load and set the Einstein photo
     await loadDefaultEinsteinPhoto();
-    await loadDefaultEinsteinEditablePhoto();
-  }, [contextResetSettings, loadDefaultEinsteinPhoto, loadDefaultEinsteinEditablePhoto]);
+    await loadDefaultEinsteinAdjustedPhoto();
+  }, [contextResetSettings, loadDefaultEinsteinPhoto, loadDefaultEinsteinAdjustedPhoto]);
 
 
 
-  // Load lastEditablePhoto from localStorage on app mount
+  // Load lastAdjustedPhoto from localStorage on app mount
   useEffect(() => {
-    const loadEditablePhoto = async () => {
-      const storedPhotoData = loadLastEditablePhotoFromStorage();
+    const loadAdjustedPhoto = async () => {
+      const storedPhotoData = loadLastAdjustedPhotoFromStorage();
 
       if (storedPhotoData) {
         // We don't have the blob anymore, but we have the adjustments
-        setLastEditablePhotoState(storedPhotoData);
+        setLastAdjustedPhotoState(storedPhotoData);
       } else {
         // If no stored photo, load the default Einstein photo
-        await loadDefaultEinsteinEditablePhoto();
+        await loadDefaultEinsteinAdjustedPhoto();
       }
     };
 
-    loadEditablePhoto();
-  }, [loadDefaultEinsteinEditablePhoto]);
+    loadAdjustedPhoto();
+  }, [loadDefaultEinsteinAdjustedPhoto]);
 
   
   
@@ -889,14 +895,14 @@ const App = () => {
   }, [waitingForCameraPermission]);
 
   // When entering Style Explorer (prompt selector), ensure we have a usable
-  // reference photo in lastPhotoData by hydrating it from lastEditablePhoto
+  // reference photo in lastPhotoData by hydrating it from lastAdjustedPhoto
   // if needed. This enables showing the Generate button based on prior photos.
   useEffect(() => {
     let isCancelled = false;
     const ensureReferencePhotoForStyleExplorer = async () => {
       if (currentPage !== 'prompts') return;
       if (lastPhotoData && lastPhotoData.blob) return;
-      const editable = lastEditablePhoto;
+      const editable = lastAdjustedPhoto;
       if (!editable) return;
       try {
         const sourceType = editable.source === 'camera' ? 'camera' : 'upload';
@@ -925,7 +931,7 @@ const App = () => {
     };
     ensureReferencePhotoForStyleExplorer();
     return () => { isCancelled = true; };
-  }, [currentPage, lastEditablePhoto, lastPhotoData]);
+  }, [currentPage, lastAdjustedPhoto, lastPhotoData]);
 
   // State for URL-based search parameters
   const [urlSearchTerm, setUrlSearchTerm] = useState('');
@@ -5468,6 +5474,32 @@ const App = () => {
     setCurrentUploadedImageUrl(tempUrl);
     setCurrentUploadedSource('upload');
     
+    // Store photo data immediately with tempUrl
+    const initialPhotoData = {
+      imageUrl: tempUrl,
+      source: 'upload',
+      blob: file
+    };
+    
+    setLastAdjustedPhoto(initialPhotoData);
+    setLastUploadedPhoto(initialPhotoData); // Set immediately so preview works
+    
+    // Convert blob to data URL for persistent storage (asynchronously)
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result;
+      
+      // Update with data URL when ready
+      const updatedPhotoData = {
+        ...initialPhotoData,
+        dataUrl: dataUrl // Add persistent data URL
+      };
+
+      setLastAdjustedPhoto(updatedPhotoData);
+      setLastUploadedPhoto(updatedPhotoData);
+    };
+    reader.readAsDataURL(file);
+    
     // Show the image adjuster
     setShowImageAdjuster(true);
   };
@@ -5692,7 +5724,7 @@ const App = () => {
       blob: finalBlob
     };
 
-    setLastEditablePhoto(photoData);
+    setLastAdjustedPhoto(photoData);
     
     // Show the image adjuster
     setShowImageAdjuster(true);
@@ -5869,14 +5901,31 @@ const App = () => {
     setCurrentUploadedImageUrl(tempUrl);
     setCurrentUploadedSource('camera');
     
-    // Store this photo data for potential re-editing
-    const photoData = {
+    // Store photo data immediately with tempUrl
+    const initialPhotoData = {
       imageUrl: tempUrl,
       source: 'camera',
       blob: finalBlob
     };
+    
+    setLastAdjustedPhoto(initialPhotoData);
+    setLastCameraPhoto(initialPhotoData); // Set immediately so preview works
+    
+    // Convert blob to data URL for persistent storage (asynchronously)
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result;
+      
+      // Update with data URL when ready
+      const updatedPhotoData = {
+        ...initialPhotoData,
+        dataUrl: dataUrl // Add persistent data URL
+      };
 
-    setLastEditablePhoto(photoData);
+      setLastAdjustedPhoto(updatedPhotoData);
+      setLastCameraPhoto(updatedPhotoData);
+    };
+    reader.readAsDataURL(finalBlob);
     
     // Show the image adjuster
     setShowImageAdjuster(true);
@@ -6208,7 +6257,7 @@ const App = () => {
       ) : showStartMenu ? (
         <>
           <CameraStartMenu
-            onTakePhoto={handleTakePhotoOption}
+            onTakePhoto={handleShowExistingCameraPhoto}
             onBrowsePhoto={handleBrowsePhotoOption}
             onDragPhoto={handleDragPhotoOption}
             isProcessing={!!activeProjectReference.current || isPhotoButtonCooldown}
@@ -6232,29 +6281,35 @@ const App = () => {
             styleReferenceImage={styleReferenceImage}
             onEditStyleReference={handleEditStyleReference}
             // Photo tracking props
-            originalPhotoUrl={photos.find(p => p.isOriginal)?.originalDataUrl || null}
-            photoSourceType={photos.find(p => p.isOriginal)?.sourceType || null}
+            originalPhotoUrl={
+              // Show lastCameraPhoto for camera preview
+              (lastCameraPhoto?.dataUrl || lastCameraPhoto?.imageUrl)
+                ? (lastCameraPhoto.dataUrl || lastCameraPhoto.imageUrl)
+                : photos.find(p => p.isOriginal)?.originalDataUrl || null
+            }
+            photoSourceType={
+              // Show camera source type if we have a camera photo
+              (lastCameraPhoto?.dataUrl || lastCameraPhoto?.imageUrl)
+                ? 'camera'
+                : photos.find(p => p.isOriginal)?.sourceType || null
+            }
             reusablePhotoUrl={
-              // Only show reusable photo if it has a valid source type (not default Einstein)
-              (lastEditablePhoto?.dataUrl && lastEditablePhoto.source)
-                ? lastEditablePhoto.dataUrl
-                : (lastPhotoData?.dataUrl && lastPhotoData.sourceType)
-                  ? lastPhotoData.dataUrl
-                  : null
+              // Show lastUploadedPhoto for upload preview - ONLY use lastUploadedPhoto
+              (lastUploadedPhoto?.dataUrl || lastUploadedPhoto?.imageUrl)
+                ? (lastUploadedPhoto.dataUrl || lastUploadedPhoto.imageUrl)
+                : null
             }
             reusablePhotoSourceType={
-              // Only set source type if it exists (not default Einstein)
-              (lastEditablePhoto?.dataUrl && lastEditablePhoto.source)
-                ? (lastEditablePhoto.source === 'camera' ? 'camera' : 'upload')
-                : (lastPhotoData?.dataUrl && lastPhotoData.sourceType)
-                  ? lastPhotoData.sourceType
-                  : null
+              // Check lastUploadedPhoto - ONLY use lastUploadedPhoto
+              (lastUploadedPhoto?.dataUrl || lastUploadedPhoto?.imageUrl)
+                ? 'upload'
+                : null
             }
             // Handler to show existing upload in adjuster
             onShowExistingUpload={handleShowExistingUpload}
             hasExistingUpload={
-              // Check if there's a stored upload (not camera photo, not default Einstein)
-              !!(lastEditablePhoto && lastEditablePhoto.source === 'upload' && (lastEditablePhoto.blob || lastEditablePhoto.dataUrl))
+              // Check if there's a stored upload - ONLY check lastUploadedPhoto
+              !!(lastUploadedPhoto && (lastUploadedPhoto.blob || lastUploadedPhoto.dataUrl))
             }
           />
           
@@ -6372,7 +6427,7 @@ const App = () => {
             }}
             onResetSettings={resetSettings}
             onBackToMenu={handleBackToMenu}
-            lastPhotoData={lastEditablePhoto}
+            lastPhotoData={lastAdjustedPhoto}
             onThumbnailClick={handleThumbnailClick}
           />
           
@@ -6529,10 +6584,12 @@ const App = () => {
     setCameraManuallyStarted(true); // User explicitly chose to take a photo
   };
 
-  // Handler to show existing upload in ImageAdjuster
-  const handleShowExistingUpload = async () => {
-    if (!lastEditablePhoto) {
-      console.warn('No lastEditablePhoto available to show');
+  // Handler to show existing camera photo in ImageAdjuster
+  const handleShowExistingCameraPhoto = async () => {
+    if (!lastCameraPhoto) {
+      console.warn('No lastCameraPhoto available to show');
+      // No existing camera photo, go to camera
+      await handleTakePhotoOption();
       return;
     }
 
@@ -6554,39 +6611,111 @@ const App = () => {
       return;
     }
 
-    if (lastEditablePhoto.blob) {
+    if (lastCameraPhoto.blob) {
       // We have the blob - can reopen the adjuster
-      const newTempUrl = URL.createObjectURL(lastEditablePhoto.blob);
+      const newTempUrl = URL.createObjectURL(lastCameraPhoto.blob);
       setCurrentUploadedImageUrl(newTempUrl);
-      setCurrentUploadedSource(lastEditablePhoto.source);
+      setCurrentUploadedSource('camera');
+      setLastAdjustedPhoto(lastCameraPhoto); // Also update lastAdjustedPhoto
       setShowImageAdjuster(true);
-    } else if (lastEditablePhoto.dataUrl) {
-      // We have the dataUrl from localStorage - convert back to blob
+    } else if (lastCameraPhoto.dataUrl || lastCameraPhoto.imageUrl) {
+      // We have the dataUrl/imageUrl from state - convert back to blob
       try {
-        const response = await fetch(lastEditablePhoto.dataUrl);
+        const urlToFetch = lastCameraPhoto.dataUrl || lastCameraPhoto.imageUrl;
+        const response = await fetch(urlToFetch);
         const blob = await response.blob();
         const newTempUrl = URL.createObjectURL(blob);
         
-        // Update the lastEditablePhoto with the new blob for future use
-        setLastEditablePhoto({
-          ...lastEditablePhoto,
+        // Update both camera states with the new blob for future use
+        const updatedPhotoData = {
+          ...lastCameraPhoto,
           blob: blob,
           imageUrl: newTempUrl
-        });
+        };
+        
+        setLastCameraPhoto(updatedPhotoData);
+        setLastAdjustedPhoto(updatedPhotoData);
         
         setCurrentUploadedImageUrl(newTempUrl);
-        setCurrentUploadedSource(lastEditablePhoto.source);
+        setCurrentUploadedSource('camera');
+        setShowImageAdjuster(true);
+      } catch (error) {
+        console.error('Failed to restore camera photo from dataUrl:', error);
+        alert('Failed to restore previous camera photo. Taking a new photo...');
+        setLastCameraPhoto(null);
+        await handleTakePhotoOption();
+      }
+    } else {
+      // No usable image data, go to camera
+      console.warn('No usable camera photo data found');
+      setLastCameraPhoto(null);
+      await handleTakePhotoOption();
+    }
+  };
+
+  // Handler to show existing upload in ImageAdjuster
+  const handleShowExistingUpload = async () => {
+    // ONLY use lastUploadedPhoto - do not mix with camera photos or adjusted photos
+    if (!lastUploadedPhoto || (!lastUploadedPhoto.blob && !lastUploadedPhoto.dataUrl)) {
+      console.warn('No lastUploadedPhoto available to show');
+      return;
+    }
+
+    // Add exit animation class
+    const startMenuElement = document.querySelector('.camera-start-menu');
+    if (startMenuElement) {
+      startMenuElement.classList.add('exiting');
+      
+      // Wait for animation to complete before hiding
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+    
+    setShowStartMenu(false);
+
+    // Check if Sogni is ready
+    if (!isSogniReady) {
+      alert('Sogni is not ready yet. Please try again in a moment.');
+      setShowStartMenu(true);
+      return;
+    }
+
+    if (lastUploadedPhoto.blob) {
+      // We have the blob - can reopen the adjuster
+      const newTempUrl = URL.createObjectURL(lastUploadedPhoto.blob);
+      setCurrentUploadedImageUrl(newTempUrl);
+      setCurrentUploadedSource('upload');
+      setLastAdjustedPhoto(lastUploadedPhoto); // Also update lastAdjustedPhoto with current adjustments
+      setShowImageAdjuster(true);
+    } else if (lastUploadedPhoto.dataUrl) {
+      // We have the dataUrl from localStorage - convert back to blob
+      try {
+        const response = await fetch(lastUploadedPhoto.dataUrl);
+        const blob = await response.blob();
+        const newTempUrl = URL.createObjectURL(blob);
+        
+        // Update both upload states with the new blob for future use
+        const updatedPhotoData = {
+          ...lastUploadedPhoto,
+          blob: blob,
+          imageUrl: newTempUrl
+        };
+        
+        setLastUploadedPhoto(updatedPhotoData);
+        setLastAdjustedPhoto(updatedPhotoData);
+        
+        setCurrentUploadedImageUrl(newTempUrl);
+        setCurrentUploadedSource('upload');
         setShowImageAdjuster(true);
       } catch (error) {
         console.error('Failed to restore image from dataUrl:', error);
         alert('Failed to restore previous photo. Please upload a new photo.');
-        setLastEditablePhoto(null);
+        setLastUploadedPhoto(null);
         setShowStartMenu(true);
       }
     } else {
       // No usable image data
       console.warn('No usable image data found');
-      setLastEditablePhoto(null);
+      setLastUploadedPhoto(null);
       setShowStartMenu(true);
     }
   };
@@ -6619,14 +6748,31 @@ const App = () => {
     setCurrentUploadedImageUrl(tempUrl);
     setCurrentUploadedSource('upload');
     
-    // Store this photo data for potential re-editing
-    const photoData = {
+    // Store photo data immediately with tempUrl
+    const initialPhotoData = {
       imageUrl: tempUrl,
       source: 'upload',
       blob: file
     };
+    
+    setLastAdjustedPhoto(initialPhotoData);
+    setLastUploadedPhoto(initialPhotoData); // Set immediately so preview works
+    
+    // Convert blob to data URL for persistent storage (asynchronously)
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result;
+      
+      // Update with data URL when ready
+      const updatedPhotoData = {
+        ...initialPhotoData,
+        dataUrl: dataUrl // Add persistent data URL
+      };
 
-    setLastEditablePhoto(photoData);
+      setLastAdjustedPhoto(updatedPhotoData);
+      setLastUploadedPhoto(updatedPhotoData);
+    };
+    reader.readAsDataURL(file);
     
     // Show the image adjuster
     setShowImageAdjuster(true);
@@ -7557,11 +7703,11 @@ const App = () => {
     // Reset the current image state
     setCurrentUploadedImageUrl('');
     
-    // Update lastEditablePhoto with the adjustments so user can return to resizer from photo gallery
-    if (lastEditablePhoto && adjustments) {
+    // Update lastAdjustedPhoto with the adjustments so user can return to resizer from photo gallery
+    if (lastAdjustedPhoto && adjustments) {
   
-      setLastEditablePhoto({
-        ...lastEditablePhoto,
+      setLastAdjustedPhoto({
+        ...lastAdjustedPhoto,
         adjustments: adjustments
       });
     }
@@ -7627,82 +7773,82 @@ const App = () => {
 
   // Handle thumbnail click to reopen the image adjuster
   const handleThumbnailClick = async () => {
-    if (!lastEditablePhoto) return;
+    if (!lastAdjustedPhoto) return;
     
-    if (lastEditablePhoto.blob) {
+    if (lastAdjustedPhoto.blob) {
       // We have the blob - can reopen the adjuster
-      const newTempUrl = URL.createObjectURL(lastEditablePhoto.blob);
+      const newTempUrl = URL.createObjectURL(lastAdjustedPhoto.blob);
       setCurrentUploadedImageUrl(newTempUrl);
-      setCurrentUploadedSource(lastEditablePhoto.source);
+      setCurrentUploadedSource(lastAdjustedPhoto.source);
       setShowImageAdjuster(true);
-    } else if (lastEditablePhoto.dataUrl) {
+    } else if (lastAdjustedPhoto.dataUrl) {
       // We have the dataUrl from localStorage - convert back to blob
       try {
-        const response = await fetch(lastEditablePhoto.dataUrl);
+        const response = await fetch(lastAdjustedPhoto.dataUrl);
         const blob = await response.blob();
         const newTempUrl = URL.createObjectURL(blob);
         
-        // Update the lastEditablePhoto with the new blob for future use
-        setLastEditablePhoto({
-          ...lastEditablePhoto,
+        // Update the lastAdjustedPhoto with the new blob for future use
+        setLastAdjustedPhoto({
+          ...lastAdjustedPhoto,
           blob: blob,
           imageUrl: newTempUrl
         });
         
         setCurrentUploadedImageUrl(newTempUrl);
-        setCurrentUploadedSource(lastEditablePhoto.source);
+        setCurrentUploadedSource(lastAdjustedPhoto.source);
         setShowImageAdjuster(true);
       } catch (error) {
         console.error('Failed to restore image from dataUrl:', error);
         alert('Failed to restore previous photo. Please take a new photo.');
-        setLastEditablePhoto(null);
+        setLastAdjustedPhoto(null);
       }
     } else {
       // No usable image data
       console.warn('No usable image data found');
-      setLastEditablePhoto(null);
+      setLastAdjustedPhoto(null);
     }
   };
 
   // Handle opening ImageAdjuster for next batch generation from PhotoGallery
   const handleOpenImageAdjusterForNextBatch = async () => {
-    if (!lastEditablePhoto) {
-      console.warn('No lastEditablePhoto available for next batch');
+    if (!lastAdjustedPhoto) {
+      console.warn('No lastAdjustedPhoto available for next batch');
       return;
     }
     
-    if (lastEditablePhoto.blob) {
+    if (lastAdjustedPhoto.blob) {
       // We have the blob - can reopen the adjuster
-      const newTempUrl = URL.createObjectURL(lastEditablePhoto.blob);
+      const newTempUrl = URL.createObjectURL(lastAdjustedPhoto.blob);
       setCurrentUploadedImageUrl(newTempUrl);
-      setCurrentUploadedSource(lastEditablePhoto.source);
+      setCurrentUploadedSource(lastAdjustedPhoto.source);
       setShowImageAdjuster(true);
-    } else if (lastEditablePhoto.dataUrl) {
+    } else if (lastAdjustedPhoto.dataUrl) {
       // We have the dataUrl from localStorage - convert back to blob
       try {
-        const response = await fetch(lastEditablePhoto.dataUrl);
+        const response = await fetch(lastAdjustedPhoto.dataUrl);
         const blob = await response.blob();
         const newTempUrl = URL.createObjectURL(blob);
         
-        // Update the lastEditablePhoto with the new blob for future use
-        setLastEditablePhoto({
-          ...lastEditablePhoto,
+        // Update the lastAdjustedPhoto with the new blob for future use
+        setLastAdjustedPhoto({
+          ...lastAdjustedPhoto,
           blob: blob,
           imageUrl: newTempUrl
         });
         
         setCurrentUploadedImageUrl(newTempUrl);
-        setCurrentUploadedSource(lastEditablePhoto.source);
+        setCurrentUploadedSource(lastAdjustedPhoto.source);
         setShowImageAdjuster(true);
       } catch (error) {
         console.error('Failed to restore image from dataUrl:', error);
         alert('Failed to restore previous photo. Please take a new photo.');
-        setLastEditablePhoto(null);
+        setLastAdjustedPhoto(null);
       }
     } else {
       // No usable image data
       console.warn('No usable image data found');
-      setLastEditablePhoto(null);
+      setLastAdjustedPhoto(null);
     }
   };
 
@@ -8276,14 +8422,55 @@ const App = () => {
           onConfirm={handleAdjustedImage}
           onCancel={handleCancelAdjusting}
           initialPosition={
-            lastEditablePhoto?.adjustments?.position || defaultPosition
+            lastAdjustedPhoto?.adjustments?.position || defaultPosition
           }
           defaultScale={
-            lastEditablePhoto?.adjustments?.scale || defaultScaleValue
+            lastAdjustedPhoto?.adjustments?.scale || defaultScaleValue
           }
           numImages={numImages}
           stylePrompts={stylePrompts}
           onNavigateToVibeExplorer={handleNavigateToPromptSelector}
+          photoSource={currentUploadedSource || lastAdjustedPhoto?.source || 'upload'}
+          isCameraActive={!!(videoReference.current && videoReference.current.srcObject)}
+          onTakeNewPhoto={async () => {
+            // Close the current adjuster
+            setShowImageAdjuster(false);
+            if (currentUploadedImageUrl) {
+              URL.revokeObjectURL(currentUploadedImageUrl);
+            }
+            setCurrentUploadedImageUrl('');
+            
+            // Check if we're currently viewing the photo grid
+            // If we are, navigate to camera. Otherwise, just close adjuster (already in camera mode)
+            if (showPhotoGrid) {
+              // We're on the photo grid page, need to navigate to camera
+              console.log('📷 Navigating from photo grid to camera to take new photo');
+              
+              // Hide photo gallery
+              setShowPhotoGrid(false);
+              setSelectedPhotoIndex(null);
+              
+              // Don't show start menu, just directly start the camera
+              // Enumerate camera devices first
+              await listCameras();
+              
+              // Start camera directly
+              const preferredDeviceId = preferredCameraDeviceId || selectedCameraDeviceId;
+              console.log('📹 Starting camera with preferred device:', preferredDeviceId || 'auto-select');
+              await startCamera(preferredDeviceId);
+              setCameraManuallyStarted(true);
+            } else {
+              // We're already in camera mode (adjuster was overlay on camera view)
+              // Just close the adjuster and restart the camera for a new photo
+              console.log('📷 Already in camera mode, restarting camera to take new photo');
+              
+              // Restart the camera (it was stopped after capture)
+              setTimeout(async () => {
+                const preferredDeviceId = preferredCameraDeviceId || selectedCameraDeviceId;
+                await startCamera(preferredDeviceId);
+              }, 100);
+            }
+          }}
           onUploadNew={() => {
             // Trigger file input to upload a new image
             const input = document.createElement('input');

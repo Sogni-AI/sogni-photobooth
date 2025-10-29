@@ -27,7 +27,10 @@ const ImageAdjuster = ({
   stylePrompts = {},
   headerText = 'Adjust Your Image',
   onUploadNew = null,
-  onNavigateToVibeExplorer = null
+  onNavigateToVibeExplorer = null,
+  photoSource = 'upload', // 'camera' or 'upload'
+  onTakeNewPhoto = null,
+  isCameraActive = false // Whether camera is currently running in the background
 }) => {
 
   
@@ -754,16 +757,6 @@ const ImageAdjuster = ({
               </>
             )}
             
-            {/* Replace/Swap image button - positioned in bottom right corner */}
-            {onUploadNew && (
-              <button
-                className="image-adjuster-swap-overlay-button"
-                onClick={onUploadNew}
-                title="Upload a different image"
-              >
-                🔄
-              </button>
-            )}
           </div>
 
         </div>
@@ -798,13 +791,6 @@ const ImageAdjuster = ({
         </div>
         
         <div className="image-adjustment-buttons">
-          <button 
-            className="cancel-button"
-            onClick={onCancel}
-          >
-            Cancel
-          </button>
-          
           <div className="batch-dropdown-container" ref={dropdownRef}>
             <button 
               className="confirm-button confirm-button-main" 
@@ -845,6 +831,27 @@ const ImageAdjuster = ({
               </div>
             )}
           </div>
+          
+          {/* Replace/Swap image button - now in button bar */}
+          {(onUploadNew || onTakeNewPhoto) && (
+            <button
+              className="swap-image-button"
+              onClick={photoSource === 'camera' && onTakeNewPhoto ? onTakeNewPhoto : onUploadNew}
+              title={photoSource === 'camera' ? (isCameraActive ? "Close and take new photo" : "Take a new photo") : "Upload a different image"}
+            >
+              {photoSource === 'camera' ? '📷' : '🔄'}
+              <span className="button-label">
+                {photoSource === 'camera' ? 'Take New' : 'Re-upload'}
+              </span>
+            </button>
+          )}
+          
+          <button 
+            className="cancel-button"
+            onClick={onCancel}
+          >
+            Cancel
+          </button>
         </div>
         
         {/* Style Dropdown */}
@@ -888,7 +895,10 @@ ImageAdjuster.propTypes = {
   stylePrompts: PropTypes.object,
   headerText: PropTypes.string,
   onUploadNew: PropTypes.func,
-  onNavigateToVibeExplorer: PropTypes.func
+  onNavigateToVibeExplorer: PropTypes.func,
+  photoSource: PropTypes.oneOf(['camera', 'upload']),
+  onTakeNewPhoto: PropTypes.func,
+  isCameraActive: PropTypes.bool
 };
 
 export default ImageAdjuster; 
