@@ -6084,6 +6084,7 @@ const App = () => {
           <CameraStartMenu
             onTakePhoto={handleTakePhotoOption}
             onBrowsePhoto={handleBrowsePhotoOption}
+            onEditUploadedPhoto={handleEditUploadedPhoto}
             onDragPhoto={handleDragPhotoOption}
             isProcessing={!!activeProjectReference.current || isPhotoButtonCooldown}
             onViewPhotos={null} // Remove the onViewPhotos prop as we're moving the button out
@@ -7451,6 +7452,63 @@ const App = () => {
     }
   };
 
+  // Handler for editing/re-adjusting the previous uploaded photo
+  const handleEditUploadedPhoto = async () => {
+    // Check if there's a previous uploaded photo (source: 'upload')
+    if (!lastEditablePhoto || lastEditablePhoto.source !== 'upload') {
+      return false; // No previous uploaded photo, allow normal file upload
+    }
+    
+    console.log('📸 Reopening Image Adjuster with previous uploaded photo');
+    
+    // Hide start menu with animation
+    const startMenuElement = document.querySelector('.camera-start-menu');
+    if (startMenuElement) {
+      startMenuElement.classList.add('exiting');
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+    setShowStartMenu(false);
+    
+    // Reopen the adjuster with the previous photo
+    if (lastEditablePhoto.blob) {
+      // We have the blob - can reopen the adjuster
+      const newTempUrl = URL.createObjectURL(lastEditablePhoto.blob);
+      setCurrentUploadedImageUrl(newTempUrl);
+      setCurrentUploadedSource(lastEditablePhoto.source);
+      setShowImageAdjuster(true);
+    } else if (lastEditablePhoto.dataUrl) {
+      // We have the dataUrl from localStorage - convert back to blob
+      try {
+        const response = await fetch(lastEditablePhoto.dataUrl);
+        const blob = await response.blob();
+        const newTempUrl = URL.createObjectURL(blob);
+        
+        // Update the lastEditablePhoto with the new blob for future use
+        setLastEditablePhoto({
+          ...lastEditablePhoto,
+          blob: blob,
+          imageUrl: newTempUrl
+        });
+        
+        setCurrentUploadedImageUrl(newTempUrl);
+        setCurrentUploadedSource(lastEditablePhoto.source);
+        setShowImageAdjuster(true);
+      } catch (error) {
+        console.error('Failed to restore image from dataUrl:', error);
+        alert('Failed to restore previous photo. Please upload a new photo.');
+        setLastEditablePhoto(null);
+        setShowStartMenu(true);
+      }
+    } else {
+      // No usable image data
+      console.warn('No usable image data found');
+      setLastEditablePhoto(null);
+      return false; // Allow normal file upload
+    }
+    
+    return true; // Successfully reopened with previous photo
+  };
+
   // Handle opening ImageAdjuster for next batch generation from PhotoGallery
   const handleOpenImageAdjusterForNextBatch = async () => {
     if (!lastEditablePhoto) {
@@ -8070,6 +8128,38 @@ const App = () => {
           }
           numImages={numImages}
           stylePrompts={stylePrompts}
+          onUploadNew={currentUploadedSource === 'upload' ? () => {
+            // Trigger file input to upload a new image
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            input.onchange = async (e) => {
+              const file = e.target.files?.[0];
+              if (file) {
+                // Check file size (17MB limit)
+                if (file.size > 17 * 1024 * 1024) {
+                  alert("Image must be less than 17MB.");
+                  return;
+                }
+
+                // Check file type
+                if (!file.type.startsWith('image/')) {
+                  alert("Please select an image file (PNG or JPG).");
+                  return;
+                }
+
+                // Close the current adjuster
+                setShowImageAdjuster(false);
+                if (currentUploadedImageUrl) {
+                  URL.revokeObjectURL(currentUploadedImageUrl);
+                }
+                
+                // Upload the new file (will reopen adjuster with new image)
+                await handleBrowsePhotoOption(file);
+              }
+            };
+            input.click();
+          } : undefined}
         />
       )}
 

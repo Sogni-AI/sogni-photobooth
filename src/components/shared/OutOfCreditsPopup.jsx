@@ -149,86 +149,67 @@ const OutOfCreditsPopup = ({ isOpen, onClose, onPurchase, balances, currentToken
               className="sloth-mascot"
             />
           </div>
-          <h2>Uh oh! You&apos;re out of credits!</h2>
+          <div className="out-of-credits-text">
+            <h1>Uh oh! You&apos;re out of credits!</h1>
+            <h2>
+              {showSwitchSuggestion
+                ? `Good news! You have enough ${alternativeTokenType === 'spark' ? 'Spark Points' : 'SOGNI'} in your other wallet`
+                : 'Get back to creating in no time'}
+            </h2>
+          </div>
         </div>
 
         <div className="out-of-credits-modal-content">
           <div className="out-of-credits-message">
             {showSwitchSuggestion ? (
-              <>
-                <p className="message-main">
-                  Good news! You have enough {alternativeTokenType === 'spark' ? 'Spark Points' : 'SOGNI'} in your other wallet.
-                </p>
-                <div className="credits-info">
-                  <div className="info-item switch-wallet-item" onClick={handleSwitchWallet}>
-                    <span className="info-icon">🔄</span>
-                    <span className="info-text">
-                      Switch to <strong>{alternativeTokenType === 'spark' ? 'Spark Points' : 'SOGNI'}</strong> wallet
-                    </span>
-                  </div>
-                  <div className="info-item" onClick={handleInfoItemClick}>
-                    <span className="info-icon">🎁</span>
-                    <span className="info-text">Check for <strong>free daily credits</strong></span>
-                  </div>
-                  <div className="info-item" onClick={handleInfoItemClick}>
-                    <span className="info-icon">💳</span>
-                    <span className="info-text">Buy more render credits</span>
-                  </div>
+              <div className="credits-info">
+                <div className="info-item switch-wallet-item" onClick={handleSwitchWallet}>
+                  <span className="info-icon">🔄</span>
+                  <span className="info-text">
+                    Switch to <strong>{alternativeTokenType === 'spark' ? 'Spark Points' : 'SOGNI'}</strong> wallet
+                  </span>
                 </div>
-              </>
+                <div className="info-item" onClick={handleInfoItemClick}>
+                  <span className="info-icon">🎁</span>
+                  <span className="info-text">Check for <strong>free daily credits</strong></span>
+                </div>
+                <div className="info-item" onClick={handleInfoItemClick}>
+                  <span className="info-icon">💳</span>
+                  <span className="info-text">Buy more render credits</span>
+                </div>
+              </div>
             ) : (
-              <>
-                <p className="message-main">
-                  You can get back to creating in no time.
-                </p>
-                <div className="credits-info">
-                  <div className="info-item" onClick={handleInfoItemClick}>
-                    <span className="info-icon">🎁</span>
-                    <span className="info-text">Check for <strong>free daily credits</strong></span>
-                  </div>
-                  <div className="info-item" onClick={handleInfoItemClick}>
-                    <span className="info-icon">💳</span>
-                    <span className="info-text">Buy more render credits</span>
-                  </div>
+              <div className="credits-info">
+                <div className="info-item" onClick={handleInfoItemClick}>
+                  <span className="info-icon">🎁</span>
+                  <span className="info-text">Check for <strong>free daily credits</strong></span>
                 </div>
-              </>
+                <div className="info-item" onClick={handleInfoItemClick}>
+                  <span className="info-icon">💳</span>
+                  <span className="info-text">Buy more render credits</span>
+                </div>
+              </div>
             )}
           </div>
         </div>
 
         <div className="out-of-credits-modal-footer">
           {showSwitchSuggestion ? (
-            <>
-              <button
-                className="out-of-credits-get-credits-btn out-of-credits-switch-btn"
-                onClick={handleSwitchWallet}
-              >
-                <span className="get-credits-text">Switch Wallet & Continue</span>
-                <span className="get-credits-arrow">→</span>
-              </button>
-              <button
-                className="out-of-credits-close-btn"
-                onClick={onClose}
-              >
-                Close
-              </button>
-            </>
+            <button
+              className="out-of-credits-get-credits-btn out-of-credits-switch-btn"
+              onClick={handleSwitchWallet}
+            >
+              <span className="get-credits-text">Switch Wallet & Continue</span>
+              <span className="get-credits-arrow">→</span>
+            </button>
           ) : (
-            <>
-              <button
-                className="out-of-credits-get-credits-btn"
-                onClick={handleGetCreditsClick}
-              >
-                <span className="get-credits-text">Get More Credits</span>
-                <span className="get-credits-arrow">→</span>
-              </button>
-              <button
-                className="out-of-credits-close-btn"
-                onClick={onClose}
-              >
-                Close
-              </button>
-            </>
+            <button
+              className="out-of-credits-get-credits-btn"
+              onClick={handleGetCreditsClick}
+            >
+              <span className="get-credits-text">Get More Credits</span>
+              <span className="get-credits-arrow">→</span>
+            </button>
           )}
         </div>
       </div>
