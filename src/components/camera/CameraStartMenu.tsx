@@ -1,5 +1,4 @@
 import React, { useRef, useState, useMemo } from 'react';
-import MetricsBar from '../shared/MetricsBar';
 import StyleDropdown from '../shared/StyleDropdown';
 import { styleIdToDisplay } from '../../utils';
 import { generateGalleryFilename } from '../../utils/galleryLoader';
@@ -508,8 +507,6 @@ const CameraStartMenu: React.FC<CameraStartMenuProps> = ({
                   </div>
                 </div>
               </div>
-
-              <MetricsBar />
             </div>
 
             {/* Splash button - return to intro */}
