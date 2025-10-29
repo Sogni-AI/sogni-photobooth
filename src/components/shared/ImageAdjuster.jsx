@@ -679,36 +679,6 @@ const ImageAdjuster = ({
             ? 'Crop and position your style reference image.' 
             : 'Smaller faces can give more room for creativity.'}
         </p>
-
-        {/* Show "Upload new image" button if callback is provided */}
-        {onUploadNew && (
-          <button
-            onClick={onUploadNew}
-            style={{
-              marginBottom: '16px',
-              padding: '10px 20px',
-              background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-              border: 'none',
-              borderRadius: '12px',
-              color: 'white',
-              fontSize: '14px',
-              fontFamily: '"Permanent Marker", cursive',
-              cursor: 'pointer',
-              boxShadow: '0 2px 8px rgba(16, 185, 129, 0.3)',
-              transition: 'all 0.2s ease'
-            }}
-            onMouseOver={(e) => {
-              e.currentTarget.style.transform = 'scale(1.05)';
-              e.currentTarget.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.4)';
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.transform = 'scale(1)';
-              e.currentTarget.style.boxShadow = '0 2px 8px rgba(16, 185, 129, 0.3)';
-            }}
-          >
-            📁 Upload New Image
-          </button>
-        )}
         
         <div 
           className="image-frame"
@@ -782,6 +752,17 @@ const ImageAdjuster = ({
                 <div className="frame-corner bottom-right"></div>
               </>
             )}
+            
+            {/* Replace/Swap image button - positioned in bottom right corner */}
+            {onUploadNew && (
+              <button
+                className="image-adjuster-swap-overlay-button"
+                onClick={onUploadNew}
+                title="Upload a different image"
+              >
+                🔄
+              </button>
+            )}
           </div>
 
         </div>
@@ -822,6 +803,7 @@ const ImageAdjuster = ({
           >
             Cancel
           </button>
+          
           <div className="batch-dropdown-container" ref={dropdownRef}>
             <button 
               className="confirm-button confirm-button-main" 

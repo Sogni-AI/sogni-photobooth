@@ -335,6 +335,42 @@
   background-color: #555;
 }
 
+/* Swap/Replace image button overlay - positioned on bottom right of image */
+.image-adjuster-swap-overlay-button {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  pointer-events: auto;
+  z-index: 100;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s ease;
+  padding: 0;
+}
+
+.image-adjuster-swap-overlay-button:hover {
+  background: rgba(16, 185, 129, 0.8);
+  border-color: rgba(16, 185, 129, 0.6);
+  transform: scale(1.15) rotate(180deg);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+}
+
+.image-adjuster-swap-overlay-button:active {
+  transform: scale(1.05) rotate(180deg);
+}
+
 .confirm-button {
   background: linear-gradient(135deg, #ff7eb3, #ff5e8a);
   color: white;
@@ -544,6 +580,14 @@
   .confirm-button-main {
     padding: 12px 6px 12px 24px !important;
   }
+  
+  .image-adjuster-swap-overlay-button {
+    width: 40px;
+    height: 40px;
+    font-size: 18px;
+    bottom: 16px;
+    right: 16px;
+  }
 
   .confirm-button-dropdown {
     padding: 12px 10px !important;
@@ -594,7 +638,7 @@
   
   .image-adjuster-style-text {
     font-size: 11px;
-    max-width: 100px;
+    max-width: 180px;
   }
   
   .image-adjuster-style-icon {
@@ -618,6 +662,14 @@
 
   .confirm-button-main {
     padding: 8px 6px 8px 16px !important;
+  }
+  
+  .image-adjuster-swap-overlay-button {
+    width: 32px;
+    height: 32px;
+    font-size: 14px;
+    bottom: 8px;
+    right: 8px;
   }
 
   .confirm-button-dropdown {

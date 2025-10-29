@@ -62,6 +62,9 @@ interface CameraStartMenuProps {
   photoSourceType?: 'camera' | 'upload' | null;
   reusablePhotoUrl?: string | null;
   reusablePhotoSourceType?: 'camera' | 'upload' | null;
+  // Handler to show existing photo in adjuster
+  onShowExistingUpload?: () => void;
+  hasExistingUpload?: boolean;
 }
 
 const CameraStartMenu: React.FC<CameraStartMenuProps> = ({
@@ -83,7 +86,9 @@ const CameraStartMenu: React.FC<CameraStartMenuProps> = ({
   originalPhotoUrl = null,
   photoSourceType = null,
   reusablePhotoUrl = null,
-  reusablePhotoSourceType = null
+  reusablePhotoSourceType = null,
+  onShowExistingUpload,
+  hasExistingUpload = false
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showStyleDropdown, setShowStyleDropdown] = useState(false);
@@ -214,7 +219,13 @@ const CameraStartMenu: React.FC<CameraStartMenuProps> = ({
   }, [selectedStyle, portraitType, randomStyleForSamplers, styleReferenceImage]);
 
   const handleBrowseClick = () => {
-    fileInputRef.current?.click();
+    // If there's an existing upload stored, show the adjuster with that photo first
+    if (hasExistingUpload && onShowExistingUpload) {
+      onShowExistingUpload();
+    } else {
+      // Otherwise, trigger file input to select a new photo
+      fileInputRef.current?.click();
+    }
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {

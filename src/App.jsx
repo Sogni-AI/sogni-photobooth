@@ -6120,6 +6120,12 @@ const App = () => {
                   ? lastPhotoData.sourceType
                   : null
             }
+            // Handler to show existing upload in adjuster
+            onShowExistingUpload={handleShowExistingUpload}
+            hasExistingUpload={
+              // Check if there's a stored upload (not camera photo, not default Einstein)
+              !!(lastEditablePhoto && lastEditablePhoto.source === 'upload' && (lastEditablePhoto.blob || lastEditablePhoto.dataUrl))
+            }
           />
           
 
@@ -6391,6 +6397,68 @@ const App = () => {
     console.log('📹 Starting camera with preferred device:', preferredDeviceId || 'auto-select');
     await startCamera(preferredDeviceId);
     setCameraManuallyStarted(true); // User explicitly chose to take a photo
+  };
+
+  // Handler to show existing upload in ImageAdjuster
+  const handleShowExistingUpload = async () => {
+    if (!lastEditablePhoto) {
+      console.warn('No lastEditablePhoto available to show');
+      return;
+    }
+
+    // Add exit animation class
+    const startMenuElement = document.querySelector('.camera-start-menu');
+    if (startMenuElement) {
+      startMenuElement.classList.add('exiting');
+      
+      // Wait for animation to complete before hiding
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+    
+    setShowStartMenu(false);
+
+    // Check if Sogni is ready
+    if (!isSogniReady) {
+      alert('Sogni is not ready yet. Please try again in a moment.');
+      setShowStartMenu(true);
+      return;
+    }
+
+    if (lastEditablePhoto.blob) {
+      // We have the blob - can reopen the adjuster
+      const newTempUrl = URL.createObjectURL(lastEditablePhoto.blob);
+      setCurrentUploadedImageUrl(newTempUrl);
+      setCurrentUploadedSource(lastEditablePhoto.source);
+      setShowImageAdjuster(true);
+    } else if (lastEditablePhoto.dataUrl) {
+      // We have the dataUrl from localStorage - convert back to blob
+      try {
+        const response = await fetch(lastEditablePhoto.dataUrl);
+        const blob = await response.blob();
+        const newTempUrl = URL.createObjectURL(blob);
+        
+        // Update the lastEditablePhoto with the new blob for future use
+        setLastEditablePhoto({
+          ...lastEditablePhoto,
+          blob: blob,
+          imageUrl: newTempUrl
+        });
+        
+        setCurrentUploadedImageUrl(newTempUrl);
+        setCurrentUploadedSource(lastEditablePhoto.source);
+        setShowImageAdjuster(true);
+      } catch (error) {
+        console.error('Failed to restore image from dataUrl:', error);
+        alert('Failed to restore previous photo. Please upload a new photo.');
+        setLastEditablePhoto(null);
+        setShowStartMenu(true);
+      }
+    } else {
+      // No usable image data
+      console.warn('No usable image data found');
+      setLastEditablePhoto(null);
+      setShowStartMenu(true);
+    }
   };
 
   // Handler for the "Browse Photo" option in start menu
@@ -8072,6 +8140,48 @@ const App = () => {
           }
           numImages={numImages}
           stylePrompts={stylePrompts}
+          onUploadNew={() => {
+            // Trigger file input to upload a new image
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            input.style.display = 'none';
+            
+            // Append to body for mobile compatibility
+            document.body.appendChild(input);
+            
+            input.onchange = async (e) => {
+              const file = e.target.files?.[0];
+              
+              // Clean up the input element
+              document.body.removeChild(input);
+              
+              if (file) {
+                // Check file size (17MB limit)
+                if (file.size > 17 * 1024 * 1024) {
+                  alert("Image must be less than 17MB.");
+                  return;
+                }
+                
+                // Close the current adjuster
+                setShowImageAdjuster(false);
+                if (currentUploadedImageUrl) {
+                  URL.revokeObjectURL(currentUploadedImageUrl);
+                }
+                
+                // Upload the new file (will reopen adjuster with new image)
+                await handleBrowsePhotoOption(file);
+              }
+            };
+            
+            // Also handle cancel/close of file picker
+            input.oncancel = () => {
+              document.body.removeChild(input);
+            };
+            
+            // Trigger click
+            input.click();
+          }}
         />
       )}
 
@@ -8098,8 +8208,17 @@ const App = () => {
             const input = document.createElement('input');
             input.type = 'file';
             input.accept = 'image/*';
+            input.style.display = 'none';
+            
+            // Append to body for mobile compatibility
+            document.body.appendChild(input);
+            
             input.onchange = async (e) => {
               const file = e.target.files?.[0];
+              
+              // Clean up the input element
+              document.body.removeChild(input);
+              
               if (file) {
                 // Close the current adjuster
                 setShowStyleReferenceAdjuster(false);
@@ -8107,6 +8226,13 @@ const App = () => {
                 await handleStyleReferenceUpload(file);
               }
             };
+            
+            // Also handle cancel/close of file picker
+            input.oncancel = () => {
+              document.body.removeChild(input);
+            };
+            
+            // Trigger click
             input.click();
           }}
         />
