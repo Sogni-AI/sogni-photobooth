@@ -54,6 +54,7 @@ const StyleDropdown = ({
   });
   const [isThemesSectionOpen, setIsThemesSectionOpen] = useState(false);
   const [isIndividualStylesOpen, setIsIndividualStylesOpen] = useState(true); // Open by default
+  const [showSearchInput, setShowSearchInput] = useState(false);
   
   // Handle slide-in panel closing animation
   const handleClose = () => {
@@ -603,38 +604,59 @@ const StyleDropdown = ({
           tabIndex={0}
         >
           <span>👤 Individual styles</span>
-          <span className="collapse-arrow">{isIndividualStylesOpen ? '▼' : '▶'}</span>
+          <div className="section-header-controls">
+            {isIndividualStylesOpen && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (showSearchInput) {
+                    // Clear search when closing
+                    setSearchQuery('');
+                  }
+                  setShowSearchInput(!showSearchInput);
+                }}
+                className="header-control-btn"
+                title="Search styles"
+              >
+                🔍
+              </button>
+            )}
+            <span className="collapse-arrow">{isIndividualStylesOpen ? '▼' : '▶'}</span>
+          </div>
         </div>
 
         {isIndividualStylesOpen && (
           <div className="collapsible-content">
             {/* Search Section */}
-            <div className="style-section search-section">
-              <div className="search-input-wrapper">
-                <span className="search-icon">🔍</span>
-                <input
-                  type="text"
-                  placeholder="Search styles..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="style-search-input"
-                  autoComplete="off"
-                  autoCorrect="off"
-                  autoCapitalize="off"
-                  spellCheck="false"
-                  data-form-type="other"
-                />
-                {searchQuery && (
-                  <button
-                    className="search-clear-btn"
-                    onClick={() => setSearchQuery('')}
-                    aria-label="Clear search"
-                  >
-                    ✕
-                  </button>
-                )}
+            {showSearchInput && (
+              <div className="style-section search-section">
+                <div className="search-input-wrapper">
+                  <span className="search-icon">🔍</span>
+                  <input
+                    type="text"
+                    placeholder="Search styles..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="style-search-input"
+                    autoComplete="off"
+                    autoCorrect="off"
+                    autoCapitalize="off"
+                    spellCheck="false"
+                    data-form-type="other"
+                    autoFocus
+                  />
+                  {searchQuery && (
+                    <button
+                      className="search-clear-btn"
+                      onClick={() => setSearchQuery('')}
+                      aria-label="Clear search"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
               </div>
-            </div>
+            )}
 
             <div className="style-list">
               {Object.keys(defaultStylePrompts)
