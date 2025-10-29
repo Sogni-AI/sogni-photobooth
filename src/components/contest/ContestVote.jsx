@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useSogniAuth } from '../../services/sogniAuth';
+import { useMusicPlayer } from '../../context/MusicPlayerContext';
 import LoginModal from '../auth/LoginModal';
 import { AuthStatus } from '../auth/AuthStatus';
 import '../../styles/contest/ContestVote.css';
 
 const ContestVote = () => {
   const { isAuthenticated, user } = useSogniAuth();
+  const { isEnabled, enable: enableMusic } = useMusicPlayer();
   const [contestId] = useState('halloween');
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -59,6 +61,13 @@ const ContestVote = () => {
       setShowLoginModal(false);
     }
   }, [isAuthenticated, showLoginModal]);
+
+  // Enable music player when component mounts
+  useEffect(() => {
+    if (!isEnabled) {
+      enableMusic();
+    }
+  }, [isEnabled, enableMusic]);
 
   const formatDate = (timestamp) => {
     return new Date(timestamp).toLocaleString();
