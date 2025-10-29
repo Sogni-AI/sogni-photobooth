@@ -303,13 +303,13 @@ body:has(.promo-modal-overlay) .halloween-notification-tooltip {
     padding: 6px 10px;
   }
 
-  /* Mobile: hide text, show emoji */
+  /* Mobile: hide emoji, keep text */
   .compete-text {
-    display: none;
+    display: inline;
   }
 
   .compete-emoji {
-    display: inline;
+    display: none;
   }
 
   /* Reposition speech bubble arrow to point upward (toward pumpkin) */

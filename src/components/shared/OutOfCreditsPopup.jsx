@@ -1,37 +1,10 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import '../../styles/components/OutOfCreditsPopup.css';
 
-const OutOfCreditsPopup = ({ isOpen, onClose, onPurchase, balances, currentTokenType, estimatedCost, onSwitchPaymentMethod }) => {
+const OutOfCreditsPopup = ({ isOpen, onClose, onPurchase }) => {
   const modalRef = useRef(null);
   const overlayRef = useRef(null);
-  const [showSwitchSuggestion, setShowSwitchSuggestion] = useState(false);
-  const [alternativeTokenType, setAlternativeTokenType] = useState(null);
-
-  // Check if switching to the alternative payment method would solve the problem
-  useEffect(() => {
-    if (!isOpen || !balances || !currentTokenType || !estimatedCost || !onSwitchPaymentMethod) {
-      setShowSwitchSuggestion(false);
-      setAlternativeTokenType(null);
-      return;
-    }
-
-    // Determine the alternative token type
-    const altTokenType = currentTokenType === 'spark' ? 'sogni' : 'spark';
-
-    // Get current and alternative balances
-    const currentBalance = parseFloat(balances[currentTokenType]?.net || '0');
-    const alternativeBalance = parseFloat(balances[altTokenType]?.net || '0');
-
-    // Check if current wallet is insufficient but alternative has enough
-    if (currentBalance < estimatedCost && alternativeBalance >= estimatedCost) {
-      setShowSwitchSuggestion(true);
-      setAlternativeTokenType(altTokenType);
-    } else {
-      setShowSwitchSuggestion(false);
-      setAlternativeTokenType(null);
-    }
-  }, [isOpen, balances, currentTokenType, estimatedCost, onSwitchPaymentMethod]);
 
   // Handle overlay click to close (more reliable on iOS/touch devices)
   const handleOverlayClick = (e) => {
@@ -127,13 +100,6 @@ const OutOfCreditsPopup = ({ isOpen, onClose, onPurchase, balances, currentToken
     }
   };
 
-  const handleSwitchWallet = () => {
-    if (onSwitchPaymentMethod && alternativeTokenType) {
-      onSwitchPaymentMethod(alternativeTokenType);
-      onClose();
-    }
-  };
-
   if (!isOpen) return null;
 
   return (
@@ -154,82 +120,36 @@ const OutOfCreditsPopup = ({ isOpen, onClose, onPurchase, balances, currentToken
 
         <div className="out-of-credits-modal-content">
           <div className="out-of-credits-message">
-            {showSwitchSuggestion ? (
-              <>
-                <p className="message-main">
-                  Good news! You have enough {alternativeTokenType === 'spark' ? 'Spark Points' : 'SOGNI'} in your other wallet.
-                </p>
-                <div className="credits-info">
-                  <div className="info-item switch-wallet-item" onClick={handleSwitchWallet}>
-                    <span className="info-icon">🔄</span>
-                    <span className="info-text">
-                      Switch to <strong>{alternativeTokenType === 'spark' ? 'Spark Points' : 'SOGNI'}</strong> wallet
-                    </span>
-                  </div>
-                  <div className="info-item" onClick={handleInfoItemClick}>
-                    <span className="info-icon">🎁</span>
-                    <span className="info-text">Check for <strong>free daily credits</strong></span>
-                  </div>
-                  <div className="info-item" onClick={handleInfoItemClick}>
-                    <span className="info-icon">💳</span>
-                    <span className="info-text">Buy more render credits</span>
-                  </div>
-                </div>
-              </>
-            ) : (
-              <>
-                <p className="message-main">
-                  You can get back to creating in no time.
-                </p>
-                <div className="credits-info">
-                  <div className="info-item" onClick={handleInfoItemClick}>
-                    <span className="info-icon">🎁</span>
-                    <span className="info-text">Check for <strong>free daily credits</strong></span>
-                  </div>
-                  <div className="info-item" onClick={handleInfoItemClick}>
-                    <span className="info-icon">💳</span>
-                    <span className="info-text">Buy more render credits</span>
-                  </div>
-                </div>
-              </>
-            )}
+            <p className="message-main">
+              You can get back to creating in no time.
+            </p>
+            <div className="credits-info">
+              <div className="info-item" onClick={handleInfoItemClick}>
+                <span className="info-icon">🎁</span>
+                <span className="info-text">Check for <strong>free daily credits</strong></span>
+              </div>
+              <div className="info-item" onClick={handleInfoItemClick}>
+                <span className="info-icon">💳</span>
+                <span className="info-text">Buy more render credits</span>
+              </div>
+            </div>
           </div>
         </div>
 
         <div className="out-of-credits-modal-footer">
-          {showSwitchSuggestion ? (
-            <>
-              <button
-                className="out-of-credits-get-credits-btn out-of-credits-switch-btn"
-                onClick={handleSwitchWallet}
-              >
-                <span className="get-credits-text">Switch Wallet & Continue</span>
-                <span className="get-credits-arrow">→</span>
-              </button>
-              <button
-                className="out-of-credits-close-btn"
-                onClick={onClose}
-              >
-                Close
-              </button>
-            </>
-          ) : (
-            <>
-              <button
-                className="out-of-credits-get-credits-btn"
-                onClick={handleGetCreditsClick}
-              >
-                <span className="get-credits-text">Get More Credits</span>
-                <span className="get-credits-arrow">→</span>
-              </button>
-              <button
-                className="out-of-credits-close-btn"
-                onClick={onClose}
-              >
-                Close
-              </button>
-            </>
-          )}
+          <button
+            className="out-of-credits-get-credits-btn"
+            onClick={handleGetCreditsClick}
+          >
+            <span className="get-credits-text">Get More Credits</span>
+            <span className="get-credits-arrow">→</span>
+          </button>
+          <button
+            className="out-of-credits-close-btn"
+            onClick={onClose}
+          >
+            Close
+          </button>
         </div>
       </div>
     </div>
@@ -240,10 +160,6 @@ OutOfCreditsPopup.propTypes = {
   isOpen: PropTypes.bool.isRequired,
   onClose: PropTypes.func.isRequired,
   onPurchase: PropTypes.func,
-  balances: PropTypes.object,
-  currentTokenType: PropTypes.oneOf(['spark', 'sogni']),
-  estimatedCost: PropTypes.number,
-  onSwitchPaymentMethod: PropTypes.func,
 };
 
 export default OutOfCreditsPopup;
