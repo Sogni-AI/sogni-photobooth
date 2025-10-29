@@ -444,14 +444,14 @@ const PhotoGallery = ({
     setFramedImageUrls({});
   }, [settings.sogniWatermark, settings.sogniWatermarkSize, settings.sogniWatermarkMargin, settings.qrCodeUrl]);
   
-  // Effect to handle the 10-second timeout for showing the "more" button during generation
+  // Effect to handle the 5-second timeout for showing the "more" button during generation
   useEffect(() => {
     if (isGenerating && selectedPhotoIndex === null) {
-      // Start the 10-second timeout when generation begins
+      // Start the 5-second timeout when generation begins
       setShowMoreButtonDuringGeneration(false);
       const timeoutId = setTimeout(() => {
         setShowMoreButtonDuringGeneration(true);
-      }, 20000); // 20 seconds
+      }, 5000); // 5 seconds
 
       return () => {
         clearTimeout(timeoutId);
