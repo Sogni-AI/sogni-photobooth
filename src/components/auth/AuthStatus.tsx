@@ -318,7 +318,7 @@ export const AuthStatus: React.FC<AuthStatusProps> = ({ onPurchaseClick, onSignu
                       Premium Boosted!
                     </div>
                     <div style={{ fontSize: '11px', opacity: 0.9 }}>
-                      {formatTokenAmount(balances?.spark.premiumCredit || '0')} boosts left
+                      {formatTokenAmount(balances?.spark.premiumCredit || '0')} premium credits left
                     </div>
                   </div>
                 )}

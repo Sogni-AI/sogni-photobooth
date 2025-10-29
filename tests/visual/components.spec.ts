@@ -32,7 +32,7 @@ test.describe('Component Visual Tests', () => {
     });
 
     // Selected state
-    await page.click('.style-option:has-text("Random Mix")');
+    await page.click('.style-option:has-text("Random: All")');
     await waitForAnimations(page);
     await expect(page.locator('.bottom-style-select')).toHaveScreenshot('style-button-selected.png', {
       maxDiffPixelRatio: 0.01

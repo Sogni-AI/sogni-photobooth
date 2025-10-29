@@ -1572,6 +1572,14 @@ const App = () => {
     // Clear selected photo state when entering Sample Gallery mode
     setSelectedPhotoIndex(null);
 
+    // Close ImageAdjuster if it's open
+    setShowImageAdjuster(false);
+    setShowStyleReferenceAdjuster(false);
+    if (currentUploadedImageUrl) {
+      URL.revokeObjectURL(currentUploadedImageUrl);
+      setCurrentUploadedImageUrl('');
+    }
+
     // Stop camera when entering Sample Gallery mode
     stopCamera();
 
@@ -8140,6 +8148,7 @@ const App = () => {
           }
           numImages={numImages}
           stylePrompts={stylePrompts}
+          onNavigateToVibeExplorer={handleNavigateToPromptSelector}
           onUploadNew={() => {
             // Trigger file input to upload a new image
             const input = document.createElement('input');
@@ -8203,6 +8212,7 @@ const App = () => {
           numImages={1}
           stylePrompts={stylePrompts}
           headerText="Adjust Your Style Reference"
+          onNavigateToVibeExplorer={handleNavigateToPromptSelector}
           onUploadNew={() => {
             // Trigger file input to upload a new style reference image
             const input = document.createElement('input');

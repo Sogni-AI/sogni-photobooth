@@ -2995,7 +2995,7 @@ const PhotoGallery = ({
               margin: '0 0 12px 0',
               textAlign: 'center'
             }}>
-              Pick a vibes preset
+              Style Picker Mode
             </h2>
             
             {/* Random Style Buttons */}
@@ -3033,7 +3033,7 @@ const PhotoGallery = ({
                 }}
               >
                 <span>🎲</span>
-                <span>Random Mix</span>
+                <span>Random: All</span>
               </button>
               
               {!isFluxKontextModel(selectedModel) && (
@@ -3064,7 +3064,7 @@ const PhotoGallery = ({
                   }}
                 >
                   <span>🔀</span>
-                  <span>Random Single</span>
+                  <span>Random: Single</span>
                 </button>
               )}
               
@@ -3645,63 +3645,93 @@ const PhotoGallery = ({
           <div style={{
             width: '100%'
           }}>
-              {/* Select All/Deselect All buttons */}
+              {/* Theme filter header with controls */}
               <div style={{
                 display: 'flex',
-                gap: '8px',
-                marginBottom: '16px',
-                justifyContent: 'flex-start'
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: '16px'
               }}>
-                <button
-                  onClick={() => {
-                    const allSelected = Object.fromEntries(
-                      Object.keys(THEME_GROUPS).map(groupId => [groupId, true])
-                    );
-                    setThemeGroupState(allSelected);
-                    saveThemeGroupPreferences(allSelected);
-                    if (onThemeChange) {
-                      onThemeChange(allSelected);
-                    }
-                  }}
-                  style={{
-                    background: 'linear-gradient(135deg, #72e3f2 0%, #5ccfe0 100%)',
-                    border: 'none',
-                    borderRadius: '8px',
-                    padding: '6px 10px',
-                    fontSize: '11px',
-                    fontWeight: 600,
-                    color: 'white',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease'
-                  }}
-                >
-                  Select All
-                </button>
-                <button
-                  onClick={() => {
-                    const allDeselected = Object.fromEntries(
-                      Object.keys(THEME_GROUPS).map(groupId => [groupId, false])
-                    );
-                    setThemeGroupState(allDeselected);
-                    saveThemeGroupPreferences(allDeselected);
-                    if (onThemeChange) {
-                      onThemeChange(allDeselected);
-                    }
-                  }}
-                  style={{
-                    background: 'linear-gradient(135deg, #9ca3af 0%, #6b7280 100%)',
-                    border: 'none',
-                    borderRadius: '8px',
-                    padding: '6px 10px',
-                    fontSize: '11px',
-                    fontWeight: 600,
-                    color: 'white',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease'
-                  }}
-                >
-                  Deselect All
-                </button>
+                <h3 style={{
+                  margin: 0,
+                  fontSize: '16px',
+                  fontFamily: '"Permanent Marker", cursive',
+                  color: 'white'
+                }}>
+                  🎨 Themes
+                </h3>
+                <div style={{
+                  display: 'flex',
+                  gap: '6px',
+                  alignItems: 'center'
+                }}>
+                  <button
+                    onClick={() => {
+                      const allSelected = Object.fromEntries(
+                        Object.keys(THEME_GROUPS).map(groupId => [groupId, true])
+                      );
+                      setThemeGroupState(allSelected);
+                      saveThemeGroupPreferences(allSelected);
+                      if (onThemeChange) {
+                        onThemeChange(allSelected);
+                      }
+                    }}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      fontFamily: '"Permanent Marker", cursive',
+                      fontSize: '11px',
+                      fontWeight: 600,
+                      color: 'white',
+                      cursor: 'pointer',
+                      padding: '3px 8px',
+                      borderRadius: '4px',
+                      transition: 'all 0.2s ease'
+                    }}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.background = 'none';
+                    }}
+                    title="Select all themes"
+                  >
+                    ALL
+                  </button>
+                  <button
+                    onClick={() => {
+                      const allDeselected = Object.fromEntries(
+                        Object.keys(THEME_GROUPS).map(groupId => [groupId, false])
+                      );
+                      setThemeGroupState(allDeselected);
+                      saveThemeGroupPreferences(allDeselected);
+                      if (onThemeChange) {
+                        onThemeChange(allDeselected);
+                      }
+                    }}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      fontFamily: '"Permanent Marker", cursive',
+                      fontSize: '11px',
+                      fontWeight: 600,
+                      color: 'white',
+                      cursor: 'pointer',
+                      padding: '3px 8px',
+                      borderRadius: '4px',
+                      transition: 'all 0.2s ease'
+                    }}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.background = 'none';
+                    }}
+                    title="Deselect all themes"
+                  >
+                    NONE
+                  </button>
+                </div>
               </div>
 
               <div style={{

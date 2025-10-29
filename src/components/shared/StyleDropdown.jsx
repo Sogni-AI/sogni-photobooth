@@ -1,9 +1,9 @@
 import React, { useRef, useEffect, useState } from 'react';
 import ReactDOM from 'react-dom';
 import { styleIdToDisplay } from '../../utils';
-import { THEME_GROUPS, getDefaultThemeGroupState, getEnabledPrompts } from '../../constants/themeGroups';
+import { THEME_GROUPS, getDefaultThemeGroupState } from '../../constants/themeGroups';
 import { getThemeGroupPreferences, saveThemeGroupPreferences } from '../../utils/cookies';
-import { isFluxKontextModel, getModelOptions } from '../../constants/settings';
+import { isFluxKontextModel } from '../../constants/settings';
 import { generateGalleryFilename } from '../../utils/galleryLoader';
 import CustomPromptPopup from './CustomPromptPopup';
 import '../../styles/style-dropdown.css';
@@ -16,7 +16,7 @@ const StyleDropdown = ({
   selectedStyle, 
   updateStyle, 
   defaultStylePrompts, 
-  setShowControlOverlay, 
+  setShowControlOverlay: _setShowControlOverlay, // eslint-disable-line no-unused-vars
   dropdownPosition = 'top', // Default value
   triggerButtonClass = '.bottom-style-select', // Default class for the main toolbar
   onThemeChange = null, // Callback when theme preferences change
@@ -27,7 +27,9 @@ const StyleDropdown = ({
   currentCustomPrompt = '', // Current custom prompt value
   portraitType = 'medium', // Portrait type for gallery preview images
   styleReferenceImage = null, // Style reference image for Copy Image Style mode
-  onEditStyleReference = null // Callback to edit existing style reference
+  onEditStyleReference = null, // Callback to edit existing style reference
+  onNavigateToVibeExplorer = null, // Callback to navigate to full Vibe Explorer
+  slideInPanel = false // Whether to render as a full-height slide-in panel
 }) => {
   const [position, setPosition] = useState({ top: 0, left: 0, width: 0 });
   const [mounted, setMounted] = useState(false);
@@ -40,9 +42,41 @@ const StyleDropdown = ({
     return { ...defaultState, ...saved };
   });
   const [showCustomPromptPopup, setShowCustomPromptPopup] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isClosing, setIsClosing] = useState(false);
+  const [isModelSectionOpen, setIsModelSectionOpen] = useState(false);
+  // Collapse Style Mode by default if an individual style is preselected
+  const [isStyleModeOpen, setIsStyleModeOpen] = useState(() => {
+    // Check if selectedStyle is an individual style (not a preset mode)
+    const isIndividualStyle = selectedStyle && 
+      !['custom', 'random', 'randomMix', 'oneOfEach', 'browseGallery', 'copyImageStyle'].includes(selectedStyle);
+    return !isIndividualStyle; // Collapse if individual style is selected
+  });
+  const [isThemesSectionOpen, setIsThemesSectionOpen] = useState(false);
+  const [isIndividualStylesOpen, setIsIndividualStylesOpen] = useState(true); // Open by default
+  
+  // Handle slide-in panel closing animation
+  const handleClose = () => {
+    if (slideInPanel) {
+      setIsClosing(true);
+      // Wait for animation to complete before actually closing
+      setTimeout(() => {
+        setIsClosing(false);
+        onClose();
+      }, 300); // Match animation duration
+    } else {
+      onClose();
+    }
+  };
   
   useEffect(() => {
     if (isOpen) {
+      // Skip positioning logic if we're in slide-in panel mode
+      if (slideInPanel) {
+        setMounted(true);
+        return;
+      }
+      
       // Find the style button in the DOM to position the dropdown
       const styleButton = document.querySelector(triggerButtonClass) || document.querySelector('.grid-style-btn');
       if (styleButton) {
@@ -144,11 +178,17 @@ const StyleDropdown = ({
       }
     } else {
       setMounted(false);
+      setIsClosing(false); // Reset closing state when dropdown closes
     }
-  }, [isOpen, dropdownPosition, triggerButtonClass]);
+  }, [isOpen, dropdownPosition, triggerButtonClass, slideInPanel]);
 
   useEffect(() => {
     if (isOpen) {
+      // Skip click outside handling for slide-in panel (backdrop handles it)
+      if (slideInPanel) {
+        return;
+      }
+      
       const handleClickOutside = (e) => {
         if (dropdownReference.current && !dropdownReference.current.contains(e.target)) {
           // Check if the click was on any style button
@@ -173,8 +213,11 @@ const StyleDropdown = ({
       }
       
       return () => document.removeEventListener('click', handleClickOutside);
+    } else {
+      // Reset search when dropdown closes
+      setSearchQuery('');
     }
-  }, [isOpen, onClose, triggerButtonClass, initialScrollDone]);
+  }, [isOpen, onClose, triggerButtonClass, initialScrollDone, slideInPanel]);
 
   // Add event listener to prevent auto-scrolling after user interaction
   useEffect(() => {
@@ -209,6 +252,30 @@ const StyleDropdown = ({
     }
   };
 
+  // Handle Select All themes
+  const handleSelectAllThemes = () => {
+    const allSelected = Object.fromEntries(
+      Object.keys(THEME_GROUPS).map(groupId => [groupId, true])
+    );
+    setThemeGroupState(allSelected);
+    saveThemeGroupPreferences(allSelected);
+    if (onThemeChange) {
+      onThemeChange(allSelected);
+    }
+  };
+
+  // Handle Deselect All themes
+  const handleDeselectAllThemes = () => {
+    const allDeselected = Object.fromEntries(
+      Object.keys(THEME_GROUPS).map(groupId => [groupId, false])
+    );
+    setThemeGroupState(allDeselected);
+    saveThemeGroupPreferences(allDeselected);
+    if (onThemeChange) {
+      onThemeChange(allDeselected);
+    }
+  };
+
   // Handle custom prompt application
   const handleApplyCustomPrompt = (promptText) => {
     // First update the style to custom
@@ -222,11 +289,6 @@ const StyleDropdown = ({
 
   // Check if we're using Flux.1 Kontext
   const isFluxKontext = selectedModel && isFluxKontextModel(selectedModel);
-  
-  // Filter prompts based on enabled theme groups (only for non-Flux models)
-  const enabledPrompts = isFluxKontext 
-    ? defaultStylePrompts 
-    : getEnabledPrompts(themeGroupState, defaultStylePrompts);
 
   // If not mounted or not open, don't render anything
   if (!mounted || !isOpen) return (
@@ -245,201 +307,339 @@ const StyleDropdown = ({
   return (
     <>
       {ReactDOM.createPortal(
-        <div 
-          ref={dropdownReference}
-          className={`style-dropdown ${actualPosition}-position ${position.isMobilePortrait ? 'mobile-portrait' : ''}`}
-          style={{
-            ...(actualPosition === 'top' 
-              ? { bottom: position.bottom } 
-              : { top: position.top }),
-            left: position.isMobilePortrait ? 10 : position.left,
-            width: position.width,
-          }}
-        >
-      {/* Model Selector - First item in dropdown */}
-      {onModelSelect && selectedModel && (
         <>
-          <div className="style-section model-selector">
-            <div className="section-header" style={{ color: '#333' }}>
-              <span>🤖 Model</span>
-            </div>
-            <select
-              value={selectedModel}
-              onChange={(e) => {
-                console.log('StyleDropdown: Model changed to', e.target.value);
-                onModelSelect(e.target.value);
-              }}
-              onClick={(e) => e.stopPropagation()}
-              style={{
-                width: '100%',
-                padding: '10px 12px',
-                fontSize: '14px',
-                fontFamily: 'inherit',
-                background: 'rgba(255, 255, 255, 0.95)',
-                border: '2px solid rgba(114, 227, 242, 0.3)',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                outline: 'none',
-                transition: 'all 0.2s ease',
-                marginBottom: '8px',
-                color: '#333'
-              }}
-              onMouseOver={(e) => {
-                e.target.style.borderColor = 'rgba(114, 227, 242, 0.6)';
-                e.target.style.background = 'rgba(255, 255, 255, 1)';
-              }}
-              onMouseOut={(e) => {
-                e.target.style.borderColor = 'rgba(114, 227, 242, 0.3)';
-                e.target.style.background = 'rgba(255, 255, 255, 0.95)';
-              }}
-            >
-              {getModelOptions().map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="style-section-divider"></div>
-        </>
-      )}
-      
-      <div className="style-section featured">      
-        {/* Featured options */}
-        {/* Browse Gallery option - only show for non-Flux models */}
-        {!isFluxKontext && onGallerySelect && (
+          {/* Backdrop for slide-in panel */}
+          {slideInPanel && (
+            <div 
+              className={`style-dropdown-backdrop ${isClosing ? 'closing' : ''}`}
+              onClick={handleClose}
+            />
+          )}
           <div 
-            className={`style-option ${selectedStyle === 'browseGallery' ? 'selected' : ''}`}
-            onClick={() => { 
-              updateStyle('browseGallery');
-              onGallerySelect();
-              onClose();
+            ref={dropdownReference}
+            className={`style-dropdown ${slideInPanel ? `slide-in-panel ${isClosing ? 'closing' : ''}` : `${actualPosition}-position`} ${position.isMobilePortrait && !slideInPanel ? 'mobile-portrait' : ''}`}
+            style={slideInPanel ? {} : {
+              ...(actualPosition === 'top' 
+                ? { bottom: position.bottom } 
+                : { top: position.top }),
+              left: position.isMobilePortrait ? 10 : position.left,
+              width: position.width,
             }}
           >
-            <span>🖼️</span>
-            <span>Browse Gallery</span>
+      {/* Close button for slide-in panel - mobile only */}
+      {slideInPanel && (
+        <button 
+          className="slide-panel-close-btn mobile-only"
+          onClick={handleClose}
+          aria-label="Close"
+        >
+          ✕
+        </button>
+      )}
+      
+      {/* Browse Vibe Explorer - First item */}
+      {onNavigateToVibeExplorer && !isFluxKontext && (
+        <div className="style-section featured">
+          <div 
+            className="style-option browse-vibe-explorer"
+            onClick={() => { 
+              if (slideInPanel) {
+                // For slide-in panel: close with animation first, then navigate
+                handleClose();
+                setTimeout(() => {
+                  onNavigateToVibeExplorer();
+                }, 300); // Match the slide-out animation duration
+              } else {
+                // For regular dropdown: immediate navigation
+                onNavigateToVibeExplorer();
+                handleClose();
+              }
+            }}
+          >
+            <span>🌟</span>
+            <span>Browse in Vibe Explorer</span>
+            <span className="browse-arrow">→</span>
           </div>
-        )}
-        
-        <div 
-          className={`style-option ${selectedStyle === 'randomMix' ? 'selected' : ''}`} 
-          onClick={() => { 
-            updateStyle('randomMix');
-            onClose();
-          }}
-        >
-          <span>🎲</span>
-          <span>Random Mix</span>
         </div>
-        
-        {/* Random Single option - available for all models */}
+      )}
+
+      {/* Model Selector - Collapsible */}
+      {onModelSelect && selectedModel && (
+        <div className="style-section model-selector">
+            <div 
+              className="section-header collapsible" 
+              style={{ color: '#333' }}
+              onClick={() => setIsModelSectionOpen(!isModelSectionOpen)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  setIsModelSectionOpen(!isModelSectionOpen);
+                }
+              }}
+              role="button"
+              tabIndex={0}
+            >
+              <span>🤖 Current model</span>
+              <span className="collapse-arrow">{isModelSectionOpen ? '▼' : '▶'}</span>
+            </div>
+            {isModelSectionOpen && (
+              <div className="collapsible-content">
+                <div className="model-button-bar">
+                  <button
+                    className={`model-btn ${selectedModel === 'coreml-sogniXLturbo_alpha1_ad' ? 'active' : ''}`}
+                    onClick={() => {
+                      console.log('StyleDropdown: Model changed to SOGNI.XLT');
+                      onModelSelect('coreml-sogniXLturbo_alpha1_ad');
+                    }}
+                  >
+                    Default (Fast)
+                  </button>
+                  <button
+                    className={`model-btn ${selectedModel === 'flux1-dev-kontext_fp8_scaled' ? 'active' : ''}`}
+                    onClick={() => {
+                      console.log('StyleDropdown: Model changed to Flux Kontext');
+                      onModelSelect('flux1-dev-kontext_fp8_scaled');
+                    }}
+                  >
+                    Flux Kontext
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+      )}
+      
+      {/* Only show separator if Model Selector was shown OR Browse Vibe Explorer was shown */}
+      {((onModelSelect && selectedModel) || (onNavigateToVibeExplorer && !isFluxKontext)) && (
+        <div className="style-section-divider"></div>
+      )}
+      
+      {/* Style Mode Section */}
+      <div className="style-section style-mode">
         <div 
-          className={`style-option ${selectedStyle === 'random' ? 'selected' : ''}`} 
-          onClick={() => { 
-            updateStyle('random');
-            onClose();
-          }}
-        >
-          <span>🔀</span>
-          <span>Random Single</span>
-        </div>
-        
-        <div 
-          className={`style-option ${selectedStyle === 'oneOfEach' ? 'selected' : ''}`} 
-          onClick={() => { 
-            updateStyle('oneOfEach');
-            onClose();
-          }}
-        >
-          <span>🙏</span>
-          <span>One of each plz</span>
-        </div>
-        
-        <div 
-          className={`style-option ${selectedStyle === 'custom' ? 'selected' : ''}`} 
-          onClick={() => { 
-            setShowCustomPromptPopup(true);
-          }}
-        >
-          <span>✏️</span>
-          <span>Custom Prompt</span>
-        </div>
-        
-        {/* Copy Image Style option - available for all models (triggers Flux Kontext switch) */}
-        <div 
-          className={`style-option ${selectedStyle === 'copyImageStyle' ? 'selected' : ''}`} 
-          onClick={() => {
-            // If style reference exists and already selected, open for editing
-            if (selectedStyle === 'copyImageStyle' && styleReferenceImage?.dataUrl && onEditStyleReference) {
-              onEditStyleReference();
-              onClose();
-            } else {
-              // Otherwise just select this style (will prompt user to upload via PhotoGallery button)
-              updateStyle('copyImageStyle');
-              onClose();
+          className="section-header collapsible"
+          onClick={() => setIsStyleModeOpen(!isStyleModeOpen)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              setIsStyleModeOpen(!isStyleModeOpen);
             }
           }}
+          role="button"
+          tabIndex={0}
         >
-          {styleReferenceImage?.dataUrl ? (
-            <div style={{
-              width: '32px',
-              height: '32px',
-              borderRadius: '50%',
-              overflow: 'hidden',
-              flexShrink: 0,
-              border: '2px solid rgba(255, 255, 255, 0.3)',
-              boxShadow: '0 2px 4px rgba(0, 0, 0, 0.2)',
-              background: '#fff'
-            }}>
-              <img 
-                src={styleReferenceImage.dataUrl} 
-                alt="Style reference"
-                style={{
-                  width: '100%',
-                  height: '100%',
-                  objectFit: 'cover'
-                }}
-              />
-            </div>
-          ) : (
-            <span>🎨</span>
-          )}
-          <span>Copy Image Style</span>
+          <span>🎯 Style Picker</span>
+          <span className="collapse-arrow">{isStyleModeOpen ? '▼' : '▶'}</span>
         </div>
+        
+        {isStyleModeOpen && (
+          <div className="style-mode-content">
+            <div 
+              className={`style-option ${selectedStyle === 'randomMix' ? 'selected' : ''}`} 
+              onClick={() => { 
+                updateStyle('randomMix');
+                handleClose();
+              }}
+            >
+              <span>🎲</span>
+              <span>Random: All</span>
+            </div>
+            
+            <div 
+              className={`style-option ${selectedStyle === 'random' ? 'selected' : ''}`} 
+              onClick={() => { 
+                updateStyle('random');
+                handleClose();
+              }}
+            >
+              <span>🔀</span>
+              <span>Random: Single</span>
+            </div>
+            
+            <div 
+              className={`style-option ${selectedStyle === 'oneOfEach' ? 'selected' : ''}`} 
+              onClick={() => { 
+                updateStyle('oneOfEach');
+                handleClose();
+              }}
+            >
+              <span>🙏</span>
+              <span>One of each plz</span>
+            </div>
+            
+            <div 
+              className={`style-option ${selectedStyle === 'custom' ? 'selected' : ''}`} 
+              onClick={() => { 
+                setShowCustomPromptPopup(true);
+              }}
+            >
+              <span>✏️</span>
+              <span>Custom Prompt</span>
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* Browse Gallery and Copy Image Style */}
+      {((!isFluxKontext && onGallerySelect) || isFluxKontext) && (
+        <>
+          <div className="style-section-divider"></div>
+          <div className="style-section other-options">
+            {/* Browse Gallery option - only show for non-Flux models */}
+            {!isFluxKontext && onGallerySelect && (
+              <div 
+                className={`style-option ${selectedStyle === 'browseGallery' ? 'selected' : ''}`}
+                onClick={() => { 
+                  updateStyle('browseGallery');
+                  onGallerySelect();
+                  handleClose();
+                }}
+              >
+                <span>🖼️</span>
+                <span>Browse Gallery</span>
+              </div>
+            )}
+            
+            {/* Copy Image Style option - only show when Flux Kontext is selected (disabled/coming soon) */}
+            {isFluxKontext && (
+              <div 
+                className="style-option disabled" 
+                title="Coming soon"
+              >
+                <span>🎨</span>
+                <span>Copy Image Style</span>
+                <span style={{ fontSize: '10px', opacity: 0.6, marginLeft: 'auto' }}>(Coming soon)</span>
+              </div>
+            )}
+          </div>
+        </>
+      )}
       
-      {/* Themes Section - only show for non-Flux models */}
+      {/* Themes Section - Collapsible, only show for non-Flux models */}
       {!isFluxKontext && (
         <>
+          <div className="style-section-divider"></div>
           <div className="style-section themes">
-            <div className="section-header">
-              <span>🎨 Themes</span>
+            <div 
+              className="section-header collapsible"
+              onClick={() => setIsThemesSectionOpen(!isThemesSectionOpen)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  setIsThemesSectionOpen(!isThemesSectionOpen);
+                }
+              }}
+              role="button"
+              tabIndex={0}
+            >
+              <span>🎨 Theme Packs</span>
+              <div className="section-header-controls">
+                {isThemesSectionOpen && (
+                  <>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleSelectAllThemes();
+                      }}
+                      className="header-control-btn"
+                      title="Select all themes"
+                    >
+                      ALL
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeselectAllThemes();
+                      }}
+                      className="header-control-btn"
+                      title="Deselect all themes"
+                    >
+                      NONE
+                    </button>
+                  </>
+                )}
+                <span className="collapse-arrow">{isThemesSectionOpen ? '▼' : '▶'}</span>
+              </div>
             </div>
-            <div className="theme-groups">
-              {Object.entries(THEME_GROUPS).map(([groupId, group]) => (
-                <div key={groupId} className="theme-group">
-                  <label className="theme-group-label">
-                    <input
-                      type="checkbox"
-                      checked={themeGroupState[groupId]}
-                      onChange={() => handleThemeGroupToggle(groupId)}
-                      className="theme-group-checkbox"
-                    />
-                    <span className="theme-group-name">{group.name}</span>
-                    <span className="theme-group-count">({group.prompts.length})</span>
-                  </label>
+            
+            {isThemesSectionOpen && (
+              <div className="collapsible-content">
+                <div className="theme-groups">
+                  {Object.entries(THEME_GROUPS).map(([groupId, group]) => (
+                    <div key={groupId} className="theme-group">
+                      <label className="theme-group-label">
+                        <input
+                          type="checkbox"
+                          checked={themeGroupState[groupId]}
+                          onChange={() => handleThemeGroupToggle(groupId)}
+                          className="theme-group-checkbox"
+                        />
+                        <span className="theme-group-name">{group.name}</span>
+                        <span className="theme-group-count">({group.prompts.length})</span>
+                      </label>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              </div>
+            )}
           </div>
 
           <div className="style-section-divider"></div>
         </>
       )}
 
-      <div className="style-section regular">
-        {Object.keys(enabledPrompts)
+      {/* Individual Styles Section - Collapsible */}
+      <div className="style-section individual-styles">
+        <div 
+          className="section-header collapsible"
+          onClick={() => setIsIndividualStylesOpen(!isIndividualStylesOpen)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              setIsIndividualStylesOpen(!isIndividualStylesOpen);
+            }
+          }}
+          role="button"
+          tabIndex={0}
+        >
+          <span>👤 Individual styles</span>
+          <span className="collapse-arrow">{isIndividualStylesOpen ? '▼' : '▶'}</span>
+        </div>
+
+        {isIndividualStylesOpen && (
+          <div className="collapsible-content">
+            {/* Search Section */}
+            <div className="style-section search-section">
+              <div className="search-input-wrapper">
+                <span className="search-icon">🔍</span>
+                <input
+                  type="text"
+                  placeholder="Search styles..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="style-search-input"
+                />
+                {searchQuery && (
+                  <button
+                    className="search-clear-btn"
+                    onClick={() => setSearchQuery('')}
+                    aria-label="Clear search"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div className="style-list">
+              {Object.keys(defaultStylePrompts)
           .filter(key => key !== 'random' && key !== 'custom' && key !== 'randomMix' && key !== 'oneOfEach' && key !== 'copyImageStyle')
+          .filter(key => {
+            // Apply search filter
+            if (!searchQuery) return true;
+            const displayName = styleIdToDisplay(key).toLowerCase();
+            return displayName.includes(searchQuery.toLowerCase());
+          })
           .sort((a, b) => {
             const displayA = styleIdToDisplay(a);
             const displayB = styleIdToDisplay(b);
@@ -480,10 +680,10 @@ const StyleDropdown = ({
                   // Special handling for copyImageStyle - allow clicking when selected to edit
                   if (styleKey === 'copyImageStyle' && selectedStyle === 'copyImageStyle' && onEditStyleReference) {
                     onEditStyleReference();
-                    onClose();
+                    handleClose();
                   } else {
                     updateStyle(styleKey);
-                    onClose();
+                    handleClose();
                   }
                 }}
               >
@@ -502,8 +702,12 @@ const StyleDropdown = ({
               </div>
             );
           })}
+            </div>
+          </div>
+        )}
       </div>
-    </div>,
+    </div>
+        </>,
         document.body
       )}
       
@@ -512,7 +716,7 @@ const StyleDropdown = ({
         isOpen={showCustomPromptPopup}
         onClose={() => {
           setShowCustomPromptPopup(false);
-          onClose(); // Also close the dropdown when custom prompt popup closes
+          handleClose(); // Also close the dropdown when custom prompt popup closes
         }}
         onApply={handleApplyCustomPrompt}
         currentPrompt={currentCustomPrompt}
@@ -538,7 +742,9 @@ StyleDropdown.propTypes = {
   currentCustomPrompt: PropTypes.string,
   portraitType: PropTypes.oneOf(['headshot', 'medium', 'fullbody']),
   styleReferenceImage: PropTypes.object,
-  onEditStyleReference: PropTypes.func
+  onEditStyleReference: PropTypes.func,
+  onNavigateToVibeExplorer: PropTypes.func,
+  slideInPanel: PropTypes.bool
 };
 
 export default StyleDropdown; 

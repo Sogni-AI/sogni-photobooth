@@ -2,7 +2,6 @@ import React, { useRef, useState, useMemo } from 'react';
 import MetricsBar from '../shared/MetricsBar';
 import StyleDropdown from '../shared/StyleDropdown';
 import { styleIdToDisplay } from '../../utils';
-import { isFluxKontextModel } from '../../constants/settings';
 import { generateGalleryFilename } from '../../utils/galleryLoader';
 import './CameraStartMenu.css';
 
@@ -254,15 +253,9 @@ const CameraStartMenu: React.FC<CameraStartMenuProps> = ({
 
   // Style selector handlers
   const handleStyleClick = () => {
-    const isFluxKontext = isFluxKontextModel(selectedModel);
-
-    if (isFluxKontext) {
-      // For Flux Kontext, show the dropdown
-      setShowStyleDropdown(true);
-    } else {
-      // For other models, navigate to the full gallery
-      onNavigateToGallery?.();
-    }
+    // Always show the dropdown for quick selection
+    // Users can choose "Browse Vibe Explorer" from the dropdown if they want the full gallery
+    setShowStyleDropdown(true);
   };
 
   const handleStyleSelect = (style: string) => {
@@ -549,7 +542,7 @@ const CameraStartMenu: React.FC<CameraStartMenuProps> = ({
         onChange={handleFileSelect}
       />
 
-      {/* Style Dropdown - only show for Flux Kontext models */}
+      {/* Style Dropdown */}
       {showStyleDropdown && (
         <StyleDropdown
           isOpen={showStyleDropdown}
@@ -569,6 +562,8 @@ const CameraStartMenu: React.FC<CameraStartMenuProps> = ({
           portraitType={portraitType}
           styleReferenceImage={styleReferenceImage as any}
           onEditStyleReference={onEditStyleReference as any}
+          onNavigateToVibeExplorer={onNavigateToGallery as any}
+          slideInPanel={true}
         />
       )}
     </div>

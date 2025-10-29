@@ -152,7 +152,7 @@ test.describe('Verify Component States', () => {
       states: [{ name: 'open' }]
     });
 
-    await page.click('.style-option:has-text("Random Mix")');
+    await page.click('.style-option:has-text("Random: All")');
     await page.waitForTimeout(300);
     await verifyComponentStates(page, referenceStates.styleSelector, {
       selector: '.bottom-style-select',

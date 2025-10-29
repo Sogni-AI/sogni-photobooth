@@ -26,7 +26,8 @@ const ImageAdjuster = ({
   numImages = 1,
   stylePrompts = {},
   headerText = 'Adjust Your Image',
-  onUploadNew = null
+  onUploadNew = null,
+  onNavigateToVibeExplorer = null
 }) => {
 
   
@@ -630,13 +631,13 @@ const ImageAdjuster = ({
         <div className="image-adjuster-style-pinned">
           <div 
             className="style-label-text"
-            onClick={() => setShowStyleDropdown(true)}
+            onClick={() => setShowStyleDropdown(prev => !prev)}
             role="button"
             tabIndex={0}
             onKeyDown={(e) => {
               if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault();
-                setShowStyleDropdown(true);
+                setShowStyleDropdown(prev => !prev);
               }
             }}
           >
@@ -644,7 +645,7 @@ const ImageAdjuster = ({
           </div>
           <button 
             className="image-adjuster-style-selector-button"
-            onClick={() => setShowStyleDropdown(true)}
+            onClick={() => setShowStyleDropdown(prev => !prev)}
             title="Change style"
           >
             <div className="image-adjuster-style-selector-content">
@@ -865,6 +866,8 @@ const ImageAdjuster = ({
               }
             }}
             portraitType={portraitType}
+            onNavigateToVibeExplorer={onNavigateToVibeExplorer}
+            slideInPanel={true}
           />
         )}
       </div>
@@ -884,7 +887,8 @@ ImageAdjuster.propTypes = {
   numImages: PropTypes.number,
   stylePrompts: PropTypes.object,
   headerText: PropTypes.string,
-  onUploadNew: PropTypes.func
+  onUploadNew: PropTypes.func,
+  onNavigateToVibeExplorer: PropTypes.func
 };
 
 export default ImageAdjuster; 

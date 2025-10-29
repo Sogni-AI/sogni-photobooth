@@ -24,7 +24,7 @@ export const getDefaultThemeGroupState = () => {
 
 // Get all prompts that are enabled based on theme group selections
 // Note: Favorites are stored as promptKeys (e.g., 'animeKawaii') for gallery images,
-// allowing them to be used with Random Mix and One of Each generation
+// allowing them to be used with Random: All and One of Each generation
 export const getEnabledPrompts = (themeGroupState, allPrompts) => {
   const enabledPromptNames = [];
   

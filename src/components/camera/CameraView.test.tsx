@@ -44,8 +44,8 @@ describe('CameraView', () => {
     fireEvent.click(styleButton);
     
     // Check if dropdown opened with featured options
-    expect(screen.getByText('Random Mix')).toBeInTheDocument();
-    expect(screen.getByText('Random')).toBeInTheDocument();
+    expect(screen.getByText('Random: All')).toBeInTheDocument();
+    expect(screen.getByText('Random: Single')).toBeInTheDocument();
     expect(screen.getByText('Custom...')).toBeInTheDocument();
   });
 

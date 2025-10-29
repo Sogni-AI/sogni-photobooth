@@ -131,7 +131,10 @@ export function styleIdToDisplay(styleId: string): string {
     return 'Browse Gallery';
   }
   if (styleId === 'random') {
-    return 'Random Single';
+    return 'Random: Single';
+  }
+  if (styleId === 'randomMix') {
+    return 'Random: All';
   }
   if (styleId === 'rnBSoulSinger') {
     return 'R&B Soul Singer';

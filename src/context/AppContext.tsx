@@ -93,17 +93,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     let selectedStyle = getSettingFromCookie('selectedStyle', DEFAULT_SETTINGS.selectedStyle);
     let positivePrompt = getSettingFromCookie('positivePrompt', DEFAULT_SETTINGS.positivePrompt);
     
-    // Reset Flux Kontext to Sogni Turbo on initialization
-    // (Flux Kontext is only for Copy Image Style mode which user must explicitly activate)
-    if (isFluxKontextModel(selectedModel)) {
-      console.log('🔄 [INIT] Resetting model from Flux Kontext to Sogni Turbo');
+    // Always reset to default model on page reload
+    // Users must explicitly select a different model in each session
+    if (selectedModel !== DEFAULT_MODEL_ID) {
+      console.log(`🔄 [INIT] Resetting model from ${selectedModel} to default (${DEFAULT_MODEL_ID})`);
       selectedModel = DEFAULT_MODEL_ID;
       
-      // Save to cookies and also ensure model-specific settings are loaded for Sogni Turbo
+      // Save to cookies and also ensure model-specific settings are loaded for default model
       saveSettingsToCookies({ selectedModel: DEFAULT_MODEL_ID });
-      const sogniTurboSettings = getSettingsForModel(DEFAULT_MODEL_ID);
-      saveModelSpecificSettings(DEFAULT_MODEL_ID, sogniTurboSettings);
-      console.log('🔄 [INIT] Saved Sogni Turbo settings:', sogniTurboSettings);
+      const defaultModelSettings = getSettingsForModel(DEFAULT_MODEL_ID);
+      saveModelSpecificSettings(DEFAULT_MODEL_ID, defaultModelSettings);
+      console.log('🔄 [INIT] Saved default model settings:', defaultModelSettings);
       
       // Clear any cached Flux Kontext model-specific settings to prevent conflicts
       try {
@@ -116,7 +116,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       // Also reset copyImageStyle to randomMix when resetting the model
       // This ensures they're in sync
       if (selectedStyle === 'copyImageStyle') {
-        console.log('🔄 [INIT] Also resetting style from Copy Image Style to Random Mix (model was reset)');
+        console.log('🔄 [INIT] Also resetting style from Copy Image Style to Random: All (model was reset)');
         selectedStyle = 'randomMix';
         saveSettingsToCookies({ selectedStyle });
       }
