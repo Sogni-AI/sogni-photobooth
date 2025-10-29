@@ -42,7 +42,6 @@ const RANDOM_TAGLINES = [
 interface CameraStartMenuProps {
   onTakePhoto: () => void;
   onBrowsePhoto: (file: File) => void;
-  onEditUploadedPhoto?: () => Promise<boolean>;
   onDragPhoto: () => void;
   // Style selector props
   selectedStyle?: string;
@@ -68,7 +67,6 @@ interface CameraStartMenuProps {
 const CameraStartMenu: React.FC<CameraStartMenuProps> = ({
   onTakePhoto,
   onBrowsePhoto,
-  onEditUploadedPhoto,
   selectedStyle = '',
   onStyleSelect,
   stylePrompts = {},
@@ -215,15 +213,7 @@ const CameraStartMenu: React.FC<CameraStartMenuProps> = ({
     return null;
   }, [selectedStyle, portraitType, randomStyleForSamplers, styleReferenceImage]);
 
-  const handleBrowseClick = async () => {
-    // Check if there's a previous uploaded photo that we can reopen in the adjuster
-    if (onEditUploadedPhoto && reusablePhotoUrl && reusablePhotoSourceType === 'upload') {
-      const handled = await onEditUploadedPhoto();
-      if (handled) {
-        return; // Successfully opened adjuster with previous photo
-      }
-    }
-    // Otherwise, trigger normal file upload
+  const handleBrowseClick = () => {
     fileInputRef.current?.click();
   };
 

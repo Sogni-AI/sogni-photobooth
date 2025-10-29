@@ -115,14 +115,14 @@ const LoginUpsellPopup = ({ isOpen, onClose }) => {
               className="sloth-mascot"
             />
           </div>
-          <div className="out-of-credits-text">
-            <h1>Ready for more?</h1>
-            <h2>Get back to creating in no time</h2>
-          </div>
+          <h2>Ready for more?</h2>
         </div>
 
         <div className="out-of-credits-modal-content">
           <div className="out-of-credits-message">
+            <p className="message-main">
+              You&apos;ve used your free demo render! Create an account to unlock unlimited creativity.
+            </p>
             <div className="credits-info">
               <div className="info-item">
                 <span className="info-icon">🎁</span>

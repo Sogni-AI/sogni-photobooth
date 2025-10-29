@@ -89,6 +89,10 @@ const HalloweenNotificationTooltip = ({ onNavigate }) => {
           ✕
         </button>
         <span className="pumpkin-emoji">🎃</span>
+        <span className="compete-bubble">
+          <span className="compete-text">In the Halloween spirit?</span>
+          <span className="compete-emoji">🎁</span>
+        </span>
       </button>
     );
   }

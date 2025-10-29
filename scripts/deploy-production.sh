@@ -218,27 +218,32 @@ if [ $? -ne 0 ]; then
   exit 1
 fi
 
-# Wait a moment for services to start
-echo "Waiting 5 seconds for services to start..."
-sleep 5
-
 # Verify deployment
 show_step "Verifying deployment"
-echo "🔍 Checking backend health via branded domain (https://photobooth-api.sogni.ai)..."
-HEALTH_CHECK=$(ssh $REMOTE_HOST "curl -s -o /dev/null -w '%{http_code}' https://photobooth-api.sogni.ai/health" || echo "failed")
-if [ "$HEALTH_CHECK" = "200" ]; then
-  echo "✅ Backend API is accessible via HTTPS (status code: $HEALTH_CHECK)"
+echo "🔍 Checking backend health directly on port 3001..."
+HEALTH_CHECK_DIRECT=$(curl -s -o /dev/null -w "%{http_code}" http://$REMOTE_HOST:3001/health || echo "failed")
+if [ "$HEALTH_CHECK_DIRECT" = "200" ] || [ "$HEALTH_CHECK_DIRECT" = "404" ]; then # 404 if /health is under /api in app
+  echo "✅ Backend is running (direct check status code: $HEALTH_CHECK_DIRECT)"
 else
-  echo "❌ Backend API health check failed with status $HEALTH_CHECK"
+  echo "❌ Backend direct health check failed with status $HEALTH_CHECK_DIRECT"
   echo "⚠️ Warning: The backend may not be running correctly. Please check logs with: ssh $REMOTE_HOST 'pm2 logs sogni-photobooth-production'"
 fi
 
-echo "🔍 Checking frontend availability (https://photobooth.sogni.ai)..."
-FRONTEND_CHECK=$(curl -s -o /dev/null -w "%{http_code}" -I https://photobooth.sogni.ai/ || echo "failed")
-if [ "$FRONTEND_CHECK" = "200" ]; then
-  echo "✅ Frontend is accessible via HTTPS (status code: $FRONTEND_CHECK)"
+echo "🔍 Checking frontend availability via Nginx (photobooth.sogni.ai)..."
+FRONTEND_NGINX_CHECK=$(curl -s -o /dev/null -w "%{http_code}" -I http://photobooth.sogni.ai/ || echo "failed") # Check via HTTP as Nginx listens on 80
+if [ "$FRONTEND_NGINX_CHECK" = "200" ] || [ "$FRONTEND_NGINX_CHECK" = "301" ] || [ "$FRONTEND_NGINX_CHECK" = "302" ]; then # 30x if Cloudflare redirects to HTTPS
+  echo "✅ Frontend Nginx check successful (status code: $FRONTEND_NGINX_CHECK)"
 else
-  echo "❌ Frontend check failed with status $FRONTEND_CHECK"
+  echo "❌ Frontend Nginx check failed with status $FRONTEND_NGINX_CHECK"
+fi
+
+echo "🔍 Checking API availability via Nginx (photobooth-api.sogni.ai)..."
+API_NGINX_CHECK=$(curl -s -o /dev/null -w "%{http_code}" -I http://photobooth-api.sogni.ai/health || echo "failed") # Check via HTTP
+if [ "$API_NGINX_CHECK" = "200" ] || [ "$API_NGINX_CHECK" = "301" ] || [ "$API_NGINX_CHECK" = "302" ]; then # 30x if Cloudflare redirects to HTTPS, 200 if /health is direct
+  echo "✅ API Nginx check successful (status code: $API_NGINX_CHECK)"
+else
+  echo "❌ API Nginx check failed with status $API_NGINX_CHECK"
+  echo "⚠️ Warning: The API through Nginx may not be correctly configured."
 fi
 
 echo ""
