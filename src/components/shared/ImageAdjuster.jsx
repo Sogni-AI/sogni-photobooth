@@ -703,11 +703,11 @@ const ImageAdjuster = ({
                 cursor: isDragging ? 'grabbing' : 'grab',
                 opacity: imageLoaded ? 1 : 0, // Hide until loaded
                 transition: 'opacity 0.3s ease',
-                // Make image fill the container like the final result (object-fit: cover behavior)
-                // This ensures the preview matches how the image will appear in the final framed result
+                // Use contain to show the full source image without clipping
+                // This ensures the entire image is visible when resizing the widget
                 width: '100%',
                 height: '100%',
-                objectFit: 'cover',
+                objectFit: 'contain',
                 objectPosition: 'center'
               }}
               onLoad={() => {
