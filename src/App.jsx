@@ -6656,6 +6656,7 @@ const App = () => {
     if (!authState.isAuthenticated && hasDoneDemoRender()) {
       console.log('🚫 Non-authenticated user has already used their demo render - showing login upsell');
       setShowLoginUpsellPopup(true);
+      setShowStartMenu(true); // Return to main yellow screen
       return;
     }
 
@@ -7324,6 +7325,7 @@ const App = () => {
         URL.revokeObjectURL(currentUploadedImageUrl);
       }
       setCurrentUploadedImageUrl('');
+      setShowStartMenu(true); // Return to main yellow screen
       return;
     }
 
