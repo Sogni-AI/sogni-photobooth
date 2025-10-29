@@ -298,43 +298,9 @@ body:has(.promo-modal-overlay) .halloween-notification-tooltip {
     opacity: 1;
   }
 
+  /* Mobile: hide entire speech bubble */
   .halloween-pumpkin-notification .compete-bubble {
-    font-size: 1.1rem;
-    padding: 6px 10px;
-  }
-
-  /* Mobile: hide emoji, keep text */
-  .compete-text {
-    display: inline;
-  }
-
-  .compete-emoji {
     display: none;
-  }
-
-  /* Reposition speech bubble arrow to point upward (toward pumpkin) */
-  .halloween-pumpkin-notification .compete-bubble::before {
-    top: auto;
-    bottom: 100%;
-    left: 50%;
-    transform: translateX(-50%);
-    border-left: 8px solid transparent;
-    border-right: 8px solid transparent;
-    border-bottom: 10px solid #ff6b00;
-    border-top: none;
-  }
-
-  .halloween-pumpkin-notification .compete-bubble::after {
-    top: auto;
-    bottom: 100%;
-    left: 50%;
-    transform: translateX(-50%);
-    border-left: 6px solid transparent;
-    border-right: 6px solid transparent;
-    border-bottom: 8px solid white;
-    border-top: none;
-    margin-left: 0;
-    margin-bottom: -2px;
   }
 
   /* Expanded state on mobile */
