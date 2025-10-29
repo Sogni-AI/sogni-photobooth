@@ -52,31 +52,31 @@
 @media (max-width: 480px) and (orientation: portrait) {
   .slide-panel-close-btn.mobile-only {
     display: flex;
-    position: absolute;
-    top: 12px;
-    right: 12px;
-    background: rgba(0, 0, 0, 0.1);
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: #ff5252;
+    color: white;
     border: none;
-    border-radius: 50%;
-    width: 40px;
-    height: 40px;
+    padding: 8px 16px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    cursor: pointer;
+    min-height: 44px;
     align-items: center;
     justify-content: center;
-    cursor: pointer;
-    font-size: 24px;
-    color: #333;
+    font-weight: 600;
+    white-space: nowrap;
+    font-size: 16px;
+    z-index: 10001;
     transition: all 0.2s ease;
-    z-index: 10;
+    padding-bottom: 10px;
+    font-family: "Permanent Marker", cursive;
   }
   
   .slide-panel-close-btn.mobile-only:hover {
-    background: rgba(0, 0, 0, 0.2);
-    transform: scale(1.1);
-  }
-  
-  /* Add margin to browse button on mobile portrait to avoid close button */
-  .slide-in-panel .style-option.browse-vibe-explorer {
-    margin-right: 48px;
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.25);
   }
 }
 

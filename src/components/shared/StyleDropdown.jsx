@@ -334,7 +334,7 @@ const StyleDropdown = ({
           onClick={handleClose}
           aria-label="Close"
         >
-          ✕
+          Close
         </button>
       )}
       
