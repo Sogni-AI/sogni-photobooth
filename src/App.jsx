@@ -304,6 +304,12 @@ const App = () => {
         return;
       }
 
+      // Only show toast for significant balance increases (minimum credit card purchase is 275)
+      if (increase < 275) {
+        console.log(`💰 Skipping balance notification - increase too small (${increase.toFixed(2)} < 275)`);
+        return;
+      }
+
       // Show toast notification
       showToast({
         type: 'success',
