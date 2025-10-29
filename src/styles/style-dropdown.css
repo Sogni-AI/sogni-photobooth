@@ -392,8 +392,22 @@
 }
 
 .style-option.selected {
-  color: #ff5e8a;
-  background: #fff0f4;
+  background: transparent !important;
+  background-color: transparent !important;
+  position: relative;
+}
+
+.style-option.selected span:last-of-type {
+  text-decoration: underline;
+  text-decoration-color: #000;
+}
+
+.style-option.selected::after {
+  content: '✓';
+  margin-left: auto;
+  font-size: 18px;
+  font-weight: bold;
+  color: #ff5252;
 }
 
 .style-option.disabled {
@@ -408,9 +422,7 @@
 
 /* Browse Vibe Explorer special styling */
 .style-option.browse-vibe-explorer {
-  background: linear-gradient(135deg, #ff0080, #ff8c00, #40e0d0, #9370db, #ff69b4, #00ff7f);
-  background-size: 400% 400%;
-  animation: rainbow-shift-slow 16s ease-in-out infinite;
+  background: #ff5252;
   color: white;
   font-weight: 600;
   justify-content: space-between;
@@ -420,9 +432,7 @@
 }
 
 .style-option.browse-vibe-explorer:hover {
-  background: linear-gradient(135deg, #ff0080, #ff8c00, #40e0d0, #9370db, #ff69b4, #00ff7f);
-  background-size: 300% 300%;
-  animation: rainbow-shift-slow 8s ease-in-out infinite;
+  background: #ff3535;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
   transform: translateY(-1px);
 }

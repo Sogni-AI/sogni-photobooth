@@ -222,6 +222,7 @@ const App = () => {
     flashEnabled, 
     keepOriginalPhoto,
     positivePrompt,
+    customSceneName,
     stylePrompt,
     negativePrompt,
     seed,
@@ -4128,6 +4129,7 @@ const App = () => {
                 statusText: 'Calling Art Robot...',
                 sourceType, // Include sourceType in generated photos
                 promptKey: (selectedStyle && selectedStyle !== 'custom' && selectedStyle !== 'random' && selectedStyle !== 'randomMix' && selectedStyle !== 'oneOfEach') ? selectedStyle : undefined, // Track which style is being used
+                customSceneName: selectedStyle === 'custom' && customSceneName ? customSceneName : undefined, // Store custom scene name at creation time
                 // Assign Taipei frame number based on photo index for equal distribution (1-6)
                 taipeiFrameNumber: (globalPhotoIndex % 6) + 1,
                 framePadding: 0 // Will be updated by migration effect in PhotoGallery
@@ -5088,10 +5090,15 @@ const App = () => {
           hashtag = `#${selectedStyle}`;
         }
         
-        // Strategy 3.5: For custom prompts, use #SogniPhotobooth
+        // Strategy 3.5: For custom prompts, use custom scene name if available, otherwise #SogniPhotobooth
         if (!hashtag && selectedStyle === 'custom') {
-          console.log('📸 Using #SogniPhotobooth for custom prompt');
-          hashtag = '#SogniPhotobooth';
+          if (customSceneName && customSceneName.trim()) {
+            console.log('📸 Using custom scene name for hashtag:', customSceneName);
+            hashtag = customSceneName; // Use scene name directly without # for custom prompts
+          } else {
+            console.log('📸 Using #SogniPhotobooth for custom prompt');
+            hashtag = '#SogniPhotobooth';
+          }
         }
         
         // Strategy 4: Final fallback - try to find ANY matching prompt in our style library
@@ -5162,6 +5169,8 @@ const App = () => {
                 newlyArrived: true,
                 isPreview: false, // Clear preview flag so final image shows at full opacity
                 positivePrompt,
+                // customSceneName is already set when photo is created, preserve it
+                customSceneName: updated[photoIndex].customSceneName,
                 stylePrompt: positivePrompt, // Use the actual prompt that was used for generation
                 promptKey: extractedPromptKey, // Track which style was used for favoriting
                 statusText
@@ -6213,8 +6222,12 @@ const App = () => {
             onNavigateToGallery={handleNavigateToPromptSelector}
             onShowControlOverlay={() => setShowControlOverlay(true)}
             onThemeChange={handleThemeChange}
-            onCustomPromptChange={(prompt) => updateSetting('positivePrompt', prompt)}
+            onCustomPromptChange={(prompt, sceneName) => {
+              updateSetting('positivePrompt', prompt);
+              updateSetting('customSceneName', sceneName || '');
+            }}
             currentCustomPrompt={positivePrompt}
+            currentCustomSceneName={customSceneName}
             portraitType={portraitType}
             styleReferenceImage={styleReferenceImage}
             onEditStyleReference={handleEditStyleReference}
@@ -6921,6 +6934,7 @@ const App = () => {
           newlyArrived: false,
           statusText: 'Calling Art Robot...',
           stylePrompt: '', // Use context stylePrompt here? Or keep empty?
+          customSceneName: selectedStyle === 'custom' && customSceneName ? customSceneName : undefined, // Store custom scene name for "More" photos
           sourceType: sourceType, // Store sourceType in photo object for reference
           // Assign Taipei frame number based on photo index for equal distribution (1-6)
           taipeiFrameNumber: (globalPhotoIndex % 6) + 1,
@@ -7197,9 +7211,21 @@ const App = () => {
       }
       
       .style-option.selected {
-        background-color: #fff0f4 !important; /* Light pink background */
-        color: #ff5e8a !important;
-        font-weight: 500;
+        background-color: transparent !important;
+        position: relative;
+      }
+      
+      .style-option.selected span:last-of-type {
+        text-decoration: underline;
+        text-decoration-color: #000;
+      }
+      
+      .style-option.selected::after {
+        content: '✓';
+        margin-left: auto;
+        font-size: 18px;
+        font-weight: bold;
+        color: #ff5252;
       }
       
       .style-icon {

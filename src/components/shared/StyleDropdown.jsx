@@ -25,6 +25,7 @@ const StyleDropdown = ({
   onGallerySelect = null, // Callback for gallery selection
   onCustomPromptChange = null, // Callback for custom prompt changes
   currentCustomPrompt = '', // Current custom prompt value
+  currentCustomSceneName = '', // Current custom scene name value
   portraitType = 'medium', // Portrait type for gallery preview images
   styleReferenceImage = null, // Style reference image for Copy Image Style mode
   onEditStyleReference = null, // Callback to edit existing style reference
@@ -67,6 +68,23 @@ const StyleDropdown = ({
       }, 300); // Match animation duration
     } else {
       onClose();
+    }
+  };
+  
+  // Handle style selection with animation
+  const handleStyleSelect = (styleKey, callback = null) => {
+    if (slideInPanel) {
+      // For slide-in panel: close with animation first, then update style
+      handleClose();
+      setTimeout(() => {
+        updateStyle(styleKey);
+        if (callback) callback();
+      }, 300); // Match the slide-out animation duration
+    } else {
+      // For regular dropdown: immediate update
+      updateStyle(styleKey);
+      if (callback) callback();
+      handleClose();
     }
   };
   
@@ -278,13 +296,13 @@ const StyleDropdown = ({
   };
 
   // Handle custom prompt application
-  const handleApplyCustomPrompt = (promptText) => {
+  const handleApplyCustomPrompt = (promptText, sceneName) => {
     // First update the style to custom
     updateStyle('custom');
     
     // Then update the custom prompt if callback is provided
     if (onCustomPromptChange) {
-      onCustomPromptChange(promptText);
+      onCustomPromptChange(promptText, sceneName);
     }
   };
 
@@ -300,6 +318,7 @@ const StyleDropdown = ({
         onClose={() => setShowCustomPromptPopup(false)}
         onApply={handleApplyCustomPrompt}
         currentPrompt={currentCustomPrompt}
+        currentSceneName={currentCustomSceneName}
       />
     </>
   );
@@ -437,10 +456,7 @@ const StyleDropdown = ({
           <div className="style-mode-content">
             <div 
               className={`style-option ${selectedStyle === 'randomMix' ? 'selected' : ''}`} 
-              onClick={() => { 
-                updateStyle('randomMix');
-                handleClose();
-              }}
+              onClick={() => handleStyleSelect('randomMix')}
             >
               <span>🎲</span>
               <span>Random: All</span>
@@ -448,10 +464,7 @@ const StyleDropdown = ({
             
             <div 
               className={`style-option ${selectedStyle === 'random' ? 'selected' : ''}`} 
-              onClick={() => { 
-                updateStyle('random');
-                handleClose();
-              }}
+              onClick={() => handleStyleSelect('random')}
             >
               <span>🔀</span>
               <span>Random: Single</span>
@@ -459,10 +472,7 @@ const StyleDropdown = ({
             
             <div 
               className={`style-option ${selectedStyle === 'oneOfEach' ? 'selected' : ''}`} 
-              onClick={() => { 
-                updateStyle('oneOfEach');
-                handleClose();
-              }}
+              onClick={() => handleStyleSelect('oneOfEach')}
             >
               <span>🙏</span>
               <span>One of each plz</span>
@@ -490,11 +500,7 @@ const StyleDropdown = ({
             {!isFluxKontext && onGallerySelect && (
               <div 
                 className={`style-option ${selectedStyle === 'browseGallery' ? 'selected' : ''}`}
-                onClick={() => { 
-                  updateStyle('browseGallery');
-                  onGallerySelect();
-                  handleClose();
-                }}
+                onClick={() => handleStyleSelect('browseGallery', onGallerySelect)}
               >
                 <span>🖼️</span>
                 <span>Browse Gallery</span>
@@ -706,11 +712,9 @@ const StyleDropdown = ({
                 onClick={() => {
                   // Special handling for copyImageStyle - allow clicking when selected to edit
                   if (styleKey === 'copyImageStyle' && selectedStyle === 'copyImageStyle' && onEditStyleReference) {
-                    onEditStyleReference();
-                    handleClose();
+                    handleStyleSelect(styleKey, onEditStyleReference);
                   } else {
-                    updateStyle(styleKey);
-                    handleClose();
+                    handleStyleSelect(styleKey);
                   }
                 }}
               >
@@ -747,6 +751,7 @@ const StyleDropdown = ({
         }}
         onApply={handleApplyCustomPrompt}
         currentPrompt={currentCustomPrompt}
+        currentSceneName={currentCustomSceneName}
       />
     </>
   );
@@ -767,6 +772,7 @@ StyleDropdown.propTypes = {
   onGallerySelect: PropTypes.func,
   onCustomPromptChange: PropTypes.func,
   currentCustomPrompt: PropTypes.string,
+  currentCustomSceneName: PropTypes.string,
   portraitType: PropTypes.oneOf(['headshot', 'medium', 'fullbody']),
   styleReferenceImage: PropTypes.object,
   onEditStyleReference: PropTypes.func,
