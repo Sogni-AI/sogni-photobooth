@@ -44,6 +44,11 @@ const AppRouter = () => {
     window.history.pushState({}, '', '/event/halloween');
   };
 
+  const navigateToContestVote = () => {
+    setCurrentRoute('contest-vote');
+    window.history.pushState({}, '', '/contest/vote');
+  };
+
   useEffect(() => {
     const handleHashChange = () => {
       const hash = window.location.hash;
@@ -73,7 +78,7 @@ const AppRouter = () => {
   }, []);
 
   return (
-    <NavigationContext.Provider value={{ navigateToCamera }}>
+    <NavigationContext.Provider value={{ navigateToCamera, navigateToContestVote }}>
       <MusicPlayerProvider>
         {/* Dynamic page metadata for SEO and social sharing */}
         <PageMetadata />

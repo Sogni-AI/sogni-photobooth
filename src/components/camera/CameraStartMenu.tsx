@@ -101,6 +101,8 @@ const CameraStartMenu: React.FC<CameraStartMenuProps> = ({
     return !splashSeen && !isHalloweenLink && !skipWelcome;
   });
   const [isTransitioning, setIsTransitioning] = useState(false);
+  // Track if user came from intro to determine if animations should play
+  const [shouldPlayAnimations, setShouldPlayAnimations] = useState(false);
   const [randomTagline] = useState(() => {
     return RANDOM_TAGLINES[Math.floor(Math.random() * RANDOM_TAGLINES.length)];
   });
@@ -284,6 +286,8 @@ const CameraStartMenu: React.FC<CameraStartMenuProps> = ({
     setIsTransitioning(true);
     // Mark splash as seen
     localStorage.setItem(SPLASH_SEEN_KEY, 'true');
+    // Enable animations since we're transitioning from intro
+    setShouldPlayAnimations(true);
     // Wait for exit animation to complete before showing options
     setTimeout(() => {
       setShowIntro(false);
@@ -386,7 +390,7 @@ const CameraStartMenu: React.FC<CameraStartMenuProps> = ({
           </div>
         ) : (
           /* Options Section - 3 Polaroids */
-          <div className="options-section">
+          <div className={`options-section ${shouldPlayAnimations ? 'with-animations' : 'no-animations'}`}>
             <div className="top-content">
               <h1 className="start-menu-title">SOGNI PHOTOBOOTH</h1>
               <p className="start-menu-tagline">{randomTagline}</p>

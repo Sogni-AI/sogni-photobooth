@@ -6,7 +6,7 @@
 // Twitter share configuration
 export const TWITTER_SHARE_CONFIG = {
   // Default fallback message for Twitter sharing
-  DEFAULT_MESSAGE: "Just took my photo with the free @sogni_protocol AI photobooth at https://photobooth.sogni.ai",
+  DEFAULT_MESSAGE: "Just took my photo with the @sogni_protocol AI photobooth at https://photobooth.sogni.ai",
 };
 
 export default {
