@@ -27,7 +27,6 @@ export const AuthStatus: React.FC<AuthStatusProps> = ({ onPurchaseClick, onSignu
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [loginModalMode, setLoginModalMode] = useState<LoginModalMode>('login');
   const [highlightDailyBoost, setHighlightDailyBoost] = useState(false);
-  
   // Compute button text ONCE based on visitor status (before marking as visited)
   // Use useRef to preserve the initial value across renders
   const authButtonTextRef = useRef<string>(getAuthButtonText());

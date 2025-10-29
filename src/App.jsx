@@ -3085,6 +3085,15 @@ const App = () => {
     const wasAuthenticated = prevAuthRef.current.isAuthenticated;
     const isNowAuthenticated = authState.isAuthenticated;
     
+    // DEBUG: Log auth state changes
+    console.log('🔍 Auth state change detected:', {
+      wasAuthenticated,
+      isNowAuthenticated,
+      authMode: authState.authMode,
+      sessionTransferred: authState.sessionTransferred,
+      authStateKeys: Object.keys(authState)
+    });
+    
     // Update the ref for next time
     prevAuthRef.current = { isAuthenticated: authState.isAuthenticated, authMode: authState.authMode };
     
@@ -5996,6 +6005,100 @@ const App = () => {
           }
         }}
       />
+
+      {/* Session Transfer Modal - Non-dismissable full-screen overlay */}
+      {authState.sessionTransferred && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.85)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 999999,
+          padding: '20px',
+          backdropFilter: 'blur(8px)'
+        }}>
+          <div style={{
+            background: 'linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)',
+            borderRadius: '16px',
+            maxWidth: '90%',
+            width: '500px',
+            padding: '0',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
+            border: '1px solid rgba(255,255,255,0.2)',
+            overflow: 'hidden'
+          }}>
+            {/* Header with orange accent for session transfer */}
+            <div style={{
+              background: 'linear-gradient(135deg, #ff9800 0%, #ff9800dd 100%)',
+              padding: '24px 32px 20px 32px',
+              color: 'white',
+              textAlign: 'center'
+            }}>
+              <div style={{ fontSize: '3rem', marginBottom: '8px' }}>
+                🔄
+              </div>
+              <h3 style={{ 
+                margin: '0', 
+                fontSize: '1.4rem',
+                fontWeight: '600',
+                textShadow: '0 1px 2px rgba(0,0,0,0.1)'
+              }}>
+                Session Transferred
+              </h3>
+            </div>
+
+            {/* Content */}
+            <div style={{ padding: '24px 32px' }}>
+              <p style={{
+                fontSize: '1rem',
+                color: '#2c3e50',
+                lineHeight: '1.6',
+                margin: '0 0 24px 0'
+              }}>
+                {authState.error}
+              </p>
+
+              <div style={{
+                display: 'flex',
+                gap: '12px',
+                justifyContent: 'center'
+              }}>
+                <button
+                  onClick={() => window.location.reload()}
+                  style={{
+                    flex: 1,
+                    background: 'linear-gradient(135deg, #2196f3 0%, #1976d2 100%)',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    padding: '12px 24px',
+                    fontSize: '1rem',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    boxShadow: '0 4px 12px rgba(33, 150, 243, 0.3)'
+                  }}
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = '0 6px 16px rgba(33, 150, 243, 0.4)';
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(33, 150, 243, 0.3)';
+                  }}
+                >
+                  🔄 Refresh Browser
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Toast notifications are now handled by ToastProvider */}
 

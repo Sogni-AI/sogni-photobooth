@@ -1,6 +1,7 @@
 import React from 'react';
 import { SogniClient } from '@sogni-ai/sogni-client';
 import { getOrCreateAppId } from '../utils/appId';
+import { tabSync } from './tabSync';
 
 export interface SogniAuthState {
   isAuthenticated: boolean;
@@ -11,6 +12,7 @@ export interface SogniAuthState {
   } | null;
   authMode: 'frontend' | 'demo' | null;
   error: string | null;
+  sessionTransferred?: boolean; // Flag for when session is transferred to new tab
 }
 
 export interface SogniAuthService {
@@ -38,6 +40,18 @@ class SogniAuthManager implements SogniAuthService {
   constructor() {
     // Initialize on construction
     this.initializationPromise = this.initialize();
+    
+    // Setup tab synchronization listener
+    tabSync.onNewTabDetected((newTabDetected) => {
+      if (newTabDetected && this.authState.isAuthenticated) {
+        console.log('🔄 New authenticated tab detected, setting session transfer flag');
+        // Just set the flag - don't change auth state
+        this.setAuthState({
+          sessionTransferred: true,
+          error: 'Your Photobooth Session has been transferred to a new tab. Please refresh the browser to resume in this tab.'
+        });
+      }
+    });
   }
 
   private async initialize(): Promise<void> {
@@ -120,19 +134,23 @@ class SogniAuthManager implements SogniAuthService {
             email: currentAccount?.email
           });
           
-          this.setAuthState({
-            isAuthenticated: true,
-            authMode: 'frontend',
-            user: {
-              username: currentAccount?.username,
-              email: currentAccount?.email
-            },
-            isLoading: false,
-            error: null
-          });
+        this.setAuthState({
+          isAuthenticated: true,
+          authMode: 'frontend',
+          user: {
+            username: currentAccount?.username,
+            email: currentAccount?.email
+          },
+          isLoading: false,
+          error: null,
+          sessionTransferred: false
+        });
 
-          console.log('✅ Auth state updated, listeners notified');
-          return true;
+        // Notify other tabs about this authenticated session
+        tabSync.notifyNewAuthenticatedTab();
+
+        console.log('✅ Auth state updated, listeners notified');
+        return true;
         }
       }
 
@@ -224,8 +242,12 @@ class SogniAuthManager implements SogniAuthService {
             email: this.sogniClient.account.currentAccount?.email
           },
           isLoading: false,
-          error: null
+          error: null,
+          sessionTransferred: false
         });
+
+        // Notify other tabs about this authenticated session
+        tabSync.notifyNewAuthenticatedTab();
 
         console.log('✅ Existing Sogni session found and restored');
         return true;
@@ -236,7 +258,8 @@ class SogniAuthManager implements SogniAuthService {
           authMode: null,
           user: null,
           isLoading: false,
-          error: null
+          error: null,
+          sessionTransferred: false
         });
 
         console.log('ℹ️ No existing Sogni session found');
@@ -249,7 +272,8 @@ class SogniAuthManager implements SogniAuthService {
         authMode: null,
         user: null,
         isLoading: false,
-        error: error instanceof Error ? error.message : 'Failed to check existing session'
+        error: error instanceof Error ? error.message : 'Failed to check existing session',
+        sessionTransferred: false
       });
       return false;
     }
@@ -269,12 +293,16 @@ class SogniAuthManager implements SogniAuthService {
         this.sogniClient = null;
       }
 
+      // Clear tab session when explicitly logging out
+      tabSync.clearSession();
+
       this.setAuthState({
         isAuthenticated: false,
         authMode: null,
         user: null,
         isLoading: false,
-        error: null
+        error: null,
+        sessionTransferred: false
       });
 
       console.log('✅ Successfully logged out from Sogni');
@@ -285,17 +313,21 @@ class SogniAuthManager implements SogniAuthService {
       
       // Force cleanup even on error
       this.sogniClient = null;
+      tabSync.clearSession();
+      
       this.setAuthState({
         isAuthenticated: false,
         authMode: null,
         user: null,
         isLoading: false,
-        error: error instanceof Error ? error.message : 'Logout failed'
+        error: error instanceof Error ? error.message : 'Logout failed',
+        sessionTransferred: false
       });
       
       return false;
     }
   }
+
 
   async switchToDemoMode(): Promise<boolean> {
     try {
@@ -315,7 +347,8 @@ class SogniAuthManager implements SogniAuthService {
         authMode: 'demo',
         user: null, // Demo mode doesn't have user info
         isLoading: false,
-        error: null
+        error: null,
+        sessionTransferred: false
       });
 
       console.log('✅ Switched to demo mode');
@@ -328,7 +361,8 @@ class SogniAuthManager implements SogniAuthService {
         authMode: null,
         user: null,
         isLoading: false,
-        error: error instanceof Error ? error.message : 'Failed to switch to demo mode'
+        error: error instanceof Error ? error.message : 'Failed to switch to demo mode',
+        sessionTransferred: false
       });
       
       return false;
@@ -397,8 +431,12 @@ class SogniAuthManager implements SogniAuthService {
         email
       },
       isLoading: false,
-      error: null
+      error: null,
+      sessionTransferred: false
     });
+
+    // Notify other tabs about this authenticated session
+    tabSync.notifyNewAuthenticatedTab();
 
     console.log('✅ Auth state set to authenticated');
   }
