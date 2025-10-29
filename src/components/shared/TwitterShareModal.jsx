@@ -7,7 +7,6 @@ import { themeConfigService } from '../../services/themeConfig';
 import { styleIdToDisplay } from '../../utils';
 import { TWITTER_SHARE_CONFIG, getQRWatermarkConfig } from '../../constants/settings';
 import { useApp } from '../../context/AppContext';
-import { useSogniAuth } from '../../services/sogniAuth';
 
 // Helper to ensure Permanent Marker font is loaded
 const ensureFontLoaded = () => {
@@ -36,15 +35,11 @@ const TwitterShareModal = ({
   const [isSharing, setIsSharing] = useState(false);
   const [polaroidImageUrl, setPolaroidImageUrl] = useState(null);
   const [isLoadingPreview, setIsLoadingPreview] = useState(true);
-  const [submitToContest, setSubmitToContest] = useState(false);
   const textareaRef = useRef(null);
   const modalRef = useRef(null);
   
   // Get settings from context
   const { settings } = useApp();
-  
-  // Get authentication state
-  const { isAuthenticated } = useSogniAuth();
   
   // Get style display text (spaced format, no hashtags) from photo data if available
   const styleDisplayText = photoData?.promptDisplay || 
@@ -58,12 +53,9 @@ const TwitterShareModal = ({
     : styleDisplayText || '';
   
   
-  // Helper function to generate message based on contest submission status
-  const generateMessage = useCallback(async (isContestEntry) => {
-    if (isContestEntry && settings.positivePrompt) {
-      // Use Halloween-specific message format
-      return `My @sogni_protocol Halloween Costume Party Challenge entry! My prompt: "${settings.positivePrompt}"`;
-    } else if (tezdevTheme !== 'off') {
+  // Helper function to generate message
+  const generateMessage = useCallback(async () => {
+    if (tezdevTheme !== 'off') {
       // Use dynamic theme-specific message format
       try {
         const styleTag = styleDisplayText ? styleDisplayText.toLowerCase().replace(/\s+/g, '') : '';
@@ -81,19 +73,14 @@ const TwitterShareModal = ({
         : defaultMessage;
       return initialMessage;
     }
-  }, [settings.positivePrompt, tezdevTheme, styleDisplayText, defaultMessage]);
+  }, [tezdevTheme, styleDisplayText, defaultMessage]);
 
-  // Initialize message and contest checkbox when modal opens
+  // Initialize message when modal opens
   useEffect(() => {
     const loadMessage = async () => {
       if (isOpen) {
-        // Check if user came from Halloween event and set contest checkbox accordingly
-        // But only if user is authenticated - otherwise force it to false
-        const shouldSubmitToContest = isAuthenticated && (settings.halloweenContext || false);
-        setSubmitToContest(shouldSubmitToContest);
-        
         // Generate appropriate message
-        const initialMessage = await generateMessage(shouldSubmitToContest);
+        const initialMessage = await generateMessage();
         setMessage(initialMessage);
         
         // Focus the textarea
@@ -107,14 +94,7 @@ const TwitterShareModal = ({
     };
 
     loadMessage();
-  }, [isOpen, settings.halloweenContext, isAuthenticated, generateMessage]);
-
-  // Handle contest checkbox toggle - update message template
-  const handleContestToggle = async (checked) => {
-    setSubmitToContest(checked);
-    const newMessage = await generateMessage(checked);
-    setMessage(newMessage);
-  };
+  }, [isOpen, generateMessage]);
 
   // Ensure font is loaded when component mounts
   useEffect(() => {
@@ -133,9 +113,6 @@ const TwitterShareModal = ({
           
           let previewImageUrl;
           
-          // Determine label based on contest submission
-          const labelToUse = submitToContest ? 'Sogni Halloween 2025' : photoLabel;
-          
           if (tezdevTheme !== 'off') {
             // For TezDev themes, create full frame version (no polaroid frame, just TezDev overlay)
             // Custom frames should not include labels - they have their own styling
@@ -153,8 +130,8 @@ const TwitterShareModal = ({
             });
           } else {
             // For non-TezDev themes, use traditional polaroid frame
-            console.log(`Creating polaroid preview with label: "${labelToUse}" (always JPG for Twitter)`);
-            previewImageUrl = await createPolaroidImage(imageUrl, labelToUse, {
+            console.log(`Creating polaroid preview with label: "${photoLabel}" (always JPG for Twitter)`);
+            previewImageUrl = await createPolaroidImage(imageUrl, photoLabel, {
               tezdevTheme,
               aspectRatio,
               outputFormat: 'jpg', // Always use JPG for Twitter sharing
@@ -179,7 +156,7 @@ const TwitterShareModal = ({
       // Cleanup function
       setPolaroidImageUrl(null);
     };
-  }, [isOpen, imageUrl, photoLabel, tezdevTheme, aspectRatio, submitToContest, settings.sogniWatermark]);
+  }, [isOpen, imageUrl, photoLabel, tezdevTheme, aspectRatio, settings.sogniWatermark]);
 
   // Handle click outside to close
   useEffect(() => {
@@ -203,7 +180,8 @@ const TwitterShareModal = ({
     
     setIsSharing(true);
     try {
-      await onShare(message, submitToContest);
+      // Contest is over, always pass false
+      await onShare(message, false);
       onClose();
     } catch (error) {
       console.error('Error sharing:', error);
@@ -271,19 +249,6 @@ const TwitterShareModal = ({
         </div>
         
         <div className="twitter-modal-footer">
-          <div className="halloween-contest-checkbox">
-            <label>
-              <input
-                type="checkbox"
-                checked={submitToContest}
-                onChange={(e) => handleContestToggle(e.target.checked)}
-                disabled={!isAuthenticated}
-              />
-              <span className="checkbox-label">
-                <span className="pumpkin-icon">🎃</span>Submit to Halloween Contest{!isAuthenticated && ' (must be logged in)'}
-              </span>
-            </label>
-          </div>
           <button 
             className="twitter-share-btn" 
             onClick={handleShare}

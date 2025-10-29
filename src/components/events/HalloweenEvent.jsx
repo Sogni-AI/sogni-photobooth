@@ -17,14 +17,10 @@ const HalloweenEvent = () => {
   const [pumpkinDismissed, setPumpkinDismissed] = useState(false);
   const { isEnabled, enable: enableMusic } = useMusicPlayer();
   const { updateSetting, stylePrompts } = useApp();
-  const { navigateToCamera } = useNavigation();
+  const { navigateToCamera, navigateToContestVote } = useNavigation();
 
   const handleDismissOverlay = () => {
     setShowOverlay(false);
-  };
-
-  const handleExpandOverlay = () => {
-    setShowOverlay(true);
   };
 
   const handleDismissPumpkin = (e) => {
@@ -61,7 +57,7 @@ const HalloweenEvent = () => {
     console.log('🎃 Halloween prompt submitted:', prompt);
     updateSetting('positivePrompt', prompt);
     updateSetting('selectedStyle', 'custom');
-    updateSetting('halloweenContext', true); // Flag to enable Halloween-specific Twitter share message
+    // Contest is over - no longer setting halloweenContext flag
     
     // Mark that user has explicitly selected a style (for checkmark in CameraStartMenu)
     localStorage.setItem('sogni_style_explicitly_selected', 'true');
@@ -103,7 +99,7 @@ const HalloweenEvent = () => {
     // Set the style and prompt
     updateSetting('selectedStyle', styleKey);
     updateSetting('positivePrompt', prompt);
-    updateSetting('halloweenContext', true); // Flag to enable Halloween-specific Twitter share message
+    // Contest is over - no longer setting halloweenContext flag
     
     // Mark that user has explicitly selected a style (for checkmark in CameraStartMenu)
     localStorage.setItem('sogni_style_explicitly_selected', 'true');
@@ -159,8 +155,8 @@ const HalloweenEvent = () => {
         {!showOverlay && !pumpkinDismissed && (
           <button 
             className="halloween-pumpkin-button"
-            onClick={handleExpandOverlay}
-            aria-label="View contest information"
+            onClick={navigateToContestVote}
+            aria-label="Vote on new community submissions"
           >
             <button
               className="pumpkin-dismiss-btn"
@@ -171,8 +167,8 @@ const HalloweenEvent = () => {
             </button>
             <span className="pumpkin-emoji">🎃</span>
             <span className="compete-bubble">
-              <span className="compete-text">Create your own costume and win!</span>
-              <span className="compete-emoji">🎁</span>
+              <span className="compete-text">Vote on new community submissions!</span>
+              <span className="compete-emoji">🗳️</span>
             </span>
           </button>
         )}
