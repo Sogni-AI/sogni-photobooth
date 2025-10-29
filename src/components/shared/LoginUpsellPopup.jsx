@@ -115,7 +115,10 @@ const LoginUpsellPopup = ({ isOpen, onClose }) => {
               className="sloth-mascot"
             />
           </div>
-          <h2>Ready for more?</h2>
+          <div className="out-of-credits-text">
+            <h1>Ready for more?</h1>
+            <h2>Signup for free.</h2>
+          </div>
         </div>
 
         <div className="out-of-credits-modal-content">
