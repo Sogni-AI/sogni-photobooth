@@ -306,18 +306,6 @@
   padding: 4px 10px;
   border-radius: 6px;
 }
-
-.custom-prompt-hint {
-  margin-top: 14px;
-  font-size: 13px;
-  color: rgba(255, 255, 255, 0.5);
-  text-align: center;
-  padding: 8px;
-  background: rgba(59, 130, 246, 0.05);
-  border-radius: 8px;
-  border: 1px dashed rgba(59, 130, 246, 0.2);
-}
-
 .custom-prompt-footer {
   position: relative;
   z-index: 1;
@@ -468,5 +456,47 @@
   .sparkle {
     font-size: 16px;
   }
+}
+
+/* Scene Name Section */
+.scene-name-section {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px dashed rgba(255, 255, 255, 0.1);
+}
+
+.scene-name-input {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.4);
+  border: 2px solid rgba(139, 92, 246, 0.2);
+  border-radius: 12px;
+  padding: 12px 16px;
+  font-size: 15px;
+  color: #fff;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-sizing: border-box;
+}
+
+.scene-name-input:focus {
+  outline: none;
+  border-color: #a78bfa;
+  background: rgba(0, 0, 0, 0.5);
+  box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.2),
+              0 4px 16px rgba(139, 92, 246, 0.15);
+  transform: translateY(-1px);
+}
+
+.scene-name-input::placeholder {
+  color: rgba(255, 255, 255, 0.35);
+  font-style: italic;
+}
+
+.scene-name-hint {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.4);
+  font-family: monospace;
+  margin-top: 6px;
+  text-align: right;
 }
 

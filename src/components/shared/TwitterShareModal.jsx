@@ -42,7 +42,9 @@ const TwitterShareModal = ({
   const { settings } = useApp();
   
   // Get style display text (spaced format, no hashtags) from photo data if available
-  const styleDisplayText = photoData?.promptDisplay || 
+  // Priority: customSceneName > promptDisplay > stylePrompt lookup
+  const styleDisplayText = photoData?.customSceneName ||
+    photoData?.promptDisplay || 
     (photoData?.stylePrompt && styleIdToDisplay(
       Object.entries(stylePrompts || {}).find(([, value]) => value === photoData.stylePrompt)?.[0] || ''
     )) || '';
@@ -66,14 +68,19 @@ const TwitterShareModal = ({
         return defaultMessage;
       }
     } else {
-      // Original behavior for non-TezDev themes
+      // For custom prompts (with customSceneName), don't add hashtag or URL params
+      if (photoData?.customSceneName) {
+        return defaultMessage;
+      }
+      
+      // Original behavior for non-TezDev themes and non-custom prompts
       const currentUrl = window.location.href;
       const initialMessage = styleDisplayText 
         ? `${defaultMessage} #${styleDisplayText.toLowerCase().replace(/\s+/g, '')} ${currentUrl.split('?')[0]}?prompt=${styleDisplayText.toLowerCase().replace(/\s+/g, '')}`
         : defaultMessage;
       return initialMessage;
     }
-  }, [tezdevTheme, styleDisplayText, defaultMessage]);
+  }, [tezdevTheme, styleDisplayText, defaultMessage, photoData]);
 
   // Initialize message when modal opens
   useEffect(() => {

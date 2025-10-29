@@ -78,6 +78,7 @@ export interface Settings {
   flashEnabled: boolean;
   keepOriginalPhoto: boolean;
   positivePrompt?: string;
+  customSceneName?: string;
   stylePrompt?: string;
   negativePrompt?: string;
   seed?: string;

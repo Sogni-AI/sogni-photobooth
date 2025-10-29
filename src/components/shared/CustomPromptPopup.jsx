@@ -6,16 +6,37 @@ import '../../styles/custom-prompt-popup.css';
 /**
  * CustomPromptPopup - A popup dialog for entering custom prompts directly in Vibe Explorer
  */
+const CUSTOM_PROMPT_STORAGE_KEY = 'sogni_last_custom_prompt';
+const CUSTOM_SCENE_NAME_STORAGE_KEY = 'sogni_last_custom_scene_name';
+
 const CustomPromptPopup = ({ 
   isOpen, 
   onClose, 
   onApply,
-  currentPrompt = ''
+  currentPrompt = '',
+  currentSceneName = ''
 }) => {
-  const [promptText, setPromptText] = useState(currentPrompt);
+  // Initialize state from localStorage if available, otherwise use props
+  const [promptText, setPromptText] = useState(() => {
+    try {
+      const stored = localStorage.getItem(CUSTOM_PROMPT_STORAGE_KEY);
+      return stored || currentPrompt;
+    } catch (e) {
+      return currentPrompt;
+    }
+  });
+  const [sceneName, setSceneName] = useState(() => {
+    try {
+      const stored = localStorage.getItem(CUSTOM_SCENE_NAME_STORAGE_KEY);
+      return stored || currentSceneName;
+    } catch (e) {
+      return currentSceneName;
+    }
+  });
   const [showSparkles, setShowSparkles] = useState(false);
   const textareaRef = useRef(null);
   const popupRef = useRef(null);
+  const initialValuesRef = useRef({ prompt: '', sceneName: '' });
 
   // Fun placeholder examples that rotate
   const funPlaceholders = [
@@ -49,10 +70,30 @@ const CustomPromptPopup = ({
     }
   }, [isOpen]);
 
-  // Update local state when currentPrompt prop changes
+  // When popup opens, load from localStorage (takes precedence over props)
   useEffect(() => {
-    setPromptText(currentPrompt);
-  }, [currentPrompt]);
+    if (isOpen) {
+      try {
+        const storedPrompt = localStorage.getItem(CUSTOM_PROMPT_STORAGE_KEY);
+        const storedSceneName = localStorage.getItem(CUSTOM_SCENE_NAME_STORAGE_KEY);
+        
+        // Use localStorage values if they exist, otherwise use props
+        const finalPrompt = storedPrompt !== null ? storedPrompt : (currentPrompt || '');
+        const finalSceneName = storedSceneName !== null ? storedSceneName : (currentSceneName || '');
+        
+        setPromptText(finalPrompt);
+        setSceneName(finalSceneName);
+        
+        // Store initial values for cancel functionality
+        initialValuesRef.current = { prompt: finalPrompt, sceneName: finalSceneName };
+      } catch (e) {
+        console.warn('Failed to load custom prompt from localStorage:', e);
+        setPromptText(currentPrompt);
+        setSceneName(currentSceneName);
+        initialValuesRef.current = { prompt: currentPrompt, sceneName: currentSceneName };
+      }
+    }
+  }, [isOpen, currentPrompt, currentSceneName]);
 
   // Handle click outside to close
   useEffect(() => {
@@ -93,12 +134,21 @@ const CustomPromptPopup = ({
   }, [isOpen, promptText, onClose]);
 
   const handleApply = () => {
-    onApply(promptText);
+    // Save to localStorage for future sessions
+    try {
+      localStorage.setItem(CUSTOM_PROMPT_STORAGE_KEY, promptText);
+      localStorage.setItem(CUSTOM_SCENE_NAME_STORAGE_KEY, sceneName);
+    } catch (e) {
+      console.warn('Failed to save custom prompt to localStorage:', e);
+    }
+    onApply(promptText, sceneName);
     onClose();
   };
 
   const handleCancel = () => {
-    setPromptText(currentPrompt); // Reset to original
+    // Reset to the values that were loaded when popup opened
+    setPromptText(initialValuesRef.current.prompt);
+    setSceneName(initialValuesRef.current.sceneName);
     onClose();
   };
 
@@ -176,8 +226,25 @@ const CustomPromptPopup = ({
             </div>
           </div>
 
-          <div className="custom-prompt-hint">
-            ⚡ Tip: Press Ctrl+Enter (or Cmd+Enter) to apply quickly
+          <div className="scene-name-section">
+            <label className="custom-prompt-label" style={{ marginTop: '12px' }}>
+              🏷️ Give your scene a name
+            </label>
+            <input
+              type="text"
+              className="scene-name-input"
+              placeholder="e.g., My Magical Adventure"
+              value={sceneName}
+              onChange={(e) => setSceneName(e.target.value.slice(0, 24))}
+              maxLength={24}
+              autoComplete="off"
+              autoCapitalize="off"
+              data-form-type="other"
+              required
+            />
+            <div className="scene-name-hint">
+              {sceneName.length}/24 characters
+            </div>
           </div>
         </div>
 
@@ -191,7 +258,7 @@ const CustomPromptPopup = ({
           <button 
             className="custom-prompt-btn custom-prompt-btn-apply"
             onClick={handleApply}
-            disabled={!promptText.trim()}
+            disabled={!promptText.trim() || !sceneName.trim()}
           >
             Let&apos;s Create Magic! ✨
           </button>
@@ -206,7 +273,8 @@ CustomPromptPopup.propTypes = {
   isOpen: PropTypes.bool.isRequired,
   onClose: PropTypes.func.isRequired,
   onApply: PropTypes.func.isRequired,
-  currentPrompt: PropTypes.string
+  currentPrompt: PropTypes.string,
+  currentSceneName: PropTypes.string
 };
 
 export default CustomPromptPopup;

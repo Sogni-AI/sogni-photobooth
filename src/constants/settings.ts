@@ -199,6 +199,7 @@ const createDefaultSettings = (): Settings => {
     keepOriginalPhoto: false,
     selectedStyle: "randomMix",
     positivePrompt: '',
+    customSceneName: '',
     stylePrompt: '',
     negativePrompt: '',
     seed: '',

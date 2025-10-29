@@ -51,8 +51,9 @@ interface CameraStartMenuProps {
   onNavigateToGallery?: () => void;
   onShowControlOverlay?: () => void;
   onThemeChange?: (themeState: Record<string, boolean>) => void;
-  onCustomPromptChange?: (prompt: string) => void;
+  onCustomPromptChange?: (prompt: string, sceneName: string) => void;
   currentCustomPrompt?: string;
+  currentCustomSceneName?: string;
   portraitType?: 'headshot' | 'medium' | 'fullbody';
   styleReferenceImage?: { blob: File; dataUrl: string; croppedBlob: Blob | null } | null;
   onEditStyleReference?: () => void;
@@ -79,6 +80,7 @@ const CameraStartMenu: React.FC<CameraStartMenuProps> = ({
   onThemeChange,
   onCustomPromptChange,
   currentCustomPrompt = '',
+  currentCustomSceneName = '',
   portraitType = 'medium',
   styleReferenceImage = null,
   onEditStyleReference,
@@ -559,6 +561,7 @@ const CameraStartMenu: React.FC<CameraStartMenuProps> = ({
           onGallerySelect={undefined}
           onCustomPromptChange={onCustomPromptChange as any}
           currentCustomPrompt={currentCustomPrompt}
+          currentCustomSceneName={currentCustomSceneName}
           portraitType={portraitType}
           styleReferenceImage={styleReferenceImage as any}
           onEditStyleReference={onEditStyleReference as any}

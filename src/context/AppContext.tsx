@@ -129,6 +129,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       saveSettingsToCookies({ positivePrompt });
     }
     
+    // Always load customSceneName from cookies (don't reset it)
+    // This allows users to reuse their previous scene name when creating new custom prompts
+    let customSceneName = getSettingFromCookie('customSceneName', DEFAULT_SETTINGS.customSceneName) as string;
+    
     // Get model-specific settings for the (possibly reset) model
     const modelSettings = getSettingsForModel(selectedModel);
     
@@ -136,6 +140,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       selectedStyle,
       selectedModel,
       positivePrompt,
+      customSceneName,
       numImages: modelSettings.numImages || DEFAULT_SETTINGS.numImages,
       promptGuidance: modelSettings.promptGuidance || DEFAULT_SETTINGS.promptGuidance,
       controlNetStrength: getSettingFromCookie('controlNetStrength', DEFAULT_SETTINGS.controlNetStrength),

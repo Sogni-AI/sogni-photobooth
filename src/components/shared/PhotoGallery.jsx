@@ -960,6 +960,11 @@ const PhotoGallery = ({
       return '';
     }
     
+    // Use custom scene name if available
+    if (photo.customSceneName) {
+      return photo.customSceneName;
+    }
+    
     // Try stylePrompt first
     if (photo.stylePrompt) {
       const foundStyleKey = Object.entries(stylePrompts).find(
@@ -3840,9 +3845,10 @@ const PhotoGallery = ({
           const placeholderUrl = photo.originalDataUrl;
           const progress = Math.floor(photo.progress || 0);
           const loadingLabel = progress > 0 ? `${progress}%` : "";
+          const styleDisplayText = getStyleDisplayText(photo);
           const labelText = isReference ? "Reference" : 
             photo.isGalleryImage && photo.promptDisplay ? photo.promptDisplay : 
-            (getStyleDisplayText(photo) ? `#${index-keepOriginalPhoto+1}` : '#SogniPhotobooth');
+            (styleDisplayText || '#SogniPhotobooth');
           // Check if this photo represents the currently selected style
           const isCurrentStyle = isPromptSelectorMode && photo.promptKey && photo.promptKey === selectedStyle;
           // Loading or error state
@@ -5441,7 +5447,7 @@ const PhotoGallery = ({
               <div className="photo-label">
                 {photo.loading || photo.generating ? 
                   (photo.statusText || labelText) 
-                  : photo.isGalleryImage ? labelText : (photo.statusText || (labelText + (getStyleDisplayText(photo) ? ` ${getStyleDisplayText(photo)}` : '')))}
+                  : photo.isGalleryImage ? labelText : (photo.statusText || labelText)}
               </div>
             </div>
           );
