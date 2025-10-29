@@ -786,6 +786,9 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
               boxShadow: autoFocusPositivePrompt ? '0 0 0 3px rgba(59, 130, 246, 0.1)' : undefined,
               transition: 'all 0.2s ease'
             }}
+            autoComplete="off"
+            autoCapitalize="off"
+            data-form-type="other"
           />
         </div>
 
@@ -798,6 +801,9 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
             value={stylePrompt}
             onChange={(e) => onStylePromptChange?.(e.target.value)}
             rows={2}
+            autoComplete="off"
+            autoCapitalize="off"
+            data-form-type="other"
           />
         </div>
 
@@ -810,6 +816,9 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
             value={negativePrompt}
             onChange={(e) => onNegativePromptChange?.(e.target.value)}
             rows={2}
+            autoComplete="off"
+            autoCapitalize="off"
+            data-form-type="other"
           />
         </div>
 
@@ -963,6 +972,11 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
                 fontSize: '14px',
                 fontFamily: 'monospace'
               }}
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck="false"
+              data-form-type="other"
             />
             {qrUrlError && (
               <div className="error-message" style={{

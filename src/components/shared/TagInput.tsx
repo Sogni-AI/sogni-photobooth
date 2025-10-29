@@ -96,6 +96,11 @@ const TagInput: React.FC<TagInputProps> = ({
           className={`tag-input-field ${disabled ? 'disabled' : ''}`}
           disabled={disabled}
           readOnly={disabled}
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="off"
+          spellCheck="false"
+          data-form-type="other"
         />
       </div>
     </div>

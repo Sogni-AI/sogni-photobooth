@@ -213,6 +213,9 @@ const TwitterShareModal = ({
               onChange={(e) => setMessage(e.target.value)}
               placeholder="What would you like to say about this photo?"
               maxLength={maxLength}
+              autoComplete="off"
+              autoCapitalize="off"
+              data-form-type="other"
             />
             <div className="twitter-char-counter">
               {message.length}/{maxLength}

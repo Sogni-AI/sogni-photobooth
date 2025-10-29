@@ -3391,6 +3391,11 @@ const PhotoGallery = ({
                     e.target.style.borderColor = 'rgba(255, 255, 255, 0.3)';
                   }}
                   autoFocus
+                  autoComplete="off"
+                  autoCorrect="off"
+                  autoCapitalize="off"
+                  spellCheck="false"
+                  data-form-type="other"
                 />
                 {searchTerm && (
                   <button
@@ -5520,6 +5525,9 @@ const PhotoGallery = ({
                   }
                 }
               }}
+              autoComplete="off"
+              autoCapitalize="off"
+              data-form-type="other"
             />
 
             {/* Quick-action suggestion chips */}

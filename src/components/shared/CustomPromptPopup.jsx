@@ -160,6 +160,9 @@ const CustomPromptPopup = ({
               value={promptText}
               onChange={handleTextChange}
               rows={5}
+              autoComplete="off"
+              autoCapitalize="off"
+              data-form-type="other"
             />
             {showSparkles && <div className="typing-sparkles">✨</div>}
           </div>
