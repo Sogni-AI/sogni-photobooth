@@ -23,6 +23,7 @@ import { ensurePermanentUrl } from './utils/imageUpload.js';
 import { createPolaroidImage } from './utils/imageProcessing.js';
 import { getPhotoHashtag } from './services/TwitterShare.js';
 import { trackShareWithStyle } from './services/analyticsService';
+import { CUSTOM_PROMPT_IMAGE_KEY } from './components/shared/CustomPromptPopup';
 import clickSound from './click.mp3';
 import cameraWindSound from './camera-wind.mp3';
 // import helloSound from './hello.mp3';
@@ -5164,6 +5165,25 @@ const App = () => {
                 statusText = styleIdToDisplay(selectedStyle);
               } else {
                 statusText = '#SogniPhotobooth';
+              }
+              
+              // Save first custom prompt image to localStorage for display in UI
+              if (selectedStyle === 'custom' && positivePrompt) {
+                try {
+                  const existingImage = localStorage.getItem(CUSTOM_PROMPT_IMAGE_KEY);
+                  if (!existingImage) {
+                    // Only save the first image for this custom prompt
+                    const imageData = {
+                      url: loadedImageUrl,
+                      prompt: positivePrompt,
+                      timestamp: Date.now()
+                    };
+                    localStorage.setItem(CUSTOM_PROMPT_IMAGE_KEY, JSON.stringify(imageData));
+                    console.log('Saved custom prompt image:', imageData);
+                  }
+                } catch (e) {
+                  console.warn('Failed to save custom prompt image:', e);
+                }
               }
               
               updated[photoIndex] = {

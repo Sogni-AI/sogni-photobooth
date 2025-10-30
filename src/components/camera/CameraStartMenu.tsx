@@ -1,7 +1,8 @@
-import React, { useRef, useState, useMemo } from 'react';
+import React, { useRef, useState, useMemo, useEffect } from 'react';
 import StyleDropdown from '../shared/StyleDropdown';
 import { styleIdToDisplay } from '../../utils';
 import { generateGalleryFilename } from '../../utils/galleryLoader';
+import { CUSTOM_PROMPT_IMAGE_KEY } from '../shared/CustomPromptPopup';
 import './CameraStartMenu.css';
 
 const AUDIO_ENABLED_KEY = 'sogni_splash_audio_enabled';
@@ -144,6 +145,24 @@ const CameraStartMenu: React.FC<CameraStartMenuProps> = ({
     return localStorage.getItem(STYLE_SELECTED_KEY) === 'true';
   }, [selectedStyle]); // Re-check when selectedStyle changes
 
+  // Load custom prompt image from localStorage
+  const [customPromptImage, setCustomPromptImage] = useState<string | null>(null);
+  
+  useEffect(() => {
+    try {
+      const imageData = localStorage.getItem(CUSTOM_PROMPT_IMAGE_KEY);
+      if (imageData) {
+        const parsed = JSON.parse(imageData);
+        setCustomPromptImage(parsed.url);
+      } else {
+        setCustomPromptImage(null);
+      }
+    } catch (e) {
+      console.warn('Failed to load custom prompt image:', e);
+      setCustomPromptImage(null);
+    }
+  }, [selectedStyle]); // Reload when selected style changes
+
   // Get the appropriate icon for the selected style
   const getStyleIcon = useMemo(() => {
     if (!selectedStyle || selectedStyle === '') return '🎨';
@@ -169,6 +188,12 @@ const CameraStartMenu: React.FC<CameraStartMenuProps> = ({
   // Generate preview image path for selected style
   const stylePreviewImage = useMemo(() => {
     console.log('🖼️ stylePreviewImage recalculating - selectedStyle:', selectedStyle, 'hasStyleRef:', !!styleReferenceImage?.dataUrl);
+    
+    // Special handling for Custom Prompt - show saved custom prompt image
+    if (selectedStyle === 'custom' && customPromptImage) {
+      console.log('✏️ Using custom prompt image for preview:', customPromptImage.substring(0, 50));
+      return customPromptImage;
+    }
     
     // Special handling for Copy Image Style - show uploaded reference image
     if (selectedStyle === 'copyImageStyle' && styleReferenceImage?.dataUrl) {
@@ -216,7 +241,7 @@ const CameraStartMenu: React.FC<CameraStartMenuProps> = ({
 
     console.log('⚪ No preview image (returning null)');
     return null;
-  }, [selectedStyle, portraitType, randomStyleForSamplers, styleReferenceImage]);
+  }, [selectedStyle, portraitType, randomStyleForSamplers, styleReferenceImage, customPromptImage]);
 
   const handleBrowseClick = () => {
     // If there's an existing upload stored, show the adjuster with that photo first

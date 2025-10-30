@@ -8,6 +8,7 @@ import '../../styles/custom-prompt-popup.css';
  */
 const CUSTOM_PROMPT_STORAGE_KEY = 'sogni_last_custom_prompt';
 const CUSTOM_SCENE_NAME_STORAGE_KEY = 'sogni_last_custom_scene_name';
+export const CUSTOM_PROMPT_IMAGE_KEY = 'sogni_custom_prompt_image';
 
 const CustomPromptPopup = ({ 
   isOpen, 
@@ -138,6 +139,17 @@ const CustomPromptPopup = ({
     try {
       localStorage.setItem(CUSTOM_PROMPT_STORAGE_KEY, promptText);
       localStorage.setItem(CUSTOM_SCENE_NAME_STORAGE_KEY, sceneName);
+      
+      // Clear the saved custom prompt image if the prompt has changed
+      // This allows a new first image to be captured for the new prompt
+      const existingImageData = localStorage.getItem(CUSTOM_PROMPT_IMAGE_KEY);
+      if (existingImageData) {
+        const imageData = JSON.parse(existingImageData);
+        if (imageData.prompt !== promptText) {
+          localStorage.removeItem(CUSTOM_PROMPT_IMAGE_KEY);
+          console.log('Cleared previous custom prompt image for new prompt');
+        }
+      }
     } catch (e) {
       console.warn('Failed to save custom prompt to localStorage:', e);
     }

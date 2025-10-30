@@ -5,7 +5,7 @@ import { THEME_GROUPS, getDefaultThemeGroupState } from '../../constants/themeGr
 import { getThemeGroupPreferences, saveThemeGroupPreferences } from '../../utils/cookies';
 import { isFluxKontextModel } from '../../constants/settings';
 import { generateGalleryFilename } from '../../utils/galleryLoader';
-import CustomPromptPopup from './CustomPromptPopup';
+import CustomPromptPopup, { CUSTOM_PROMPT_IMAGE_KEY } from './CustomPromptPopup';
 import '../../styles/style-dropdown.css';
 import PropTypes from 'prop-types';
 
@@ -56,6 +56,7 @@ const StyleDropdown = ({
   const [isThemesSectionOpen, setIsThemesSectionOpen] = useState(false);
   const [isIndividualStylesOpen, setIsIndividualStylesOpen] = useState(true); // Open by default
   const [showSearchInput, setShowSearchInput] = useState(false);
+  const [customPromptImage, setCustomPromptImage] = useState(null);
   
   // Handle slide-in panel closing animation
   const handleClose = () => {
@@ -309,6 +310,22 @@ const StyleDropdown = ({
   // Check if we're using Flux.1 Kontext
   const isFluxKontext = selectedModel && isFluxKontextModel(selectedModel);
 
+  // Load custom prompt image from localStorage
+  useEffect(() => {
+    try {
+      const imageData = localStorage.getItem(CUSTOM_PROMPT_IMAGE_KEY);
+      if (imageData) {
+        const parsed = JSON.parse(imageData);
+        setCustomPromptImage(parsed.url);
+      } else {
+        setCustomPromptImage(null);
+      }
+    } catch (e) {
+      console.warn('Failed to load custom prompt image:', e);
+      setCustomPromptImage(null);
+    }
+  }, [isOpen]); // Reload when dropdown opens
+
   // If not mounted or not open, don't render anything
   if (!mounted || !isOpen) return (
     <>
@@ -346,16 +363,6 @@ const StyleDropdown = ({
               width: position.width,
             }}
           >
-      {/* Close button for slide-in panel - mobile only */}
-      {slideInPanel && (
-        <button 
-          className="slide-panel-close-btn mobile-only"
-          onClick={handleClose}
-          aria-label="Close"
-        >
-          Close
-        </button>
-      )}
       
       {/* Browse Vibe Explorer - First item */}
       {onNavigateToVibeExplorer && !isFluxKontext && (
@@ -484,6 +491,17 @@ const StyleDropdown = ({
                 setShowCustomPromptPopup(true);
               }}
             >
+              {customPromptImage && (
+                <img 
+                  src={customPromptImage} 
+                  alt="Custom Prompt"
+                  className="style-option-preview"
+                  onError={(e) => {
+                    // Hide image if it fails to load
+                    e.currentTarget.style.display = 'none';
+                  }}
+                />
+              )}
               <span>✏️</span>
               <span>Custom Prompt</span>
             </div>
@@ -738,6 +756,16 @@ const StyleDropdown = ({
         )}
       </div>
     </div>
+          {/* Close button for slide-in panel - mobile only - positioned outside dropdown to avoid scrolling */}
+          {slideInPanel && (
+            <button
+              className="slide-panel-close-btn mobile-only"
+              onClick={handleClose}
+              aria-label="Close"
+            >
+              Close
+            </button>
+          )}
         </>,
         document.body
       )}
