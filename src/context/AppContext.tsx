@@ -46,7 +46,7 @@ interface AppContextType {
   
   // Settings
   settings: Settings;
-  updateSetting: <K extends keyof Settings>(key: K, value: Settings[K]) => void;
+  updateSetting: <K extends keyof Settings>(key: K, value: Settings[K], isAuthenticated?: boolean) => void;
   switchToModel: (modelId: string) => void;
   resetSettings: () => void;
   
@@ -73,7 +73,6 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | null>(null);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-
   
   // Photos state
   const [photos, setPhotos] = useState<Photo[]>([]);
@@ -197,7 +196,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Cache clearing callbacks
   const cacheClearingCallbacks = useRef<(() => void)[]>([]);
   
-  const updateSetting = <K extends keyof Settings>(key: K, value: Settings[K]) => {
+  const updateSetting = <K extends keyof Settings>(key: K, value: Settings[K], isAuthenticated: boolean = false) => {
     // Special handling for model changes
     if (key === 'selectedModel') {
       console.log(`updateSetting: Model change detected, calling switchToModel with ${String(value)}`);
@@ -214,8 +213,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         console.log(`📦 Saving model-specific setting ${String(key)}`);
         saveModelSpecificSettings(newSettings.selectedModel, { [key]: value });
       } else {
-        console.log(`🌐 Saving global setting ${String(key)} via saveSettingsToCookies`);
-        saveSettingsToCookies({ [key]: value });
+        // Save to localStorage if authenticated, sessionStorage if not
+        saveSettingsToCookies({ [key]: value }, isAuthenticated);
       }
       
       return newSettings;

@@ -324,7 +324,18 @@ if (!isLocalEnv) {
   app.use(express.static(staticDir));
 
   // Catch-all route to serve index.html for SPA routing
+  // BUT: Return 404 for missing static assets (images, fonts, etc.) instead of serving index.html
   app.get('*', (req, res) => {
+    // Check if the request is for a static asset
+    const isStaticAsset = /\.(png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot|webp|bmp|tiff)$/i.test(req.path);
+
+    if (isStaticAsset) {
+      // Return 404 for missing static assets
+      console.log(`[Catch-all] Returning 404 for missing static asset: ${req.path}`);
+      return res.status(404).send('Not Found');
+    }
+
+    // Otherwise, serve index.html for SPA routing
     console.log(`[Catch-all] Serving index.html for path: ${req.path}`);
     res.sendFile(path.join(staticDir, 'index.html'));
   });

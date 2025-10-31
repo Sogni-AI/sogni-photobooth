@@ -11,6 +11,7 @@ import { isMobile, styleIdToDisplay } from '../../utils/index';
 import promptsDataRaw from '../../prompts.json';
 import { THEME_GROUPS, getDefaultThemeGroupState, getEnabledPrompts } from '../../constants/themeGroups';
 import { getThemeGroupPreferences, saveThemeGroupPreferences, getFavoriteImages, toggleFavoriteImage, saveFavoriteImages, getBlockedPrompts, blockPrompt } from '../../utils/cookies';
+import { getAttributionText } from '../../config/ugcAttributions';
 import { isFluxKontextModel, SAMPLE_GALLERY_CONFIG, getQRWatermarkConfig } from '../../constants/settings';
 import { themeConfigService } from '../../services/themeConfig';
 import { useApp } from '../../context/AppContext';
@@ -4046,8 +4047,8 @@ const PhotoGallery = ({
                           {isPhotoFavorited(photo) ? '❤️' : '🤍'}
                         </button>
                       )}
-                      {/* Refresh button - only show if not already refreshing or generating */}
-                      {!photo.generating && !photo.loading && (photo.positivePrompt || photo.stylePrompt) && (
+                      {/* Refresh button - show for failed images or when not generating/loading */}
+                      {(photo.error || (!photo.generating && !photo.loading)) && (photo.positivePrompt || photo.stylePrompt) && (
                         <button
                           className="photo-refresh-btn"
                           onMouseDown={(e) => {
@@ -4760,6 +4761,23 @@ const PhotoGallery = ({
                     >
                       Use this vibe
                     </button>
+
+                    {/* UGC Attribution - Only show when there's an attribution */}
+                    {getAttributionText(photo.promptKey) && (
+                      <span style={{
+                        position: 'absolute',
+                        bottom: '8px',
+                        right: '8px',
+                        color: 'white',
+                        fontSize: '12px',
+                        opacity: 0.9,
+                        textShadow: '0 1px 3px rgba(0,0,0,0.8)',
+                        pointerEvents: 'none',
+                        zIndex: 11
+                      }}>
+                        {getAttributionText(photo.promptKey)}
+                      </span>
+                    )}
                   </div>
                 )}
 
@@ -5448,6 +5466,17 @@ const PhotoGallery = ({
                 {photo.loading || photo.generating ? 
                   (photo.statusText || labelText) 
                   : photo.isGalleryImage ? labelText : (photo.statusText || labelText)}
+                {/* UGC Attribution - show for Vibe Explorer photos with attribution */}
+                {isPromptSelectorMode && photo.promptKey && getAttributionText(photo.promptKey) && (
+                  <div style={{
+                    fontSize: '9px',
+                    opacity: 0.7,
+                    marginTop: '2px',
+                    fontStyle: 'italic'
+                  }}>
+                    {getAttributionText(photo.promptKey)}
+                  </div>
+                )}
               </div>
             </div>
           );

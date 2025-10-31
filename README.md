@@ -36,11 +36,12 @@ Live demo → **https://photobooth.sogni.ai**
 2. [Project Layout](#-project-layout)
 3. [Configuration](#️-configuration)
 4. [Stripe Payment Integration](#-stripe-payment-integration)
-5. [Testing](#-testing)
-6. [Production Build & Deploy](#-production-build--deploy)
-7. [Contributing](#-contributing)
-8. [License](#-license)
-9. [Acknowledgements](#-acknowledgements)
+5. [Code Quality & Enforcement](#-code-quality--enforcement)
+6. [Testing](#-testing)
+7. [Production Build & Deploy](#-production-build--deploy)
+8. [Contributing](#-contributing)
+9. [License](#-license)
+10. [Acknowledgements](#-acknowledgements)
 
 ---
 
@@ -287,6 +288,40 @@ Use Stripe test cards:
 - Webhook endpoint must be configured in Stripe dashboard
 
 For complete implementation details, troubleshooting, and deployment guide, see **[STRIPE_INTEGRATION.md](./STRIPE_INTEGRATION.md)**.
+
+---
+
+## 🔍 Code Quality & Enforcement
+
+This project uses **automated validation** to prevent common React bugs, especially around `useEffect` hooks.
+
+### useEffect Validation
+
+**Before making changes to React components:**
+
+```bash
+npm run validate:useeffect
+```
+
+This script scans all React files for common `useEffect` violations:
+- ❌ Functions in dependency arrays (causes infinite re-renders)
+- ❌ Too many dependencies (indicates mixed concerns)
+- ❌ Context functions that don't need to be dependencies
+
+**Required reading:**
+- 📖 `cursor.rules.md` - Complete rules and examples
+- 📋 `USEEFFECT-CHECKLIST.md` - Step-by-step checklist before editing useEffect
+- 📊 `USEEFFECT-ENFORCEMENT.md` - Full enforcement strategy and rationale
+
+**Why this matters:**
+
+A single misplaced dependency can cause bugs like:
+- Settings that auto-deselect after being clicked
+- Infinite render loops
+- Effects running when unrelated state changes
+- Performance degradation from unnecessary re-renders
+
+The validation script catches these issues **before** they make it into the codebase.
 
 ---
 

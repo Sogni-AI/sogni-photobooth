@@ -1,19 +1,27 @@
 import { Settings } from '../types/index';
 import { getModelDefaults, isFluxKontextModel } from '../constants/settings';
 
-export function getSettingFromCookie<T>(name: string, defaultValue: T): T {
+export function getSettingFromCookie<T>(name: string, defaultValue: T, isAuthenticated: boolean = false): T {
   try {
-    const value = localStorage.getItem(`sogni_${name}`);
+    // Try localStorage first (logged-in settings), then sessionStorage (logged-out settings)
+    let value = localStorage.getItem(`sogni_${name}`);
+    
+    if (!isAuthenticated && !value) {
+      // If not authenticated, prefer sessionStorage
+      value = sessionStorage.getItem(`sogni_${name}`);
+    }
+    
     if (!value || value === 'undefined' || value === 'null') {
       return defaultValue;
     }
+    
     return JSON.parse(value) as T;
   } catch (e) {
-    console.warn(`Error reading cookie ${name}:`, e);
-    // Clear the corrupted value
+    console.warn(`Error reading setting ${name}:`, e);
+    // Clear the corrupted value from both storages
     try {
       localStorage.removeItem(`sogni_${name}`);
-      console.log(`Cleared corrupted setting: ${name}`);
+      sessionStorage.removeItem(`sogni_${name}`);
     } catch (clearError) {
       console.warn(`Could not clear corrupted setting ${name}:`, clearError);
     }
@@ -21,24 +29,18 @@ export function getSettingFromCookie<T>(name: string, defaultValue: T): T {
   }
 }
 
-export function saveSettingsToCookies(settings: Partial<Settings>): void {
-  console.log('🍪 saveSettingsToCookies called with:', settings);
+export function saveSettingsToCookies(settings: Partial<Settings>, isAuthenticated: boolean = false): void {
+  const storage = isAuthenticated ? localStorage : sessionStorage;
+  
   Object.entries(settings).forEach(([key, value]) => {
     try {
       if (value === undefined) {
-        // Remove the setting if value is undefined
-        console.log(`🗑️ Removing setting ${key} from localStorage`);
-        localStorage.removeItem(`sogni_${key}`);
+        storage.removeItem(`sogni_${key}`);
       } else {
-        console.log(`💾 Saving setting ${key} = ${value} to localStorage as sogni_${key}`);
-        localStorage.setItem(`sogni_${key}`, JSON.stringify(value));
-        
-        // Verify it was saved
-        const saved = localStorage.getItem(`sogni_${key}`);
-        console.log(`✅ Verification: sogni_${key} = ${saved}`);
+        storage.setItem(`sogni_${key}`, JSON.stringify(value));
       }
     } catch (e) {
-      console.warn(`❌ Error saving setting ${key}:`, e);
+      console.warn(`Error saving setting ${key}:`, e);
     }
   });
 }
@@ -291,6 +293,28 @@ export function markDemoRenderDone(): void {
     console.log('✅ Marked demo render as done for non-authenticated user');
   } catch (e) {
     console.warn('Error marking demo render as done:', e);
+  }
+}
+
+// Clear all session storage settings (used on logout)
+export function clearSessionSettings(): void {
+  try {
+    const keysToRemove: string[] = [];
+    
+    // Find all sogni_ keys in sessionStorage
+    for (let i = 0; i < sessionStorage.length; i++) {
+      const key = sessionStorage.key(i);
+      if (key && key.startsWith('sogni_')) {
+        keysToRemove.push(key);
+      }
+    }
+    
+    // Remove them
+    keysToRemove.forEach(key => {
+      sessionStorage.removeItem(key);
+    });
+  } catch (e) {
+    console.warn('Error clearing session settings:', e);
   }
 }
 

@@ -1,0 +1,16 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# Run useEffect validation before allowing commit
+echo "🚨 Running useEffect validation..."
+node scripts/validate-useeffect.js
+
+if [ $? -ne 0 ]; then
+  echo ""
+  echo "❌ Commit blocked due to useEffect violations"
+  echo "Fix the issues above and try again"
+  exit 1
+fi
+
+echo "✅ useEffect validation passed"
+

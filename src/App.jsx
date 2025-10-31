@@ -2,7 +2,7 @@ import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react'
 
 import { getModelOptions, defaultStylePrompts as initialStylePrompts, TIMEOUT_CONFIG, isFluxKontextModel, TWITTER_SHARE_CONFIG, getQRWatermarkConfig, DEFAULT_MODEL_ID, FLUX_KONTEXT_MODEL_ID } from './constants/settings';
 import { photoThoughts, randomThoughts } from './constants/thoughts';
-import { saveSettingsToCookies, shouldShowPromoPopup, markPromoPopupShown, hasDoneDemoRender, markDemoRenderDone } from './utils/cookies';
+import { saveSettingsToCookies, shouldShowPromoPopup, markPromoPopupShown, hasDoneDemoRender, markDemoRenderDone, clearSessionSettings } from './utils/cookies';
 import { styleIdToDisplay } from './utils';
 import { getCustomDimensions } from './utils/imageProcessing';
 import { goToPreviousPhoto, goToNextPhoto } from './utils/photoNavigation';
@@ -208,7 +208,20 @@ const App = () => {
   }, []);
 
   // --- Use AppContext for settings ---
-  const { settings, updateSetting, switchToModel, resetSettings: contextResetSettings, registerCacheClearingCallback } = useApp();
+  const { settings, updateSetting: baseUpdateSetting, switchToModel, resetSettings: contextResetSettings, registerCacheClearingCallback } = useApp();
+  
+  // Track auth state in a ref so we always get the current value
+  const authStateRef = useRef(authState);
+  useEffect(() => {
+    authStateRef.current = authState;
+  }, [authState.isAuthenticated, authState.authMode]); // Only primitive dependencies
+  
+  // Wrap updateSetting to pass CURRENT auth state (not captured in closure)
+  const updateSetting = useCallback((key, value) => {
+    // Get current auth state from ref, not closure
+    const isAuth = authStateRef.current.isAuthenticated;
+    baseUpdateSetting(key, value, isAuth);
+  }, [baseUpdateSetting]); // Only depends on baseUpdateSetting, not authState
   const { 
     selectedStyle, 
     selectedModel, 
@@ -1052,7 +1065,7 @@ const App = () => {
         updateUrlWithPrompt('copyImageStyle');
       }
     }
-  }, [stylePrompts, updateSetting, selectedStyle, promptsData, currentPage]);
+  }, [stylePrompts, selectedStyle, promptsData, currentPage]); // updateSetting is stable, doesn't need to be a dependency
 
 
 
@@ -1327,17 +1340,18 @@ const App = () => {
   }, [showSplashScreen]);
 
   // Debug: Log current inactivity settings
+  // Effect: Debug logging for inactivity settings
   useEffect(() => {
     console.log('⚙️ Inactivity settings:', {
       showSplashOnInactivity,
       inactivityTimeout,
-      settingsObject: settings
+      settingsObject: settings // OK to use whole object in logging, not in logic
     });
     
     // Check what's actually in localStorage
     const storedValue = localStorage.getItem('sogni_showSplashOnInactivity');
     console.log('💾 Value in localStorage:', storedValue);
-  }, [showSplashOnInactivity, inactivityTimeout, settings]);
+  }, [showSplashOnInactivity, inactivityTimeout]); // Removed settings - it's only for logging, not logic
   
   // Inactivity timer for splash screen
   const inactivityTimerRef = useRef(null);
@@ -3064,7 +3078,7 @@ const App = () => {
     }, 100); // 100ms debounce
     
     return () => clearTimeout(timeoutId);
-  }, [cameraDevices, settings.preferredCameraDeviceId, updateSetting]);
+  }, [cameraDevices, settings.preferredCameraDeviceId]); // updateSetting is stable, doesn't need to be a dependency
 
   // Modified useEffect for app initialization - no camera enumeration on startup
   useEffect(() => {
@@ -3094,7 +3108,8 @@ const App = () => {
   // Track previous auth state to detect actual logout transitions
   const prevAuthRef = useRef({ isAuthenticated: false, authMode: null });
   
-  // Update Sogni client when auth state changes (login/logout)
+  // Effect: Handle auth state changes (login/logout)
+  // Triggers when: User authentication status or auth mode changes
   useEffect(() => {
     const wasAuthenticated = prevAuthRef.current.isAuthenticated;
     const isNowAuthenticated = authState.isAuthenticated;
@@ -3126,12 +3141,9 @@ const App = () => {
       // Note: We do NOT clear demo render status on login
       // The free demo render is a one-time offer that should persist across login/logout
       
-      // Disable QR watermark for logged-in users (they don't need it for attribution)
-      // Only update if not explicitly set by user (check if it's still at default)
-      if (settings.sogniWatermark === true) {
-        console.log('💧 Disabling QR watermark for logged-in user');
-        updateSetting('sogniWatermark', false);
-      }
+      // DO NOT SET DEFAULTS HERE!
+      // Settings are already loaded from localStorage during AppContext initialization
+      // Changing them here would override user preferences on every page refresh
     } else if (!isNowAuthenticated && authState.authMode === null && wasAuthenticated) {
       // User logged out - ONLY trigger if they were previously authenticated
       console.log('🔐 User logged out, switching back to demo mode (backend client)');
@@ -3140,16 +3152,17 @@ const App = () => {
       setSogniClient(null);
       setIsSogniReady(false);
       
-      // Reinitialize with backend client
+      // Reinitialize with backend client (called directly, not in dependencies)
       initializeSogni();
       
-      // Re-enable QR watermark for anonymous users (needed for attribution)
-      if (settings.sogniWatermark === false) {
-        console.log('💧 Re-enabling QR watermark for anonymous user');
-        updateSetting('sogniWatermark', true);
-      }
+      // Clear session storage on logout
+      clearSessionSettings();
+      
+      // DO NOT SET DEFAULTS HERE!
+      // Let AppContext initialization handle loading defaults
+      // Settings will be loaded from defaults on next page refresh when logged out
     }
-  }, [authState.isAuthenticated, authState.authMode, initializeSogni, settings.sogniWatermark, updateSetting]);
+  }, [authState.isAuthenticated, authState.authMode]); // Only auth-related primitives - no functions!
 
   // Create batch cancellation function for WebSocket errors
   const cancelBatchOnError = useCallback((error) => {
@@ -4936,6 +4949,8 @@ const App = () => {
           const jobIndex = projectStateReference.current.jobMap.get(job.id);
           if (jobIndex === undefined) {
             console.error('Unknown job completed with missing resultUrl:', job.id);
+            console.error('jobMap contents:', Array.from(projectStateReference.current.jobMap.entries()));
+            console.error('Job details:', job);
             return;
           }
           
@@ -4973,6 +4988,11 @@ const App = () => {
             
             // Check if all photos are done generating
             const stillGenerating = updated.some(photo => photo.generating);
+            const successfulPhotos = updated.filter(p => !p.error && p.images && p.images.length > 0).length;
+            const allDone = updated.every(p => !p.loading && !p.generating);
+            
+            console.log(`Failsafe: Updated photo ${photoIndex} with error. AllDone: ${allDone}, Successful: ${successfulPhotos}/${updated.length}`);
+            
             if (!stillGenerating && activeProjectReference.current) {
               clearAllTimeouts();
               activeProjectReference.current = null;

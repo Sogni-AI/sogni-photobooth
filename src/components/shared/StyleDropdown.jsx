@@ -1,13 +1,14 @@
 import React, { useRef, useEffect, useState } from 'react';
 import ReactDOM from 'react-dom';
 import { styleIdToDisplay } from '../../utils';
-import { THEME_GROUPS, getDefaultThemeGroupState } from '../../constants/themeGroups';
-import { getThemeGroupPreferences, saveThemeGroupPreferences } from '../../utils/cookies';
+import { THEME_GROUPS, getDefaultThemeGroupState, getEnabledPrompts } from '../../constants/themeGroups';
+import { getThemeGroupPreferences, saveThemeGroupPreferences, getFavoriteImages } from '../../utils/cookies';
 import { isFluxKontextModel } from '../../constants/settings';
 import { generateGalleryFilename } from '../../utils/galleryLoader';
 import CustomPromptPopup, { CUSTOM_PROMPT_IMAGE_KEY } from './CustomPromptPopup';
 import '../../styles/style-dropdown.css';
 import PropTypes from 'prop-types';
+import { getAttributionText } from '../../config/ugcAttributions';
 
 // StyleDropdown component that uses portals to render outside the DOM hierarchy
 const StyleDropdown = ({ 
@@ -57,6 +58,7 @@ const StyleDropdown = ({
   const [isIndividualStylesOpen, setIsIndividualStylesOpen] = useState(true); // Open by default
   const [showSearchInput, setShowSearchInput] = useState(false);
   const [customPromptImage, setCustomPromptImage] = useState(null);
+  const [favoritesCount, setFavoritesCount] = useState(0);
   
   // Handle slide-in panel closing animation
   const handleClose = () => {
@@ -310,7 +312,7 @@ const StyleDropdown = ({
   // Check if we're using Flux.1 Kontext
   const isFluxKontext = selectedModel && isFluxKontextModel(selectedModel);
 
-  // Load custom prompt image from localStorage
+  // Load custom prompt image and favorites count from localStorage
   useEffect(() => {
     try {
       const imageData = localStorage.getItem(CUSTOM_PROMPT_IMAGE_KEY);
@@ -323,6 +325,15 @@ const StyleDropdown = ({
     } catch (e) {
       console.warn('Failed to load custom prompt image:', e);
       setCustomPromptImage(null);
+    }
+    
+    // Load favorites count
+    try {
+      const favorites = getFavoriteImages();
+      setFavoritesCount(favorites.length);
+    } catch (e) {
+      console.warn('Failed to load favorites count:', e);
+      setFavoritesCount(0);
     }
   }, [isOpen]); // Reload when dropdown opens
 
@@ -590,20 +601,24 @@ const StyleDropdown = ({
             {isThemesSectionOpen && (
               <div className="collapsible-content">
                 <div className="theme-groups">
-                  {Object.entries(THEME_GROUPS).map(([groupId, group]) => (
-                    <div key={groupId} className="theme-group">
-                      <label className="theme-group-label">
-                        <input
-                          type="checkbox"
-                          checked={themeGroupState[groupId]}
-                          onChange={() => handleThemeGroupToggle(groupId)}
-                          className="theme-group-checkbox"
-                        />
-                        <span className="theme-group-name">{group.name}</span>
-                        <span className="theme-group-count">({group.prompts.length})</span>
-                      </label>
-                    </div>
-                  ))}
+                  {Object.entries(THEME_GROUPS).map(([groupId, group]) => {
+                    // For favorites, use the dynamic count from localStorage
+                    const displayCount = groupId === 'favorites' ? favoritesCount : group.prompts.length;
+                    return (
+                      <div key={groupId} className="theme-group">
+                        <label className="theme-group-label">
+                          <input
+                            type="checkbox"
+                            checked={themeGroupState[groupId]}
+                            onChange={() => handleThemeGroupToggle(groupId)}
+                            className="theme-group-checkbox"
+                          />
+                          <span className="theme-group-name">{group.name}</span>
+                          <span className="theme-group-count">({displayCount})</span>
+                        </label>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -686,6 +701,18 @@ const StyleDropdown = ({
               {Object.keys(defaultStylePrompts)
           .filter(key => key !== 'random' && key !== 'custom' && key !== 'randomMix' && key !== 'oneOfEach' && key !== 'copyImageStyle')
           .filter(key => {
+            // Apply theme pack filter (only for non-Flux models)
+            if (!isFluxKontext) {
+              const enabledPrompts = getEnabledPrompts(themeGroupState, defaultStylePrompts);
+              // If no themes are selected or all are deselected, show all styles
+              const hasAnyThemeEnabled = Object.values(themeGroupState).some(enabled => enabled);
+              if (hasAnyThemeEnabled && !enabledPrompts[key]) {
+                return false;
+              }
+            }
+            return true;
+          })
+          .filter(key => {
             // Apply search filter
             if (!searchQuery) return true;
             const displayName = styleIdToDisplay(key).toLowerCase();
@@ -747,7 +774,19 @@ const StyleDropdown = ({
                     }}
                   />
                 )}
-                <span>{styleIdToDisplay(styleKey)}</span>
+                <span style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                  <span>{styleIdToDisplay(styleKey)}</span>
+                  {/* UGC Attribution */}
+                  {getAttributionText(styleKey) && (
+                    <span style={{
+                      fontSize: '10px',
+                      lineHeight: '5px',
+                      opacity: 0.7,
+                    }}>
+                      {getAttributionText(styleKey)}
+                    </span>
+                  )}
+                </span>
               </div>
             );
           })}

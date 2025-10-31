@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useApp } from '../../context/AppContext';
-import { AspectRatioOption, TezDevTheme, OutputFormat } from '../../types/index';
+import { AspectRatioOption, TezDevTheme, OutputFormat, Settings } from '../../types/index';
 import { isFluxKontextModel, getModelRanges, getModelDefaults } from '../../constants/settings';
 import { themeConfigService } from '../../services/themeConfig';
 import { sanitizeUrl, getUrlValidationError } from '../../utils/urlValidation';
@@ -124,10 +124,15 @@ interface AdvancedSettingsProps {
 export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
   // Get current settings from context if not provided via props
   const appContext = useApp();
-  const { settings, updateSetting, clearImageCaches } = appContext;
+  const { settings, updateSetting: baseUpdateSetting, clearImageCaches } = appContext;
   
   // Get authentication state to check if user is logged in with frontend auth
   const authState = useSogniAuth();
+  
+  // Wrap updateSetting to pass auth state
+  const updateSetting = React.useCallback((key: keyof Settings, value: any) => {
+    baseUpdateSetting(key, value, authState.isAuthenticated);
+  }, [baseUpdateSetting, authState.isAuthenticated]);
   
   // Ref for positive prompt textarea
   const positivePromptRef = useRef<HTMLTextAreaElement>(null);
@@ -179,8 +184,9 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
   // Custom handlers for QR code settings that trigger cache clearing
   const handleSogniWatermarkChange = useCallback((enabled: boolean) => {
     updateSetting('sogniWatermark', enabled);
+    // Note: updateSetting now automatically marks this as user-set
+    
     // Clear caches immediately when toggling QR code overlay on/off
-     
     clearImageCaches();
   }, [updateSetting, clearImageCaches]);
   

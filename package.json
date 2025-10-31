@@ -25,7 +25,9 @@
     "server:dev": "cd server && npm run dev",
     "server:start": "cd server && npm start",
     "prepare": "npm run server:install",
-    "start:prod": "node server/index.js & vite preview"
+    "start:prod": "node server/index.js & vite preview",
+    "validate:useeffect": "node scripts/validate-useeffect.js",
+    "precommit": "npm run validate:useeffect"
   },
   "dependencies": {
     "@sogni-ai/sogni-client": "^4.0.0-alpha.3",

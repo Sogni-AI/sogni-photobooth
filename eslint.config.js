@@ -61,5 +61,32 @@ export default [
         version: 'detect',
       },
     },
+    rules: {
+      // 🚨 CRITICAL: Enforce strict useEffect dependency rules
+      'react-hooks/exhaustive-deps': ['error', {
+        'additionalHooks': '',
+        'enableDangerousAutofixThisMayCauseInfiniteLoops': false
+      }],
+      // Warn on too many dependencies (likely doing too much)
+      'max-lines-per-function': ['warn', {
+        max: 50,
+        skipBlankLines: true,
+        skipComments: true
+      }],
+    },
   },
+  // 🚨 CUSTOM RULE: Catch common useEffect violations
+  {
+    files: ["**/*.{jsx,tsx}"],
+    rules: {
+      // Ban common context functions in dependencies
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: 'CallExpression[callee.name="useEffect"] > ArrayExpression[elements.length>3]',
+          message: '❌ useEffect has too many dependencies (>3). Split into multiple effects with single responsibilities.'
+        }
+      ]
+    }
+  }
 ];
