@@ -6,6 +6,7 @@ import { useMusicPlayer } from '../../context/MusicPlayerContext';
 import { useApp } from '../../context/AppContext';
 import { useNavigation } from '../AppRouter';
 import { styleIdToDisplay } from '../../utils';
+import { getAttributionText, hasPromptAttribution } from '../../config/ugcAttributions';
 import promptsDataRaw from '../../prompts.json';
 import '../../styles/film-strip.css'; // Reuse existing film-strip styles
 import '../../styles/events/HalloweenEvent.css';
@@ -15,6 +16,8 @@ const HalloweenEvent = () => {
   const [showOverlay, setShowOverlay] = useState(false); // Start minimized (pumpkin button only)
   const [selectedStyleKey, setSelectedStyleKey] = useState(null); // Track selected style for mobile two-click
   const [pumpkinDismissed, setPumpkinDismissed] = useState(false);
+  const [showPumpkinButton, setShowPumpkinButton] = useState(false); // Delayed appearance
+  const [portraitType, setPortraitType] = useState('medium'); // 'headshot', 'medium', or 'fullbody'
   const { isEnabled, enable: enableMusic } = useMusicPlayer();
   const { updateSetting, stylePrompts } = useApp();
   const { navigateToCamera, navigateToContestVote } = useNavigation();
@@ -28,17 +31,34 @@ const HalloweenEvent = () => {
     setPumpkinDismissed(true);
   };
 
-  // Dynamically generate Halloween styles from prompts.json (sorted alphabetically)
+  // Dynamically generate Halloween styles from prompts.json
+  // Sort: UGC-attributed prompts first, then alphabetically
+  // Update image paths based on selected portrait type
   const halloweenStyles = useMemo(() => {
     const halloweenPrompts = promptsDataRaw.halloween?.prompts || {};
+    // Portrait type is used directly as the subdirectory name
+    const folder = portraitType || 'medium';
+
     return Object.keys(halloweenPrompts)
-      .sort((a, b) => styleIdToDisplay(a).localeCompare(styleIdToDisplay(b)))
+      .sort((a, b) => {
+        // Check if either has attribution
+        const aHasAttribution = hasPromptAttribution(a);
+        const bHasAttribution = hasPromptAttribution(b);
+        
+        // Prioritize attributed prompts
+        if (aHasAttribution && !bHasAttribution) return -1;
+        if (!aHasAttribution && bHasAttribution) return 1;
+        
+        // If both have attribution or both don't, sort alphabetically
+        return styleIdToDisplay(a).localeCompare(styleIdToDisplay(b));
+      })
       .map(key => ({
         key,
-        img: `/gallery/prompts/medium/sogni-photobooth-${key.replace(/([A-Z])/g, '-$1').toLowerCase()}-raw.jpg`,
-        title: styleIdToDisplay(key)
+        img: `/gallery/prompts/${folder}/sogni-photobooth-${key.replace(/([A-Z])/g, '-$1').toLowerCase()}-raw.jpg`,
+        title: styleIdToDisplay(key),
+        hasAttribution: hasPromptAttribution(key)
       }));
-  }, []);
+  }, [portraitType]);
 
   // Enable music player when component mounts (but not expanded)
   React.useEffect(() => {
@@ -50,6 +70,15 @@ const HalloweenEvent = () => {
   // Mark Halloween notification as dismissed when visiting the Halloween event page
   React.useEffect(() => {
     sessionStorage.setItem('halloween-contest-dismissed', 'true');
+  }, []);
+
+  // Delay pumpkin button appearance by 5 seconds
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowPumpkinButton(true);
+    }, 5000); // 5 seconds
+
+    return () => clearTimeout(timer);
   }, []);
 
   const handlePromptSubmit = (prompt) => {
@@ -151,12 +180,12 @@ const HalloweenEvent = () => {
           <div className="floating-spider spider-2">🕷️</div>
         </div>
 
-        {/* Collapsed pumpkin button - scrolls with page */}
-        {!showOverlay && !pumpkinDismissed && (
+        {/* Collapsed pumpkin button - scrolls with page, appears after 5 seconds */}
+        {!showOverlay && !pumpkinDismissed && showPumpkinButton && (
           <button 
             className="halloween-pumpkin-button"
-            onClick={navigateToContestVote}
-            aria-label="Vote on new community submissions"
+            onClick={() => setShowPromptPopup(true)}
+            aria-label="Create your own costume"
           >
             <button
               className="pumpkin-dismiss-btn"
@@ -167,8 +196,8 @@ const HalloweenEvent = () => {
             </button>
             <span className="pumpkin-emoji">🎃</span>
             <span className="compete-bubble">
-              <span className="compete-text">Vote on new community submissions!</span>
-              <span className="compete-emoji">🗳️</span>
+              <span className="compete-text">Create your own costume?</span>
+              <span className="compete-emoji">✨</span>
             </span>
           </button>
         )}
@@ -180,6 +209,108 @@ const HalloweenEvent = () => {
             Sogni Halloween Photobooth
             <span className="ghost-icon">👻</span>
           </h1>
+
+          {/* Portrait Type Selector - 3 circular buttons */}
+          <div className="halloween-portrait-selector">
+            <div 
+              style={{ position: 'relative' }} 
+              className="portrait-type-button-container"
+              onMouseEnter={(e) => {
+                if (portraitType !== 'headshot') {
+                  const label = e.currentTarget.querySelector('.portrait-type-label');
+                  if (label) label.style.opacity = '1';
+                }
+              }}
+              onMouseLeave={(e) => {
+                const label = e.currentTarget.querySelector('.portrait-type-label');
+                if (label) label.style.opacity = '0';
+              }}
+            >
+              <button 
+                onClick={() => setPortraitType('headshot')}
+                className="halloween-portrait-btn"
+                style={{
+                  border: portraitType === 'headshot' ? '3px solid #ff6b00' : '3px solid rgba(45, 24, 16, 0.3)',
+                  boxShadow: portraitType === 'headshot' ? '0 0 12px rgba(255, 107, 0, 0.6)' : '0 2px 8px rgba(0,0,0,0.2)'
+                }}
+                title="Up Close"
+              >
+                <img 
+                  src="/gallery/sample-gallery-headshot-einstein.jpg"
+                  alt="Up Close"
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                    display: 'block'
+                  }}
+                />
+              </button>
+              <span className="portrait-type-label halloween-label">
+                NEAR
+              </span>
+            </div>
+            
+            <button 
+              onClick={() => setPortraitType('medium')}
+              className="halloween-portrait-btn"
+              style={{
+                border: portraitType === 'medium' ? '3px solid #ff6b00' : '3px solid rgba(45, 24, 16, 0.3)',
+                boxShadow: portraitType === 'medium' ? '0 0 12px rgba(255, 107, 0, 0.6)' : '0 2px 8px rgba(0,0,0,0.2)'
+              }}
+              title="Waist-Up"
+            >
+              <img 
+                src="/gallery/sample-gallery-medium-body-jen.jpg"
+                alt="Waist-Up"
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                  display: 'block'
+                }}
+              />
+            </button>
+            
+            <div 
+              style={{ position: 'relative' }} 
+              className="portrait-type-button-container"
+              onMouseEnter={(e) => {
+                if (portraitType !== 'fullbody') {
+                  const label = e.currentTarget.querySelector('.portrait-type-label');
+                  if (label) label.style.opacity = '1';
+                }
+              }}
+              onMouseLeave={(e) => {
+                const label = e.currentTarget.querySelector('.portrait-type-label');
+                if (label) label.style.opacity = '0';
+              }}
+            >
+              <button 
+                onClick={() => setPortraitType('fullbody')}
+                className="halloween-portrait-btn"
+                style={{
+                  border: portraitType === 'fullbody' ? '3px solid #ff6b00' : '3px solid rgba(45, 24, 16, 0.3)',
+                  boxShadow: portraitType === 'fullbody' ? '0 0 12px rgba(255, 107, 0, 0.6)' : '0 2px 8px rgba(0,0,0,0.2)'
+                }}
+                title="Full Body"
+              >
+                <img 
+                  src="/gallery/sample-gallery-full-body-mark.jpg"
+                  alt="Full Body"
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                    display: 'block'
+                  }}
+                />
+              </button>
+              <span className="portrait-type-label halloween-label">
+                FAR
+              </span>
+            </div>
+          </div>
         </header>
 
         {/* Photo grid using film-strip-content for consistent styling */}
@@ -204,7 +335,7 @@ const HalloweenEvent = () => {
               <div style={{
                 position: 'relative',
                 width: '100%',
-                aspectRatio: '832/1216', // 2:3 aspect ratio like Style Explorer
+                aspectRatio: '832/1216', // Always 2:3 ratio for display
                 overflow: 'hidden'
               }}>
                 <img
@@ -217,9 +348,23 @@ const HalloweenEvent = () => {
                     objectPosition: 'center'
                   }}
                 />
+                
+                {/* Community Badge - Only show for UGC attributed prompts */}
+                {style.hasAttribution && (
+                  <div className="halloween-community-badge" title="Community Created">
+                    <span className="community-icon">🏅</span>
+                  </div>
+                )}
+
                 {/* Hover overlay with "Use this costume" */}
                 <div className="halloween-hover-overlay">
                   <div className="use-costume-text">Use this costume</div>
+                  {/* UGC Attribution - Only show when there's an attribution */}
+                  {getAttributionText(style.key) && (
+                    <span className="halloween-attribution">
+                      {getAttributionText(style.key)}
+                    </span>
+                  )}
                 </div>
               </div>
               <div className="photo-label" style={{

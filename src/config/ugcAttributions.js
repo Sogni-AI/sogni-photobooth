@@ -16,10 +16,11 @@ export const UGC_ATTRIBUTIONS = {
   rustedSurgeon: 'kanuTTP',
   cosmicGrimReaper: 'shux',
   cyborgDemon: 'pecok',
-  surrealHorror: 'akashivander',
+  surrealPumpkin: 'akashivander',
   castleWitch: 'bobunny',
   midnightWitch: 'sayo',
   hoodedEerie: 'Sogyiai',
+  daenerysTargaryen: 'mark.and.robot',
 };
 
 /**
