@@ -189,6 +189,58 @@ router.post('/track/metric', async (req, res) => {
 });
 
 /**
+ * Track photobooth generation event
+ * POST /api/analytics/track/generation
+ * Body: { 
+ *   numberImages: number, 
+ *   sourceType?: 'camera' | 'upload',
+ *   selectedModel?: string
+ * }
+ */
+router.post('/track/generation', async (req, res) => {
+  try {
+    const { numberImages = 1, sourceType, selectedModel } = req.body;
+    
+    // Track batch generated
+    await trackMetric('batches_generated', 1);
+    
+    // Track photos generated
+    await trackMetric('photos_generated', numberImages);
+    
+    // Track enhancement if applicable
+    if (selectedModel === 'flux1-schnell-fp8') {
+      await trackMetric('photos_enhanced', 1);
+    }
+    
+    // Track source type (camera vs upload)
+    if (sourceType === 'camera') {
+      await trackMetric('photos_taken_camera', 1);
+    } else if (sourceType === 'upload') {
+      await trackMetric('photos_uploaded_browse', 1);
+    }
+    
+    console.log(`[Analytics API] ✅ Generation tracked: ${numberImages} images, sourceType: ${sourceType || 'unknown'}, model: ${selectedModel || 'unknown'}`);
+    
+    res.json({ 
+      success: true, 
+      message: 'Generation tracked successfully',
+      tracked: {
+        batches: 1,
+        photos: numberImages,
+        enhanced: selectedModel === 'flux1-schnell-fp8' ? 1 : 0,
+        sourceType: sourceType || 'unknown'
+      }
+    });
+  } catch (error) {
+    console.error('[Analytics API] ❌ Error tracking generation:', error);
+    res.status(500).json({ 
+      error: 'Failed to track generation',
+      details: error.message
+    });
+  }
+});
+
+/**
  * Admin endpoint: Clear all analytics data
  * DELETE /api/analytics/clear-all?confirm=true
  */

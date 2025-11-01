@@ -1,4 +1,5 @@
 import { SogniClient } from '@sogni-ai/sogni-client';
+import { trackFrontendGeneration } from './frontendAnalytics';
 
 /**
  * Adapter that wraps the real Sogni Client SDK to emit the same events
@@ -573,6 +574,17 @@ export class FrontendSogniClientAdapter {
             disableNSFWFilter_output: sdkParams.disableNSFWFilter
           });
         }
+        
+        // Track analytics for frontend SDK generation (critical for logged-in users)
+        // This ensures we capture metrics even when bypassing the backend /generate endpoint
+        trackFrontendGeneration({
+          numberImages: params.numberOfImages || 1,
+          sourceType: params.sourceType,
+          selectedModel: params.modelId,
+        }).catch(err => {
+          // Log but don't throw - analytics failures shouldn't break generation
+          console.error('[FrontendAdapter] Analytics tracking error:', err);
+        });
         
         // Create the real project with converted parameters
         const realProject = await this.realClient.projects.create(sdkParams);
