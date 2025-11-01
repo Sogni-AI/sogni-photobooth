@@ -15,12 +15,12 @@ const PageMetadata = () => {
         twitterDescription: 'Amazing AI-generated Halloween photos from the Sogni community. Vote for your favorites!',
         keywords: 'AI photo contest, Halloween contest, vote AI art, AI generated photos, community voting, Sogni contest'
       },
-      '/admin/contest/results': {
-        title: '🎃 Halloween Contest Results - Admin Dashboard | Sogni AI Photobooth',
-        description: 'Contest administration dashboard for moderating Halloween AI photo contest entries, viewing submissions, and managing contest results. Approve or reject entries and track contest statistics.',
-        ogTitle: '🎃 Halloween Contest Administration Dashboard',
+      '/admin/moderate': {
+        title: '🛡️ Moderation Panel - Admin Dashboard | Sogni AI Photobooth',
+        description: 'Content moderation dashboard for moderating Halloween AI photo contest entries, viewing submissions, and managing contest results. Approve or reject entries and track contest statistics.',
+        ogTitle: '🛡️ Content Moderation Dashboard',
         ogDescription: 'Moderate Halloween AI photo contest entries, review submissions, and manage contest results. View statistics and moderate community submissions.',
-        twitterTitle: '🎃 Contest Admin Dashboard - Halloween AI Photo Contest',
+        twitterTitle: '🛡️ Moderation Dashboard - Halloween AI Photo Contest',
         twitterDescription: 'Administration panel for moderating AI-generated Halloween photo contest entries and viewing results.'
       },
       default: {

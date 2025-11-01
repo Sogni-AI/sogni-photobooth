@@ -1,4 +1,4 @@
-.contest-results {
+.moderation-page {
   min-height: 100vh;
   background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
   padding: 2rem;
@@ -6,14 +6,14 @@
   position: relative;
 }
 
-.contest-results-auth-status {
+.moderation-page-auth-status {
   position: absolute;
   top: 1rem;
   left: 1rem;
   z-index: 100;
 }
 
-.contest-results-header {
+.moderation-page-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -22,7 +22,7 @@
   gap: 1rem;
 }
 
-.contest-results-header h1 {
+.moderation-page-header h1 {
   font-size: 2.5rem;
   margin: 0;
   background: linear-gradient(90deg, #ff6b6b, #feca57, #ff9ff3);
@@ -587,24 +587,24 @@
 
 /* Responsive Design */
 @media (max-width: 768px) {
-  .contest-results {
+  .moderation-page {
     padding: 1rem;
     padding-top: 5rem; /* Make room for auth status */
   }
 
-  .contest-results-auth-status {
+  .moderation-page-auth-status {
     position: fixed;
     top: 0.5rem;
     left: 0.5rem;
     right: 0.5rem;
   }
 
-  .contest-results-header {
+  .moderation-page-header {
     flex-direction: column;
     align-items: flex-start;
   }
 
-  .contest-results-header h1 {
+  .moderation-page-header h1 {
     font-size: 2rem;
   }
 

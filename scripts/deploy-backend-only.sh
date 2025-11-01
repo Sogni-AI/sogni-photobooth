@@ -43,5 +43,5 @@ EOF
 echo ""
 echo "✅ Deployment complete!"
 echo "🎃 Test contest at: https://photobooth.sogni.ai/halloween"
-echo "📊 View entries at: https://photobooth.sogni.ai/admin/contest/results"
+echo "🛡️ Moderate entries at: https://photobooth.sogni.ai/admin/moderate"
 

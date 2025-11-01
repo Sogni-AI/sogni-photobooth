@@ -1,7 +1,7 @@
 import React, { useState, useEffect, createContext, useContext } from 'react';
 import App from '../App';
 import AnalyticsDashboard from './admin/AnalyticsDashboard';
-import ContestResults from './admin/ContestResults';
+import Moderate from './admin/Moderate';
 import ContestVote from './contest/ContestVote';
 import HalloweenEvent from './events/HalloweenEvent';
 import { MusicPlayerProvider } from '../context/MusicPlayerContext';
@@ -21,8 +21,8 @@ const AppRouter = () => {
     if (hash === '#analytics' || pathname === '/admin/analytics') {
       return 'analytics';
     }
-    if (hash === '#contest' || pathname === '/admin/contest/results') {
-      return 'contest';
+    if (hash === '#moderate' || pathname === '/admin/moderate') {
+      return 'moderate';
     }
     if (pathname === '/contest/vote') {
       return 'contest-vote';
@@ -55,8 +55,8 @@ const AppRouter = () => {
       const pathname = window.location.pathname;
       if (hash === '#analytics' || pathname === '/admin/analytics') {
         setCurrentRoute('analytics');
-      } else if (hash === '#contest' || pathname === '/admin/contest/results') {
-        setCurrentRoute('contest');
+      } else if (hash === '#moderate' || pathname === '/admin/moderate') {
+        setCurrentRoute('moderate');
       } else if (pathname === '/contest/vote') {
         setCurrentRoute('contest-vote');
       } else if (hash === '#halloween' || pathname === '/halloween' || pathname === '/event/halloween') {
@@ -93,8 +93,8 @@ const AppRouter = () => {
 
         {currentRoute === 'analytics' ? (
           <AnalyticsDashboard />
-        ) : currentRoute === 'contest' ? (
-          <ContestResults />
+        ) : currentRoute === 'moderate' ? (
+          <Moderate />
         ) : currentRoute === 'contest-vote' ? (
           <ContestVote />
         ) : currentRoute === 'halloween' ? (

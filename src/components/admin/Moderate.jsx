@@ -2,18 +2,22 @@ import React, { useState, useEffect } from 'react';
 import { useSogniAuth } from '../../services/sogniAuth';
 import LoginModal from '../auth/LoginModal';
 import { AuthStatus } from '../auth/AuthStatus';
-import '../../styles/admin/ContestResults.css';
+import { isModerationEnabled } from '../../config/env';
+import '../../styles/admin/Moderate.css';
 
-const CORRECT_PASSWORD = import.meta.env.VITE_CONTEST_RESULTS_PASSWORD || '';
-const AUTH_KEY = 'contest_results_auth';
+const CORRECT_PASSWORD = import.meta.env.VITE_MODERATION_PASSWORD || '';
+const AUTH_KEY = 'moderation_auth';
 
-const ContestResults = () => {
+const Moderate = () => {
   const { isAuthenticated: isSogniAuthenticated, user } = useSogniAuth();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [passwordInput, setPasswordInput] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [loginModalMode, setLoginModalMode] = useState('login');
+  
+  // Check if moderation is enabled
+  const moderationEnabled = isModerationEnabled();
 
   const [contestId, setContestId] = useState('halloween');
   const [entries, setEntries] = useState([]);
@@ -213,12 +217,12 @@ const ContestResults = () => {
 
   // Show password modal if not authenticated
   if (!isAuthenticated) {
-    return (
-      <div className="contest-results">
-        <div className="password-modal-overlay">
-          <div className="password-modal">
-            <h2>🔐 Access Restricted</h2>
-            <p>Please enter the password to view contest results.</p>
+  return (
+    <div className="moderation-page">
+      <div className="password-modal-overlay">
+        <div className="password-modal">
+          <h2>🔐 Access Restricted</h2>
+          <p>Please enter the password to view moderation panel.</p>
             <form onSubmit={handlePasswordSubmit}>
               <input
                 type="password"
@@ -242,15 +246,28 @@ const ContestResults = () => {
   }
 
   return (
-    <div className="contest-results">
+    <div className="moderation-page">
       {/* Auth Status Widget */}
-      <div className="contest-results-auth-status">
+      <div className="moderation-page-auth-status">
         <AuthStatus />
       </div>
 
-      <header className="contest-results-header">
-        <h1>🎃 Contest Results</h1>
+      <header className="moderation-page-header">
+        <h1>🛡️ Moderation Panel</h1>
         <div className="header-controls">
+          {!moderationEnabled && (
+            <div style={{
+              padding: '0.5rem 1rem',
+              borderRadius: '8px',
+              background: 'rgba(254, 202, 87, 0.2)',
+              border: '2px solid #feca57',
+              color: '#feca57',
+              fontSize: '0.9rem',
+              fontWeight: '600'
+            }}>
+              ⚠️ Moderation Disabled
+            </div>
+          )}
           <select
             value={contestId}
             onChange={(e) => {
@@ -348,37 +365,39 @@ const ContestResults = () => {
                       {entry.prompt}
                     </span>
                   </div>
-                  <div className="entry-moderation">
-                    <div className="moderation-info">
-                      <strong>Moderation Status:</strong>
-                      <span className={`status-badge status-${(entry.moderationStatus || 'PENDING').toLowerCase()}`}>
-                        {entry.moderationStatus || 'PENDING'}
-                      </span>
+                  {moderationEnabled && (
+                    <div className="entry-moderation">
+                      <div className="moderation-info">
+                        <strong>Moderation Status:</strong>
+                        <span className={`status-badge status-${(entry.moderationStatus || 'PENDING').toLowerCase()}`}>
+                          {entry.moderationStatus || 'PENDING'}
+                        </span>
+                      </div>
+                      <div className="moderation-actions">
+                        <button
+                          onClick={() => handleModerationChange(entry.id, 'APPROVED')}
+                          className="quick-action-btn approve-btn"
+                          disabled={entry.moderationStatus === 'APPROVED'}
+                        >
+                          ✓ Approve
+                        </button>
+                        <button
+                          onClick={() => handleModerationChange(entry.id, 'REJECTED')}
+                          className="quick-action-btn reject-btn"
+                          disabled={entry.moderationStatus === 'REJECTED'}
+                        >
+                          ✗ Reject
+                        </button>
+                        <button
+                          onClick={() => handleModerationChange(entry.id, 'PENDING')}
+                          className="quick-action-btn pending-btn"
+                          disabled={entry.moderationStatus === 'PENDING'}
+                        >
+                          ⟲ Reset
+                        </button>
+                      </div>
                     </div>
-                    <div className="moderation-actions">
-                      <button
-                        onClick={() => handleModerationChange(entry.id, 'APPROVED')}
-                        className="quick-action-btn approve-btn"
-                        disabled={entry.moderationStatus === 'APPROVED'}
-                      >
-                        ✓ Approve
-                      </button>
-                      <button
-                        onClick={() => handleModerationChange(entry.id, 'REJECTED')}
-                        className="quick-action-btn reject-btn"
-                        disabled={entry.moderationStatus === 'REJECTED'}
-                      >
-                        ✗ Reject
-                      </button>
-                      <button
-                        onClick={() => handleModerationChange(entry.id, 'PENDING')}
-                        className="quick-action-btn pending-btn"
-                        disabled={entry.moderationStatus === 'PENDING'}
-                      >
-                        ⟲ Reset
-                      </button>
-                    </div>
-                  </div>
+                  )}
                   <div className="entry-meta selectable">
                     <div className="entry-user">
                       <strong>User:</strong> {entry.username || 'Anonymous'}
@@ -480,5 +499,5 @@ const ContestResults = () => {
   );
 };
 
-export default ContestResults;
+export default Moderate;
 

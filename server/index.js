@@ -280,11 +280,11 @@ const handleAdminContestRoute = (req, res) => {
 
     let modifiedHtml = html;
 
-    const adminTitle = '🎃 Halloween Contest Results - Admin Dashboard | Sogni AI Photobooth';
-    const adminDesc = 'Contest administration dashboard for moderating Halloween AI photo contest entries, viewing submissions, and managing contest results.';
-    const adminOgTitle = '🎃 Halloween Contest Administration Dashboard';
+    const adminTitle = '🛡️ Moderation Panel - Admin Dashboard | Sogni AI Photobooth';
+    const adminDesc = 'Content moderation dashboard for moderating Halloween AI photo contest entries, viewing submissions, and managing contest results.';
+    const adminOgTitle = '🛡️ Content Moderation Dashboard';
     const adminOgDesc = 'Moderate Halloween AI photo contest entries, review submissions, and manage contest results. View statistics and moderate community submissions.';
-    const adminUrl = 'https://photobooth.sogni.ai/admin/contest/results';
+    const adminUrl = 'https://photobooth.sogni.ai/admin/moderate';
     const adminImage = 'https://photobooth.sogni.ai/halloween_bg.jpg';
 
     // Replace meta tags with admin-specific content
@@ -312,7 +312,7 @@ if (!isLocalEnv) {
   app.get('/halloween', handleHalloweenRoute);
   app.get('/event/halloween', handleHalloweenRoute);
   app.get('/contest/vote', handleContestVoteRoute);
-  app.get('/admin/contest/results', handleAdminContestRoute);
+  app.get('/admin/moderate', handleAdminContestRoute);
 }
 
 // Mobile sharing page route

@@ -178,9 +178,13 @@ The application uses environment-specific configuration files for frontend setti
 
 1. Create a `.env.local` file in the project root for local development:
    ```
-   # Contest Results Password (Required)
-   # Used to protect the /admin/contest/results page
-   VITE_CONTEST_RESULTS_PASSWORD=your_secure_password_here
+   # Moderation Password (Required)
+   # Used to protect the /admin/moderate page
+   VITE_MODERATION_PASSWORD=your_secure_password_here
+
+   # Moderation Feature Flag (Optional)
+   # Set to 'false' to disable moderation for rapid testing
+   VITE_MODERATION_ENABLED=false
 
    # Google Analytics Configuration (Optional)
    # Set to 'false' to disable GA completely
@@ -191,12 +195,13 @@ The application uses environment-specific configuration files for frontend setti
    VITE_GA_DOMAIN=sogni.ai
    ```
 
-2. For production builds, create a `.env.production` file with the same variables
+2. For production builds, create a `.env.production` file with the same variables (set `VITE_MODERATION_ENABLED=true` for production)
 
 3. Important notes:
    - **Never commit `.env.local` or `.env.production` to Git** - they're in `.gitignore`
    - All frontend environment variables must be prefixed with `VITE_` to be accessible
-   - The contest results password is required to access `/admin/contest/results`
+   - The moderation password is required to access `/admin/moderate`
+   - Moderation is enabled by default in production/staging, disabled by default in local
    - Google Analytics is optional and respects user privacy
    - Analytics supports cross-subdomain tracking for sogni.ai domains
 

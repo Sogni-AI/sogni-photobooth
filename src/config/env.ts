@@ -53,4 +53,23 @@ export const getTurnstileKey = (): string => {
   const env = import.meta.env as Record<string, unknown>;
   const key = env['VITE_TURNSTILE_KEY'];
   return typeof key === 'string' ? key : '';
+};
+
+/**
+ * Check if moderation is enabled
+ * - Enabled by default in production and staging
+ * - Disabled by default in development/local
+ * - Can be explicitly controlled via VITE_MODERATION_ENABLED env variable
+ */
+export const isModerationEnabled = (): boolean => {
+  const env = import.meta.env as Record<string, unknown>;
+  const explicitFlag = env['VITE_MODERATION_ENABLED'];
+  
+  // If explicitly set, use that value
+  if (explicitFlag !== undefined) {
+    return explicitFlag === 'true' || explicitFlag === true;
+  }
+  
+  // Otherwise, enable for production/staging, disable for development
+  return !isDevelopment();
 }; 
