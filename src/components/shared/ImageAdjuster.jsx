@@ -839,9 +839,9 @@ const ImageAdjuster = ({
               onClick={photoSource === 'camera' && onTakeNewPhoto ? onTakeNewPhoto : onUploadNew}
               title={photoSource === 'camera' ? (isCameraActive ? "Close and take new photo" : "Take a new photo") : "Upload a different image"}
             >
-              {photoSource === 'camera' ? '📷' : '🔄'}
+              {photoSource === 'camera' ? '📷' : '⬆️'}
               <span className="button-label">
-                {photoSource === 'camera' ? 'Take New' : 'Re-upload'}
+                New
               </span>
             </button>
           )}
