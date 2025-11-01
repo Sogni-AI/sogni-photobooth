@@ -1718,7 +1718,7 @@ const App = () => {
   };
 
   // Prompt selection handlers for the new page
-  const handlePromptSelectFromPage = (promptKey) => {
+  const handlePromptSelectFromPage = (promptKey, gallerySeed = undefined) => {
     // Check if we're in extension mode
     if (window.extensionMode && window.parent !== window) {
       console.log('🚀 Extension mode: posting styleSelected message to parent window');
@@ -1750,6 +1750,13 @@ const App = () => {
       // Clear Halloween context when switching to a preset style
       updateSetting('halloweenContext', false);
     }
+    
+    // If a gallery variation is selected, use its seed
+    if (gallerySeed !== undefined) {
+      console.log('🎲 Using gallery variation seed:', gallerySeed);
+      updateSetting('seed', String(gallerySeed));
+    }
+    
     // Update current hashtag for sharing
     setCurrentHashtag(getHashtagForStyle(promptKey));
     // Update URL with selected prompt for deep linking
@@ -5219,7 +5226,10 @@ const App = () => {
                 customSceneName: updated[photoIndex].customSceneName,
                 stylePrompt: positivePrompt, // Use the actual prompt that was used for generation
                 promptKey: extractedPromptKey, // Track which style was used for favoriting
-                statusText
+                statusText,
+                seed: job.seed, // Capture the actual seed used for generation
+                model: job.model || selectedModel, // Capture model used
+                steps: job.steps || inferenceSteps // Capture steps used
               };
             }
             return updated;

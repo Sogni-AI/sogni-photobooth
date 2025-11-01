@@ -19,7 +19,7 @@ const Moderate = () => {
   // Check if moderation is enabled
   const moderationEnabled = isModerationEnabled();
 
-  const [contestId, setContestId] = useState('halloween');
+  const [contestId, setContestId] = useState('gallery-submissions');
   const [entries, setEntries] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -252,8 +252,8 @@ const Moderate = () => {
         <AuthStatus />
       </div>
 
-      <header className="moderation-page-header">
-        <h1>🛡️ Moderation Panel</h1>
+      <header className="contest-results-header">
+        <h1>{contestId === 'gallery-submissions' ? '🖼️ Gallery Submissions' : '🎃 Contest Results'}</h1>
         <div className="header-controls">
           {!moderationEnabled && (
             <div style={{
@@ -277,7 +277,7 @@ const Moderate = () => {
             className="contest-select"
           >
             <option value="halloween">Halloween Contest</option>
-            {/* Add more contests as needed */}
+            <option value="gallery-submissions">Gallery Submissions</option>
           </select>
           <button onClick={handleRefresh} className="refresh-btn">
             🔄 Refresh
@@ -348,23 +348,30 @@ const Moderate = () => {
                   </div>
                 )}
                 <div className="entry-details">
-                  <div 
-                    className={`entry-prompt ${expandedPrompts.has(entry.id) ? 'expanded' : 'collapsed'}`}
-                    onClick={() => togglePromptExpansion(entry.id)}
-                    title="Click to expand/collapse"
-                  >
-                    <strong>Prompt:</strong> 
-                    <span 
-                      className="prompt-text selectable"
-                      onClick={(e) => {
-                        if (expandedPrompts.has(entry.id)) {
-                          e.stopPropagation();
-                        }
-                      }}
+                  {/* For gallery submissions, show the style name. For other contests, show prompt */}
+                  {contestId === 'gallery-submissions' ? (
+                    <div className="entry-style">
+                      <strong>Style:</strong> {entry.prompt}
+                    </div>
+                  ) : (
+                    <div 
+                      className={`entry-prompt ${expandedPrompts.has(entry.id) ? 'expanded' : 'collapsed'}`}
+                      onClick={() => togglePromptExpansion(entry.id)}
+                      title="Click to expand/collapse"
                     >
-                      {entry.prompt}
-                    </span>
-                  </div>
+                      <strong>Prompt:</strong>
+                      <span 
+                        className="prompt-text selectable"
+                        onClick={(e) => {
+                          if (expandedPrompts.has(entry.id)) {
+                            e.stopPropagation();
+                          }
+                        }}
+                      >
+                        {entry.prompt}
+                      </span>
+                    </div>
+                  )}
                   {moderationEnabled && (
                     <div className="entry-moderation">
                       <div className="moderation-info">
@@ -415,14 +422,14 @@ const Moderate = () => {
                         <strong>Steps:</strong> {entry.metadata.inferenceSteps}
                       </div>
                     )}
-                    {entry.metadata?.seed && (
-                      <div className="entry-seed">
-                        <strong>Seed:</strong> {entry.metadata.seed}
-                      </div>
-                    )}
                     {entry.metadata?.guidance && (
                       <div className="entry-guidance">
                         <strong>Guidance:</strong> {entry.metadata.guidance}
+                      </div>
+                    )}
+                    {(entry.metadata?.seed !== undefined && entry.metadata?.seed !== null) && (
+                      <div className="entry-seed">
+                        <strong>Seed:</strong> {entry.metadata.seed}
                       </div>
                     )}
                     {entry.tweetUrl && (

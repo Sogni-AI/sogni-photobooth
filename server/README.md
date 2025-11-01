@@ -20,6 +20,10 @@ SOGNI_ENV=production
 # Server config
 PORT=3001
 CLIENT_ORIGIN=https://photobooth-local.sogni.ai
+
+# Gallery Moderation (optional)
+# Set to 'false' to disable moderation and auto-approve all gallery submissions
+# MODERATION_ENABLED=true
 ```
 
 3. Start the server:

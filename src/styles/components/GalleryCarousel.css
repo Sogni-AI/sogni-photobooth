@@ -10,7 +10,7 @@
   box-shadow: none;
   z-index: 9997;
   height: 220px;
-  overflow: hidden;
+  overflow: visible;
   display: flex;
   flex-direction: column;
   pointer-events: none;
@@ -88,8 +88,9 @@
   display: flex;
   gap: 12px;
   padding: 10px 20px;
+  padding-top: 50px;
   overflow-x: auto;
-  overflow-y: hidden;
+  overflow-y: visible;
   scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
   flex: 1;
@@ -145,6 +146,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+  overflow: visible;
 }
 
 .gallery-carousel-item.selected .gallery-carousel-polaroid {
@@ -162,6 +164,7 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  position: relative;
 }
 
 .gallery-carousel-image-wrapper img {
@@ -172,6 +175,45 @@
   object-fit: contain;
   display: block;
   border-radius: 0;
+}
+
+/* Seed tooltip - speech bubble */
+.gallery-carousel-seed-tooltip {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 8px 14px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease, bottom 0.25s ease;
+  z-index: 10000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  letter-spacing: 0.3px;
+}
+
+/* Speech bubble arrow */
+.gallery-carousel-seed-tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 8px solid transparent;
+  border-top-color: #764ba2;
+}
+
+/* Show tooltip on hover */
+.gallery-carousel-item:hover .gallery-carousel-seed-tooltip {
+  opacity: 1;
+  bottom: calc(100% + 16px);
 }
 
 .gallery-carousel-label {
@@ -255,6 +297,22 @@
   .gallery-carousel-selected-indicator {
     font-size: 14px;
     bottom: -4px;
+  }
+  
+  /* Smaller tooltip on mobile */
+  .gallery-carousel-seed-tooltip {
+    font-size: 11px;
+    padding: 6px 10px;
+    border-radius: 8px;
+    bottom: calc(100% + 8px);
+  }
+  
+  .gallery-carousel-seed-tooltip::after {
+    border-width: 6px;
+  }
+  
+  .gallery-carousel-item:hover .gallery-carousel-seed-tooltip {
+    bottom: calc(100% + 12px);
   }
 }
 

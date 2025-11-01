@@ -42,12 +42,27 @@ const TwitterShareModal = ({
   const { settings } = useApp();
   
   // Get style display text (spaced format, no hashtags) from photo data if available
-  // Priority: customSceneName > promptDisplay > stylePrompt lookup
-  const styleDisplayText = photoData?.customSceneName ||
-    photoData?.promptDisplay || 
-    (photoData?.stylePrompt && styleIdToDisplay(
-      Object.entries(stylePrompts || {}).find(([, value]) => value === photoData.stylePrompt)?.[0] || ''
-    )) || '';
+  // Priority: customSceneName > promptDisplay > promptKey/selectedStyle > stylePrompt lookup
+  const getStyleDisplayText = () => {
+    if (photoData?.customSceneName) return photoData.customSceneName;
+    if (photoData?.promptDisplay) return photoData.promptDisplay;
+    
+    // Check for promptKey or selectedStyle (most common case)
+    const promptKey = photoData?.promptKey || photoData?.selectedStyle;
+    if (promptKey && promptKey !== 'custom') {
+      return styleIdToDisplay(promptKey);
+    }
+    
+    // Fallback to stylePrompt lookup
+    if (photoData?.stylePrompt) {
+      const foundKey = Object.entries(stylePrompts || {}).find(([, value]) => value === photoData.stylePrompt)?.[0];
+      if (foundKey) return styleIdToDisplay(foundKey);
+    }
+    
+    return '';
+  };
+  
+  const styleDisplayText = getStyleDisplayText();
   
   // Use statusText directly if it's a hashtag (like #SogniPhotobooth), otherwise use styleDisplayText
   const photoLabel = (photoData?.statusText && photoData.statusText.includes('#')) 

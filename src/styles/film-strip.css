@@ -684,6 +684,34 @@ body .film-frame.selected,
   overflow: visible !important;
 }
 
+/* When gallery carousel is present in prompt selector, adjust fullscreen image to fit above carousel */
+.film-strip-container.has-gallery-carousel .film-frame.selected {
+  max-height: calc(100vh - 260px) !important;
+  top: calc((100vh - 260px) / 2 + 20px) !important;
+}
+
+/* Constrain the actual image within the polaroid frame when carousel is present */
+/* Account for: polaroid top padding (8px) + bottom padding area for label (50px) = ~58px + extra margin */
+.film-strip-container.has-gallery-carousel .film-frame.selected img {
+  max-height: calc(100vh - 400px) !important;
+  max-width: calc(100vw - 80px) !important;
+  object-fit: contain !important;
+}
+
+/* Mobile adjustments for gallery carousel presence */
+@media (max-width: 768px) {
+  .film-strip-container.has-gallery-carousel .film-frame.selected {
+    max-height: calc(100vh - 220px) !important;
+    top: calc((100vh - 220px) / 2 + 15px) !important;
+  }
+  
+  .film-strip-container.has-gallery-carousel .film-frame.selected img {
+    max-height: calc(100vh - 350px) !important;
+    max-width: calc(100vw - 60px) !important;
+    object-fit: contain !important;
+  }
+}
+
 /* In Style Explorer mode, keep selected photos in grid as thumbnails (no fullscreen) */
 /* UNLESS user explicitly clicked fullscreen button */
 .film-strip-container.prompt-selector-mode .film-frame.selected:not(.fullscreen-mode) {
@@ -1337,6 +1365,17 @@ html body.has-selected-photo .film-strip-container.visible .film-frame.selected[
   100% {
     transform: translateX(-50%) scale(1);
     box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+  }
+}
+
+/* Adjust action buttons when gallery carousel is present */
+.film-strip-container.has-gallery-carousel .photo-action-buttons {
+  bottom: 230px !important;
+}
+
+@media (max-width: 768px) {
+  .film-strip-container.has-gallery-carousel .photo-action-buttons {
+    bottom: 190px !important;
   }
 }
 

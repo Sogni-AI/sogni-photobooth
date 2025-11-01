@@ -69,6 +69,128 @@ router.post('/submit', async (req, res) => {
   }
 });
 
+// GET /api/contest/gallery-submissions/approved/:promptKey - Get approved gallery submissions for a specific prompt
+router.get('/gallery-submissions/approved/:promptKey', async (req, res) => {
+  try {
+    const { promptKey } = req.params;
+    
+    // Check if moderation is enabled (via MODERATION_ENABLED env var)
+    const moderationEnabled = process.env.MODERATION_ENABLED !== 'false';
+    
+    console.log(`[Gallery] Fetching entries for promptKey: ${promptKey}`);
+    console.log(`[Gallery] MODERATION_ENABLED env var: ${process.env.MODERATION_ENABLED}`);
+    console.log(`[Gallery] moderationEnabled: ${moderationEnabled}`);
+    console.log(`[Gallery] moderationStatus filter: ${moderationEnabled ? 'APPROVED' : 'undefined (all entries)'}`);
+    
+    // Get entries for gallery-submissions
+    // If moderation is disabled, get all entries. Otherwise, only approved ones.
+    const result = await getContestEntries('gallery-submissions', {
+      page: 1,
+      limit: 100, // Get up to 100 images per prompt
+      sortBy: 'timestamp',
+      order: 'desc',
+      moderationStatus: moderationEnabled ? 'APPROVED' : undefined
+    });
+    
+    // Filter by promptKey
+    const filteredEntries = result.entries.filter(entry => 
+      entry.metadata?.promptKey === promptKey
+    );
+    
+    console.log(`[Gallery] Total entries from DB: ${result.entries.length}`);
+    console.log(`[Gallery] Filtered entries for ${promptKey}: ${filteredEntries.length}`);
+    if (filteredEntries.length > 0) {
+      console.log(`[Gallery] Sample entry moderation statuses:`, filteredEntries.slice(0, 3).map(e => ({
+        id: e.id.substring(0, 8),
+        status: e.moderationStatus,
+        promptKey: e.metadata?.promptKey
+      })));
+    }
+    
+    res.json({
+      success: true,
+      promptKey,
+      entries: filteredEntries,
+      total: filteredEntries.length
+    });
+  } catch (error) {
+    console.error('[Gallery] Error fetching approved gallery submissions:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch gallery submissions',
+      error: error.message
+    });
+  }
+});
+
+// POST /api/contest/gallery-submissions/entry - Submit to public gallery (no tweet required)
+router.post('/gallery-submissions/entry', async (req, res) => {
+  try {
+    const {
+      imageUrl,
+      promptKey,
+      username,
+      address,
+      metadata
+    } = req.body;
+
+    if (!imageUrl || !promptKey) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required fields: imageUrl and promptKey are required'
+      });
+    }
+
+    // Prevent custom prompts from being submitted
+    if (promptKey === 'custom') {
+      return res.status(400).json({
+        success: false,
+        message: 'Custom prompts cannot be submitted to the gallery'
+      });
+    }
+
+    // Convert promptKey to display name (e.g., "barbie" -> "Barbie")
+    const styleDisplayName = promptKey
+      .replace(/([A-Z])/g, ' $1') // Add space before capital letters
+      .replace(/^./, str => str.toUpperCase()) // Capitalize first letter
+      .trim();
+
+    // Save the gallery submission as a contest entry under 'gallery-submissions'
+    const entry = await saveContestEntry({
+      contestId: 'gallery-submissions',
+      imageUrl,
+      prompt: styleDisplayName, // Store the style display name instead of the prompt text
+      username,
+      address,
+      tweetId: null, // No tweet for gallery submissions
+      tweetUrl: null,
+      metadata: {
+        ...metadata,
+        promptKey, // Store the prompt key for filtering by style
+        submittedAt: Date.now()
+      }
+    });
+
+    console.log(`[Gallery] New submission for prompt ${promptKey}:`, entry.id);
+
+    res.json({
+      success: true,
+      message: 'Gallery submission successful. Your image will be reviewed by moderators.',
+      entry: {
+        id: entry.id,
+        timestamp: entry.timestamp
+      }
+    });
+  } catch (error) {
+    console.error('[Gallery] Error submitting to gallery:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to submit to gallery',
+      error: error.message
+    });
+  }
+});
+
 // GET /api/contest/:contestId/entries - Get contest entries (paginated)
 router.get('/:contestId/entries', async (req, res) => {
   try {

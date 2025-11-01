@@ -211,6 +211,12 @@ const GalleryCarousel = ({
                   alt={`Gallery submission by ${entry.username || 'Anonymous'}`}
                   loading="lazy"
                 />
+                {/* Show seed tooltip for user submissions */}
+                {!entry.isOriginal && entry.metadata?.seed !== undefined && entry.metadata?.seed !== null && (
+                  <div className="gallery-carousel-seed-tooltip">
+                    Seed: {entry.metadata.seed}
+                  </div>
+                )}
               </div>
               <div className="gallery-carousel-label">
                 {entry.isOriginal ? 'Sample' : `@${entry.username || 'Anonymous'}`}

@@ -18,10 +18,14 @@ import { useApp } from '../../context/AppContext';
 import { trackDownloadWithStyle } from '../../services/analyticsService';
 import { downloadImagesAsZip } from '../../utils/bulkDownload';
 import CustomPromptPopup from './CustomPromptPopup';
+import ShareMenu from './ShareMenu';
+import GallerySubmissionConfirm from './GallerySubmissionConfirm';
+import GalleryCarousel from './GalleryCarousel';
 import { useSogniAuth } from '../../services/sogniAuth';
 import { useWallet } from '../../hooks/useWallet';
 import { useCostEstimation } from '../../hooks/useCostEstimation.ts';
 import { getTokenLabel } from '../../services/walletService';
+import { useToastContext } from '../../context/ToastContext';
 
 // Memoized placeholder image component to prevent blob reloading
 const PlaceholderImage = memo(({ placeholderUrl }) => {
@@ -316,6 +320,19 @@ const PhotoGallery = ({
 
   // State for Download All button dropdown
   const [showMoreDropdown, setShowMoreDropdown] = useState(false);
+  
+  // State for gallery submission
+  const [showGalleryConfirm, setShowGalleryConfirm] = useState(false);
+  const [gallerySubmissionPending, setGallerySubmissionPending] = useState(false);
+  
+  // Get user authentication state for gallery submissions
+  const { user } = useSogniAuth();
+  
+  // Get toast notification system
+  const { showToast } = useToastContext();
+  
+  // State to track if gallery carousel has entries
+  const [hasGalleryEntries, setHasGalleryEntries] = useState(false);
   
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -1817,6 +1834,113 @@ const PhotoGallery = ({
     }
   };
 
+  // Handle gallery submission
+  const handleGallerySubmitRequest = useCallback(() => {
+    const currentPhoto = photos[selectedPhotoIndex];
+    if (!currentPhoto) return;
+    
+    // Only allow submission if photo has a valid prompt key (not custom)
+    const promptKey = currentPhoto.promptKey || currentPhoto.selectedStyle;
+    if (!promptKey || promptKey === 'custom') {
+      console.log('Cannot submit custom prompt to gallery');
+      return;
+    }
+    
+    // Show confirmation popup
+    setShowGalleryConfirm(true);
+  }, [photos, selectedPhotoIndex]);
+
+  const handleGallerySubmitConfirm = useCallback(async () => {
+    const currentPhoto = photos[selectedPhotoIndex];
+    if (!currentPhoto || gallerySubmissionPending) return;
+    
+    setGallerySubmissionPending(true);
+    setShowGalleryConfirm(false);
+    
+    try {
+      const promptKey = currentPhoto.promptKey || currentPhoto.selectedStyle;
+      const blobUrl = currentPhoto.images[selectedSubIndex || 0];
+      
+      // Convert blob URL to data URL for server storage
+      let imageDataUrl = blobUrl;
+      if (blobUrl && blobUrl.startsWith('blob:')) {
+        try {
+          const response = await fetch(blobUrl);
+          const blob = await response.blob();
+          imageDataUrl = await new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result);
+            reader.readAsDataURL(blob);
+          });
+        } catch (err) {
+          console.error('Failed to convert blob to data URL:', err);
+          // Continue with blob URL as fallback
+        }
+      }
+      
+      // Get metadata from photo (actual values used) and settings (fallback)
+      const metadata = {
+        model: currentPhoto.model || selectedModel || settings.selectedModel,
+        inferenceSteps: currentPhoto.steps || settings.inferenceSteps,
+        seed: currentPhoto.seed !== undefined ? currentPhoto.seed : settings.seed,
+        guidance: settings.guidance,
+        aspectRatio: aspectRatio || settings.aspectRatio,
+        width: desiredWidth,
+        height: desiredHeight,
+        promptKey: promptKey,
+        promptText: currentPhoto.positivePrompt || currentPhoto.stylePrompt || stylePrompts[promptKey] || ''
+      };
+      
+      // Submit to gallery API
+      const response = await fetch('/api/contest/gallery-submissions/entry', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          imageUrl: imageDataUrl,
+          promptKey,
+          username: user?.username,
+          address: user?.address,
+          metadata
+        }),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to submit to gallery');
+      }
+      
+      const data = await response.json();
+      console.log('Gallery submission successful:', data);
+      
+      // Show success toast notification
+      showToast({
+        type: 'success',
+        title: '✨ Successfully submitted to gallery!',
+        message: 'Your image will be reviewed by moderators.',
+        timeout: 5000
+      });
+      
+    } catch (error) {
+      console.error('Error submitting to gallery:', error);
+      
+      // Show error toast notification
+      showToast({
+        type: 'error',
+        title: '❌ Submission Failed',
+        message: 'Failed to submit to gallery. Please try again.',
+        timeout: 5000
+      });
+    } finally {
+      setGallerySubmissionPending(false);
+    }
+  }, [photos, selectedPhotoIndex, selectedSubIndex, gallerySubmissionPending, stylePrompts, user, showToast, settings, selectedModel, aspectRatio, desiredWidth, desiredHeight]);
+
+  const handleGallerySubmitCancel = useCallback(() => {
+    setShowGalleryConfirm(false);
+  }, []);
+
   // Handle download photo with polaroid frame
   const handleDownloadPhoto = async (photoIndex) => {
     // Get the correct photo from the appropriate array (filtered or original)
@@ -2067,7 +2191,7 @@ const PhotoGallery = ({
 
 
   return (
-    <div className={`film-strip-container ${showPhotoGrid ? 'visible' : 'hiding'} ${selectedPhotoIndex !== null && (!isPromptSelectorMode || wantsFullscreen) ? 'has-selected' : ''} ${wantsFullscreen ? 'fullscreen-active' : ''} ${isPWA ? 'pwa-mode' : ''} ${isExtensionMode ? 'extension-mode' : ''} ${isPromptSelectorMode ? 'prompt-selector-mode' : ''}`}
+    <div className={`film-strip-container ${showPhotoGrid ? 'visible' : 'hiding'} ${selectedPhotoIndex !== null && (!isPromptSelectorMode || wantsFullscreen) ? 'has-selected' : ''} ${wantsFullscreen ? 'fullscreen-active' : ''} ${hasGalleryEntries && isPromptSelectorMode && wantsFullscreen ? 'has-gallery-carousel' : ''} ${isPWA ? 'pwa-mode' : ''} ${isExtensionMode ? 'extension-mode' : ''} ${isPromptSelectorMode ? 'prompt-selector-mode' : ''}`}
       onClick={(e) => {
         // Dismiss touch hover state when clicking outside images in Vibe Explorer
         if (isPromptSelectorMode && touchHoveredPhotoIndex !== null && e.target === e.currentTarget) {
@@ -2435,6 +2559,7 @@ const PhotoGallery = ({
             display: 'flex',
             justifyContent: 'center',
             position: 'fixed',
+            bottom: '20px',
             left: '50%',
             transform: 'translateX(-50%)',
             // Ensure this toolbar and its popups are above sloth mascot
@@ -2466,9 +2591,12 @@ const PhotoGallery = ({
                     }
                     
                     if (isPromptSelectorMode && onPromptSelect && selectedPhoto.promptKey) {
-                      onPromptSelect(selectedPhoto.promptKey);
+                      // If a gallery variation is selected, pass the seed to use that variation
+                      const seedToUse = selectedPhoto.gallerySeed !== undefined ? selectedPhoto.gallerySeed : undefined;
+                      onPromptSelect(selectedPhoto.promptKey, seedToUse);
                     } else if (onUseGalleryPrompt && selectedPhoto.promptKey) {
-                      onUseGalleryPrompt(selectedPhoto.promptKey);
+                      const seedToUse = selectedPhoto.gallerySeed !== undefined ? selectedPhoto.gallerySeed : undefined;
+                      onUseGalleryPrompt(selectedPhoto.promptKey, seedToUse);
                     }
                     e.stopPropagation();
                   }}
@@ -2482,12 +2610,9 @@ const PhotoGallery = ({
                 </button>
               </>
             ) : (
-              <button
-                className="action-button twitter-btn"
-                onClick={(e) => {
-                  handleShareToX(selectedPhotoIndex);
-                  e.stopPropagation();
-                }}
+              <ShareMenu
+                onShareToTwitter={() => handleShareToX(selectedPhotoIndex)}
+                onSubmitToGallery={handleGallerySubmitRequest}
                 disabled={
                   selectedPhoto.loading || 
                   selectedPhoto.enhancing ||
@@ -2496,10 +2621,9 @@ const PhotoGallery = ({
                   !selectedPhoto.images ||
                   selectedPhoto.images.length === 0
                 }
-              >
-                <svg fill="currentColor" width="16" height="16" viewBox="0 0 24 24"><path d="M22.46 6c-.77.35-1.6.58-2.46.67.9-.53 1.59-1.37 1.92-2.38-.84.5-1.78.86-2.79 1.07C18.27 4.49 17.01 4 15.63 4c-2.38 0-4.31 1.94-4.31 4.31 0 .34.04.67.11.99C7.83 9.09 4.16 7.19 1.69 4.23-.07 6.29.63 8.43 2.49 9.58c-.71-.02-1.38-.22-1.97-.54v.05c0 2.09 1.49 3.83 3.45 4.23-.36.1-.74.15-1.14.15-.28 0-.55-.03-.81-.08.55 1.71 2.14 2.96 4.03 3-1.48 1.16-3.35 1.85-5.37 1.85-.35 0-.69-.02-1.03-.06 1.92 1.23 4.2 1.95 6.67 1.95 8.01 0 12.38-6.63 12.38-12.38 0-.19 0-.38-.01-.56.85-.61 1.58-1.37 2.16-2.24z"/></svg>
-                {tezdevTheme !== 'off' ? 'Get your print!' : 'Share'}
-              </button>
+                hasPromptKey={!!(selectedPhoto.promptKey || selectedPhoto.selectedStyle) && (selectedPhoto.promptKey !== 'custom' && selectedPhoto.selectedStyle !== 'custom')}
+                tezdevTheme={tezdevTheme}
+              />
             )}
 
           {/* Download Framed Button - Hide in Vibe Explorer */}
@@ -5482,6 +5606,52 @@ const PhotoGallery = ({
           );
         })}
       </div>
+
+      {/* Gallery Carousel - show when in fullscreen mode in prompt selector */}
+      {isPromptSelectorMode && wantsFullscreen && selectedPhotoIndex !== null && (
+        <GalleryCarousel
+          promptKey={
+            (isPromptSelectorMode ? filteredPhotos : photos)[selectedPhotoIndex]?.promptKey ||
+            (isPromptSelectorMode ? filteredPhotos : photos)[selectedPhotoIndex]?.selectedStyle
+          }
+          originalImage={(isPromptSelectorMode ? filteredPhotos : photos)[selectedPhotoIndex]}
+          onImageSelect={(entry) => {
+            if (!entry.imageUrl) return;
+            
+            // In prompt selector mode, we need to update the filtered photo directly
+            // Don't update photos array as that's for user-generated images
+            if (isPromptSelectorMode) {
+              // Since filteredPhotos is derived from photos, we can't directly update it
+              // Instead, we'll create a temporary display by replacing just the image URL
+              // The actual photo object in the photos array stays the same
+              const currentPhoto = filteredPhotos[selectedPhotoIndex];
+              if (!currentPhoto) return;
+              
+              // Create a modified version for display
+              const modifiedPhoto = {
+                ...currentPhoto,
+                images: [entry.imageUrl],
+                selectedGalleryEntry: entry,
+                gallerySeed: entry.metadata?.seed,
+                galleryMetadata: entry.metadata
+              };
+              
+              // Replace the photo at the current index in the photos array used by prompt selector
+              setPhotos(prev => {
+                const updated = [...prev];
+                // Find the index in the full photos array (not filteredPhotos)
+                const fullIndex = prev.findIndex(p => p.id === currentPhoto.id);
+                if (fullIndex !== -1) {
+                  updated[fullIndex] = modifiedPhoto;
+                }
+                return updated;
+              });
+            }
+          }}
+          onEntriesLoaded={(count) => setHasGalleryEntries(count > 0)}
+          showKeyboardHint={true}
+        />
+      )}
       {/* Only render slothicorn if animation is enabled */}
       {slothicornAnimationEnabled && (
         <div className="slothicorn-container">
@@ -5689,6 +5859,15 @@ const PhotoGallery = ({
         onClose={() => setShowCustomPromptPopup(false)}
         onApply={handleApplyCustomPrompt}
         currentPrompt={settings.positivePrompt || ''}
+      />
+
+      {/* Gallery Submission Confirmation Modal */}
+      <GallerySubmissionConfirm
+        isOpen={showGalleryConfirm}
+        onConfirm={handleGallerySubmitConfirm}
+        onCancel={handleGallerySubmitCancel}
+        promptKey={selectedPhotoIndex !== null && photos[selectedPhotoIndex] ? (photos[selectedPhotoIndex].promptKey || photos[selectedPhotoIndex].selectedStyle) : null}
+        imageUrl={selectedPhotoIndex !== null && photos[selectedPhotoIndex] && photos[selectedPhotoIndex].images ? photos[selectedPhotoIndex].images[selectedSubIndex || 0] : null}
       />
     </div>
   );

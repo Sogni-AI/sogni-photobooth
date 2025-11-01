@@ -92,11 +92,18 @@ export async function saveContestEntry({
       }
     }
 
-    // Determine the API base URL based on environment
-    const isDev = process.env.NODE_ENV !== 'production';
-    const apiBaseUrl = isDev 
-      ? 'http://localhost:3001' 
-      : 'https://photobooth-api.sogni.ai';
+    // Determine the API base URL based on CLIENT_ORIGIN (same pattern as static file serving)
+    const isLocal = process.env.CLIENT_ORIGIN?.includes('local');
+    const isStaging = process.env.CLIENT_ORIGIN?.includes('staging');
+    
+    let apiBaseUrl;
+    if (isLocal) {
+      apiBaseUrl = 'https://photobooth-api-local.sogni.ai';
+    } else if (isStaging) {
+      apiBaseUrl = 'https://photobooth-api-staging.sogni.ai';
+    } else {
+      apiBaseUrl = 'https://photobooth-api.sogni.ai';
+    }
 
     // Create contest entry object
     const entry = {

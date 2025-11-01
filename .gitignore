@@ -73,3 +73,5 @@ Thumbs.db
 # Test results
 test-results/
 playwright-report/
+
+server/uploads/contest/gallery-submissions/
