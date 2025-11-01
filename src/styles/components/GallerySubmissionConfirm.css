@@ -1,0 +1,263 @@
+.gallery-confirm-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100000;
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.gallery-confirm-modal {
+  background: #f8f8f8;
+  border-radius: 16px;
+  max-width: 480px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  animation: slideUp 0.3s ease-out;
+  position: relative;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.gallery-confirm-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: rgba(0, 0, 0, 0.1);
+  border: none;
+  color: #333;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  z-index: 1;
+}
+
+.gallery-confirm-close:hover {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.gallery-confirm-header {
+  padding: 16px 20px 10px;
+  text-align: center;
+  border-bottom: 1px solid #e0e0e0;
+  background: white;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.gallery-icon {
+  margin: 0;
+  display: block;
+}
+
+.gallery-confirm-header h2 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 600;
+  color: #333;
+  line-height: 1.1;
+}
+
+.gallery-confirm-content {
+  padding: 20px;
+  background: #f8f8f8;
+}
+
+.gallery-confirm-preview {
+  margin-bottom: 16px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 150px;
+}
+
+.gallery-confirm-preview img {
+  max-width: 100%;
+  max-height: 350px;
+  display: block;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.25));
+}
+
+.preview-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 40px;
+  color: #666;
+}
+
+.preview-loading .loading-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid #e0e0e0;
+  border-top-color: #764ba2;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.gallery-confirm-message {
+  font-size: 15px;
+  line-height: 1.4;
+  color: #333;
+  margin: 0 0 12px 0;
+  text-align: center;
+}
+
+.gallery-confirm-message strong {
+  color: #764ba2;
+  font-weight: 600;
+}
+
+.gallery-confirm-note {
+  font-size: 13px;
+  line-height: 1.4;
+  color: #666;
+  margin: 0;
+  padding: 12px;
+  background: white;
+  border-radius: 8px;
+  border-left: 3px solid #764ba2;
+}
+
+.gallery-confirm-footer {
+  padding: 16px 20px 20px;
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  background: white;
+  border-top: 1px solid #e0e0e0;
+}
+
+.gallery-confirm-btn {
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cancel-btn {
+  background: #f0f0f0;
+  color: #666;
+}
+
+.cancel-btn:hover {
+  background: #e0e0e0;
+  color: #333;
+}
+
+.submit-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.submit-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(118, 75, 162, 0.3);
+}
+
+.submit-btn:active {
+  transform: translateY(0);
+}
+
+/* Mobile adjustments */
+@media (max-width: 768px) {
+  .gallery-confirm-modal {
+    width: 95%;
+    max-height: 92vh;
+  }
+
+  .gallery-confirm-header {
+    padding: 12px 16px 8px;
+    gap: 2px;
+  }
+
+  .gallery-confirm-header h2 {
+    font-size: 19px;
+  }
+  
+  .gallery-icon {
+    width: 40px;
+    height: 40px;
+  }
+  
+  .gallery-confirm-preview {
+    min-height: 120px;
+    margin-bottom: 12px;
+  }
+  
+  .gallery-confirm-preview img {
+    max-height: 280px;
+  }
+
+  .gallery-confirm-content {
+    padding: 16px;
+  }
+
+  .gallery-confirm-message {
+    font-size: 14px;
+    margin-bottom: 10px;
+  }
+
+  .gallery-confirm-note {
+    font-size: 12px;
+    padding: 10px;
+    line-height: 1.3;
+  }
+
+  .gallery-confirm-footer {
+    padding: 12px 16px 16px;
+    flex-direction: column;
+  }
+
+  .gallery-confirm-btn {
+    width: 100%;
+    justify-content: center;
+    padding: 10px 20px;
+  }
+}
+

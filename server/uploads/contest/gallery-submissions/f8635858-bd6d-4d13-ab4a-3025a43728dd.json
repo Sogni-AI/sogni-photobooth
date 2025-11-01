@@ -1,0 +1,28 @@
+{
+  "id": "f8635858-bd6d-4d13-ab4a-3025a43728dd",
+  "contestId": "gallery-submissions",
+  "timestamp": 1761960244843,
+  "prompt": "Barbie",
+  "username": "mark.and.robot",
+  "address": null,
+  "tweetId": null,
+  "tweetUrl": null,
+  "imageFilename": "f8635858-bd6d-4d13-ab4a-3025a43728dd.jpg",
+  "imagePath": "/Users/markledford/Documents/git/sogni-photobooth/server/uploads/contest/gallery-submissions/f8635858-bd6d-4d13-ab4a-3025a43728dd.jpg",
+  "imageUrl": "https://photobooth-api-local.sogni.ai/api/contest/gallery-submissions/image/f8635858-bd6d-4d13-ab4a-3025a43728dd.jpg",
+  "moderationStatus": "APPROVED",
+  "metadata": {
+    "model": "coreml-sogniXLturbo_alpha1_ad",
+    "inferenceSteps": 7,
+    "seed": 455100902,
+    "guidance": 3,
+    "aspectRatio": "narrow",
+    "width": 832,
+    "height": 1216,
+    "promptKey": "barbie",
+    "promptText": "glamorous fashion Barbie aesthetic, sparkling pink gown, polished hair with glossy curls, radiant smooth skin, bright pink studio or dreamhouse background, confident pose, lens-flare sparkle effects, clean high-fashion lighting, magazine-cover look--preferred-workers=SPICE.MUST.FLOW --skip-workers=freeman123",
+    "submittedAt": "2025-11-01T01:24:04.843Z"
+  },
+  "moderatedAt": 1761960271918,
+  "moderatedBy": "mark.and.robot"
+}
