@@ -6,7 +6,6 @@ import ContestVote from './contest/ContestVote';
 import HalloweenEvent from './events/HalloweenEvent';
 import { MusicPlayerProvider } from '../context/MusicPlayerContext';
 import GlobalMusicPlayer from './shared/GlobalMusicPlayer';
-import HalloweenNotificationTooltip from './notifications/HalloweenNotificationTooltip';
 import PageMetadata from './shared/PageMetadata';
 
 // Create navigation context
@@ -85,11 +84,6 @@ const AppRouter = () => {
         
         {/* Global music player - shows on all pages when enabled */}
         <GlobalMusicPlayer />
-
-        {/* Halloween notification tooltip - only on main page */}
-        {currentRoute === 'main' && (
-          <HalloweenNotificationTooltip onNavigate={navigateToHalloween} />
-        )}
 
         {currentRoute === 'analytics' ? (
           <AnalyticsDashboard />
