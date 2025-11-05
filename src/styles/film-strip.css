@@ -686,14 +686,14 @@ body .film-frame.selected,
 
 /* When gallery carousel is present in prompt selector, adjust fullscreen image to fit above carousel */
 .film-strip-container.has-gallery-carousel .film-frame.selected {
-  max-height: calc(100vh - 260px) !important;
-  top: calc((100vh - 260px) / 2 + 20px) !important;
+  max-height: calc(100vh - 120px) !important;
+  top: calc((100vh - 120px) / 2 + 20px) !important;
 }
 
 /* Constrain the actual image within the polaroid frame when carousel is present */
 /* Account for: polaroid top padding (8px) + bottom padding area for label (50px) = ~58px + extra margin */
 .film-strip-container.has-gallery-carousel .film-frame.selected img {
-  max-height: calc(100vh - 400px) !important;
+  max-height: calc(100vh - 240px) !important;
   max-width: calc(100vw - 80px) !important;
   object-fit: contain !important;
 }
@@ -701,12 +701,12 @@ body .film-frame.selected,
 /* Mobile adjustments for gallery carousel presence */
 @media (max-width: 768px) {
   .film-strip-container.has-gallery-carousel .film-frame.selected {
-    max-height: calc(100vh - 220px) !important;
-    top: calc((100vh - 220px) / 2 + 15px) !important;
+    max-height: calc(100vh - 110px) !important;
+    top: calc((100vh - 110px) / 2 + 15px) !important;
   }
   
   .film-strip-container.has-gallery-carousel .film-frame.selected img {
-    max-height: calc(100vh - 350px) !important;
+    max-height: calc(100vh - 220px) !important;
     max-width: calc(100vw - 60px) !important;
     object-fit: contain !important;
   }
@@ -1370,12 +1370,12 @@ html body.has-selected-photo .film-strip-container.visible .film-frame.selected[
 
 /* Adjust action buttons when gallery carousel is present */
 .film-strip-container.has-gallery-carousel .photo-action-buttons {
-  bottom: 230px !important;
+  bottom: 110px !important;
 }
 
 @media (max-width: 768px) {
   .film-strip-container.has-gallery-carousel .photo-action-buttons {
-    bottom: 190px !important;
+    bottom: 100px !important;
   }
 }
 

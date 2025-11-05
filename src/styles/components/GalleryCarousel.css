@@ -4,15 +4,8 @@
   left: 0;
   right: 0;
   width: 100%;
-  padding: 10px 0 10px;
   background: transparent;
-  border-radius: 0;
-  box-shadow: none;
-  z-index: 9997;
-  height: 220px;
-  overflow: visible;
-  display: flex;
-  flex-direction: column;
+  z-index: 10000;
   pointer-events: none;
 }
 
@@ -50,30 +43,29 @@
 }
 
 .gallery-carousel-header {
-  padding: 0 20px 8px;
+  padding: 0 12px 4px;
   border-bottom: none;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  flex-shrink: 0;
   background: transparent;
   pointer-events: auto;
 }
 
 .gallery-carousel-header h3 {
   margin: 0;
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 600;
   color: white;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
 }
 
 .gallery-carousel-header h3::before {
   content: '🖼️';
-  font-size: 16px;
+  font-size: 14px;
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
 }
 
@@ -86,15 +78,13 @@
 
 .gallery-carousel-track {
   display: flex;
-  gap: 12px;
-  padding: 10px 20px;
-  padding-top: 50px;
+  gap: 6px;
+  padding: 6px 12px 4px;
   overflow-x: auto;
-  overflow-y: visible;
+  overflow-y: hidden;
   scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
-  flex: 1;
-  align-items: flex-start;
+  align-items: center;
   background: transparent;
   pointer-events: auto;
 }
@@ -121,198 +111,136 @@
 .gallery-carousel-item {
   flex-shrink: 0;
   cursor: pointer;
-  transition: transform 0.2s ease;
   position: relative;
-  padding-bottom: 8px;
   pointer-events: auto;
 }
 
-.gallery-carousel-item:hover {
-  transform: translateY(-2px);
-}
-
-.gallery-carousel-item.selected {
-  transform: translateY(-4px);
-}
-
-.gallery-carousel-polaroid {
-  background: white;
-  border-radius: 2px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
-  padding: 6px;
-  padding-bottom: 28px;
-  transition: box-shadow 0.2s ease;
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  overflow: visible;
-}
-
-.gallery-carousel-item.selected .gallery-carousel-polaroid {
-  box-shadow: 0 6px 20px rgba(118, 75, 162, 0.5);
-  outline: 2px solid #764ba2;
-}
-
 .gallery-carousel-image-wrapper {
-  max-width: 140px;
-  height: 110px;
-  overflow: visible;
-  border-radius: 0;
+  width: 66px;
+  height: 99px;
   background: transparent;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
   position: relative;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  transition: all 0.15s ease;
+}
+
+.gallery-carousel-item.selected .gallery-carousel-image-wrapper {
+  box-shadow: 0 0 0 3px #764ba2, 0 4px 12px rgba(118, 75, 162, 0.5);
+}
+
+.gallery-carousel-item:hover .gallery-carousel-image-wrapper {
+  box-shadow: 0 0 0 2px rgba(118, 75, 162, 0.6), 0 4px 12px rgba(118, 75, 162, 0.3);
 }
 
 .gallery-carousel-image-wrapper img {
-  max-width: 130px;
-  max-height: 110px;
+  max-width: 100%;
+  max-height: 100%;
   width: auto;
   height: auto;
   object-fit: contain;
   display: block;
-  border-radius: 0;
 }
 
 /* Seed tooltip - speech bubble */
 .gallery-carousel-seed-tooltip {
-  position: absolute;
-  bottom: calc(100% + 10px);
-  left: 50%;
-  transform: translateX(-50%);
+  position: fixed;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
-  padding: 8px 14px;
-  border-radius: 10px;
-  font-size: 12px;
-  font-weight: 700;
+  padding: 8px 12px;
+  font-size: 11px;
+  font-weight: 600;
   white-space: nowrap;
   opacity: 0;
+  visibility: hidden;
   pointer-events: none;
-  transition: opacity 0.25s ease, bottom 0.25s ease;
-  z-index: 10000;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+  z-index: 99999;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  letter-spacing: 0.3px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
 }
 
-/* Speech bubble arrow */
+.gallery-carousel-seed-tooltip .username {
+  font-size: 10px;
+  opacity: 0.85;
+  font-weight: 500;
+}
+
+/* Speech bubble arrow pointing down */
 .gallery-carousel-seed-tooltip::after {
   content: '';
   position: absolute;
   top: 100%;
   left: 50%;
   transform: translateX(-50%);
-  border: 8px solid transparent;
+  border: 6px solid transparent;
   border-top-color: #764ba2;
 }
 
 /* Show tooltip on hover */
 .gallery-carousel-item:hover .gallery-carousel-seed-tooltip {
   opacity: 1;
-  bottom: calc(100% + 16px);
+  visibility: visible;
 }
 
 .gallery-carousel-label {
-  position: absolute;
-  bottom: 6px;
-  left: 0;
-  right: 0;
-  text-align: center;
-  font-family: 'Permanent Marker', cursive;
-  font-size: 11px;
-  color: #333;
-  white-space: nowrap;
-  overflow: visible;
-  line-height: 22px;
-  width: 100%;
+  display: none;
 }
 
 .gallery-carousel-selected-indicator {
   position: absolute;
-  bottom: -6px;
+  bottom: -8px;
   left: 50%;
   transform: translateX(-50%);
   color: #764ba2;
-  font-size: 16px;
-  animation: bounce 0.5s ease-in-out;
-}
-
-@keyframes bounce {
-  0%, 100% { transform: translateX(-50%) translateY(0); }
-  50% { transform: translateX(-50%) translateY(-2px); }
+  font-size: 12px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
 }
 
 /* Mobile adjustments */
 @media (max-width: 768px) {
-  .gallery-carousel {
-    padding: 8px 0 8px;
-    height: 180px;
-  }
-
   .gallery-carousel-header {
-    padding: 0 12px 6px;
-    flex-direction: row;
-    gap: 8px;
+    padding: 0 8px 3px;
   }
 
   .gallery-carousel-header h3 {
-    font-size: 14px;
-  }
-
-  .gallery-carousel-hint {
-    font-size: 11px;
-    display: none; /* Hide keyboard hint on mobile */
+    font-size: 13px;
   }
 
   .gallery-carousel-track {
-    padding: 8px 12px;
-    gap: 10px;
+    padding: 5px 8px 3px;
+    gap: 4px;
   }
 
-  .gallery-carousel-polaroid {
-    width: 110px;
-    padding: 5px;
-    padding-bottom: 24px;
-  }
-  
   .gallery-carousel-image-wrapper {
-    height: 90px;
-  }
-  
-  .gallery-carousel-image-wrapper img {
-    max-width: 100px;
-    max-height: 90px;
-  }
-
-  .gallery-carousel-label {
-    font-size: 9px;
-    line-height: 19px;
-    bottom: 5px;
+    width: 55px;
+    height: 82px;
   }
   
   .gallery-carousel-selected-indicator {
-    font-size: 14px;
-    bottom: -4px;
+    font-size: 11px;
+    bottom: -6px;
   }
   
   /* Smaller tooltip on mobile */
   .gallery-carousel-seed-tooltip {
-    font-size: 11px;
+    font-size: 10px;
     padding: 6px 10px;
-    border-radius: 8px;
-    bottom: calc(100% + 8px);
+  }
+  
+  .gallery-carousel-seed-tooltip .username {
+    font-size: 9px;
   }
   
   .gallery-carousel-seed-tooltip::after {
-    border-width: 6px;
-  }
-  
-  .gallery-carousel-item:hover .gallery-carousel-seed-tooltip {
-    bottom: calc(100% + 12px);
+    border-width: 5px;
   }
 }
 

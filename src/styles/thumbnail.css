@@ -1,10 +1,11 @@
 /* Thumbnail gallery and related components */
 .thumbnail-gallery {
-  @apply flex gap-3 p-3 overflow-x-auto bg-black bg-opacity-70;
+  @apply flex gap-3 overflow-x-auto bg-black bg-opacity-70;
   position: absolute;
   left: 0;
   right: 0;
   bottom: 0;
+  padding: 8px 12px;
   z-index: 70;
 }
 
