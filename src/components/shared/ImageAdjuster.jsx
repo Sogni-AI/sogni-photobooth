@@ -629,53 +629,50 @@ const ImageAdjuster = ({
   
   return (
     <div className="image-adjuster-overlay">
-      <div className="image-adjuster-container">
-        {/* Pinned Style Widget - Top Left */}
-        <div className="image-adjuster-style-pinned">
-          <div 
-            className="style-label-text"
-            onClick={() => setShowStyleDropdown(prev => !prev)}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                setShowStyleDropdown(prev => !prev);
-              }
-            }}
-          >
-            Your selected vibe
-          </div>
+      <div className="image-adjuster-wrapper">
+        <div className="image-adjuster-container">
+          {/* Pinned Style Widget - Top Left */}
           <button 
-            className="image-adjuster-style-selector-button"
-            onClick={() => setShowStyleDropdown(prev => !prev)}
-            title="Change style"
-          >
-            <div className="image-adjuster-style-selector-content">
-              {stylePreviewImage ? (
-                <img 
-                  src={stylePreviewImage} 
-                  alt={selectedStyle ? styleIdToDisplay(selectedStyle) : 'Style preview'}
-                  className="image-adjuster-style-preview-image"
-                  onError={(e) => {
-                    // Fallback to emoji icon if image fails to load
-                    e.currentTarget.style.display = 'none';
-                    const fallbackIcon = e.currentTarget.nextElementSibling;
-                    if (fallbackIcon && fallbackIcon.classList.contains('image-adjuster-style-icon-fallback')) {
-                      fallbackIcon.style.display = 'block';
-                    }
-                  }}
-                />
-              ) : null}
-              <span className={`image-adjuster-style-icon ${stylePreviewImage ? 'image-adjuster-style-icon-fallback' : ''}`} style={stylePreviewImage ? { display: 'none' } : {}}>
-                🎨
-              </span>
-              <span className="image-adjuster-style-text">
+          className="image-adjuster-style-selector-button"
+          onClick={() => setShowStyleDropdown(prev => !prev)}
+          title="Your selected vibe - Click to change"
+        >
+          <div className="image-adjuster-style-selector-content">
+            {stylePreviewImage ? (
+              <img 
+                src={stylePreviewImage} 
+                alt={selectedStyle ? styleIdToDisplay(selectedStyle) : 'Style preview'}
+                className="image-adjuster-style-preview-image"
+                onError={(e) => {
+                  // Fallback to emoji icon if image fails to load
+                  e.currentTarget.style.display = 'none';
+                  const fallbackIcon = e.currentTarget.nextElementSibling;
+                  if (fallbackIcon && fallbackIcon.classList.contains('image-adjuster-style-icon-fallback')) {
+                    fallbackIcon.style.display = 'block';
+                  }
+                }}
+              />
+            ) : null}
+            <span className={`image-adjuster-style-icon ${stylePreviewImage ? 'image-adjuster-style-icon-fallback' : ''}`} style={stylePreviewImage ? { display: 'none' } : {}}>
+              🎨
+            </span>
+            <div className="image-adjuster-style-info">
+              <div className="image-adjuster-style-label">Selected vibe</div>
+              <div className="image-adjuster-style-text">
                 {selectedStyle === 'custom' ? 'Custom...' : selectedStyle ? styleIdToDisplay(selectedStyle) : 'Select Style'}
-              </span>
+              </div>
             </div>
-          </button>
-        </div>
+          </div>
+        </button>
+        
+        {/* Close button in top right */}
+        <button 
+          className="image-adjuster-close-btn"
+          onClick={onCancel}
+          title="Close"
+        >
+          ×
+        </button>
         
         <h2>{headerText}</h2>
         <p className="image-adjuster-subtitle">
@@ -797,9 +794,18 @@ const ImageAdjuster = ({
               onClick={handleConfirm}
               style={headerText === 'Adjust Your Style Reference' ? { borderRadius: '12px' } : {}}
             >
-              {headerText === 'Adjust Your Style Reference' ? 'Continue' : `Imagine (${selectedBatchCount}x)`}
-              {headerText !== 'Adjust Your Style Reference' && isAuthenticated && !costLoading && formattedCost && formattedCost !== '—' && (
-                <span className="cost-estimate"> {formattedCost} {tokenLabel}</span>
+              {headerText === 'Adjust Your Style Reference' ? (
+                'Continue'
+              ) : (
+                <div className="confirm-button-content">
+                  <div className="confirm-button-label">Imagine</div>
+                  <div className="confirm-button-details">
+                    {selectedBatchCount}x
+                    {isAuthenticated && !costLoading && formattedCost && formattedCost !== '—' && (
+                      <> • {formattedCost} {tokenLabel}</>
+                    )}
+                  </div>
+                </div>
               )}
             </button>
             {headerText !== 'Adjust Your Style Reference' && (
@@ -845,13 +851,6 @@ const ImageAdjuster = ({
               </span>
             </button>
           )}
-          
-          <button 
-            className="cancel-button"
-            onClick={onCancel}
-          >
-            Cancel
-          </button>
         </div>
         
         {/* Style Dropdown */}
@@ -877,6 +876,7 @@ const ImageAdjuster = ({
             slideInPanel={true}
           />
         )}
+        </div>
       </div>
     </div>
   );

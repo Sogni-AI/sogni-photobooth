@@ -1019,3 +1019,405 @@ html body .photo-action-buttons .action-button,
 .portrait-type-button-container:hover .portrait-type-label {
   opacity: 1;
 }
+
+/* Vibe Selector Widget - Aligned to right, compact horizontal design */
+.photo-gallery-style-selector-button {
+  position: fixed;
+  top: 24px;
+  right: 74px; /* Settings button (38px) + gap (12px) + settings position (24px) = 74px */
+  height: 38px;
+  z-index: 1001;
+  background: linear-gradient(135deg, #ff7eb3, #7868e6);
+  border: none;
+  border-radius: 8px;
+  padding: 0 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  overflow: hidden;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.photo-gallery-style-selector-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s ease;
+}
+
+.photo-gallery-style-selector-button:hover::before {
+  left: 100%;
+}
+
+.photo-gallery-style-selector-button:hover {
+  background: linear-gradient(135deg, #ff8cc8, #8b7aed);
+  box-shadow: 0 6px 16px rgba(255, 126, 179, 0.4);
+  transform: translateY(-2px) scale(1.05);
+}
+
+.photo-gallery-style-selector-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.photo-gallery-style-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  justify-content: center;
+}
+
+.photo-gallery-style-label {
+  font-size: 8px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.85);
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  line-height: 1;
+}
+
+.photo-gallery-style-icon {
+  font-size: 1rem;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+
+.photo-gallery-style-selector-button:hover .photo-gallery-style-icon {
+  transform: scale(1.1) rotate(10deg);
+}
+
+.photo-gallery-style-preview-image {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  object-fit: cover;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+
+.photo-gallery-style-selector-button:hover .photo-gallery-style-preview-image {
+  transform: scale(1.1);
+}
+
+.photo-gallery-style-icon-fallback {
+  display: none;
+}
+
+.photo-gallery-style-text {
+  font-family: "Permanent Marker", cursive;
+  font-size: 13px;
+  color: white;
+  font-weight: 700;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1;
+}
+
+/* iPad responsiveness for vibe selector */
+@media (min-width: 768px) and (max-width: 1366px) {
+  .photo-gallery-style-selector-button {
+    top: 24px;
+    right: 74px; /* Match desktop spacing */
+    height: 38px;
+    padding: 0 12px;
+    border-radius: 8px;
+  }
+
+  .photo-gallery-style-label {
+    font-size: 8px;
+  }
+
+  .photo-gallery-style-text {
+    font-size: 13px;
+    max-width: 160px;
+  }
+
+  .photo-gallery-style-icon {
+    font-size: 1rem;
+  }
+
+  .photo-gallery-style-preview-image {
+    width: 24px;
+    height: 24px;
+  }
+}
+
+/* Mobile tablet (portrait) responsiveness for vibe selector */
+@media (max-width: 768px) and (min-width: 577px) {
+  .photo-gallery-style-selector-button {
+    top: 24px;
+    right: 74px; /* Settings button position (24px) + button width (38px) + gap (12px) = 74px */
+    height: 38px;
+    padding: 0 10px;
+    border-radius: 8px;
+    max-width: calc(100vw - 74px - 24px); /* Prevent extending beyond left edge */
+  }
+
+  .photo-gallery-style-label {
+    font-size: 8px;
+  }
+
+  .photo-gallery-style-text {
+    font-size: 12px;
+    max-width: 140px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .photo-gallery-style-icon {
+    font-size: 0.95rem;
+  }
+
+  .photo-gallery-style-preview-image {
+    width: 22px;
+    height: 22px;
+  }
+}
+
+/* Mobile portrait specific adjustments - compact layout */
+@media (max-width: 576px) and (orientation: portrait) {
+  .photo-gallery-style-selector-button {
+    top: 24px; /* Match settings button vertical position */
+    right: 70px; /* Settings button position (24px) + button width (38px) + gap (8px) = 70px */
+    height: 38px;
+    padding: 0 8px;
+    border-radius: 6px;
+    max-width: calc(100vw - 70px - 24px); /* Prevent extending beyond left edge: screen width minus right offset minus left padding */
+  }
+
+  .photo-gallery-style-label {
+    font-size: 7px;
+  }
+
+  .photo-gallery-style-text {
+    font-size: 10px;
+    max-width: 100px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .photo-gallery-style-icon {
+    font-size: 0.85rem;
+  }
+
+  .photo-gallery-style-preview-image {
+    width: 20px;
+    height: 20px;
+  }
+}
+
+/* Camera View Style Selector - Same styling as Photo Gallery but with camera-view prefix */
+.camera-view-style-selector-button {
+  position: fixed;
+  top: 24px;
+  right: 74px; /* Settings button (38px) + gap (12px) + settings position (24px) = 74px */
+  height: 38px;
+  z-index: 1001;
+  background: linear-gradient(135deg, #ff7eb3, #7868e6);
+  border: none;
+  border-radius: 8px;
+  padding: 0 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  overflow: hidden;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.camera-view-style-selector-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s ease;
+}
+
+.camera-view-style-selector-button:hover::before {
+  left: 100%;
+}
+
+.camera-view-style-selector-button:hover {
+  background: linear-gradient(135deg, #ff8cc8, #8b7aed);
+  box-shadow: 0 6px 16px rgba(255, 126, 179, 0.4);
+  transform: translateY(-2px) scale(1.05);
+}
+
+.camera-view-style-selector-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.camera-view-style-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  justify-content: center;
+}
+
+.camera-view-style-label {
+  font-size: 8px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.85);
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  line-height: 1;
+}
+
+.camera-view-style-icon {
+  font-size: 1rem;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+
+.camera-view-style-selector-button:hover .camera-view-style-icon {
+  transform: scale(1.1) rotate(10deg);
+}
+
+.camera-view-style-preview-image {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  object-fit: cover;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+
+.camera-view-style-selector-button:hover .camera-view-style-preview-image {
+  transform: scale(1.1);
+}
+
+.camera-view-style-icon-fallback {
+  display: none;
+}
+
+.camera-view-style-text {
+  font-family: "Permanent Marker", cursive;
+  font-size: 13px;
+  color: white;
+  font-weight: 700;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1;
+}
+
+/* iPad responsiveness for camera view style selector */
+@media (min-width: 768px) and (max-width: 1366px) {
+  .camera-view-style-selector-button {
+    top: 24px;
+    right: 74px; /* Match desktop spacing */
+    height: 38px;
+    padding: 0 12px;
+    border-radius: 8px;
+  }
+
+  .camera-view-style-label {
+    font-size: 8px;
+  }
+
+  .camera-view-style-text {
+    font-size: 13px;
+    max-width: 160px;
+  }
+
+  .camera-view-style-icon {
+    font-size: 1rem;
+  }
+
+  .camera-view-style-preview-image {
+    width: 24px;
+    height: 24px;
+  }
+}
+
+/* Mobile tablet (portrait) responsiveness for camera view style selector */
+@media (max-width: 768px) and (min-width: 577px) {
+  .camera-view-style-selector-button {
+    top: 24px;
+    right: 74px; /* Settings button position (24px) + button width (38px) + gap (12px) = 74px */
+    height: 38px;
+    padding: 0 10px;
+    border-radius: 8px;
+    max-width: calc(100vw - 74px - 24px); /* Prevent extending beyond left edge */
+  }
+
+  .camera-view-style-label {
+    font-size: 8px;
+  }
+
+  .camera-view-style-text {
+    font-size: 12px;
+    max-width: 140px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .camera-view-style-icon {
+    font-size: 0.95rem;
+  }
+
+  .camera-view-style-preview-image {
+    width: 22px;
+    height: 22px;
+  }
+}
+
+/* Mobile portrait specific adjustments for camera view - compact layout */
+@media (max-width: 576px) and (orientation: portrait) {
+  .camera-view-style-selector-button {
+    top: 24px; /* Match settings button vertical position */
+    right: 70px; /* Settings button position (24px) + button width (38px) + gap (8px) = 70px */
+    height: 38px;
+    padding: 0 8px;
+    border-radius: 6px;
+    max-width: calc(100vw - 70px - 24px); /* Prevent extending beyond left edge: screen width minus right offset minus left padding */
+  }
+
+  .camera-view-style-label {
+    font-size: 7px;
+  }
+
+  .camera-view-style-text {
+    font-size: 10px;
+    max-width: 100px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .camera-view-style-icon {
+    font-size: 0.85rem;
+  }
+
+  .camera-view-style-preview-image {
+    width: 20px;
+    height: 20px;
+  }
+}

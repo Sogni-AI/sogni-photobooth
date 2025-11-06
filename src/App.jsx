@@ -5,6 +5,7 @@ import { photoThoughts, randomThoughts } from './constants/thoughts';
 import { saveSettingsToCookies, shouldShowPromoPopup, markPromoPopupShown, hasDoneDemoRender, markDemoRenderDone, clearSessionSettings } from './utils/cookies';
 import { styleIdToDisplay } from './utils';
 import { getCustomDimensions } from './utils/imageProcessing';
+import { generateGalleryFilename } from './utils/galleryLoader';
 import { goToPreviousPhoto, goToNextPhoto } from './utils/photoNavigation';
 import { initializeStylePrompts, getRandomStyle, getRandomMixPrompts } from './services/prompts';
 import { getDefaultThemeGroupState, getEnabledPrompts, getOneOfEachPrompts } from './constants/themeGroups';
@@ -49,6 +50,7 @@ Object.values(promptsDataRaw).forEach(themeGroup => {
   Object.assign(promptsData, themeGroup.prompts);
 });
 import PhotoGallery from './components/shared/PhotoGallery';
+import StyleDropdown from './components/shared/StyleDropdown';
 import { useApp } from './context/AppContext.tsx';
 import { useWallet } from './hooks/useWallet';
 import { isPremiumBoosted } from './services/walletService';
@@ -368,6 +370,7 @@ const App = () => {
 
   // Info modal state - adding back the missing state
   const [showInfoModal, setShowInfoModal] = useState(false);
+  const [showCameraStyleDropdown, setShowCameraStyleDropdown] = useState(false);
   const [showPhotoGrid, setShowPhotoGrid] = useState(
     immediatePageParam === 'prompts' && immediateExtensionParam === 'true'
   );
@@ -6086,20 +6089,7 @@ const App = () => {
       overflow: 'hidden',
       background: window.extensionMode ? 'transparent' : undefined, // Make transparent in extension mode
     }}>
-      {/* Auth Status in top left - shown on photo grid page when not in Style Explorer */}
-      {showPhotoGrid && currentPage !== 'prompts' && (
-        <div style={{
-          position: 'fixed',
-          top: '24px',
-          left: '24px',
-          zIndex: 9999,
-        }}>
-          <AuthStatus 
-            onPurchaseClick={authState.isAuthenticated && authState.authMode === 'frontend' ? () => setShowStripePurchase(true) : undefined}
-            onSignupComplete={triggerSignupCelebration}
-          />
-        </div>
-      )}
+      {/* Auth Status is now rendered globally below - removed duplicate */}
 
       {/* Upload Progress Modal */}
       <UploadProgress
@@ -8098,23 +8088,29 @@ const App = () => {
           modelOptions={getModelOptions()} 
         />
 
-        {/* Authentication Status - top-left */}
+        {/* Authentication Status - top-left corner */}
         {!showSplashScreen && (
-          <div style={{
-            position: 'fixed',
-            top: 24,
-            left: 24,
-            zIndex: 1000,
-            filter: 'drop-shadow(0 4px 12px rgba(0, 0, 0, 0.15))',
-          }}>
+          <div 
+            className="auth-status-wrapper"
+            style={{
+              position: 'fixed',
+              top: 24,
+              left: 24,
+              zIndex: 1002,
+              filter: 'drop-shadow(0 4px 12px rgba(0, 0, 0, 0.15))',
+              transition: 'left 0.3s ease',
+              display: 'flex',
+              alignItems: 'center',
+            }}>
             <AuthStatus 
               onPurchaseClick={authState.isAuthenticated && authState.authMode === 'frontend' ? () => setShowStripePurchase(true) : undefined}
+              onSignupComplete={triggerSignupCelebration}
             />
           </div>
         )}
 
-        {/* Help button - only show in camera view */}
-        {!showPhotoGrid && !selectedPhotoIndex && (
+        {/* Settings and Tips buttons - show on start menu */}
+        {!showPhotoGrid && !selectedPhotoIndex && showStartMenu && (
           <>
             <button
               className="header-settings-btn"
@@ -8153,31 +8149,31 @@ const App = () => {
             >
               ⚙️
             </button>
-          <button
-            className="header-info-btn"
-            onClick={toggleNotesModal}
-            style={{
-              position: 'fixed',
-              top: 24,
-              right: 24,
-              background: 'linear-gradient(135deg, #ffb6e6 0%, #ff5e8a 100%)',
-              border: 'none',
-              color: '#fff',
-              fontSize: 22,
-              width: 38,
-              height: 38,
-              borderRadius: '50%',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
-              cursor: 'pointer',
-              fontWeight: 900,
-              lineHeight: 1,
-              padding: 0,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
+            <button
+              className="header-info-btn"
+              onClick={toggleNotesModal}
+              style={{
+                position: 'fixed',
+                top: 24,
+                right: 24,
+                background: 'linear-gradient(135deg, #ffb6e6 0%, #ff5e8a 100%)',
+                border: 'none',
+                color: '#fff',
+                fontSize: 22,
+                width: 38,
+                height: 38,
+                borderRadius: '50%',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
+                cursor: 'pointer',
+                fontWeight: 900,
+                lineHeight: 1,
+                padding: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
                 transition: 'all 0.2s ease',
-              zIndex: 1000,
-            }}
+                zIndex: 1000,
+              }}
               onMouseOver={(e) => {
                 e.currentTarget.style.transform = 'scale(1.05)';
                 e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.2)';
@@ -8185,12 +8181,122 @@ const App = () => {
               onMouseOut={(e) => {
                 e.currentTarget.style.transform = 'scale(1)';
                 e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.12)';
-            }}
-            title="Photobooth Tips"
-          >
-            ?
-          </button>
+              }}
+              title="Photobooth Tips"
+            >
+              ?
+            </button>
           </>
+        )}
+
+        {/* Settings and Style Selector buttons - only show in live camera view (not splash or start menu) */}
+        {!showPhotoGrid && !selectedPhotoIndex && !showStartMenu && (
+          <>
+            <button
+              className="header-settings-btn"
+              onClick={() => setShowControlOverlay(!showControlOverlay)}
+              style={{
+                position: 'fixed',
+                top: 24,
+                right: 24,
+                background: 'linear-gradient(135deg, #72e3f2 0%, #4bbbd3 100%)',
+                border: 'none',
+                color: '#fff',
+                fontSize: 20,
+                width: 38,
+                height: 38,
+                borderRadius: '50%',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
+                cursor: 'pointer',
+                fontWeight: 900,
+                lineHeight: 1,
+                padding: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'all 0.2s ease',
+                zIndex: 1000,
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.transform = 'scale(1.05)';
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.2)';
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.transform = 'scale(1)';
+                e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.12)';
+              }}
+              title="Settings"
+            >
+              ⚙️
+            </button>
+            {/* Camera View Style Selector Button */}
+            <button
+              className="camera-view-style-selector-button"
+              onClick={() => setShowCameraStyleDropdown(prev => !prev)}
+              title="Your selected vibe - Click to change"
+            >
+              <div className="camera-view-style-selector-content">
+                {(() => {
+                  // Generate the full gallery image path
+                  const stylePreviewImage = selectedStyle && selectedStyle !== 'custom'
+                    ? `/gallery/prompts/${portraitType}/${generateGalleryFilename(selectedStyle)}`
+                    : null;
+                  return stylePreviewImage ? (
+                    <img
+                      src={stylePreviewImage}
+                      alt={selectedStyle ? styleIdToDisplay(selectedStyle) : 'Style preview'}
+                      className="camera-view-style-preview-image"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                        const fallbackIcon = e.currentTarget.nextElementSibling;
+                        if (fallbackIcon && fallbackIcon.classList.contains('camera-view-style-icon-fallback')) {
+                          fallbackIcon.style.display = 'block';
+                        }
+                      }}
+                    />
+                  ) : null;
+                })()}
+                <span className={`camera-view-style-icon ${selectedStyle && selectedStyle !== 'custom' ? 'camera-view-style-icon-fallback' : ''}`} style={selectedStyle && selectedStyle !== 'custom' ? { display: 'none' } : {}}>
+                  🎨
+                </span>
+                <div className="camera-view-style-info">
+                  <div className="camera-view-style-label">Selected vibe</div>
+                  <div className="camera-view-style-text">
+                    {selectedStyle === 'custom' ? 'Custom...' : selectedStyle ? styleIdToDisplay(selectedStyle) : 'Select Style'}
+                  </div>
+                </div>
+              </div>
+            </button>
+          </>
+        )}
+
+        {/* Camera View Style Dropdown */}
+        {!showPhotoGrid && !selectedPhotoIndex && !showStartMenu && showCameraStyleDropdown && (
+          <StyleDropdown
+            isOpen={showCameraStyleDropdown}
+            onClose={() => setShowCameraStyleDropdown(false)}
+            selectedStyle={selectedStyle}
+            updateStyle={(style) => {
+              updateSetting('selectedStyle', style);
+            }}
+            defaultStylePrompts={stylePrompts}
+            setShowControlOverlay={() => {}}
+            dropdownPosition="top"
+            triggerButtonClass=".camera-view-style-selector-button"
+            selectedModel={selectedModel}
+            onModelSelect={(model) => {
+              console.log('Camera View: Switching model to', model);
+              if (switchToModel) {
+                switchToModel(model);
+              }
+            }}
+            portraitType={portraitType}
+            onNavigateToVibeExplorer={() => {
+              setShowPhotoGrid(true);
+              setShowCameraStyleDropdown(false);
+            }}
+            slideInPanel={true}
+          />
         )}
         
         {/* Studio lights - permanent background elements */}
@@ -8347,6 +8453,11 @@ const App = () => {
           styleReferenceImage={styleReferenceImage}
           onRemoveStyleReference={handleRemoveStyleReference}
           onEditStyleReference={handleEditStyleReference}
+          updateStyle={handleUpdateStyle}
+          switchToModel={switchToModel}
+          onNavigateToVibeExplorer={handleNavigateToPromptSelector}
+          selectedModel={selectedModel}
+          portraitType={portraitType}
         />
           </div>
         )}

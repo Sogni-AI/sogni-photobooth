@@ -1,0 +1,49 @@
+/* AuthStatus Component Styles */
+
+/* Auth status wrapper positioning adjustments */
+.auth-status-wrapper {
+  transition: left 0.3s ease;
+  display: flex;
+  align-items: center;
+}
+
+/* Mobile portrait - compact layout with wrapping */
+@media (max-width: 576px) and (orientation: portrait) {
+  .auth-status-container {
+    max-width: 130px;
+  }
+
+  .auth-status-content {
+    font-size: 11px !important;
+    gap: 3px !important;
+    line-height: 1.2;
+  }
+
+  .auth-status-content span {
+    font-size: 11px !important;
+  }
+
+  /* Hide separator on mobile portrait, stack vertically */
+  .auth-separator {
+    display: none !important;
+  }
+
+  /* Force balance to next line */
+  .auth-balance {
+    flex-basis: 100%;
+    font-size: 10px !important;
+  }
+}
+
+/* Mobile tablet */
+@media (max-width: 768px) and (min-width: 577px) {
+  .auth-status-content {
+    font-size: 13px !important;
+    gap: 6px !important;
+  }
+
+  .auth-status-content span {
+    font-size: 13px !important;
+  }
+}
+

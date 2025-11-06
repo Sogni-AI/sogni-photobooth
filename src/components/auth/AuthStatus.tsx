@@ -5,6 +5,7 @@ import { formatTokenAmount, getTokenLabel } from '../../services/walletService';
 import { useRewards } from '../../context/RewardsContext';
 import LoginModal, { LoginModalMode } from './LoginModal';
 import { getAuthButtonText, getDefaultModalMode, markAsVisited } from '../../utils/visitorTracking';
+import '../../styles/components/AuthStatus.css';
 
 // Helper to format time remaining
 const formatTimeRemaining = (ms: number): string => {
@@ -127,32 +128,44 @@ export const AuthStatus: React.FC<AuthStatusProps> = ({ onPurchaseClick, onSignu
       <button
         onClick={handleLoginClick}
         disabled={isLoading}
-        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg transition-all duration-200 hover:shadow-xl"
+        style={{
+          background: 'transparent',
+          color: '#000000',
+          border: 'none',
+          padding: '8px 16px',
+          fontSize: '14px',
+          fontWeight: '700',
+          cursor: isLoading ? 'not-allowed' : 'pointer',
+          textDecoration: 'underline',
+          opacity: isLoading ? 0.5 : 1,
+          transition: 'opacity 0.2s ease'
+        }}
+        onMouseEnter={(e) => !isLoading && (e.currentTarget.style.opacity = '0.8')}
+        onMouseLeave={(e) => !isLoading && (e.currentTarget.style.opacity = '1')}
       >
         {isLoading ? 'Loading...' : authButtonText}
       </button>
     ) : (
     // Show username with balance inline
-    <div className="relative">
+    <div className="relative auth-status-container">
       <div
         onClick={() => setShowUserMenu(!showUserMenu)}
+        className="auth-status-content"
         style={{
           display: 'flex',
           alignItems: 'center',
           gap: '8px',
-          color: 'white',
+          color: '#000000',
           fontSize: '14px',
           fontWeight: '500',
           cursor: 'pointer',
-          userSelect: 'none'
+          userSelect: 'none',
+          flexWrap: 'wrap'
         }}
       >
         <span style={{
-          background: 'linear-gradient(90deg, #a4e836, #ffe033, #ff8c00, #ff4500)',
-          WebkitBackgroundClip: 'text',
-          WebkitTextFillColor: 'transparent',
-          backgroundClip: 'text',
-          fontWeight: '600'
+          color: '#000000',
+          fontWeight: '700'
         }}>
           @{authMode === 'demo' ? 'Demo Mode' : user?.username || 'User'}
         </span>
@@ -160,23 +173,26 @@ export const AuthStatus: React.FC<AuthStatusProps> = ({ onPurchaseClick, onSignu
         {/* Show balance only when NOT in demo mode */}
         {authMode !== 'demo' && balances && (
           <>
-            <span style={{ opacity: 0.5 }}>|</span>
-            <span style={{ 
-              color: (tokenType === 'spark' && hasPremiumSpark) ? '#00D5FF' : 'white',
-              fontWeight: (tokenType === 'spark' && hasPremiumSpark) ? '600' : '500'
+            <span className="auth-separator" style={{ color: '#000000', opacity: 0.7 }}>|</span>
+            <span className="auth-balance" style={{ 
+              color: (tokenType === 'spark' && hasPremiumSpark) ? '#00D5FF' : '#000000',
+              fontWeight: (tokenType === 'spark' && hasPremiumSpark) ? '600' : '500',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px'
             }}>
               {formatTokenAmount(currentBalance)} {tokenLabel}
+              {tokenType === 'spark' && hasPremiumSpark && (
+                <span title="Premium Boosted!">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" style={{ width: '16px', height: '16px', fill: '#00D5FF', display: 'block' }}>
+                    <path d="M5.9 10.938a1.103 1.103 0 0 0-.176-1.107L3.5 7.134a.276.276 0 0 1 .312-.43L7.063 7.99a1.103 1.103 0 0 0 1.107-.175l2.697-2.224a.276.276 0 0 1 .43.312l-1.285 3.251a1.103 1.103 0 0 0 .175 1.107l2.225 2.697a.276.276 0 0 1-.313.43l-3.251-1.285a1.104 1.104 0 0 0-1.107.175L5.044 14.5a.275.275 0 0 1-.43-.312L5.9 10.938Z" />
+                    <path fillRule="evenodd" clipRule="evenodd" d="M11.025 5.255a.552.552 0 0 1 .529.743l-.002.006-1.285 3.25a.828.828 0 0 0 .13.83l2.229 2.7a.552.552 0 0 1-.626.86h-.004l-3.25-1.286a.827.827 0 0 0-.832.131l-2.7 2.228a.552.552 0 0 1-.86-.625l.002-.005 1.285-3.25a.828.828 0 0 0-.131-.831L3.28 7.304a.552.552 0 0 1 .625-.858l.006.002 3.251 1.284a.828.828 0 0 0 .83-.13l2.701-2.229a.552.552 0 0 1 .331-.118Zm.011.551L8.344 8.027a1.38 1.38 0 0 1-1.384.218L3.716 6.964l2.22 2.69a1.38 1.38 0 0 1 .218 1.385l-1.283 3.245 2.692-2.22a1.379 1.379 0 0 1 1.385-.219l3.246 1.283-2.222-2.692a1.38 1.38 0 0 1-.219-1.384l1.283-3.246Z" />
+                    <path d="M5.215 3.777a.444.444 0 0 0-.117-.435l-1.003-.985a.11.11 0 0 1 .106-.185l1.355.377a.444.444 0 0 0 .435-.117l.985-1.003a.111.111 0 0 1 .185.107L6.784 2.89a.444.444 0 0 0 .116.435l1.004.985a.11.11 0 0 1-.107.185l-1.354-.377a.444.444 0 0 0-.436.117l-.984 1.003a.11.11 0 0 1-.185-.107l.377-1.354ZM10.449 2.644a.31.31 0 0 0-.082-.305l-.702-.689a.078.078 0 0 1 .074-.13l.948.264a.31.31 0 0 0 .305-.082l.69-.702a.078.078 0 0 1 .129.075l-.264.948a.31.31 0 0 0 .082.305l.702.689a.078.078 0 0 1-.075.13l-.948-.264a.31.31 0 0 0-.304.081l-.69.702a.077.077 0 0 1-.13-.074l.265-.948Z" />
+                    <path fillRule="evenodd" clipRule="evenodd" d="M7.01 1.178a.333.333 0 0 1 .365.413l-.001.004-.377 1.354a.222.222 0 0 0 .058.218l1.006.987a.333.333 0 0 1-.32.556l-.004-.001-1.354-.377a.222.222 0 0 0-.218.058l-.988 1.007a.333.333 0 0 1-.555-.32l.001-.005L5 3.718a.222.222 0 0 0-.058-.218l-1.007-.988a.333.333 0 0 1 .32-.555l.005.001 1.354.377a.222.222 0 0 0 .218-.058L6.82 1.27a.333.333 0 0 1 .19-.092Zm-.18.715-.26.937a.666.666 0 0 0 .174.654l.695.681-.938-.26a.666.666 0 0 0-.653.174l-.681.695.26-.937a.666.666 0 0 0-.174-.654l-.695-.681.937.26a.666.666 0 0 0 .654-.174l.681-.695ZM11.709.825a.233.233 0 0 1 .254.289v.003l-.264.947a.155.155 0 0 0 .04.153l.705.69a.232.232 0 0 1-.225.39l-.002-.001-.948-.264a.155.155 0 0 0-.152.041l-.692.704a.233.233 0 0 1-.388-.224V3.55l.264-.948a.155.155 0 0 0-.04-.152l-.706-.692a.233.233 0 0 1 .225-.388h.003l.948.264a.155.155 0 0 0 .152-.04l.692-.705a.233.233 0 0 1 .134-.064Zm-.127.5-.182.656a.466.466 0 0 0 .122.457l.486.478-.656-.183a.466.466 0 0 0-.457.122l-.477.487.182-.657a.466.466 0 0 0-.122-.457l-.486-.477.656.183a.466.466 0 0 0 .457-.123l.477-.486Z" />
+                  </svg>
+                </span>
+              )}
             </span>
-            {tokenType === 'spark' && hasPremiumSpark && (
-              <span title="Premium Boosted!">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" style={{ width: '16px', height: '16px', fill: '#00D5FF', display: 'block' }}>
-                  <path d="M5.9 10.938a1.103 1.103 0 0 0-.176-1.107L3.5 7.134a.276.276 0 0 1 .312-.43L7.063 7.99a1.103 1.103 0 0 0 1.107-.175l2.697-2.224a.276.276 0 0 1 .43.312l-1.285 3.251a1.103 1.103 0 0 0 .175 1.107l2.225 2.697a.276.276 0 0 1-.313.43l-3.251-1.285a1.104 1.104 0 0 0-1.107.175L5.044 14.5a.275.275 0 0 1-.43-.312L5.9 10.938Z" />
-                  <path fillRule="evenodd" clipRule="evenodd" d="M11.025 5.255a.552.552 0 0 1 .529.743l-.002.006-1.285 3.25a.828.828 0 0 0 .13.83l2.229 2.7a.552.552 0 0 1-.626.86h-.004l-3.25-1.286a.827.827 0 0 0-.832.131l-2.7 2.228a.552.552 0 0 1-.86-.625l.002-.005 1.285-3.25a.828.828 0 0 0-.131-.831L3.28 7.304a.552.552 0 0 1 .625-.858l.006.002 3.251 1.284a.828.828 0 0 0 .83-.13l2.701-2.229a.552.552 0 0 1 .331-.118Zm.011.551L8.344 8.027a1.38 1.38 0 0 1-1.384.218L3.716 6.964l2.22 2.69a1.38 1.38 0 0 1 .218 1.385l-1.283 3.245 2.692-2.22a1.379 1.379 0 0 1 1.385-.219l3.246 1.283-2.222-2.692a1.38 1.38 0 0 1-.219-1.384l1.283-3.246Z" />
-                  <path d="M5.215 3.777a.444.444 0 0 0-.117-.435l-1.003-.985a.11.11 0 0 1 .106-.185l1.355.377a.444.444 0 0 0 .435-.117l.985-1.003a.111.111 0 0 1 .185.107L6.784 2.89a.444.444 0 0 0 .116.435l1.004.985a.11.11 0 0 1-.107.185l-1.354-.377a.444.444 0 0 0-.436.117l-.984 1.003a.11.11 0 0 1-.185-.107l.377-1.354ZM10.449 2.644a.31.31 0 0 0-.082-.305l-.702-.689a.078.078 0 0 1 .074-.13l.948.264a.31.31 0 0 0 .305-.082l.69-.702a.078.078 0 0 1 .129.075l-.264.948a.31.31 0 0 0 .082.305l.702.689a.078.078 0 0 1-.075.13l-.948-.264a.31.31 0 0 0-.304.081l-.69.702a.077.077 0 0 1-.13-.074l.265-.948Z" />
-                  <path fillRule="evenodd" clipRule="evenodd" d="M7.01 1.178a.333.333 0 0 1 .365.413l-.001.004-.377 1.354a.222.222 0 0 0 .058.218l1.006.987a.333.333 0 0 1-.32.556l-.004-.001-1.354-.377a.222.222 0 0 0-.218.058l-.988 1.007a.333.333 0 0 1-.555-.32l.001-.005L5 3.718a.222.222 0 0 0-.058-.218l-1.007-.988a.333.333 0 0 1 .32-.555l.005.001 1.354.377a.222.222 0 0 0 .218-.058L6.82 1.27a.333.333 0 0 1 .19-.092Zm-.18.715-.26.937a.666.666 0 0 0 .174.654l.695.681-.938-.26a.666.666 0 0 0-.653.174l-.681.695.26-.937a.666.666 0 0 0-.174-.654l-.695-.681.937.26a.666.666 0 0 0 .654-.174l.681-.695ZM11.709.825a.233.233 0 0 1 .254.289v.003l-.264.947a.155.155 0 0 0 .04.153l.705.69a.232.232 0 0 1-.225.39l-.002-.001-.948-.264a.155.155 0 0 0-.152.041l-.692.704a.233.233 0 0 1-.388-.224V3.55l.264-.948a.155.155 0 0 0-.04-.152l-.706-.692a.233.233 0 0 1 .225-.388h.003l.948.264a.155.155 0 0 0 .152-.04l.692-.705a.233.233 0 0 1 .134-.064Zm-.127.5-.182.656a.466.466 0 0 0 .122.457l.486.478-.656-.183a.466.466 0 0 0-.457.122l-.477.487.182-.657a.466.466 0 0 0-.122-.457l-.486-.477.656.183a.466.466 0 0 0 .457-.123l.477-.486Z" />
-                </svg>
-              </span>
-            )}
           </>
         )}
       </div>

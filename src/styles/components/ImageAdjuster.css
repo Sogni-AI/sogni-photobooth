@@ -19,10 +19,19 @@
   touch-action: none;
 }
 
+/* Wrapper for component */
+.image-adjuster-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+
 .image-adjuster-container {
+  position: relative;
   background-color: #222;
   border-radius: 16px;
   padding: 24px;
+  padding-top: 60px;
   color: white;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
   display: flex;
@@ -31,6 +40,8 @@
   gap: 15px;
   /* Allow component to manage touch events */
   touch-action: none;
+  overflow: visible;
+  min-width: 600px;
 }
 
 .image-adjuster-container h2 {
@@ -48,59 +59,56 @@
   margin-top: -18px;
 }
 
-/* Pinned Style Widget - Top Left */
-.image-adjuster-style-pinned {
+/* Close button in top right corner - inside container bounds */
+.image-adjuster-close-btn {
   position: absolute;
-  top: 18px;
-  left: 12px;
-  z-index: 10;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 4px;
-}
-
-.style-label-text {
-  font-size: 11px;
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.8);
-  letter-spacing: 0.5px;
-  margin-bottom: 2px;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
-  cursor: pointer;
-  transition: color 0.2s ease;
-}
-
-.style-label-text:hover {
-  color: rgba(255, 255, 255, 1);
-}
-
-.image-adjuster-style-selector-button {
-  background: linear-gradient(135deg, #ff7eb3, #7868e6);
+  top: 16px;
+  right: 16px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
   border: none;
-  border-radius: 12px;
-  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 30px;
+  font-weight: 300;
+  line-height: 30px;
   cursor: pointer;
-  transition: all 0.3s ease;
-  position: relative;
-  overflow: hidden;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  z-index: 100;
+  padding: 0;
+  padding-bottom: 3px; /* Visually center the × symbol */
 }
 
-.image-adjuster-style-selector-button::before {
-  content: '';
+.image-adjuster-close-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  transform: scale(1.1);
+}
+
+/* Pinned Style Widget - Top Left - Flush with corner, clipped by paperclip */
+.image-adjuster-style-selector-button {
   position: absolute;
   top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-  transition: left 0.5s ease;
+  left: 0;
+  z-index: 20;
+  height: 44px;
+  background: linear-gradient(135deg, #ff7eb3, #7868e6);
+  border: none;
+  border-radius: 8px 0 8px 0;
+  padding: 0 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  overflow: visible;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
 }
 
-.image-adjuster-style-selector-button:hover::before {
-  left: 100%;
-}
 
 .image-adjuster-style-selector-button:hover {
   background: linear-gradient(135deg, #ff8cc8, #8b7aed);
@@ -114,8 +122,26 @@
   gap: 8px;
 }
 
+.image-adjuster-style-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  justify-content: center;
+}
+
+.image-adjuster-style-label {
+  font-size: 8px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.85);
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  line-height: 1;
+}
+
 .image-adjuster-style-icon {
-  font-size: 1.3rem;
+  font-size: 1rem;
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
   transition: transform 0.2s ease;
   flex-shrink: 0;
@@ -127,8 +153,8 @@
 
 /* Circular style preview image */
 .image-adjuster-style-preview-image {
-  width: 32px;
-  height: 32px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
   object-fit: cover;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
@@ -153,9 +179,10 @@
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
   letter-spacing: 0.3px;
   white-space: nowrap;
-  max-width: 140px;
+  max-width: 180px;
   overflow: hidden;
   text-overflow: ellipsis;
+  line-height: 1;
 }
 
 .image-frame {
@@ -337,7 +364,7 @@
 
 /* Swap/Replace image button - now in button bar */
 .swap-image-button {
-  padding: 10px 20px;
+  padding: 20px 20px;
   border-radius: 8px;
   font-size: 16px;
   font-weight: bold;
@@ -348,6 +375,7 @@
   color: white;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
 }
 
@@ -365,12 +393,35 @@
 .confirm-button {
   background: #ff5252;
   color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .confirm-button:hover {
   background: #ff6b6b;
   transform: translateY(-2px);
   box-shadow: 0 4px 8px rgba(255, 82, 82, 0.4);
+}
+
+/* Two-line button layout */
+.confirm-button-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  line-height: 1;
+}
+
+.confirm-button-label {
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.confirm-button-details {
+  font-size: 12px;
+  font-weight: 500;
+  opacity: 0.9;
 }
 
 .confirm-button .cost-estimate {
@@ -488,7 +539,9 @@
   .image-adjuster-container {
     width: 90%;
     max-width: 800px;
+    min-width: 600px;
     padding: 32px;
+    padding-top: 64px;
     gap: 20px;
   }
   
@@ -573,7 +626,7 @@
   }
   
   .swap-image-button {
-    padding: 12px 24px;
+    padding: 22px 24px;
     font-size: 18px;
   }
 
@@ -613,33 +666,46 @@
     font-size: 1.5rem;
   }
   
-  .image-adjuster-style-pinned {
-    top: 8px;
-    left: 8px;
-    gap: 2px;
-  }
-  
-  .style-label-text {
-    font-size: 9px;
+  .image-adjuster-close-btn {
+    top: 10px;
+    right: 10px;
+    width: 32px;
+    height: 32px;
+    font-size: 26px;
+    line-height: 26px;
+    padding-bottom: 2px;
   }
   
   .image-adjuster-style-selector-button {
-    padding: 6px 10px;
-    border-radius: 10px;
+    top: 0;
+    left: 0;
+    height: 40px;
+    padding: 0 10px;
+    border-radius: 6px 0 6px 0;
+  }
+  
+
+  .image-adjuster-container {
+    min-width: 95%;
+    padding-top: 56px;
+  }
+  
+  .image-adjuster-style-label {
+    font-size: 7px;
   }
   
   .image-adjuster-style-text {
-    font-size: 11px;
-    max-width: 180px;
+    font-size: 10px;
+    max-width: 100px;
   }
   
   .image-adjuster-style-icon {
-    font-size: 1.1rem;
+    font-size: 0.85rem;
   }
   
   .image-adjuster-style-preview-image {
-    width: 28px;
-    height: 28px;
+    width: 20px;
+    height: 20px;
   }
   
   .zoom-control label {
@@ -657,7 +723,7 @@
   }
   
   .swap-image-button {
-    padding: 8px 16px;
+    padding: 18px 16px;
     font-size: 14px;
   }
 

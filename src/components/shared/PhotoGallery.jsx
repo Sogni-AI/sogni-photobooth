@@ -21,11 +21,13 @@ import CustomPromptPopup from './CustomPromptPopup';
 import ShareMenu from './ShareMenu';
 import GallerySubmissionConfirm from './GallerySubmissionConfirm';
 import GalleryCarousel from './GalleryCarousel';
+import StyleDropdown from './StyleDropdown';
 import { useSogniAuth } from '../../services/sogniAuth';
 import { useWallet } from '../../hooks/useWallet';
 import { useCostEstimation } from '../../hooks/useCostEstimation.ts';
 import { getTokenLabel } from '../../services/walletService';
 import { useToastContext } from '../../context/ToastContext';
+import { generateGalleryFilename } from '../../utils/galleryLoader';
 
 // Memoized placeholder image component to prevent blob reloading
 const PlaceholderImage = memo(({ placeholderUrl }) => {
@@ -135,7 +137,11 @@ const PhotoGallery = ({
   // eslint-disable-next-line no-unused-vars
   onRemoveStyleReference = null,
   // eslint-disable-next-line no-unused-vars
-  onEditStyleReference = null // Callback to open existing style reference in adjuster
+  onEditStyleReference = null, // Callback to open existing style reference in adjuster
+  // New props for vibe selector widget
+  updateStyle = null, // Function to update selected style
+  switchToModel = null, // Function to switch AI model
+  onNavigateToVibeExplorer = null // Function to navigate to full vibe explorer
 }) => {
   // Get settings from context
   const { settings, updateSetting } = useApp();
@@ -237,6 +243,9 @@ const PhotoGallery = ({
 
   // State for blocked prompts
   const [blockedPromptIds, setBlockedPromptIds] = useState(() => getBlockedPrompts());
+
+  // State for vibe selector widget (only show when NOT in prompt selector mode and widget props are provided)
+  const [showStyleDropdown, setShowStyleDropdown] = useState(false);
 
   // State for video overlay - track which photo's video is playing by photo ID
   const [activeVideoPhotoId, setActiveVideoPhotoId] = useState(null);
@@ -2255,9 +2264,77 @@ const PhotoGallery = ({
           ⚙️
         </button>
       )}
+
+      {/* Vibe Selector Widget - Top Left next to auth status (only show when not in prompt selector mode and when grid is visible without selection) */}
+      {!isPromptSelectorMode && selectedPhotoIndex === null && updateStyle && (
+        <button
+          className="photo-gallery-style-selector-button"
+          onClick={() => setShowStyleDropdown(prev => !prev)}
+          title="Your selected vibe - Click to change"
+        >
+          <div className="photo-gallery-style-selector-content">
+            {(() => {
+              // Generate the full gallery image path
+              const stylePreviewImage = selectedStyle && selectedStyle !== 'custom'
+                ? `/gallery/prompts/${portraitType}/${generateGalleryFilename(selectedStyle)}`
+                : null;
+              return stylePreviewImage ? (
+                <img
+                  src={stylePreviewImage}
+                  alt={selectedStyle ? styleIdToDisplay(selectedStyle) : 'Style preview'}
+                  className="photo-gallery-style-preview-image"
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                    const fallbackIcon = e.currentTarget.nextElementSibling;
+                    if (fallbackIcon && fallbackIcon.classList.contains('photo-gallery-style-icon-fallback')) {
+                      fallbackIcon.style.display = 'block';
+                    }
+                  }}
+                />
+              ) : null;
+            })()}
+            <span className={`photo-gallery-style-icon ${selectedStyle && selectedStyle !== 'custom' ? 'photo-gallery-style-icon-fallback' : ''}`} style={selectedStyle && selectedStyle !== 'custom' ? { display: 'none' } : {}}>
+              🎨
+            </span>
+            <div className="photo-gallery-style-info">
+              <div className="photo-gallery-style-label">Selected vibe</div>
+              <div className="photo-gallery-style-text">
+                {selectedStyle === 'custom' ? 'Custom...' : selectedStyle ? styleIdToDisplay(selectedStyle) : 'Select Style'}
+              </div>
+            </div>
+          </div>
+        </button>
+      )}
+
+      {/* Style Dropdown for Vibe Selector */}
+      {!isPromptSelectorMode && showStyleDropdown && updateStyle && (
+        <StyleDropdown
+          isOpen={showStyleDropdown}
+          onClose={() => setShowStyleDropdown(false)}
+          selectedStyle={selectedStyle}
+          updateStyle={(style) => {
+            if (updateStyle) updateStyle(style);
+          }}
+          defaultStylePrompts={stylePrompts}
+          setShowControlOverlay={() => {}}
+          dropdownPosition="top"
+          triggerButtonClass=".photo-gallery-style-selector-button"
+          selectedModel={selectedModel}
+          onModelSelect={(model) => {
+            console.log('PhotoGallery: Switching model to', model);
+            if (switchToModel) {
+              switchToModel(model);
+            }
+          }}
+          portraitType={portraitType}
+          onNavigateToVibeExplorer={onNavigateToVibeExplorer}
+          slideInPanel={true}
+        />
+      )}
+
       {/* Download All button - circular button to the left of More button */}
       {!isPromptSelectorMode && selectedPhotoIndex === null && photos && photos.length > 0 && photos.every(p => !p.loading && !p.generating) && photos.filter(p => !p.error && p.images && p.images.length > 0).length > 0 && (
-        <div style={{ position: 'fixed', right: `${20 + (moreButtonWidth || 125) + 10}px`, bottom: '22px', zIndex: 10000000 }}>
+        <div style={{ position: 'fixed', right: `${20 + (moreButtonWidth || 125) + 10}px`, bottom: '20px', zIndex: 10000000 }}>
           <button
             className="download-all-circular-btn"
             onClick={(e) => {
@@ -2270,7 +2347,7 @@ const PhotoGallery = ({
               border: 'none',
               color: 'white',
               width: '46px',
-              height: '46px',
+              height: '44px',
               borderRadius: '50%',
               cursor: isBulkDownloading ? 'not-allowed' : 'pointer',
               opacity: isBulkDownloading ? 0.6 : 1,
@@ -3045,44 +3122,6 @@ const PhotoGallery = ({
           ⚙️
         </button>
       )}
-      {/* Help button in photo grid view */}
-      <button
-        className="header-info-btn"
-        onClick={toggleNotesModal}
-        style={{
-          position: 'fixed',
-          top: 24,
-          right: selectedPhotoIndex !== null ? 120 : 72,
-          background: 'linear-gradient(135deg, #ffb6e6 0%, #ff5e8a 100%)',
-          border: 'none',
-          color: '#fff',
-          fontSize: 22,
-          width: 38,
-          height: 38,
-          borderRadius: '50%',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
-          cursor: 'pointer',
-          fontWeight: 900,
-          lineHeight: 1,
-          padding: 0,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          transition: 'all 0.2s ease',
-          zIndex: 1000,
-        }}
-        onMouseOver={e => {
-          e.currentTarget.style.transform = 'scale(1.05)';
-          e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.2)';
-        }}
-        onMouseOut={e => {
-          e.currentTarget.style.transform = 'scale(1)';
-          e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.12)';
-        }}
-        title="Photobooth Tips"
-      >
-        ?
-      </button>
 
       {/* Prompt Selector Mode Header */}
       {isPromptSelectorMode && (
@@ -5935,7 +5974,11 @@ PhotoGallery.propTypes = {
   onCopyImageStyleSelect: PropTypes.func,
   styleReferenceImage: PropTypes.object,
   onRemoveStyleReference: PropTypes.func,
-  onEditStyleReference: PropTypes.func
+  onEditStyleReference: PropTypes.func,
+  // Vibe selector widget props
+  updateStyle: PropTypes.func, // Function to update selected style
+  switchToModel: PropTypes.func, // Function to switch AI model
+  onNavigateToVibeExplorer: PropTypes.func // Function to navigate to full vibe explorer
 };
 
 export default PhotoGallery; 
