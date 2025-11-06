@@ -479,6 +479,19 @@ const CameraStartMenu: React.FC<CameraStartMenuProps> = ({
                   <div className="polaroid-caption">
                     pick a vibe{hasExplicitlySelectedStyle ? ' ✓' : ''}
                   </div>
+                  {/* Reset link - only show when not randomMix */}
+                  {selectedStyle && selectedStyle !== 'randomMix' && (
+                    <button
+                      className="polaroid-reset-link"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onStyleSelect?.('randomMix');
+                      }}
+                      title="Reset to Random Mix"
+                    >
+                      RESET
+                    </button>
+                  )}
                 </div>
 
                 {/* "then" separator */}

@@ -588,6 +588,7 @@ body:has(.camera-start-menu.phase-options .options-section.no-animations) div[st
 
 /* Polaroid slide-up animations */
 .polaroid-wrapper {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -788,6 +789,34 @@ body:has(.camera-start-menu.phase-options .options-section.no-animations) div[st
   color: #333;
   text-transform: lowercase;
   letter-spacing: 0.5px;
+}
+
+/* Reset link underneath pick a vibe caption */
+.polaroid-reset-link {
+  position: absolute;
+  bottom: -24px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: "Permanent Marker", cursive;
+  font-size: 0.75rem;
+  color: #72e3f2;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  z-index: 10;
+  text-decoration: none;
+  transition: text-decoration 0.2s ease;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+.polaroid-reset-link:hover {
+  text-decoration: underline;
+}
+
+.polaroid-reset-link:active {
+  transform: translateX(-50%) scale(0.95);
 }
 
 /* Polaroid label inside the frame (bottom strip) */
