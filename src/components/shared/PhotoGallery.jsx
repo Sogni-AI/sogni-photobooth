@@ -3286,7 +3286,7 @@ const PhotoGallery = ({
                 fontFamily: '"Permanent Marker", cursive',
                 color: 'rgba(255, 255, 255, 0.9)'
               }}>
-                Or use your own prompt or style reference image
+                Or use your own prompt or style image
               </span>
             </div>
 
