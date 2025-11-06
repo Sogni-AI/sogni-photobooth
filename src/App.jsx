@@ -8295,6 +8295,7 @@ const App = () => {
             <AuthStatus 
               onPurchaseClick={authState.isAuthenticated && authState.authMode === 'frontend' ? () => setShowStripePurchase(true) : undefined}
               onSignupComplete={triggerSignupCelebration}
+              textColor="#000000"
             />
           </div>
         )}
