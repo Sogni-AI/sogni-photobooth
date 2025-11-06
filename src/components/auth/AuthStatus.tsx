@@ -21,9 +21,10 @@ const formatTimeRemaining = (ms: number): string => {
 interface AuthStatusProps {
   onPurchaseClick?: () => void;
   onSignupComplete?: () => void;
+  textColor?: string;
 }
 
-export const AuthStatus: React.FC<AuthStatusProps> = ({ onPurchaseClick, onSignupComplete }) => {
+export const AuthStatus: React.FC<AuthStatusProps> = ({ onPurchaseClick, onSignupComplete, textColor = '#ffffff' }) => {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [loginModalMode, setLoginModalMode] = useState<LoginModalMode>('login');
@@ -130,7 +131,7 @@ export const AuthStatus: React.FC<AuthStatusProps> = ({ onPurchaseClick, onSignu
         disabled={isLoading}
         style={{
           background: 'transparent',
-          color: '#000000',
+          color: textColor,
           border: 'none',
           padding: '8px 16px',
           fontSize: '14px',
@@ -155,7 +156,7 @@ export const AuthStatus: React.FC<AuthStatusProps> = ({ onPurchaseClick, onSignu
           display: 'flex',
           alignItems: 'center',
           gap: '8px',
-          color: '#000000',
+          color: textColor,
           fontSize: '14px',
           fontWeight: '500',
           cursor: 'pointer',
@@ -164,7 +165,7 @@ export const AuthStatus: React.FC<AuthStatusProps> = ({ onPurchaseClick, onSignu
         }}
       >
         <span style={{
-          color: '#000000',
+          color: textColor,
           fontWeight: '700'
         }}>
           @{authMode === 'demo' ? 'Demo Mode' : user?.username || 'User'}
@@ -173,9 +174,9 @@ export const AuthStatus: React.FC<AuthStatusProps> = ({ onPurchaseClick, onSignu
         {/* Show balance only when NOT in demo mode */}
         {authMode !== 'demo' && balances && (
           <>
-            <span className="auth-separator" style={{ color: '#000000', opacity: 0.7 }}>|</span>
+            <span className="auth-separator" style={{ color: textColor, opacity: 0.7 }}>|</span>
             <span className="auth-balance" style={{ 
-              color: (tokenType === 'spark' && hasPremiumSpark) ? '#00D5FF' : '#000000',
+              color: (tokenType === 'spark' && hasPremiumSpark) ? '#00D5FF' : textColor,
               fontWeight: (tokenType === 'spark' && hasPremiumSpark) ? '600' : '500',
               display: 'flex',
               alignItems: 'center',
