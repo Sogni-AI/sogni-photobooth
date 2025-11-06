@@ -658,9 +658,6 @@
 
 /* Mobile responsiveness */
 @media (max-width: 576px) {
-  .image-adjuster-container {
-    width: 95%;
-  }
   
   .image-adjuster-container h2 {
     font-size: 1.5rem;

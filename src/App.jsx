@@ -5980,8 +5980,10 @@ const App = () => {
     };
     reader.readAsDataURL(finalBlob);
     
-    // Show the image adjuster
-    setShowImageAdjuster(true);
+    // Show the image adjuster after a 1s delay to allow flash and sloth animations to finish
+    setTimeout(() => {
+      setShowImageAdjuster(true);
+    }, 1000);
   };
 
   /**
@@ -8089,7 +8091,7 @@ const App = () => {
         />
 
         {/* Authentication Status - top-left corner */}
-        {!showSplashScreen && (
+        {!showSplashScreen && currentPage !== 'prompts' && (
           <div 
             className="auth-status-wrapper"
             style={{
@@ -8564,7 +8566,7 @@ const App = () => {
 
       {/* Login Upsell Popup for non-authenticated users who've used their demo render */}
       <LoginUpsellPopup
-        isOpen={showLoginUpsellPopup}
+        isOpen={showLoginUpsellPopup && currentPage !== 'prompts'}
         onClose={() => setShowLoginUpsellPopup(false)}
       />
 
