@@ -261,29 +261,7 @@ const App = () => {
   const [styleReferenceImage, setStyleReferenceImage] = useState(null); // { blob, dataUrl, croppedBlob }
   const [showStyleReferenceAdjuster, setShowStyleReferenceAdjuster] = useState(false); // Show adjuster for style reference
 
-  // Helper function to load default Einstein photo
-  const loadDefaultEinsteinPhoto = useCallback(async () => {
-    try {
-      const response = await fetch('/albert-einstein-sticks-out-his-tongue.jpg');
-      if (!response.ok) throw new Error('Failed to load default photo');
-
-      const blob = await response.blob();
-      const dataUrl = URL.createObjectURL(blob);
-
-      setLastPhotoData({
-        blob,
-        dataUrl,
-        // Don't set sourceType for default photo - only set it when user actually uploads/takes a photo
-        sourceType: undefined
-      });
-
-      console.log('✅ Loaded default Einstein photo as lastPhotoData');
-      return { blob, dataUrl };
-    } catch (error) {
-      console.warn('Failed to load default photo:', error);
-      return null;
-    }
-  }, []);
+  // No longer loading Einstein as state - UI handles fallback display directly
 
   // --- Use wallet for payment method ---
   const { tokenType: walletTokenType, balances, switchPaymentMethod, onBalanceIncrease } = useWallet();
@@ -730,56 +708,9 @@ const App = () => {
     }
   };
 
-  // Helper function to load default Einstein photo for lastAdjustedPhoto
-  const loadDefaultEinsteinAdjustedPhoto = useCallback(async () => {
-    try {
-      const response = await fetch('/albert-einstein-sticks-out-his-tongue.jpg');
-      if (!response.ok) throw new Error('Failed to load default photo');
+  // No longer loading Einstein as state - UI handles fallback display directly
 
-      const blob = await response.blob();
-      const dataUrl = URL.createObjectURL(blob);
-
-      const defaultPhotoData = {
-        blob,
-        dataUrl,
-        // Don't set source for default photo - only set it when user actually uploads/takes a photo
-        source: undefined,
-        adjustments: null
-      };
-
-      setLastAdjustedPhoto(defaultPhotoData);
-      console.log('✅ Loaded default Einstein photo as lastAdjustedPhoto');
-      return defaultPhotoData;
-    } catch (error) {
-      console.warn('Failed to load default Einstein photo for lastAdjustedPhoto:', error);
-      return null;
-    }
-  }, []);
-
-  // Helper function to load default Einstein photo for lastCameraPhoto
-  const loadDefaultEinsteinCameraPhoto = useCallback(async () => {
-    try {
-      const response = await fetch('/albert-einstein-sticks-out-his-tongue.jpg');
-      if (!response.ok) throw new Error('Failed to load default photo');
-
-      const blob = await response.blob();
-      const dataUrl = URL.createObjectURL(blob);
-
-      const defaultPhotoData = {
-        blob,
-        dataUrl,
-        source: 'camera', // Mark as camera source so it appears in camera thumbnail
-        adjustments: null
-      };
-
-      setLastCameraPhoto(defaultPhotoData);
-      console.log('✅ Loaded default Einstein photo as lastCameraPhoto');
-      return defaultPhotoData;
-    } catch (error) {
-      console.warn('Failed to load default Einstein photo for lastCameraPhoto:', error);
-      return null;
-    }
-  }, []);
+  // No longer loading Einstein as state - UI handles fallback display directly
 
   // Wrapper function to reset settings and lastPhotoData
   const resetSettings = useCallback(async () => {
@@ -795,46 +726,67 @@ const App = () => {
     localStorage.removeItem('sogni_blocked_prompts');
     console.log('🗑️ Cleared blocked prompts from localStorage');
 
-    // Then reset all photo states to the default Einstein photo
-    // These functions will unconditionally load and set the Einstein photo
-    await loadDefaultEinsteinPhoto();
-    await loadDefaultEinsteinAdjustedPhoto();
-    await loadDefaultEinsteinCameraPhoto();
-  }, [contextResetSettings, loadDefaultEinsteinPhoto, loadDefaultEinsteinAdjustedPhoto, loadDefaultEinsteinCameraPhoto]);
+    // Clear all photo states - UI will show Einstein fallback automatically
+    setLastPhotoData({ blob: null, dataUrl: null });
+    setLastAdjustedPhotoState(null);
+    setLastCameraPhotoState(null);
+  }, [contextResetSettings]);
 
 
 
   // Load lastAdjustedPhoto from localStorage on app mount
   useEffect(() => {
-    const loadAdjustedPhoto = async () => {
+    const loadAdjustedPhoto = () => {
       const storedPhotoData = loadLastAdjustedPhotoFromStorage();
 
-      if (storedPhotoData) {
+      // Only use stored photo if it's a real user photo (has imageUrl or valid source + data)
+      // Einstein fallback photos lack imageUrl and should never be persisted
+      const isRealUserPhoto = storedPhotoData && (
+        storedPhotoData.imageUrl || // Real photos have imageUrl
+        (storedPhotoData.source && storedPhotoData.dataUrl && storedPhotoData.dataUrl.startsWith('data:image'))
+      );
+
+      if (isRealUserPhoto) {
         // We don't have the blob anymore, but we have the adjustments
         setLastAdjustedPhotoState(storedPhotoData);
       } else {
-        // If no stored photo, load the default Einstein photo
-        await loadDefaultEinsteinAdjustedPhoto();
+        // Clear any invalid/Einstein photos from localStorage
+        if (storedPhotoData) {
+          console.log('🗑️ Clearing Einstein fallback photo from localStorage (not a real user photo)');
+          localStorage.removeItem('sogni-lastAdjustedPhoto');
+        }
+        // Don't set any state - UI will show Einstein fallback automatically when null
       }
     };
 
     loadAdjustedPhoto();
-  }, [loadDefaultEinsteinAdjustedPhoto]);
+  }, []);
 
   // Load lastCameraPhoto from localStorage on app mount
   useEffect(() => {
-    const loadCameraPhoto = async () => {
+    const loadCameraPhoto = () => {
       const storedCameraPhoto = loadLastCameraPhotoFromStorage();
-      if (storedCameraPhoto) {
+      // Only use stored photo if it's a real user photo (has imageUrl or has valid source + data)
+      // Einstein fallback photos lack imageUrl and should never be persisted
+      const isRealUserPhoto = storedCameraPhoto && (
+        storedCameraPhoto.imageUrl || // Real camera photos have imageUrl
+        (storedCameraPhoto.source === 'camera' && storedCameraPhoto.dataUrl && storedCameraPhoto.dataUrl.startsWith('data:image'))
+      );
+      
+      if (isRealUserPhoto) {
         setLastCameraPhotoState(storedCameraPhoto);
         console.log('✅ Loaded lastCameraPhoto from localStorage');
       } else {
-        // If no stored camera photo, load the default Einstein photo
-        await loadDefaultEinsteinCameraPhoto();
+        // Clear any invalid/Einstein photos from localStorage
+        if (storedCameraPhoto) {
+          console.log('🗑️ Clearing Einstein fallback photo from localStorage (not a real user photo)');
+          localStorage.removeItem('sogni-lastCameraPhoto');
+        }
+        // Don't set any state - UI will show Einstein fallback automatically when null
       }
     };
     loadCameraPhoto();
-  }, [loadDefaultEinsteinCameraPhoto]);
+  }, []);
 
   // Load lastUploadedPhoto from localStorage on app mount
   useEffect(() => {
@@ -1075,16 +1027,7 @@ const App = () => {
   // Drag-and-drop state
   const [dragActive, setDragActive] = useState(false); // Keep this
 
-  // Load default Einstein photo when lastPhotoData is empty
-  useEffect(() => {
-    const loadDefaultPhoto = async () => {
-      // Only load if lastPhotoData is empty
-      if (lastPhotoData.blob) return;
-      await loadDefaultEinsteinPhoto();
-    };
-
-    loadDefaultPhoto();
-  }, [lastPhotoData.blob, loadDefaultEinsteinPhoto]); // Watch for changes to lastPhotoData
+  // No longer loading Einstein into state - UI handles fallback display directly
 
   // Add cleanup for orientation handler when component unmounts
   useEffect(() => {
@@ -6717,11 +6660,7 @@ const App = () => {
       setQrCodeData(null);
     }
     
-    // Ensure we have a lastCameraPhoto (fallback to Einstein if needed)
-    if (!lastCameraPhoto || (!lastCameraPhoto.blob && !lastCameraPhoto.dataUrl)) {
-      console.log('No lastCameraPhoto available, loading Einstein as fallback');
-      await loadDefaultEinsteinCameraPhoto();
-    }
+    // UI handles Einstein fallback automatically when lastCameraPhoto is null/empty
     
     // Mark the photo grid as hiding with a clean fade-out
     const filmStrip = document.querySelector('.film-strip-container');
@@ -6820,11 +6759,7 @@ const App = () => {
     // Set waiting state before starting the camera permission flow
     setWaitingForCameraPermission(true);
     
-    // Ensure we have a lastCameraPhoto (fallback to Einstein if needed)
-    if (!lastCameraPhoto || (!lastCameraPhoto.blob && !lastCameraPhoto.dataUrl)) {
-      console.log('No lastCameraPhoto available, loading Einstein as fallback');
-      await loadDefaultEinsteinCameraPhoto();
-    }
+    // UI handles Einstein fallback automatically when lastCameraPhoto is null/empty
     
     // Add exit animation class
     const startMenuElement = document.querySelector('.camera-start-menu');
@@ -8050,7 +7985,25 @@ const App = () => {
 
   // Handle thumbnail click to reopen the image adjuster
   const handleThumbnailClick = async () => {
-    if (!lastCameraPhoto) return;
+    // If no lastCameraPhoto, load Einstein fallback
+    if (!lastCameraPhoto || (!lastCameraPhoto.blob && !lastCameraPhoto.dataUrl)) {
+      try {
+        console.log('📷 Loading Einstein fallback for thumbnail click');
+        const response = await fetch('/albert-einstein-sticks-out-his-tongue.jpg');
+        if (!response.ok) throw new Error('Failed to load Einstein fallback');
+        
+        const blob = await response.blob();
+        const tempUrl = URL.createObjectURL(blob);
+        
+        setCurrentUploadedImageUrl(tempUrl);
+        setCurrentUploadedSource('camera'); // Treat as camera source for UI
+        setShowImageAdjuster(true);
+        return;
+      } catch (error) {
+        console.error('Failed to load Einstein fallback:', error);
+        return;
+      }
+    }
     
     if (lastCameraPhoto.blob) {
       // We have the blob - can reopen the adjuster
@@ -8844,11 +8797,7 @@ const App = () => {
               // We're on the photo grid page, need to navigate to camera
               console.log('📷 Navigating from photo grid to camera to take new photo');
               
-              // Ensure we have a lastCameraPhoto (fallback to Einstein if needed)
-              if (!lastCameraPhoto || (!lastCameraPhoto.blob && !lastCameraPhoto.dataUrl)) {
-                console.log('No lastCameraPhoto available, loading Einstein as fallback');
-                await loadDefaultEinsteinCameraPhoto();
-              }
+              // UI handles Einstein fallback automatically when lastCameraPhoto is null/empty
               
               // Hide photo gallery
               setShowPhotoGrid(false);

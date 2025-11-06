@@ -357,13 +357,14 @@ export const CameraView: React.FC<CameraViewProps> = (props) => {
   const hasMultipleCameras = Array.isArray(cameraDevices) && cameraDevices.filter((d: MediaDeviceInfo) => d && d.kind === 'videoinput').length > 1;
   
   // Memoize expensive conditional calculations to prevent unnecessary re-renders
+  // Thumbnail always shows now (with Einstein fallback), so position button accordingly
   const shouldShowDesktopButtonNextToThumbnail = useMemo(() => {
-    return !isMobile && hasMultipleCameras && lastPhotoData && (lastPhotoData.blob || lastPhotoData.dataUrl) && onThumbnailClick;
-  }, [isMobile, hasMultipleCameras, lastPhotoData, onThumbnailClick]);
+    return !isMobile && hasMultipleCameras && onThumbnailClick;
+  }, [isMobile, hasMultipleCameras, onThumbnailClick]);
   
   const shouldShowDesktopButtonNoThumbnail = useMemo(() => {
-    return !isMobile && hasMultipleCameras && !(lastPhotoData && (lastPhotoData.blob || lastPhotoData.dataUrl) && onThumbnailClick);
-  }, [isMobile, hasMultipleCameras, lastPhotoData, onThumbnailClick]);
+    return !isMobile && hasMultipleCameras && !onThumbnailClick;
+  }, [isMobile, hasMultipleCameras, onThumbnailClick]);
   
   // Camera detection logic (debug logging removed to prevent console spam)
 
@@ -535,7 +536,7 @@ export const CameraView: React.FC<CameraViewProps> = (props) => {
         />
 
         {/* Thumbnail button - positioned in bottom left corner, aligned with aspect ratio picker */}
-        {lastPhotoData && (lastPhotoData.blob || lastPhotoData.dataUrl) && onThumbnailClick && (
+        {onThumbnailClick && (
           <button
             className={styles.thumbnailButtonCorner}
             onClick={onThumbnailClick}
@@ -543,7 +544,13 @@ export const CameraView: React.FC<CameraViewProps> = (props) => {
             data-testid="thumbnail-button"
           >
             <img
-              src={lastPhotoData.blob ? URL.createObjectURL(lastPhotoData.blob) : lastPhotoData.dataUrl}
+              src={
+                lastPhotoData?.blob 
+                  ? URL.createObjectURL(lastPhotoData.blob) 
+                  : lastPhotoData?.dataUrl 
+                    ? lastPhotoData.dataUrl 
+                    : "/albert-einstein-sticks-out-his-tongue.jpg"
+              }
               alt="Last photo thumbnail"
               className={styles.thumbnailImage}
             />
@@ -551,7 +558,7 @@ export const CameraView: React.FC<CameraViewProps> = (props) => {
         )}
 
         {/* Camera flip button - positioned next to thumbnail when present, or in original mobile location */}
-        {isMobile && lastPhotoData && (lastPhotoData.blob || lastPhotoData.dataUrl) && onThumbnailClick && (
+        {isMobile && onThumbnailClick && (
           <button
             className={`${styles.cameraFlipButton} ${styles.cameraFlipButtonWithThumbnail}`}
             onClick={handleCameraButtonClick}
