@@ -756,6 +756,31 @@ const App = () => {
     }
   }, []);
 
+  // Helper function to load default Einstein photo for lastCameraPhoto
+  const loadDefaultEinsteinCameraPhoto = useCallback(async () => {
+    try {
+      const response = await fetch('/albert-einstein-sticks-out-his-tongue.jpg');
+      if (!response.ok) throw new Error('Failed to load default photo');
+
+      const blob = await response.blob();
+      const dataUrl = URL.createObjectURL(blob);
+
+      const defaultPhotoData = {
+        blob,
+        dataUrl,
+        source: 'camera', // Mark as camera source so it appears in camera thumbnail
+        adjustments: null
+      };
+
+      setLastCameraPhoto(defaultPhotoData);
+      console.log('✅ Loaded default Einstein photo as lastCameraPhoto');
+      return defaultPhotoData;
+    } catch (error) {
+      console.warn('Failed to load default Einstein photo for lastCameraPhoto:', error);
+      return null;
+    }
+  }, []);
+
   // Wrapper function to reset settings and lastPhotoData
   const resetSettings = useCallback(async () => {
     // First reset the context settings
@@ -763,17 +788,19 @@ const App = () => {
 
     // Clear any saved photo data from localStorage to ensure clean reset
     localStorage.removeItem('sogni-lastAdjustedPhoto');
+    localStorage.removeItem('sogni-lastCameraPhoto');
     console.log('🗑️ Cleared saved photo data from localStorage');
 
     // Clear blocked prompts
     localStorage.removeItem('sogni_blocked_prompts');
     console.log('🗑️ Cleared blocked prompts from localStorage');
 
-    // Then reset both photo states to the default Einstein photo
+    // Then reset all photo states to the default Einstein photo
     // These functions will unconditionally load and set the Einstein photo
     await loadDefaultEinsteinPhoto();
     await loadDefaultEinsteinAdjustedPhoto();
-  }, [contextResetSettings, loadDefaultEinsteinPhoto, loadDefaultEinsteinAdjustedPhoto]);
+    await loadDefaultEinsteinCameraPhoto();
+  }, [contextResetSettings, loadDefaultEinsteinPhoto, loadDefaultEinsteinAdjustedPhoto, loadDefaultEinsteinCameraPhoto]);
 
 
 
@@ -796,15 +823,18 @@ const App = () => {
 
   // Load lastCameraPhoto from localStorage on app mount
   useEffect(() => {
-    const loadCameraPhoto = () => {
+    const loadCameraPhoto = async () => {
       const storedCameraPhoto = loadLastCameraPhotoFromStorage();
       if (storedCameraPhoto) {
         setLastCameraPhotoState(storedCameraPhoto);
         console.log('✅ Loaded lastCameraPhoto from localStorage');
+      } else {
+        // If no stored camera photo, load the default Einstein photo
+        await loadDefaultEinsteinCameraPhoto();
       }
     };
     loadCameraPhoto();
-  }, []);
+  }, [loadDefaultEinsteinCameraPhoto]);
 
   // Load lastUploadedPhoto from localStorage on app mount
   useEffect(() => {
@@ -6648,7 +6678,7 @@ const App = () => {
             }}
             onResetSettings={resetSettings}
             onBackToMenu={handleBackToMenu}
-            lastPhotoData={lastAdjustedPhoto}
+            lastPhotoData={lastCameraPhoto}
             onThumbnailClick={handleThumbnailClick}
           />
           
@@ -6685,6 +6715,12 @@ const App = () => {
     if (qrCodeData) {
       console.log('Clearing QR code when returning to camera');
       setQrCodeData(null);
+    }
+    
+    // Ensure we have a lastCameraPhoto (fallback to Einstein if needed)
+    if (!lastCameraPhoto || (!lastCameraPhoto.blob && !lastCameraPhoto.dataUrl)) {
+      console.log('No lastCameraPhoto available, loading Einstein as fallback');
+      await loadDefaultEinsteinCameraPhoto();
     }
     
     // Mark the photo grid as hiding with a clean fade-out
@@ -6783,6 +6819,12 @@ const App = () => {
     
     // Set waiting state before starting the camera permission flow
     setWaitingForCameraPermission(true);
+    
+    // Ensure we have a lastCameraPhoto (fallback to Einstein if needed)
+    if (!lastCameraPhoto || (!lastCameraPhoto.blob && !lastCameraPhoto.dataUrl)) {
+      console.log('No lastCameraPhoto available, loading Einstein as fallback');
+      await loadDefaultEinsteinCameraPhoto();
+    }
     
     // Add exit animation class
     const startMenuElement = document.querySelector('.camera-start-menu');
@@ -8008,40 +8050,40 @@ const App = () => {
 
   // Handle thumbnail click to reopen the image adjuster
   const handleThumbnailClick = async () => {
-    if (!lastAdjustedPhoto) return;
+    if (!lastCameraPhoto) return;
     
-    if (lastAdjustedPhoto.blob) {
+    if (lastCameraPhoto.blob) {
       // We have the blob - can reopen the adjuster
-      const newTempUrl = URL.createObjectURL(lastAdjustedPhoto.blob);
+      const newTempUrl = URL.createObjectURL(lastCameraPhoto.blob);
       setCurrentUploadedImageUrl(newTempUrl);
-      setCurrentUploadedSource(lastAdjustedPhoto.source);
+      setCurrentUploadedSource(lastCameraPhoto.source);
       setShowImageAdjuster(true);
-    } else if (lastAdjustedPhoto.dataUrl) {
+    } else if (lastCameraPhoto.dataUrl) {
       // We have the dataUrl from localStorage - convert back to blob
       try {
-        const response = await fetch(lastAdjustedPhoto.dataUrl);
+        const response = await fetch(lastCameraPhoto.dataUrl);
         const blob = await response.blob();
         const newTempUrl = URL.createObjectURL(blob);
         
-        // Update the lastAdjustedPhoto with the new blob for future use
-        setLastAdjustedPhoto({
-          ...lastAdjustedPhoto,
+        // Update the lastCameraPhoto with the new blob for future use
+        setLastCameraPhoto({
+          ...lastCameraPhoto,
           blob: blob,
           imageUrl: newTempUrl
         });
         
         setCurrentUploadedImageUrl(newTempUrl);
-        setCurrentUploadedSource(lastAdjustedPhoto.source);
+        setCurrentUploadedSource(lastCameraPhoto.source);
         setShowImageAdjuster(true);
       } catch (error) {
         console.error('Failed to restore image from dataUrl:', error);
         alert('Failed to restore previous photo. Please take a new photo.');
-        setLastAdjustedPhoto(null);
+        setLastCameraPhoto(null);
       }
     } else {
       // No usable image data
       console.warn('No usable image data found');
-      setLastAdjustedPhoto(null);
+      setLastCameraPhoto(null);
     }
   };
 
@@ -8801,6 +8843,12 @@ const App = () => {
             if (showPhotoGrid) {
               // We're on the photo grid page, need to navigate to camera
               console.log('📷 Navigating from photo grid to camera to take new photo');
+              
+              // Ensure we have a lastCameraPhoto (fallback to Einstein if needed)
+              if (!lastCameraPhoto || (!lastCameraPhoto.blob && !lastCameraPhoto.dataUrl)) {
+                console.log('No lastCameraPhoto available, loading Einstein as fallback');
+                await loadDefaultEinsteinCameraPhoto();
+              }
               
               // Hide photo gallery
               setShowPhotoGrid(false);
