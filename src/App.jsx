@@ -520,7 +520,65 @@ const App = () => {
   const [currentUploadedSource, setCurrentUploadedSource] = useState('');
   
 
-  
+
+  // Helper function to clear old photo data from localStorage to prevent quota issues
+  const clearOldPhotoStorage = () => {
+    try {
+      // Clear all photo-related storage items
+      localStorage.removeItem('sogni-lastAdjustedPhoto');
+      localStorage.removeItem('sogni-lastCameraPhoto');
+      localStorage.removeItem('sogni-lastUploadedPhoto');
+      localStorage.removeItem('sogni_styleReferenceImage');
+      localStorage.removeItem(CUSTOM_PROMPT_IMAGE_KEY);
+      console.log('📦 Cleared old photo storage to free up space');
+    } catch (error) {
+      console.warn('Failed to clear old photo storage:', error);
+    }
+  };
+
+  // Helper function to safely store data with quota management
+  const safeLocalStorageSetItem = (key, value, retryWithCleanup = true) => {
+    try {
+      // Check if the value is too large (> 3MB when stringified)
+      // This prevents storing huge images that will likely cause quota issues
+      const sizeInBytes = new Blob([value]).size;
+      const sizeInMB = sizeInBytes / (1024 * 1024);
+
+      if (sizeInMB > 3) {
+        console.warn(`⚠️  Skipping localStorage save for ${key} - size (${sizeInMB.toFixed(2)}MB) exceeds safe limit (3MB)`);
+        return false;
+      }
+
+      localStorage.setItem(key, value);
+      return true;
+    } catch (error) {
+      // Check if it's a quota exceeded error
+      const isQuotaError = error.name === 'QuotaExceededError' ||
+                           error.code === 22 ||
+                           error.code === 1014 ||
+                           error.message?.toLowerCase().includes('quota');
+
+      if (isQuotaError) {
+        console.warn('📦 localStorage quota exceeded');
+
+        // Try to recover by clearing old data
+        if (retryWithCleanup) {
+          console.log('🔄 Clearing old photo data and retrying...');
+          clearOldPhotoStorage();
+
+          // Retry once without cleanup option to prevent infinite loop
+          return safeLocalStorageSetItem(key, value, false);
+        } else {
+          console.warn('⚠️  Still cannot save after cleanup - photo will not persist across sessions');
+          return false;
+        }
+      } else {
+        console.warn(`Failed to save to localStorage (${key}):`, error);
+        return false;
+      }
+    }
+  };
+
   // Helper functions for localStorage persistence
   const saveLastAdjustedPhotoToStorage = async (photoData) => {
     try {
@@ -535,14 +593,14 @@ const App = () => {
             // Remove blob since we have dataUrl now
             blob: null
           };
-          localStorage.setItem('sogni-lastAdjustedPhoto', JSON.stringify(dataToStore));
+          safeLocalStorageSetItem('sogni-lastAdjustedPhoto', JSON.stringify(dataToStore));
         };
         reader.readAsDataURL(photoData.blob);
       } else {
         // No blob, just store what we have
         // eslint-disable-next-line no-unused-vars
         const { blob, ...photoDataWithoutBlob } = photoData;
-        localStorage.setItem('sogni-lastAdjustedPhoto', JSON.stringify(photoDataWithoutBlob));
+        safeLocalStorageSetItem('sogni-lastAdjustedPhoto', JSON.stringify(photoDataWithoutBlob));
       }
     } catch (error) {
       console.warn('Failed to save lastAdjustedPhoto to localStorage:', error);
@@ -572,14 +630,14 @@ const App = () => {
             dataUrl: dataUrl,
             blob: null // Remove blob since we have dataUrl now
           };
-          localStorage.setItem('sogni-lastCameraPhoto', JSON.stringify(dataToStore));
+          safeLocalStorageSetItem('sogni-lastCameraPhoto', JSON.stringify(dataToStore));
         };
         reader.readAsDataURL(photoData.blob);
       } else {
         // No blob, just store what we have
         // eslint-disable-next-line no-unused-vars
         const { blob, ...photoDataWithoutBlob } = photoData;
-        localStorage.setItem('sogni-lastCameraPhoto', JSON.stringify(photoDataWithoutBlob));
+        safeLocalStorageSetItem('sogni-lastCameraPhoto', JSON.stringify(photoDataWithoutBlob));
       }
     } catch (error) {
       console.warn('Failed to save lastCameraPhoto to localStorage:', error);
@@ -609,14 +667,14 @@ const App = () => {
             dataUrl: dataUrl,
             blob: null // Remove blob since we have dataUrl now
           };
-          localStorage.setItem('sogni-lastUploadedPhoto', JSON.stringify(dataToStore));
+          safeLocalStorageSetItem('sogni-lastUploadedPhoto', JSON.stringify(dataToStore));
         };
         reader.readAsDataURL(photoData.blob);
       } else {
         // No blob, just store what we have
         // eslint-disable-next-line no-unused-vars
         const { blob, ...photoDataWithoutBlob } = photoData;
-        localStorage.setItem('sogni-lastUploadedPhoto', JSON.stringify(photoDataWithoutBlob));
+        safeLocalStorageSetItem('sogni-lastUploadedPhoto', JSON.stringify(photoDataWithoutBlob));
       }
     } catch (error) {
       console.warn('Failed to save lastUploadedPhoto to localStorage:', error);
@@ -5326,7 +5384,7 @@ const App = () => {
                       prompt: positivePrompt,
                       timestamp: Date.now()
                     };
-                    localStorage.setItem(CUSTOM_PROMPT_IMAGE_KEY, JSON.stringify(imageData));
+                    safeLocalStorageSetItem(CUSTOM_PROMPT_IMAGE_KEY, JSON.stringify(imageData));
                     console.log('Saved custom prompt image:', imageData);
                   }
                 } catch (e) {
@@ -7031,11 +7089,13 @@ const App = () => {
     
     // Save to localStorage for persistence (both as data URLs, not blob URLs)
     try {
-      localStorage.setItem('sogni_styleReferenceImage', JSON.stringify({
+      const success = safeLocalStorageSetItem('sogni_styleReferenceImage', JSON.stringify({
         croppedDataUrl: croppedDataUrl,
         originalDataUrl: originalDataUrl // Now saving as data URL, not blob URL
       }));
-      console.log('💾 Saved style reference to localStorage');
+      if (success) {
+        console.log('💾 Saved style reference to localStorage');
+      }
     } catch (e) {
       console.warn('Failed to save style reference to localStorage:', e);
     }
