@@ -671,7 +671,7 @@ body:has(.camera-start-menu.phase-options .options-section.no-animations) div[st
 
 /* No animations - separator appears immediately at final position */
 .options-section.no-animations .step-separator {
-  transform: translateY(-17.5px);
+  transform: translateY(2.5px);
   animation: none;
 }
 
@@ -1219,7 +1219,12 @@ body:has(.camera-start-menu.phase-options .options-section.no-animations) div[st
     margin: 3px 0;
     margin-bottom: 0; /* Reset for mobile - vertical layout */
   }
-  
+
+  /* Position THEN lower to avoid overlapping RESET button */
+  .step-separator:nth-of-type(1) {
+    margin-top: 15px;
+  }
+
   @keyframes fadeInUp {
     0% {
       opacity: 0;
@@ -1245,6 +1250,11 @@ body:has(.camera-start-menu.phase-options .options-section.no-animations) div[st
   .photo-options-group .step-separator {
     margin-bottom: 10px;
     align-self: center;
+  }
+
+  /* Bring RESET button closer to the caption on mobile */
+  .polaroid-reset-link {
+    bottom: -14px;
   }
 
   .polaroid-button {
@@ -1461,6 +1471,16 @@ body:has(.camera-start-menu.phase-options .options-section.no-animations) div[st
 
   .step-separator {
     font-size: 1rem;
+  }
+
+  /* Position THEN lower to avoid overlapping RESET button on iPhone */
+  .step-separator:nth-of-type(1) {
+    margin-top: 12px;
+  }
+
+  /* Bring RESET button closer to the caption on iPhone */
+  .polaroid-reset-link {
+    bottom: -12px;
   }
 
   .polaroid-options-container {
