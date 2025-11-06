@@ -65,6 +65,9 @@ interface CameraStartMenuProps {
   // Handler to show existing photo in adjuster
   onShowExistingUpload?: () => void;
   hasExistingUpload?: boolean;
+  // Reset handlers
+  onResetCameraPhoto?: () => void;
+  onResetUploadedPhoto?: () => void;
 }
 
 const CameraStartMenu: React.FC<CameraStartMenuProps> = ({
@@ -89,7 +92,9 @@ const CameraStartMenu: React.FC<CameraStartMenuProps> = ({
   reusablePhotoUrl = null,
   reusablePhotoSourceType = null,
   onShowExistingUpload,
-  hasExistingUpload = false
+  hasExistingUpload = false,
+  onResetCameraPhoto,
+  onResetUploadedPhoto
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showStyleDropdown, setShowStyleDropdown] = useState(false);
@@ -519,6 +524,19 @@ const CameraStartMenu: React.FC<CameraStartMenuProps> = ({
                     <div className="polaroid-caption">
                       snap a photo{((originalPhotoUrl && photoSourceType === 'camera') || (reusablePhotoUrl && reusablePhotoSourceType === 'camera')) ? ' ✓' : ''}
                     </div>
+                    {/* Reset link - only show when there's a saved camera photo */}
+                    {((originalPhotoUrl && photoSourceType === 'camera') || (reusablePhotoUrl && reusablePhotoSourceType === 'camera')) && onResetCameraPhoto && (
+                      <button
+                        className="polaroid-reset-link"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onResetCameraPhoto();
+                        }}
+                        title="Reset camera photo"
+                      >
+                        RESET
+                      </button>
+                    )}
                   </div>
 
                   {/* "or" separator */}
@@ -546,6 +564,19 @@ const CameraStartMenu: React.FC<CameraStartMenuProps> = ({
                     <div className="polaroid-caption">
                       upload a pic{((originalPhotoUrl && photoSourceType === 'upload') || (reusablePhotoUrl && reusablePhotoSourceType === 'upload')) ? ' ✓' : ''}
                     </div>
+                    {/* Reset link - only show when there's a saved uploaded photo */}
+                    {((originalPhotoUrl && photoSourceType === 'upload') || (reusablePhotoUrl && reusablePhotoSourceType === 'upload')) && onResetUploadedPhoto && (
+                      <button
+                        className="polaroid-reset-link"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onResetUploadedPhoto();
+                        }}
+                        title="Reset uploaded photo"
+                      >
+                        RESET
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>

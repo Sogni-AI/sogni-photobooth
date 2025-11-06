@@ -559,14 +559,88 @@ const App = () => {
     }
   };
 
+  // Helper functions for lastCameraPhoto persistence
+  const saveLastCameraPhotoToStorage = async (photoData) => {
+    try {
+      if (photoData.blob) {
+        // Convert blob to base64 data URL for storage
+        const reader = new FileReader();
+        reader.onload = () => {
+          const dataUrl = reader.result;
+          const dataToStore = {
+            ...photoData,
+            dataUrl: dataUrl,
+            blob: null // Remove blob since we have dataUrl now
+          };
+          localStorage.setItem('sogni-lastCameraPhoto', JSON.stringify(dataToStore));
+        };
+        reader.readAsDataURL(photoData.blob);
+      } else {
+        // No blob, just store what we have
+        // eslint-disable-next-line no-unused-vars
+        const { blob, ...photoDataWithoutBlob } = photoData;
+        localStorage.setItem('sogni-lastCameraPhoto', JSON.stringify(photoDataWithoutBlob));
+      }
+    } catch (error) {
+      console.warn('Failed to save lastCameraPhoto to localStorage:', error);
+    }
+  };
+
+  const loadLastCameraPhotoFromStorage = () => {
+    try {
+      const stored = localStorage.getItem('sogni-lastCameraPhoto');
+      return stored ? JSON.parse(stored) : null;
+    } catch (error) {
+      console.warn('Failed to load lastCameraPhoto from localStorage:', error);
+      return null;
+    }
+  };
+
+  // Helper functions for lastUploadedPhoto persistence
+  const saveLastUploadedPhotoToStorage = async (photoData) => {
+    try {
+      if (photoData.blob) {
+        // Convert blob to base64 data URL for storage
+        const reader = new FileReader();
+        reader.onload = () => {
+          const dataUrl = reader.result;
+          const dataToStore = {
+            ...photoData,
+            dataUrl: dataUrl,
+            blob: null // Remove blob since we have dataUrl now
+          };
+          localStorage.setItem('sogni-lastUploadedPhoto', JSON.stringify(dataToStore));
+        };
+        reader.readAsDataURL(photoData.blob);
+      } else {
+        // No blob, just store what we have
+        // eslint-disable-next-line no-unused-vars
+        const { blob, ...photoDataWithoutBlob } = photoData;
+        localStorage.setItem('sogni-lastUploadedPhoto', JSON.stringify(photoDataWithoutBlob));
+      }
+    } catch (error) {
+      console.warn('Failed to save lastUploadedPhoto to localStorage:', error);
+    }
+  };
+
+  const loadLastUploadedPhotoFromStorage = () => {
+    try {
+      const stored = localStorage.getItem('sogni-lastUploadedPhoto');
+      return stored ? JSON.parse(stored) : null;
+    } catch (error) {
+      console.warn('Failed to load lastUploadedPhoto from localStorage:', error);
+      return null;
+    }
+  };
+
   // Add state to store the last adjusted photo data for re-editing
   const [lastAdjustedPhoto, setLastAdjustedPhotoState] = useState(null);
   
   // Add separate state for uploaded photos (separate from camera photos)
-  const [lastUploadedPhoto, setLastUploadedPhoto] = useState(null);
+  const [lastUploadedPhoto, setLastUploadedPhotoState] = useState(null);
   
   // Add separate state for camera photos (separate from uploaded photos)
-  const [lastCameraPhoto, setLastCameraPhoto] = useState(null);
+  const [lastCameraPhoto, setLastCameraPhotoState] = useState(null);
   
   // Custom setter that also saves to localStorage
   const setLastAdjustedPhoto = (photoData) => {
@@ -575,6 +649,26 @@ const App = () => {
       saveLastAdjustedPhotoToStorage(photoData);
     } else {
       localStorage.removeItem('sogni-lastAdjustedPhoto');
+    }
+  };
+
+  // Custom setter for lastCameraPhoto that also saves to localStorage
+  const setLastCameraPhoto = (photoData) => {
+    setLastCameraPhotoState(photoData);
+    if (photoData) {
+      saveLastCameraPhotoToStorage(photoData);
+    } else {
+      localStorage.removeItem('sogni-lastCameraPhoto');
+    }
+  };
+
+  // Custom setter for lastUploadedPhoto that also saves to localStorage
+  const setLastUploadedPhoto = (photoData) => {
+    setLastUploadedPhotoState(photoData);
+    if (photoData) {
+      saveLastUploadedPhotoToStorage(photoData);
+    } else {
+      localStorage.removeItem('sogni-lastUploadedPhoto');
     }
   };
 
@@ -641,6 +735,30 @@ const App = () => {
 
     loadAdjustedPhoto();
   }, [loadDefaultEinsteinAdjustedPhoto]);
+
+  // Load lastCameraPhoto from localStorage on app mount
+  useEffect(() => {
+    const loadCameraPhoto = () => {
+      const storedCameraPhoto = loadLastCameraPhotoFromStorage();
+      if (storedCameraPhoto) {
+        setLastCameraPhotoState(storedCameraPhoto);
+        console.log('✅ Loaded lastCameraPhoto from localStorage');
+      }
+    };
+    loadCameraPhoto();
+  }, []);
+
+  // Load lastUploadedPhoto from localStorage on app mount
+  useEffect(() => {
+    const loadUploadedPhoto = () => {
+      const storedUploadedPhoto = loadLastUploadedPhotoFromStorage();
+      if (storedUploadedPhoto) {
+        setLastUploadedPhotoState(storedUploadedPhoto);
+        console.log('✅ Loaded lastUploadedPhoto from localStorage');
+      }
+    };
+    loadUploadedPhoto();
+  }, []);
 
   
   
@@ -6353,6 +6471,9 @@ const App = () => {
               // Check if there's a stored upload - ONLY check lastUploadedPhoto
               !!(lastUploadedPhoto && (lastUploadedPhoto.blob || lastUploadedPhoto.dataUrl))
             }
+            // Reset handlers for camera and upload photos
+            onResetCameraPhoto={handleResetCameraPhoto}
+            onResetUploadedPhoto={handleResetUploadedPhoto}
           />
           
 
@@ -6760,6 +6881,18 @@ const App = () => {
       setLastUploadedPhoto(null);
       setShowStartMenu(true);
     }
+  };
+
+  // Handler to reset camera photo
+  const handleResetCameraPhoto = () => {
+    setLastCameraPhoto(null);
+    console.log('🗑️ Reset camera photo');
+  };
+
+  // Handler to reset uploaded photo
+  const handleResetUploadedPhoto = () => {
+    setLastUploadedPhoto(null);
+    console.log('🗑️ Reset uploaded photo');
   };
 
   // Handler for the "Browse Photo" option in start menu
