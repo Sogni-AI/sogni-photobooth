@@ -1,0 +1,87 @@
+/* Gimi Challenge Notification Popup */
+.gimi-notification {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 10000;
+  max-width: 400px;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+  opacity: 0;
+  transform: translateX(120%);
+  transition: all 0.3s ease-out;
+}
+
+.gimi-notification-visible {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.gimi-notification-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 32px;
+  height: 32px;
+  background: rgba(0, 0, 0, 0.7);
+  color: #ffffff;
+  border: none;
+  border-radius: 50%;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  padding: 0;
+}
+
+.gimi-notification-close:hover {
+  background: rgba(0, 0, 0, 0.9);
+  transform: scale(1.1);
+}
+
+.gimi-notification-content {
+  cursor: pointer;
+  position: relative;
+  transition: transform 0.2s ease;
+}
+
+.gimi-notification-content:hover {
+  transform: scale(1.02);
+}
+
+.gimi-notification-image {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 12px;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+  .gimi-notification {
+    max-width: calc(100% - 40px);
+    right: 20px;
+    top: 20px;
+  }
+
+  .gimi-notification-close {
+    width: 28px;
+    height: 28px;
+    font-size: 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .gimi-notification {
+    max-width: calc(100% - 20px);
+    right: 10px;
+    top: 10px;
+  }
+}
+

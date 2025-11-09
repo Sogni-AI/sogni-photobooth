@@ -111,35 +111,40 @@ export const isStableDiffusionModel = (modelValue: string): boolean => {
 // Model parameter ranges and constraints
 export const getModelRanges = (modelValue: string, isLoggedInWithFrontendAuth: boolean = false) => {
   if (isFluxKontextModel(modelValue)) {
+    // For Flux Kontext: default 8 when not logged in, 4 when logged in (to save user credits)
+    const defaultNumImages = isLoggedInWithFrontendAuth ? 4 : 8;
+
     return {
       guidance: { min: 1, max: 5, step: 0.1, default: 2.8 },
       inferenceSteps: { min: 18, max: 40, step: 1, default: 24 },
-      numImages: { min: 1, max: 8, step: 1, default: 4 },
+      numImages: { min: 1, max: 8, step: 1, default: defaultNumImages },
       schedulerOptions: ['Euler', 'Euler a', 'DPM++ 2M'],
       timeStepSpacingOptions: ['Simple', 'SGM Uniform', 'Beta', 'Normal', 'DDIM'],
     };
   }
-  
+
   // Ranges for Stable Diffusion models (SDXL-based)
-  // When user is logged in with frontend auth and spending own credits, allow up to 512 images
+  // When user is logged in with frontend auth and spending own credits, allow up to 256 images
   const maxImages = isLoggedInWithFrontendAuth ? 256 : 16;
-  
+  // For SD: default 16 when not logged in, 8 when logged in (to save user credits)
+  const defaultNumImages = isLoggedInWithFrontendAuth ? 8 : 16;
+
   return {
     promptGuidance: { min: 1.8, max: 3, step: 0.1, default: 2 },
     guidance: { min: 1, max: 5, step: 0.1, default: 3 }, // Not used but kept for consistency
     controlNetStrength: { min: 0.4, max: 1, step: 0.1, default: 0.7 },
     controlNetGuidanceEnd: { min: 0.2, max: 0.8, step: 0.1, default: 0.6 },
     inferenceSteps: { min: 4, max: 10, step: 1, default: 7 },
-    numImages: { min: 1, max: maxImages, step: 1, default: 8 },
+    numImages: { min: 1, max: maxImages, step: 1, default: defaultNumImages },
     schedulerOptions: ['DPM++ SDE', 'DPM++ 2M SDE'],
     timeStepSpacingOptions: ['Karras', 'SGM Uniform'],
   };
 };
 
 // Get model-specific default settings
-export const getModelDefaults = (modelValue: string) => {
-  const ranges = getModelRanges(modelValue);
-  
+export const getModelDefaults = (modelValue: string, isLoggedInWithFrontendAuth: boolean = false) => {
+  const ranges = getModelRanges(modelValue, isLoggedInWithFrontendAuth);
+
   if (isFluxKontextModel(modelValue)) {
     return {
       guidance: ranges.guidance.default,
@@ -149,7 +154,7 @@ export const getModelDefaults = (modelValue: string) => {
       numImages: ranges.numImages.default,
     };
   }
-  
+
   // Default settings for other models
   return {
     promptGuidance: ranges.promptGuidance?.default || 2,

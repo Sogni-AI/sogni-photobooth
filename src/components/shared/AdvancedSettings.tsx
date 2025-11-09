@@ -309,7 +309,11 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
 
   // Determine the current model for getting defaults and ranges
   const currentModel = selectedModel || settings.selectedModel || '';
-  const modelDefaults = getModelDefaults(currentModel);
+
+  // Check if user is logged in with frontend auth to allow higher image limits and different defaults
+  const isLoggedInWithFrontendAuth = authState.isAuthenticated && authState.authMode === 'frontend';
+  const modelDefaults = getModelDefaults(currentModel, isLoggedInWithFrontendAuth);
+  const modelRanges = getModelRanges(currentModel, isLoggedInWithFrontendAuth);
 
   // Auto-focus positive prompt when requested
   useEffect(() => {
@@ -321,9 +325,6 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
       }, 150);
     }
   }, [visible, autoFocusPositivePrompt]);
-  // Check if user is logged in with frontend auth to allow higher image limits
-  const isLoggedInWithFrontendAuth = authState.isAuthenticated && authState.authMode === 'frontend';
-  const modelRanges = getModelRanges(currentModel, isLoggedInWithFrontendAuth);
 
   // Apply defaults to props that weren't provided
   const finalNumImages = numImages ?? modelDefaults.numImages ?? 8;

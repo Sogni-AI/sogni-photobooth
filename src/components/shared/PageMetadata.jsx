@@ -23,6 +23,15 @@ const PageMetadata = () => {
         twitterTitle: '🛡️ Moderation Dashboard - Halloween AI Photo Contest',
         twitterDescription: 'Administration panel for moderating AI-generated Halloween photo contest entries and viewing results.'
       },
+      '/challenge/gimi': {
+        title: 'Turn One Photo Into 8 Viral Posts – $2,000 Gimi Challenge | Sogni AI Photobooth',
+        description: 'Join the Sogni x Gimi Creator Challenge! Create 8 viral photo transformations in 60 seconds and compete for $2,000 USDC. Use photobooth.sogni.ai with 200+ AI styles. Sign up free on Gimi.co.',
+        ogTitle: 'Turn One Photo Into 8 Viral Posts – Win $2,000!',
+        ogDescription: 'Join the Sogni x Gimi Creator Challenge! Create 8 viral photo transformations in 60 seconds with 200+ AI styles. Compete for $2,000 USDC based on engagement. Sign up free on Gimi.co.',
+        twitterTitle: 'Turn One Photo Into 8 Viral Posts – Win $2,000!',
+        twitterDescription: 'Join the Sogni x Gimi Creator Challenge! Create viral AI photo transformations in 60 seconds. 200+ styles. $2,000 USDC prize pool. Sign up free on Gimi.co.',
+        keywords: 'AI photo challenge, creator challenge, Gimi.co, viral content, AI photobooth, photo transformation, creator rewards, USDC prizes, social media content, TikTok challenge, Instagram challenge'
+      },
       default: {
         title: 'Sogni AI Photobooth',
         description: 'Sogni Photobooth: Capture and transform your photos with AI styles',

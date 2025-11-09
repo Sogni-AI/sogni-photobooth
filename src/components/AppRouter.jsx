@@ -4,9 +4,11 @@ import AnalyticsDashboard from './admin/AnalyticsDashboard';
 import Moderate from './admin/Moderate';
 import ContestVote from './contest/ContestVote';
 import HalloweenEvent from './events/HalloweenEvent';
+import GimiChallenge from './challenge/GimiChallenge';
 import { MusicPlayerProvider } from '../context/MusicPlayerContext';
 import GlobalMusicPlayer from './shared/GlobalMusicPlayer';
 import PageMetadata from './shared/PageMetadata';
+import GimiChallengeNotification from './shared/GimiChallengeNotification';
 
 // Create navigation context
 const NavigationContext = createContext();
@@ -29,6 +31,9 @@ const AppRouter = () => {
     if (hash === '#halloween' || pathname === '/halloween' || pathname === '/event/halloween') {
       return 'halloween';
     }
+    if (pathname === '/challenge/gimi') {
+      return 'gimi-challenge';
+    }
     return 'main';
   });
 
@@ -48,6 +53,11 @@ const AppRouter = () => {
     window.history.pushState({}, '', '/contest/vote');
   };
 
+  const navigateToGimiChallenge = () => {
+    setCurrentRoute('gimi-challenge');
+    window.history.pushState({}, '', '/challenge/gimi');
+  };
+
   useEffect(() => {
     const handleHashChange = () => {
       const hash = window.location.hash;
@@ -60,6 +70,8 @@ const AppRouter = () => {
         setCurrentRoute('contest-vote');
       } else if (hash === '#halloween' || pathname === '/halloween' || pathname === '/event/halloween') {
         setCurrentRoute('halloween');
+      } else if (pathname === '/challenge/gimi') {
+        setCurrentRoute('gimi-challenge');
       } else {
         setCurrentRoute('main');
       }
@@ -76,14 +88,20 @@ const AppRouter = () => {
     };
   }, []);
 
+  // Determine if we should show the Gimi Challenge notification
+  const shouldShowNotification = currentRoute === 'main' || currentRoute === 'halloween';
+
   return (
-    <NavigationContext.Provider value={{ navigateToCamera, navigateToContestVote }}>
+    <NavigationContext.Provider value={{ navigateToCamera, navigateToContestVote, navigateToGimiChallenge }}>
       <MusicPlayerProvider>
         {/* Dynamic page metadata for SEO and social sharing */}
         <PageMetadata />
-        
+
         {/* Global music player - shows on all pages when enabled */}
         <GlobalMusicPlayer />
+
+        {/* Gimi Challenge notification - shows on public pages after 5 seconds */}
+        {shouldShowNotification && <GimiChallengeNotification />}
 
         {currentRoute === 'analytics' ? (
           <AnalyticsDashboard />
@@ -93,6 +111,8 @@ const AppRouter = () => {
           <ContestVote />
         ) : currentRoute === 'halloween' ? (
           <HalloweenEvent />
+        ) : currentRoute === 'gimi-challenge' ? (
+          <GimiChallenge />
         ) : (
           <App />
         )}
