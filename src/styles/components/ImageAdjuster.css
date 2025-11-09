@@ -371,7 +371,7 @@
   cursor: pointer;
   border: none;
   transition: all 0.2s ease;
-  background: linear-gradient(135deg, #10b981, #059669);
+  background: #ff5252;
   color: white;
   display: flex;
   align-items: center;
@@ -380,9 +380,9 @@
 }
 
 .swap-image-button:hover {
-  background: linear-gradient(135deg, #34d399, #10b981);
+  background: #ff6b6b;
   transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(16, 185, 129, 0.3);
+  box-shadow: 0 4px 8px rgba(255, 82, 82, 0.4);
 }
 
 .swap-image-button .button-label {
@@ -391,7 +391,7 @@
 }
 
 .confirm-button {
-  background: #ff5252;
+  background: linear-gradient(135deg, #10b981, #059669);
   color: white;
   display: flex;
   align-items: center;
@@ -399,9 +399,9 @@
 }
 
 .confirm-button:hover {
-  background: #ff6b6b;
+  background: linear-gradient(135deg, #34d399, #10b981);
   transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(255, 82, 82, 0.4);
+  box-shadow: 0 4px 8px rgba(16, 185, 129, 0.3);
 }
 
 /* Two-line button layout */
@@ -439,14 +439,14 @@
   gap: 0 !important;
   border-radius: 8px;
   overflow: visible;
-  background: #ff5252;
+  background: linear-gradient(135deg, #10b981, #059669);
   transition: all 0.2s ease;
 }
 
 .batch-dropdown-container:hover {
-  background: #ff6b6b;
+  background: linear-gradient(135deg, #34d399, #10b981);
   transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(255, 82, 82, 0.4);
+  box-shadow: 0 4px 8px rgba(16, 185, 129, 0.3);
 }
 
 /* Split button styles */
@@ -525,11 +525,11 @@
 }
 
 .batch-dropdown-item.selected {
-  background: rgba(255, 82, 82, 0.3);
+  background: rgba(16, 185, 129, 0.3);
 }
 
 .batch-dropdown-item .checkmark {
-  color: #ff5252;
+  color: #10b981;
   font-weight: bold;
   font-size: 0.9em;
 }

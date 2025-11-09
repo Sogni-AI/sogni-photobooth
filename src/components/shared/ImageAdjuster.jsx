@@ -788,6 +788,20 @@ const ImageAdjuster = ({
         </div>
         
         <div className="image-adjustment-buttons">
+          {/* Replace/Swap image button - now in button bar */}
+          {(onUploadNew || onTakeNewPhoto) && (
+            <button
+              className="swap-image-button"
+              onClick={photoSource === 'camera' && onTakeNewPhoto ? onTakeNewPhoto : onUploadNew}
+              title={photoSource === 'camera' ? (isCameraActive ? "Close and take new photo" : "Take a new photo") : "Upload a different image"}
+            >
+              {photoSource === 'camera' ? '📷' : '⬆️'}
+              <span className="button-label">
+                New
+              </span>
+            </button>
+          )}
+
           <div className="batch-dropdown-container" ref={dropdownRef}>
             <button 
               className="confirm-button confirm-button-main" 
@@ -837,20 +851,6 @@ const ImageAdjuster = ({
               </div>
             )}
           </div>
-          
-          {/* Replace/Swap image button - now in button bar */}
-          {(onUploadNew || onTakeNewPhoto) && (
-            <button
-              className="swap-image-button"
-              onClick={photoSource === 'camera' && onTakeNewPhoto ? onTakeNewPhoto : onUploadNew}
-              title={photoSource === 'camera' ? (isCameraActive ? "Close and take new photo" : "Take a new photo") : "Upload a different image"}
-            >
-              {photoSource === 'camera' ? '📷' : '⬆️'}
-              <span className="button-label">
-                New
-              </span>
-            </button>
-          )}
         </div>
         
         {/* Style Dropdown */}
