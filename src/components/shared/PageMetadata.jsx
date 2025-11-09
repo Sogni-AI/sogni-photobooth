@@ -28,8 +28,10 @@ const PageMetadata = () => {
         description: 'Join the Sogni x Gimi Creator Challenge! Create 8 viral photo transformations in 60 seconds and compete for $2,000 USDC. Use photobooth.sogni.ai with 200+ AI styles. Sign up free on Gimi.co.',
         ogTitle: 'Turn One Photo Into 8 Viral Posts – Win $2,000!',
         ogDescription: 'Join the Sogni x Gimi Creator Challenge! Create 8 viral photo transformations in 60 seconds with 200+ AI styles. Compete for $2,000 USDC based on engagement. Sign up free on Gimi.co.',
+        ogImage: 'https://photobooth.sogni.ai/promo/gimi/Photobooth_gimi-1920x400.jpg',
         twitterTitle: 'Turn One Photo Into 8 Viral Posts – Win $2,000!',
         twitterDescription: 'Join the Sogni x Gimi Creator Challenge! Create viral AI photo transformations in 60 seconds. 200+ styles. $2,000 USDC prize pool. Sign up free on Gimi.co.',
+        twitterImage: 'https://photobooth.sogni.ai/promo/gimi/Photobooth_gimi-1920x400.jpg',
         keywords: 'AI photo challenge, creator challenge, Gimi.co, viral content, AI photobooth, photo transformation, creator rewards, USDC prizes, social media content, TikTok challenge, Instagram challenge'
       },
       default: {
@@ -68,10 +70,20 @@ const PageMetadata = () => {
     updateMetaTag('meta[property="og:description"]', metadata.ogDescription);
     updateMetaTag('meta[property="og:url"]', `https://photobooth.sogni.ai${pathname}`);
     
+    // Update og:image if provided
+    if (metadata.ogImage) {
+      updateMetaTag('meta[property="og:image"]', metadata.ogImage);
+    }
+    
     // Update Twitter tags
     updateMetaTag('meta[name="twitter:title"]', metadata.twitterTitle);
     updateMetaTag('meta[name="twitter:description"]', metadata.twitterDescription);
     updateMetaTag('meta[property="twitter:url"]', `https://photobooth.sogni.ai${pathname}`);
+    
+    // Update twitter:image if provided
+    if (metadata.twitterImage) {
+      updateMetaTag('meta[name="twitter:image"]', metadata.twitterImage);
+    }
 
     // Add keywords if available
     if (metadata.keywords) {

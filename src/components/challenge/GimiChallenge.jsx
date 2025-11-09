@@ -153,15 +153,15 @@ const GimiChallenge = () => {
         <meta property="og:description" content="Join the Sogni x Gimi Creator Challenge! Create 8 viral photo transformations in 60 seconds with 200+ AI styles. Compete for $2,000 USDC based on engagement. Sign up free on Gimi.co." />
         <meta property="og:type" content="website" />
         <meta property="og:url" content="https://photobooth.sogni.ai/challenge/gimi" />
-        <meta property="og:image" content="https://photobooth.sogni.ai/icons/icon-512x512.png" />
-        <meta property="og:image:width" content="512" />
-        <meta property="og:image:height" content="512" />
+        <meta property="og:image" content="https://photobooth.sogni.ai/promo/gimi/Photobooth_gimi-1920x400.jpg" />
+        <meta property="og:image:width" content="1920" />
+        <meta property="og:image:height" content="400" />
         
         {/* Twitter */}
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content="Turn One Photo Into 8 Viral Posts – Win $2,000!" />
         <meta name="twitter:description" content="Join the Sogni x Gimi Creator Challenge! Create viral AI photo transformations in 60 seconds. 200+ styles. $2,000 USDC prize pool. Sign up free on Gimi.co." />
-        <meta name="twitter:image" content="https://photobooth.sogni.ai/icons/icon-512x512.png" />
+        <meta name="twitter:image" content="https://photobooth.sogni.ai/promo/gimi/Photobooth_gimi-1920x400.jpg" />
         <meta name="twitter:site" content="@sogni_protocol" />
         
         {/* Additional SEO */}

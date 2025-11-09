@@ -306,6 +306,48 @@ const handleAdminContestRoute = (req, res) => {
   });
 };
 
+// Gimi challenge route handler with custom meta tags for social sharing
+const handleGimiChallengeRoute = (req, res) => {
+  const indexPath = path.join(staticDir, 'index.html');
+  const requestPath = req.path;
+  console.log(`[Gimi Challenge Route] Attempting to read: ${indexPath} for path: ${requestPath}`);
+
+  fs.readFile(indexPath, 'utf8', (err, html) => {
+    if (err) {
+      console.error('[Gimi Challenge Route] Error reading index.html:', err);
+      return res.status(500).send('Error loading page: ' + err.message);
+    }
+
+    console.log('[Gimi Challenge Route] Successfully read index.html, injecting meta tags...');
+
+    let modifiedHtml = html;
+
+    const gimiTitle = 'Turn One Photo Into 8 Viral Posts – $2,000 Gimi Challenge | Sogni AI Photobooth';
+    const gimiDesc = 'Join the Sogni x Gimi Creator Challenge! Create 8 viral photo transformations in 60 seconds and compete for $2,000 USDC. Use photobooth.sogni.ai with 200+ AI styles. Sign up free on Gimi.co.';
+    const gimiOgTitle = 'Turn One Photo Into 8 Viral Posts – Win $2,000!';
+    const gimiOgDesc = 'Join the Sogni x Gimi Creator Challenge! Create 8 viral photo transformations in 60 seconds with 200+ AI styles. Compete for $2,000 USDC based on engagement. Sign up free on Gimi.co.';
+    const gimiUrl = 'https://photobooth.sogni.ai/challenge/gimi';
+    const gimiImage = 'https://photobooth.sogni.ai/promo/gimi/Photobooth_gimi-1920x400.jpg';
+
+    // Replace meta tags with Gimi challenge-specific content
+    modifiedHtml = modifiedHtml.replace('<title>Sogni AI Photobooth</title>', `<title>${gimiTitle}</title>`);
+    modifiedHtml = modifiedHtml.replace('content="Sogni AI Photobooth" />', `content="${gimiOgTitle}" />`);
+    modifiedHtml = modifiedHtml.replace('content="Sogni-AI/sogni-photobooth: Sogni Photobooth: Capture and transform your photos with AI styles"', `content="${gimiOgTitle}"`);
+    modifiedHtml = modifiedHtml.replace(/Sogni Photobooth: Capture and transform your photos with AI styles/g, gimiOgDesc);
+    modifiedHtml = modifiedHtml.replace(/content="https:\/\/photobooth\.sogni\.ai\/"/g, `content="${gimiUrl}"`);
+    modifiedHtml = modifiedHtml.replace(/content="https:\/\/photobooth\.sogni\.ai\/icons\/icon-512x512\.png"/g, `content="${gimiImage}"`);
+
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+
+    console.log('[Gimi Challenge Route] Successfully injected meta tags and sent response');
+    res.send(modifiedHtml);
+  });
+};
+
 // Halloween event routes with custom meta tags for social sharing
 // Only enable on production/staging (local uses Vite dev server for everything)
 if (!isLocalEnv) {
@@ -313,6 +355,7 @@ if (!isLocalEnv) {
   app.get('/event/halloween', handleHalloweenRoute);
   app.get('/contest/vote', handleContestVoteRoute);
   app.get('/admin/moderate', handleAdminContestRoute);
+  app.get('/challenge/gimi', handleGimiChallengeRoute);
 }
 
 // Mobile sharing page route
