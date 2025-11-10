@@ -217,7 +217,7 @@ const createDefaultSettings = (): Settings => {
     sensitiveContentFilter: false,
     preferredCameraDeviceId: undefined,
     kioskMode: false,
-    sogniWatermark: true, // Default to enabled
+    sogniWatermark: false, // Default to disabled for new users
     sogniWatermarkSize: 100, // Default QR code size
     sogniWatermarkMargin: 26, // Default margin from edge
     sogniWatermarkPosition: 'top-right' as const, // Default position

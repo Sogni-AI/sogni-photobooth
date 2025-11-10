@@ -142,6 +142,12 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
   const [themesLoading, setThemesLoading] = useState(false);
   const [themesError, setThemesError] = useState<string | null>(null);
   
+  // State for collapsible sections
+  const [showPromptsSection, setShowPromptsSection] = useState(true); // Open by default
+  const [showQRSection, setShowQRSection] = useState(false);
+  const [showUISection, setShowUISection] = useState(false);
+  const [showAdvancedSection, setShowAdvancedSection] = useState(false);
+  
   // Debounced setting updates for QR settings
   const debouncedSizeUpdate = useRef<NodeJS.Timeout | null>(null);
   const debouncedMarginUpdate = useRef<NodeJS.Timeout | null>(null);
@@ -773,117 +779,96 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
           <span className="slider-value">{finalNumImages}</span>
         </div>
       
+        {/* Prompts & Creativity Section - Collapsible */}
+        <div className="settings-section-group">
+          <div className="advanced-toggle-wrapper">
+            <button 
+              className="advanced-toggle-subtle"
+              onClick={() => setShowPromptsSection(!showPromptsSection)}
+              type="button"
+            >
+              <span className="toggle-text">Prompts & Creativity</span>
+              <span className={`toggle-chevron ${showPromptsSection ? 'expanded' : ''}`}>
+                ›
+              </span>
+            </button>
+          </div>
+          
+          {showPromptsSection && (
+            <div className="advanced-subsection">
               {/* Positive Prompt */}
               <div className="control-option">
-          <label className="control-label" style={{
-            color: autoFocusPositivePrompt ? '#3b82f6' : undefined,
-            fontWeight: autoFocusPositivePrompt ? '600' : undefined
-          }}>
-            Positive Prompt: {autoFocusPositivePrompt && <span style={{ color: '#3b82f6', fontSize: '12px' }}>✨ Ready to edit</span>}
-          </label>
-          <textarea
-            ref={positivePromptRef}
-            className="custom-style-input"
-            placeholder="Describe what you want to see..."
-            value={positivePrompt}
-            onChange={(e) => onPositivePromptChange?.(e.target.value)}
-            rows={3}
-            style={{
-              border: autoFocusPositivePrompt ? '2px solid #3b82f6' : undefined,
-              boxShadow: autoFocusPositivePrompt ? '0 0 0 3px rgba(59, 130, 246, 0.1)' : undefined,
-              transition: 'all 0.2s ease'
-            }}
-            autoComplete="off"
-            autoCapitalize="off"
-            data-form-type="other"
-          />
-        </div>
+                <label className="control-label" style={{
+                  color: autoFocusPositivePrompt ? '#3b82f6' : undefined,
+                  fontWeight: autoFocusPositivePrompt ? '600' : undefined
+                }}>
+                  Positive Prompt: {autoFocusPositivePrompt && <span style={{ color: '#3b82f6', fontSize: '12px' }}>✨ Ready to edit</span>}
+                </label>
+                <textarea
+                  ref={positivePromptRef}
+                  className="custom-style-input"
+                  placeholder="Describe what you want to see..."
+                  value={positivePrompt}
+                  onChange={(e) => onPositivePromptChange?.(e.target.value)}
+                  rows={3}
+                  style={{
+                    border: autoFocusPositivePrompt ? '2px solid #3b82f6' : undefined,
+                    boxShadow: autoFocusPositivePrompt ? '0 0 0 3px rgba(59, 130, 246, 0.1)' : undefined,
+                    transition: 'all 0.2s ease'
+                  }}
+                  autoComplete="off"
+                  autoCapitalize="off"
+                  data-form-type="other"
+                />
+              </div>
 
-        {/* Style Prompt */}
-        <div className="control-option">
-          <label className="control-label">Style Prompt:</label>
-          <textarea
-            className="custom-style-input"
-            placeholder="Additional style modifier (optional, appended to positive prompt)"
-            value={stylePrompt}
-            onChange={(e) => onStylePromptChange?.(e.target.value)}
-            rows={2}
-            autoComplete="off"
-            autoCapitalize="off"
-            data-form-type="other"
-          />
-        </div>
+              {/* Style Prompt */}
+              <div className="control-option">
+                <label className="control-label">Style Prompt:</label>
+                <textarea
+                  className="custom-style-input"
+                  placeholder="Additional style modifier (optional, appended to positive prompt)"
+                  value={stylePrompt}
+                  onChange={(e) => onStylePromptChange?.(e.target.value)}
+                  rows={2}
+                  autoComplete="off"
+                  autoCapitalize="off"
+                  data-form-type="other"
+                />
+              </div>
 
-        {/* Negative Prompt */}
-        <div className="control-option">
-          <label className="control-label">Negative Prompt:</label>
-          <textarea
-            className="custom-style-input"
-            placeholder="lowres, worst quality, low quality"
-            value={negativePrompt}
-            onChange={(e) => onNegativePromptChange?.(e.target.value)}
-            rows={2}
-            autoComplete="off"
-            autoCapitalize="off"
-            data-form-type="other"
-          />
-        </div>
+              {/* Negative Prompt */}
+              <div className="control-option">
+                <label className="control-label">Negative Prompt:</label>
+                <textarea
+                  className="custom-style-input"
+                  placeholder="lowres, worst quality, low quality"
+                  value={negativePrompt}
+                  onChange={(e) => onNegativePromptChange?.(e.target.value)}
+                  rows={2}
+                  autoComplete="off"
+                  autoCapitalize="off"
+                  data-form-type="other"
+                />
+              </div>
 
-        {/* Seed */}
-        <div className="control-option">
-          <label className="control-label">Seed (leave blank for random):</label>
-          <input
-            type="number"
-            min={0}
-            max={4294967295}
-            className="custom-style-input"
-            placeholder="Random"
-            value={seed}
-            onChange={(e) => onSeedChange?.(e.target.value)}
-          />
-        </div>
-
-
-
-        {/* Event Theme selector */}
-        <div className="control-option">
-          <label className="control-label">Event Theme:</label>
-          {themesLoading ? (
-            <div className="model-select" style={{ color: '#666', fontStyle: 'italic' }}>
-              Loading themes...
+              {/* Seed */}
+              <div className="control-option">
+                <label className="control-label">Seed (leave blank for random):</label>
+                <input
+                  type="number"
+                  min={0}
+                  max={4294967295}
+                  className="custom-style-input"
+                  placeholder="Random"
+                  value={seed}
+                  onChange={(e) => onSeedChange?.(e.target.value)}
+                />
+              </div>
             </div>
-          ) : themesError ? (
-            <div className="model-select" style={{ color: '#666', fontStyle: 'italic' }}>
-              No themes available
-            </div>
-          ) : (
-            <select
-              className="model-select"
-              onChange={(e) => void handleTezDevThemeChange(e.target.value as TezDevTheme)}
-              value={currentTezDevTheme}
-            >
-              {availableThemes.map(theme => (
-                <option key={theme.value} value={theme.value}>
-                  {theme.label}
-                </option>
-              ))}
-              <option value="off">Off</option>
-            </select>
           )}
         </div>
 
-        {/* Output Type selector */}
-        <div className="control-option">
-          <label className="control-label">Output Type:</label>
-          <select
-            className="model-select"
-            onChange={(e) => handleOutputFormatChange(e.target.value as OutputFormat)}
-            value={currentOutputFormat}
-          >
-            <option value="png">PNG</option>
-            <option value="jpg">JPG</option>
-          </select>
-        </div>
 
         {/* Sensitive Content Filter toggle */}
         <div className="control-option checkbox">
@@ -896,246 +881,346 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
           <label htmlFor="sensitive-content-filter-toggle" className="control-label">Sensitive Content Filter</label>
         </div>
 
-        {/* QR Code Watermark toggle */}
-        <div className="control-option checkbox">
-          <input
-            type="checkbox"
-            id="sogni-watermark-toggle"
-            checked={settings.sogniWatermark}
-            onChange={(e) => handleSogniWatermarkChange(e.target.checked)}
-          />
-          <label htmlFor="sogni-watermark-toggle" className="control-label">Overlay QR Code</label>
-        </div>
-
-        {/* QR Code Size - only show when watermark is enabled */}
-        {settings.sogniWatermark && (
-          <div className="control-option">
-            <label htmlFor="qr-size-slider" className="control-label">QR Code Size: {localQRSize}px</label>
-            <input
-              type="range"
-              id="qr-size-slider"
-              min="50"
-              max="150"
-              step="5"
-              value={localQRSize}
-              onChange={(e) => handleSogniWatermarkSizeChange(parseInt(e.target.value) || 94)}
-              className="slider"
-            />
-          </div>
-        )}
-
-        {/* QR Code Margin - only show when watermark is enabled */}
-        {settings.sogniWatermark && (
-          <div className="control-option">
-            <label htmlFor="qr-margin-slider" className="control-label">QR Code Margin: {localQRMargin}px</label>
-            <input
-              type="range"
-              id="qr-margin-slider"
-              min="0"
-              max="100"
-              step="1"
-              value={localQRMargin}
-              onChange={(e) => handleSogniWatermarkMarginChange(parseInt(e.target.value) || 16)}
-              className="slider"
-            />
-          </div>
-        )}
-
-        {/* QR Code Margin Starts Inside Frame toggle - only show when watermark is enabled */}
-        {settings.sogniWatermark && (
-          <div className="control-option checkbox">
-            <input
-              type="checkbox"
-              id="qr-margin-inside-frame-toggle"
-              checked={settings.qrCodeMarginStartsInsideFrame ?? false}
-              onChange={(e) => {
-                updateSetting('qrCodeMarginStartsInsideFrame', e.target.checked);
-                // Clear caches when positioning logic changes to regenerate QR code
-                clearImageCaches();
-              }}
-            />
-            <label htmlFor="qr-margin-inside-frame-toggle" className="control-label">QR Code Margin Starts Inside Frame</label>
-          </div>
-        )}
-
-        {/* QR Code URL - only show when watermark is enabled */}
-        {settings.sogniWatermark && (
-          <div className="control-option">
-            <label htmlFor="qr-url-input" className="control-label">QR Code URL</label>
-            <input
-              type="url"
-              id="qr-url-input"
-              value={localQRUrl}
-              onChange={(e) => handleQRUrlChange(e.target.value)}
-              placeholder="https://example.com"
-              className={`url-input ${qrUrlError ? 'error' : ''}`}
-              style={{
-                width: '100%',
-                padding: '8px 12px',
-                border: qrUrlError ? '2px solid #ff4444' : '2px solid #333',
-                borderRadius: '6px',
-                backgroundColor: '#1a1a1a',
-                color: '#fff',
-                fontSize: '14px',
-                fontFamily: 'monospace'
-              }}
-              autoComplete="off"
-              autoCorrect="off"
-              autoCapitalize="off"
-              spellCheck="false"
-              data-form-type="other"
-            />
-            {qrUrlError && (
-              <div className="error-message" style={{
-                color: '#ff4444',
-                fontSize: '12px',
-                marginTop: '4px',
-                fontStyle: 'italic'
-              }}>
-                {qrUrlError}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* QR Code Position - only show when watermark is enabled */}
-        {settings.sogniWatermark && (
-          <div className="control-option">
-            <label className="control-label">QR Code Position:</label>
-            <select
-              className="model-select"
-              onChange={(e) => {
-                const position = e.target.value as 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
-                updateSetting('sogniWatermarkPosition', position);
-                // Clear caches when position changes to regenerate QR code
-                clearImageCaches();
-              }}
-              value={settings.sogniWatermarkPosition || 'top-right'}
+        {/* QR Code & Watermark Section - Collapsible */}
+        <div className="settings-section-group">
+          <div className="advanced-toggle-wrapper">
+            <button 
+              className="advanced-toggle-subtle"
+              onClick={() => setShowQRSection(!showQRSection)}
+              type="button"
             >
-              <option value="top-right">Top Right</option>
-              <option value="top-left">Top Left</option>
-              <option value="bottom-right">Bottom Right</option>
-              <option value="bottom-left">Bottom Left</option>
-            </select>
+              <span className="toggle-text">QR Code & Watermark</span>
+              <span className={`toggle-chevron ${showQRSection ? 'expanded' : ''}`}>
+                ›
+              </span>
+            </button>
           </div>
-        )}
+          
+          {showQRSection && (
+            <div className="advanced-subsection">
+              {/* QR Code Watermark toggle */}
+              <div className="control-option checkbox">
+                <input
+                  type="checkbox"
+                  id="sogni-watermark-toggle"
+                  checked={settings.sogniWatermark}
+                  onChange={(e) => handleSogniWatermarkChange(e.target.checked)}
+                />
+                <label htmlFor="sogni-watermark-toggle" className="control-label">Overlay QR Code</label>
+              </div>
 
-        {/* Flash toggle */}
-        <div className="control-option checkbox">
-          <input
-            type="checkbox"
-            id="flash-toggle"
-            checked={flashEnabled}
-            onChange={(e) => onFlashEnabledChange?.(e.target.checked)}
-          />
-          <label htmlFor="flash-toggle" className="control-label">Flash</label>
+              {/* QR Code Size - only show when watermark is enabled */}
+              {settings.sogniWatermark && (
+                <div className="control-option">
+                  <label htmlFor="qr-size-slider" className="control-label">QR Code Size: {localQRSize}px</label>
+                  <input
+                    type="range"
+                    id="qr-size-slider"
+                    min="50"
+                    max="150"
+                    step="5"
+                    value={localQRSize}
+                    onChange={(e) => handleSogniWatermarkSizeChange(parseInt(e.target.value) || 94)}
+                    className="slider"
+                  />
+                </div>
+              )}
+
+              {/* QR Code Margin - only show when watermark is enabled */}
+              {settings.sogniWatermark && (
+                <div className="control-option">
+                  <label htmlFor="qr-margin-slider" className="control-label">QR Code Margin: {localQRMargin}px</label>
+                  <input
+                    type="range"
+                    id="qr-margin-slider"
+                    min="0"
+                    max="100"
+                    step="1"
+                    value={localQRMargin}
+                    onChange={(e) => handleSogniWatermarkMarginChange(parseInt(e.target.value) || 16)}
+                    className="slider"
+                  />
+                </div>
+              )}
+
+              {/* QR Code Margin Starts Inside Frame toggle - only show when watermark is enabled */}
+              {settings.sogniWatermark && (
+                <div className="control-option checkbox">
+                  <input
+                    type="checkbox"
+                    id="qr-margin-inside-frame-toggle"
+                    checked={settings.qrCodeMarginStartsInsideFrame ?? false}
+                    onChange={(e) => {
+                      updateSetting('qrCodeMarginStartsInsideFrame', e.target.checked);
+                      // Clear caches when positioning logic changes to regenerate QR code
+                      clearImageCaches();
+                    }}
+                  />
+                  <label htmlFor="qr-margin-inside-frame-toggle" className="control-label">QR Code Margin Starts Inside Frame</label>
+                </div>
+              )}
+
+              {/* QR Code URL - only show when watermark is enabled */}
+              {settings.sogniWatermark && (
+                <div className="control-option">
+                  <label htmlFor="qr-url-input" className="control-label">QR Code URL</label>
+                  <input
+                    type="url"
+                    id="qr-url-input"
+                    value={localQRUrl}
+                    onChange={(e) => handleQRUrlChange(e.target.value)}
+                    placeholder="https://example.com"
+                    className={`url-input ${qrUrlError ? 'error' : ''}`}
+                    style={{
+                      width: '100%',
+                      padding: '8px 12px',
+                      border: qrUrlError ? '2px solid #ff4444' : '2px solid #333',
+                      borderRadius: '6px',
+                      backgroundColor: '#1a1a1a',
+                      color: '#fff',
+                      fontSize: '14px',
+                      fontFamily: 'monospace'
+                    }}
+                    autoComplete="off"
+                    autoCorrect="off"
+                    autoCapitalize="off"
+                    spellCheck="false"
+                    data-form-type="other"
+                  />
+                  {qrUrlError && (
+                    <div className="error-message" style={{
+                      color: '#ff4444',
+                      fontSize: '12px',
+                      marginTop: '4px',
+                      fontStyle: 'italic'
+                    }}>
+                      {qrUrlError}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* QR Code Position - only show when watermark is enabled */}
+              {settings.sogniWatermark && (
+                <div className="control-option">
+                  <label className="control-label">QR Code Position:</label>
+                  <select
+                    className="model-select"
+                    onChange={(e) => {
+                      const position = e.target.value as 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+                      updateSetting('sogniWatermarkPosition', position);
+                      // Clear caches when position changes to regenerate QR code
+                      clearImageCaches();
+                    }}
+                    value={settings.sogniWatermarkPosition || 'top-right'}
+                  >
+                    <option value="top-right">Top Right</option>
+                    <option value="top-left">Top Left</option>
+                    <option value="bottom-right">Bottom Right</option>
+                    <option value="bottom-left">Bottom Left</option>
+                  </select>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
-        {/* Keep original photo toggle */}
-        <div className="control-option checkbox">
-          <input
-            type="checkbox"
-            id="keep-original-toggle"
-            checked={keepOriginalPhoto}
-            onChange={(e) => onKeepOriginalPhotoChange?.(e.target.checked)}
-          />
-          <label htmlFor="keep-original-toggle" className="control-label">Show Original Image In Gallery</label>
-        </div>
-        
-        {/* Sound toggle */}
-        <div className="control-option checkbox">
-          <input
-            type="checkbox"
-            id="sound-toggle"
-            checked={soundEnabled}
-            onChange={(e) => onSoundEnabledChange?.(e.target.checked)}
-          />
-          <label htmlFor="sound-toggle" className="control-label">Sound Effects</label>
-        </div>
-        
-        {/* Slothicorn Animation toggle */}
-        <div className="control-option checkbox">
-          <input
-            type="checkbox"
-            id="slothicorn-toggle"
-            checked={slothicornAnimationEnabled}
-            onChange={(e) => onSlothicornAnimationEnabledChange?.(e.target.checked)}
-          />
-          <label htmlFor="slothicorn-toggle" className="control-label">Slothicorn Animation</label>
-        </div>
-        
-        {/* Background Animations toggle */}
-        <div className="control-option checkbox">
-          <input
-            type="checkbox"
-            id="background-animations-toggle"
-            checked={backgroundAnimationsEnabled}
-            onChange={(e) => onBackgroundAnimationsEnabledChange?.(e.target.checked)}
-          />
-          <label htmlFor="background-animations-toggle" className="control-label">Background Animations</label>
-        </div>
-        
-        {/* Worker Preferences - Show all options when user is logged in with frontend auth (spending own credits) */}
-        {authState.isAuthenticated && authState.authMode === 'frontend' && (
-          <>
-            <div className="control-option worker-preference-section">
-              <label className="control-label">Required<br/>Workers</label>
-              <TagInput
-                tags={settings.requiredWorkers}
-                onTagsChange={(tags) => updateSetting('requiredWorkers', tags)}
-                placeholder="Type worker name and press Enter..."
-              />
-              <div className="control-description">
-                Only these workers will be used for processing your images
+        {/* UI & Effects Section - Collapsible */}
+        <div className="settings-section-group">
+          <div className="advanced-toggle-wrapper">
+            <button 
+              className="advanced-toggle-subtle"
+              onClick={() => setShowUISection(!showUISection)}
+              type="button"
+            >
+              <span className="toggle-text">UI & Effects</span>
+              <span className={`toggle-chevron ${showUISection ? 'expanded' : ''}`}>
+                ›
+              </span>
+            </button>
+          </div>
+          
+          {showUISection && (
+            <div className="advanced-subsection">
+              {/* Flash toggle */}
+              <div className="control-option checkbox">
+                <input
+                  type="checkbox"
+                  id="flash-toggle"
+                  checked={flashEnabled}
+                  onChange={(e) => onFlashEnabledChange?.(e.target.checked)}
+                />
+                <label htmlFor="flash-toggle" className="control-label">Flash</label>
+              </div>
+
+              {/* Keep original photo toggle */}
+              <div className="control-option checkbox">
+                <input
+                  type="checkbox"
+                  id="keep-original-toggle"
+                  checked={keepOriginalPhoto}
+                  onChange={(e) => onKeepOriginalPhotoChange?.(e.target.checked)}
+                />
+                <label htmlFor="keep-original-toggle" className="control-label">Show Original Image In Gallery</label>
+              </div>
+              
+              {/* Sound toggle */}
+              <div className="control-option checkbox">
+                <input
+                  type="checkbox"
+                  id="sound-toggle"
+                  checked={soundEnabled}
+                  onChange={(e) => onSoundEnabledChange?.(e.target.checked)}
+                />
+                <label htmlFor="sound-toggle" className="control-label">Sound Effects</label>
+              </div>
+              
+              {/* Slothicorn Animation toggle */}
+              <div className="control-option checkbox">
+                <input
+                  type="checkbox"
+                  id="slothicorn-toggle"
+                  checked={slothicornAnimationEnabled}
+                  onChange={(e) => onSlothicornAnimationEnabledChange?.(e.target.checked)}
+                />
+                <label htmlFor="slothicorn-toggle" className="control-label">Slothicorn Animation</label>
+              </div>
+              
+              {/* Background Animations toggle */}
+              <div className="control-option checkbox">
+                <input
+                  type="checkbox"
+                  id="background-animations-toggle"
+                  checked={backgroundAnimationsEnabled}
+                  onChange={(e) => onBackgroundAnimationsEnabledChange?.(e.target.checked)}
+                />
+                <label htmlFor="background-animations-toggle" className="control-label">Background Animations</label>
               </div>
             </div>
-
-            <div className="control-option worker-preference-section">
-              <label className="control-label">Preferred<br/>Workers</label>
-              <TagInput
-                tags={settings.preferWorkers}
-                onTagsChange={(tags) => updateSetting('preferWorkers', tags)}
-                placeholder="Type worker name and press Enter..."
-              />
-              <div className="control-description">
-                These workers will be prioritized when processing your images
-              </div>
-            </div>
-          </>
-        )}
-
-        <div className="control-option worker-preference-section">
-          <label className="control-label">Skip<br/>Workers</label>
-          <TagInput
-            tags={settings.skipWorkers}
-            onTagsChange={(tags) => updateSetting('skipWorkers', tags)}
-            placeholder="Type worker name and press Enter..."
-          />
-          <div className="control-description">
-            These workers will be avoided when processing your images
-          </div>
-        </div>
-
-        {/* Kiosk Mode toggle */}
-        <div className="control-option checkbox">
-          <input
-            type="checkbox"
-            id="kiosk-mode-toggle"
-            checked={kioskMode || settings.kioskMode}
-            onChange={(e) => handleKioskModeChange(e.target.checked)}
-          />
-          <label htmlFor="kiosk-mode-toggle" className="control-label">Kiosk Mode (Share via QR Code)</label>
+          )}
         </div>
         
-        {/* Show Splash on Inactivity toggle */}
-        <div className="control-option checkbox">
-          <input
-            type="checkbox"
-            id="splash-inactivity-toggle"
-            checked={showSplashOnInactivity || settings.showSplashOnInactivity}
-            onChange={(e) => handleShowSplashOnInactivityChange(e.target.checked)}
-          />
-          <label htmlFor="splash-inactivity-toggle" className="control-label">Show Splash Screen on Inactivity</label>
+        {/* Advanced Features Section - Collapsible */}
+        <div className="settings-section-group">
+          <div className="advanced-toggle-wrapper">
+            <button 
+              className="advanced-toggle-subtle"
+              onClick={() => setShowAdvancedSection(!showAdvancedSection)}
+              type="button"
+            >
+              <span className="toggle-text">Advanced Features</span>
+              <span className={`toggle-chevron ${showAdvancedSection ? 'expanded' : ''}`}>
+                ›
+              </span>
+            </button>
+          </div>
+          
+          {showAdvancedSection && (
+            <div className="advanced-subsection">
+              {/* Event Theme selector */}
+              <div className="control-option">
+                <label className="control-label">Event Theme:</label>
+                {themesLoading ? (
+                  <div className="model-select" style={{ color: '#666', fontStyle: 'italic' }}>
+                    Loading themes...
+                  </div>
+                ) : themesError ? (
+                  <div className="model-select" style={{ color: '#666', fontStyle: 'italic' }}>
+                    No themes available
+                  </div>
+                ) : (
+                  <select
+                    className="model-select"
+                    onChange={(e) => void handleTezDevThemeChange(e.target.value as TezDevTheme)}
+                    value={currentTezDevTheme}
+                  >
+                    {availableThemes.map(theme => (
+                      <option key={theme.value} value={theme.value}>
+                        {theme.label}
+                      </option>
+                    ))}
+                    <option value="off">Off</option>
+                  </select>
+                )}
+              </div>
+
+              {/* Output Type selector */}
+              <div className="control-option">
+                <label className="control-label">Output Type:</label>
+                <select
+                  className="model-select"
+                  onChange={(e) => handleOutputFormatChange(e.target.value as OutputFormat)}
+                  value={currentOutputFormat}
+                >
+                  <option value="png">PNG</option>
+                  <option value="jpg">JPG</option>
+                </select>
+              </div>
+
+              {/* Worker Preferences - Show all options when user is logged in with frontend auth (spending own credits) */}
+              {authState.isAuthenticated && authState.authMode === 'frontend' && (
+                <>
+                  <div className="control-option worker-preference-section">
+                    <label className="control-label">Required<br/>Workers</label>
+                    <TagInput
+                      tags={settings.requiredWorkers}
+                      onTagsChange={(tags) => updateSetting('requiredWorkers', tags)}
+                      placeholder="Type worker name and press Enter..."
+                    />
+                    <div className="control-description">
+                      Only these workers will be used for processing your images
+                    </div>
+                  </div>
+
+                  <div className="control-option worker-preference-section">
+                    <label className="control-label">Preferred<br/>Workers</label>
+                    <TagInput
+                      tags={settings.preferWorkers}
+                      onTagsChange={(tags) => updateSetting('preferWorkers', tags)}
+                      placeholder="Type worker name and press Enter..."
+                    />
+                    <div className="control-description">
+                      These workers will be prioritized when processing your images
+                    </div>
+                  </div>
+                </>
+              )}
+
+              <div className="control-option worker-preference-section">
+                <label className="control-label">Skip<br/>Workers</label>
+                <TagInput
+                  tags={settings.skipWorkers}
+                  onTagsChange={(tags) => updateSetting('skipWorkers', tags)}
+                  placeholder="Type worker name and press Enter..."
+                />
+                <div className="control-description">
+                  These workers will be avoided when processing your images
+                </div>
+              </div>
+
+              {/* Kiosk Mode toggle */}
+              <div className="control-option checkbox">
+                <input
+                  type="checkbox"
+                  id="kiosk-mode-toggle"
+                  checked={kioskMode || settings.kioskMode}
+                  onChange={(e) => handleKioskModeChange(e.target.checked)}
+                />
+                <label htmlFor="kiosk-mode-toggle" className="control-label">Kiosk Mode (Share via QR Code)</label>
+              </div>
+              
+              {/* Show Splash on Inactivity toggle */}
+              <div className="control-option checkbox">
+                <input
+                  type="checkbox"
+                  id="splash-inactivity-toggle"
+                  checked={showSplashOnInactivity || settings.showSplashOnInactivity}
+                  onChange={(e) => handleShowSplashOnInactivityChange(e.target.checked)}
+                />
+                <label htmlFor="splash-inactivity-toggle" className="control-label">Show Splash Screen on Inactivity</label>
+              </div>
+            </div>
+          )}
         </div>
         
         {/* Reset settings button */}
