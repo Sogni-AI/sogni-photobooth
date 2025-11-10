@@ -22,6 +22,7 @@ const GimiChallenge = () => {
   
   // State for rotating transformations (one index per transformation box)
   const [transformationIndices, setTransformationIndices] = React.useState(getInitialIndices);
+  const [flippingBoxes, setFlippingBoxes] = React.useState([false, false, false, false]);
 
   // Track page view and set campaign attribution on mount
   React.useEffect(() => {
@@ -105,21 +106,40 @@ const GimiChallenge = () => {
     
     const timers = intervals.map((interval, boxIndex) => {
       return setInterval(() => {
-        setTransformationIndices(prev => {
-          const newIndices = [...prev];
-          // Get next random index that's different from current AND not currently showing in other boxes
-          let newIndex;
-          let attempts = 0;
-          do {
-            newIndex = Math.floor(Math.random() * allTransformations.length);
-            attempts++;
-          } while (
-            (newIndex === newIndices[boxIndex] || newIndices.includes(newIndex)) && 
-            attempts < 50 // Prevent infinite loop
-          );
-          newIndices[boxIndex] = newIndex;
-          return newIndices;
+        // Start flip animation
+        setFlippingBoxes(prev => {
+          const newFlipping = [...prev];
+          newFlipping[boxIndex] = true;
+          return newFlipping;
         });
+        
+        // Change image halfway through flip (150ms)
+        setTimeout(() => {
+          setTransformationIndices(prev => {
+            const newIndices = [...prev];
+            // Get next random index that's different from current AND not currently showing in other boxes
+            let newIndex;
+            let attempts = 0;
+            do {
+              newIndex = Math.floor(Math.random() * allTransformations.length);
+              attempts++;
+            } while (
+              (newIndex === newIndices[boxIndex] || newIndices.includes(newIndex)) && 
+              attempts < 50 // Prevent infinite loop
+            );
+            newIndices[boxIndex] = newIndex;
+            return newIndices;
+          });
+        }, 150);
+        
+        // End flip animation
+        setTimeout(() => {
+          setFlippingBoxes(prev => {
+            const newFlipping = [...prev];
+            newFlipping[boxIndex] = false;
+            return newFlipping;
+          });
+        }, 300);
       }, interval);
     });
 
@@ -308,11 +328,14 @@ const GimiChallenge = () => {
                 {transformationIndices.map((transformIndex, boxIndex) => {
                   const transformation = allTransformations[transformIndex];
                   return (
-                    <div key={`${boxIndex}-${transformIndex}`} className="gimi-transformation">
+                    <div 
+                      key={boxIndex} 
+                      className={`gimi-transformation ${flippingBoxes[boxIndex] ? 'flipping' : ''}`}
+                    >
                       <img 
                         src={transformation.image} 
                         alt={`${transformation.name} transformation`} 
-                        className="gimi-showcase-image gimi-transformation-fade"
+                        className="gimi-showcase-image"
                       />
                       <span className="gimi-transform-label">{transformation.name}</span>
                     </div>
