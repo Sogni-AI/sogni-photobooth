@@ -336,6 +336,10 @@ const handleGimiChallengeRoute = (req, res) => {
     modifiedHtml = modifiedHtml.replace(/Sogni Photobooth: Capture and transform your photos with AI styles/g, gimiOgDesc);
     modifiedHtml = modifiedHtml.replace(/content="https:\/\/photobooth\.sogni\.ai\/"/g, `content="${gimiUrl}"`);
     modifiedHtml = modifiedHtml.replace(/content="https:\/\/photobooth\.sogni\.ai\/icons\/icon-512x512\.png"/g, `content="${gimiImage}"`);
+    
+    // Replace og:image dimension tags for proper social sharing
+    modifiedHtml = modifiedHtml.replace(/property="og:image:width" content="\d+"/g, `property="og:image:width" content="1920"`);
+    modifiedHtml = modifiedHtml.replace(/property="og:image:height" content="\d+"/g, `property="og:image:height" content="400"`);
 
     res.set({
       'Cache-Control': 'no-cache, no-store, must-revalidate',
