@@ -10,9 +10,9 @@ If you build something cool with the Sogni Client SDK let us know and we'll add 
 Live demo → **https://photobooth.sogni.ai**
 
 <div align="center">
-  <img alt="Photobooth screenshot – webcam mode" src="docs/assets/photobooth-demo-1.png" width="100%"/>
-  <img alt="Photobooth screenshot – style selection"  src="docs/assets/photobooth-demo-2.png" width="100%"/>
-  <img alt="Photobooth screenshot – generated gallery"  src="docs/assets/photobooth-demo-3.png" width="100%"/>
+  <img alt="Photobooth screenshot – webcam mode" src="docs/assets/photobooth-demo-1.png?1" width="100%"/>
+  <img alt="Photobooth screenshot – style selection"  src="docs/assets/photobooth-demo-2.png?1" width="100%"/>
+  <img alt="Photobooth screenshot – generated gallery"  src="docs/assets/photobooth-demo-3.png?1" width="100%"/>
 </div>
 
 ---
