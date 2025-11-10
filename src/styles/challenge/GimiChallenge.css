@@ -422,15 +422,12 @@
 .gimi-showcase-image {
   width: 100%;
   height: auto;
-  border-radius: 15px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-  border: 2px solid rgba(138, 43, 226, 0.3);
   transition: all 0.3s ease;
 }
 
 .gimi-showcase-image:hover {
   transform: scale(1.05);
-  border-color: rgba(138, 43, 226, 0.6);
   box-shadow: 0 12px 48px rgba(138, 43, 226, 0.4);
 }
 
@@ -479,7 +476,6 @@
 .gimi-transformation {
   position: relative;
   overflow: hidden;
-  border-radius: 12px;
 }
 
 .gimi-transformation .gimi-showcase-image {
@@ -514,12 +510,10 @@
   transform: translateX(-50%);
   background: rgba(0, 0, 0, 0.8);
   color: #ffffff;
-  padding: 6px 12px;
-  border-radius: 8px;
+  padding: 4px 8px;
   font-size: 0.85rem;
   font-weight: 600;
   white-space: nowrap;
-  border: 1px solid rgba(138, 43, 226, 0.5);
 }
 
 /* What You Can Make */
@@ -669,8 +663,6 @@
   width: 180px;
   height: 270px;
   object-fit: cover;
-  border-radius: 15px;
-  border: 2px solid rgba(138, 43, 226, 0.4);
   transition: all 0.3s ease;
   cursor: pointer;
   background: rgba(0, 0, 0, 0.3);
@@ -679,7 +671,6 @@
 
 .gimi-video-player:hover {
   transform: scale(1.05);
-  border-color: rgba(138, 43, 226, 0.8);
   box-shadow: 0 8px 32px rgba(138, 43, 226, 0.4);
 }
 
