@@ -113,7 +113,7 @@ const GimiChallenge = () => {
           return newFlipping;
         });
         
-        // Change image halfway through flip (150ms)
+        // Change image halfway through flip (75ms - exactly when card is edge-on)
         setTimeout(() => {
           setTransformationIndices(prev => {
             const newIndices = [...prev];
@@ -130,7 +130,7 @@ const GimiChallenge = () => {
             newIndices[boxIndex] = newIndex;
             return newIndices;
           });
-        }, 150);
+        }, 75);
         
         // End flip animation
         setTimeout(() => {
@@ -139,7 +139,7 @@ const GimiChallenge = () => {
             newFlipping[boxIndex] = false;
             return newFlipping;
           });
-        }, 300);
+        }, 150);
       }, interval);
     });
 
