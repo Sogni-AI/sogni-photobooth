@@ -486,23 +486,25 @@
   width: 100%;
   aspect-ratio: 2 / 3;
   object-fit: cover;
+  transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
 }
 
-.gimi-transformation {
-  position: relative;
-  perspective: 1000px;
-  transform-style: preserve-3d;
+.gimi-transformation-fade {
+  animation: transformationFade 0.6s ease-out;
 }
 
-.gimi-transformation .gimi-showcase-image,
-.gimi-transformation .gimi-transform-label {
-  transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1);
-  backface-visibility: hidden;
-}
-
-.gimi-transformation.flipping .gimi-showcase-image,
-.gimi-transformation.flipping .gimi-transform-label {
-  transform: rotateY(180deg);
+@keyframes transformationFade {
+  0% {
+    opacity: 0;
+    transform: scale(0.9) translateY(10px);
+  }
+  50% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
 }
 
 .gimi-transform-label {

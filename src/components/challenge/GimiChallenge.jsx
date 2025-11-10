@@ -22,7 +22,6 @@ const GimiChallenge = () => {
   
   // State for rotating transformations (one index per transformation box)
   const [transformationIndices, setTransformationIndices] = React.useState(getInitialIndices);
-  const [flippingBoxes, setFlippingBoxes] = React.useState([false, false, false, false]);
 
   // Track page view and set campaign attribution on mount
   React.useEffect(() => {
@@ -100,46 +99,27 @@ const GimiChallenge = () => {
     { name: "bronze", image: "/gallery/prompts/headshot/sogni-photobooth-polished-bronze-raw.jpg" },
   ];
 
-  // Rotate transformations at different intervals (twice as fast)
+  // Rotate transformations at different intervals
   React.useEffect(() => {
-    const intervals = [2500, 3000, 3500, 4000]; // Different intervals for each box
+    const intervals = [2500, 3000, 3500, 4000]; // Different intervals for each box (2x faster)
     
     const timers = intervals.map((interval, boxIndex) => {
       return setInterval(() => {
-        // Start flip animation
-        setFlippingBoxes(prev => {
-          const newFlipping = [...prev];
-          newFlipping[boxIndex] = true;
-          return newFlipping;
+        setTransformationIndices(prev => {
+          const newIndices = [...prev];
+          // Get next random index that's different from current AND not currently showing in other boxes
+          let newIndex;
+          let attempts = 0;
+          do {
+            newIndex = Math.floor(Math.random() * allTransformations.length);
+            attempts++;
+          } while (
+            (newIndex === newIndices[boxIndex] || newIndices.includes(newIndex)) && 
+            attempts < 50 // Prevent infinite loop
+          );
+          newIndices[boxIndex] = newIndex;
+          return newIndices;
         });
-        
-        // Change image halfway through flip (75ms - exactly when card is edge-on)
-        setTimeout(() => {
-          setTransformationIndices(prev => {
-            const newIndices = [...prev];
-            // Get next random index that's different from current AND not currently showing in other boxes
-            let newIndex;
-            let attempts = 0;
-            do {
-              newIndex = Math.floor(Math.random() * allTransformations.length);
-              attempts++;
-            } while (
-              (newIndex === newIndices[boxIndex] || newIndices.includes(newIndex)) && 
-              attempts < 50 // Prevent infinite loop
-            );
-            newIndices[boxIndex] = newIndex;
-            return newIndices;
-          });
-        }, 75);
-        
-        // End flip animation
-        setTimeout(() => {
-          setFlippingBoxes(prev => {
-            const newFlipping = [...prev];
-            newFlipping[boxIndex] = false;
-            return newFlipping;
-          });
-        }, 150);
       }, interval);
     });
 
@@ -328,14 +308,11 @@ const GimiChallenge = () => {
                 {transformationIndices.map((transformIndex, boxIndex) => {
                   const transformation = allTransformations[transformIndex];
                   return (
-                    <div 
-                      key={boxIndex} 
-                      className={`gimi-transformation ${flippingBoxes[boxIndex] ? 'flipping' : ''}`}
-                    >
+                    <div key={boxIndex} className="gimi-transformation">
                       <img 
                         src={transformation.image} 
                         alt={`${transformation.name} transformation`} 
-                        className="gimi-showcase-image"
+                        className="gimi-showcase-image gimi-transformation-fade"
                       />
                       <span className="gimi-transform-label">{transformation.name}</span>
                     </div>
