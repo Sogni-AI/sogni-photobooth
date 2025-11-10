@@ -155,6 +155,126 @@
   box-shadow: 0 8px 32px rgba(138, 43, 226, 0.5);
 }
 
+/* Referral Section */
+.gimi-referral-section {
+  padding: 60px 20px;
+  background: linear-gradient(135deg, rgba(138, 43, 226, 0.15) 0%, rgba(255, 0, 255, 0.1) 100%);
+  border-top: 1px solid rgba(138, 43, 226, 0.3);
+  border-bottom: 1px solid rgba(138, 43, 226, 0.3);
+}
+
+.gimi-referral-banner {
+  max-width: 800px;
+  margin: 0 auto;
+  text-align: center;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 20px;
+  padding: 40px;
+  border: 2px solid rgba(138, 43, 226, 0.4);
+  box-shadow: 0 8px 32px rgba(138, 43, 226, 0.2);
+}
+
+.gimi-referral-banner-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  animation: float 3s ease-in-out infinite;
+}
+
+.gimi-referral-banner-title {
+  font-size: clamp(1.5rem, 4vw, 2.5rem);
+  font-weight: 700;
+  margin: 0 0 12px 0;
+  background: linear-gradient(135deg, #8a2be2 0%, #ff00ff 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.gimi-referral-banner-description {
+  font-size: clamp(0.95rem, 2vw, 1.1rem);
+  color: #b8b8d4;
+  margin: 0 0 32px 0;
+  line-height: 1.6;
+}
+
+.gimi-referral-url-box {
+  display: flex;
+  gap: 12px;
+  max-width: 600px;
+  margin: 0 auto;
+  align-items: stretch;
+}
+
+.gimi-referral-url-input {
+  flex: 1;
+  padding: 16px 20px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 2px solid rgba(138, 43, 226, 0.5);
+  border-radius: 12px;
+  color: #fff;
+  font-size: 14px;
+  font-family: 'Courier New', monospace;
+  transition: all 0.2s;
+  outline: none;
+}
+
+.gimi-referral-url-input:focus {
+  border-color: #8a2be2;
+  box-shadow: 0 0 0 3px rgba(138, 43, 226, 0.2);
+}
+
+.gimi-referral-copy-btn {
+  padding: 16px 28px;
+  background: linear-gradient(135deg, #8a2be2 0%, #6a1bb2 100%);
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+  box-shadow: 0 4px 16px rgba(138, 43, 226, 0.3);
+}
+
+.gimi-referral-copy-btn:hover {
+  background: linear-gradient(135deg, #9a3bf2 0%, #7a2bc2 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(138, 43, 226, 0.5);
+}
+
+.gimi-referral-copy-btn:active {
+  transform: translateY(0);
+}
+
+/* Mobile responsive for referral section */
+@media (max-width: 768px) {
+  .gimi-referral-section {
+    padding: 40px 16px;
+  }
+
+  .gimi-referral-banner {
+    padding: 30px 20px;
+  }
+
+  .gimi-referral-banner-icon {
+    font-size: 36px;
+  }
+
+  .gimi-referral-url-box {
+    flex-direction: column;
+  }
+
+  .gimi-referral-copy-btn {
+    width: 100%;
+  }
+
+  .gimi-referral-url-input {
+    font-size: 12px;
+    padding: 14px 16px;
+  }
+}
+
 /* Section Styles */
 .gimi-section {
   padding: 80px 20px;

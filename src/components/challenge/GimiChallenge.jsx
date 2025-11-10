@@ -3,11 +3,14 @@ import { Helmet } from 'react-helmet-async';
 import { trackEvent, trackPageView } from '../../utils/analytics';
 import { setCampaignSource } from '../../utils/campaignAttribution';
 import { markGimiChallengeVisit } from '../../utils/referralTracking';
+import { useSogniAuth } from '../../services/sogniAuth';
 import '../../styles/challenge/GimiChallenge.css';
 
 const GimiChallenge = () => {
+  const { isAuthenticated, user } = useSogniAuth();
   const [isJazzAudioEnabled, setIsJazzAudioEnabled] = React.useState(false);
   const [isJojoAudioEnabled, setIsJojoAudioEnabled] = React.useState(false);
+  const [copied, setCopied] = React.useState(false);
   
   // Initialize with 4 unique random transformations
   const getInitialIndices = () => {
@@ -47,6 +50,19 @@ const GimiChallenge = () => {
 
   const handleAudioToggle = (videoName, isEnabled) => {
     trackEvent('Gimi Challenge', 'audio_toggle', videoName, isEnabled ? 1 : 0);
+  };
+
+  const handleCopyReferralUrl = async () => {
+    if (!user?.username) return;
+    const referralUrl = `https://photobooth.sogni.ai/?referral=${user.username}`;
+    try {
+      await navigator.clipboard.writeText(referralUrl);
+      setCopied(true);
+      trackEvent('Gimi Challenge', 'referral_url_copy', user.username);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy referral URL:', err);
+    }
   };
 
   // All available transformations - large pool to avoid repetition (using real files)
@@ -455,6 +471,35 @@ const GimiChallenge = () => {
 
         <p className="gimi-cta-tagline">Sign up. Create. Post. Earn.</p>
       </section>
+
+      {/* Your Referral URL - Only show if user is logged in */}
+      {isAuthenticated && user?.username && (
+        <section className="gimi-section gimi-referral-section">
+          <div className="gimi-referral-banner">
+            <div className="gimi-referral-banner-icon">🔗</div>
+            <h2 className="gimi-referral-banner-title">Your Creator Referral Link</h2>
+            <p className="gimi-referral-banner-description">
+              Share this URL in your Gimi Challenge content to get credit for referrals!
+            </p>
+            
+            <div className="gimi-referral-url-box">
+              <input 
+                type="text" 
+                value={`https://photobooth.sogni.ai/?referral=${user.username}`}
+                readOnly 
+                className="gimi-referral-url-input"
+                onClick={(e) => e.target.select()}
+              />
+              <button 
+                className="gimi-referral-copy-btn"
+                onClick={handleCopyReferralUrl}
+              >
+                {copied ? '✓ Copied!' : 'Copy URL'}
+              </button>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* About Section */}
       <section className="gimi-section gimi-about">
