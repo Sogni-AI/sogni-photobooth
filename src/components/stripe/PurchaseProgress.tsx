@@ -1,6 +1,8 @@
 import { PurchaseStatus } from '../../services/stripe.ts';
 import '../../styles/stripe/PurchaseProgress.css';
 import { useEffect } from 'react';
+import { trackEvent } from '../../utils/analytics';
+import { getCampaignSource } from '../../utils/campaignAttribution';
 
 interface Props {
   purchase: PurchaseStatus | null;
@@ -18,6 +20,14 @@ function PurchaseProgress({ purchase, loading, onReset, onRefresh, onClose, curr
   useEffect(() => {
     if (isCompleted && productId) {
       console.log('Purchase completed:', productId);
+      
+      // Track purchase conversion with campaign attribution
+      const campaignSource = getCampaignSource();
+      trackEvent('User', 'purchase_complete', `${campaignSource || 'organic'}: ${productId}`);
+      if (campaignSource) {
+        trackEvent('Gimi Challenge', 'conversion_purchase', `Source: ${campaignSource}, Product: ${productId}`);
+        console.log(`[Campaign] Purchase attributed to: ${campaignSource}`);
+      }
     }
   }, [isCompleted, productId]);
 

@@ -1,5 +1,7 @@
 import React from 'react';
 import { Helmet } from 'react-helmet-async';
+import { trackEvent, trackPageView } from '../../utils/analytics';
+import { setCampaignSource } from '../../utils/campaignAttribution';
 import '../../styles/challenge/GimiChallenge.css';
 
 const GimiChallenge = () => {
@@ -21,8 +23,26 @@ const GimiChallenge = () => {
   // State for rotating transformations (one index per transformation box)
   const [transformationIndices, setTransformationIndices] = React.useState(getInitialIndices);
 
+  // Track page view and set campaign attribution on mount
+  React.useEffect(() => {
+    trackPageView('/challenge/gimi');
+    trackEvent('Gimi Challenge', 'page_view', 'Challenge Landing Page');
+    
+    // Set campaign source for attribution tracking (30-day window)
+    setCampaignSource('gimi-challenge');
+  }, []);
+
   const handleCTAClick = () => {
+    trackEvent('Gimi Challenge', 'cta_click', 'Join Challenge Button');
     window.open('https://gimi.co', '_blank', 'noopener,noreferrer');
+  };
+
+  const handleVideoLinkClick = () => {
+    trackEvent('Gimi Challenge', 'video_link_click', 'Video Content Link');
+  };
+
+  const handleAudioToggle = (videoName, isEnabled) => {
+    trackEvent('Gimi Challenge', 'audio_toggle', videoName, isEnabled ? 1 : 0);
   };
 
   // All available transformations - large pool to avoid repetition (using real files)
@@ -182,13 +202,13 @@ const GimiChallenge = () => {
       <section className="gimi-hero">
         <div className="gimi-hero-content">
           <h1 className="gimi-hero-title">
-            turn one photo into <span className="highlight">8 viral posts</span>
+            Turn One Photo Into <span className="highlight">8 Viral Posts</span>
           </h1>
           <p className="gimi-hero-subtitle">(and get paid for it)</p>
           
           <div className="gimi-hero-description">
-            <p>we're giving away <strong>$2,000</strong> to creators who make the best Photobooth content</p>
-            <p className="gimi-tagline">60 seconds to create. unlimited ways to go viral.</p>
+            <p>We're giving away <strong>$2,000</strong> to creators who make the best Photobooth content</p>
+            <p className="gimi-tagline">60 seconds to create. Unlimited ways to go viral.</p>
           </div>
 
           <button className="gimi-cta-button gimi-cta-primary" onClick={handleCTAClick}>
@@ -204,25 +224,25 @@ const GimiChallenge = () => {
         <div className="gimi-steps">
           <div className="gimi-step">
             <div className="gimi-step-number">1</div>
-            <h3 className="gimi-step-title">create your transformations</h3>
+            <h3 className="gimi-step-title">Create Your Transformations</h3>
             <p className="gimi-step-description">
-              use <a href="https://photobooth.sogni.ai" target="_blank" rel="noopener noreferrer">photobooth.sogni.ai</a> → upload any photo → pick from 200+ styles → get 8 variations in ~60 seconds
+              Use <a href="https://photobooth.sogni.ai" target="_blank" rel="noopener noreferrer" onClick={() => trackEvent('Gimi Challenge', 'link_click', 'Photobooth Link')}>photobooth.sogni.ai</a> → upload any photo → pick from 200+ styles → get 8 variations in ~60 seconds
             </p>
           </div>
 
           <div className="gimi-step">
             <div className="gimi-step-number">2</div>
-            <h3 className="gimi-step-title">make it viral</h3>
+            <h3 className="gimi-step-title">Make It Viral</h3>
             <p className="gimi-step-description">
-              post to TikTok, Instagram, or X → tag us → screen record it, make before/afters, do your thing
+              Post to TikTok, Instagram, or X → tag us → screen record it, make before/afters, do your thing
             </p>
           </div>
 
           <div className="gimi-step">
             <div className="gimi-step-number">3</div>
-            <h3 className="gimi-step-title">submit & earn</h3>
+            <h3 className="gimi-step-title">Submit & Earn</h3>
             <p className="gimi-step-description">
-              drop your post link on the <a href="https://gimi.co" target="_blank" rel="noopener noreferrer">Gimi.co</a> campaign page → once approved, you start earning based on engagement
+              Drop your post link on the <a href="https://gimi.co" target="_blank" rel="noopener noreferrer" onClick={() => trackEvent('Gimi Challenge', 'link_click', 'Gimi.co Link')}>Gimi.co</a> campaign page → once approved, you start earning based on engagement
             </p>
           </div>
         </div>
@@ -253,12 +273,12 @@ const GimiChallenge = () => {
 
         <div className="gimi-prize-details">
           <ul className="gimi-prize-list">
-            <li>the more views, likes, shares, and comments on content, the more you earn</li>
-            <li>top performers get featured on our socials + ongoing partnership opportunities</li>
-            <li>rewards paid through Gimi.co based on real engagement</li>
+            <li>The more views, likes, shares, and comments on content, the more you earn</li>
+            <li>Top performers get featured on our socials + ongoing partnership opportunities</li>
+            <li>Rewards paid through Gimi.co based on real engagement</li>
           </ul>
           <p className="gimi-prize-urgency">
-            ⚡ once the prize pool is gone, it's gone. so start creating!
+            ⚡ Once the prize pool is gone, it's gone. So start creating!
           </p>
         </div>
       </section>
@@ -267,7 +287,7 @@ const GimiChallenge = () => {
       <section className="gimi-section gimi-styles">
         <h2 className="gimi-section-title">What You Can Make</h2>
         
-        <p className="gimi-styles-intro">one photo becomes:</p>
+        <p className="gimi-styles-intro">One photo becomes:</p>
 
         {/* Before/After Showcase with Rotating Transformations */}
         <div className="gimi-showcase-container">
@@ -278,7 +298,7 @@ const GimiChallenge = () => {
                 alt="Original Einstein photo" 
                 className="gimi-showcase-image"
               />
-              <span className="gimi-showcase-label">before</span>
+              <span className="gimi-showcase-label">Before</span>
             </div>
             
             <div className="gimi-arrow">→</div>
@@ -304,7 +324,7 @@ const GimiChallenge = () => {
         </div>
 
         <p className="gimi-styles-note">
-          <span className="gimi-muted">200+ styles available or prompt your own!</span> no prompt engineering required. just upload and go.
+          <span className="gimi-muted">200+ styles available or prompt your own!</span> No prompt engineering required. Just upload and go.
         </p>
       </section>
 
@@ -332,8 +352,8 @@ const GimiChallenge = () => {
       <section className="gimi-section gimi-video-section">
         <div className="gimi-video-content">
           <h3 className="gimi-video-title">
-            <a href="https://photobooth.sogni.ai/?page=prompts&themes=videos" target="_blank" rel="noopener noreferrer">
-              Video content
+            <a href="https://photobooth.sogni.ai/?page=prompts&themes=videos" target="_blank" rel="noopener noreferrer" onClick={handleVideoLinkClick}>
+              Video Content
             </a> OK as long as source images start in Photobooth
           </h3>
           
@@ -350,7 +370,11 @@ const GimiChallenge = () => {
                 />
                 <button 
                   className="gimi-audio-toggle"
-                  onClick={() => setIsJazzAudioEnabled(!isJazzAudioEnabled)}
+                  onClick={() => {
+                    const newState = !isJazzAudioEnabled;
+                    setIsJazzAudioEnabled(newState);
+                    handleAudioToggle('Jazz Sax', newState);
+                  }}
                   aria-label={isJazzAudioEnabled ? "Mute audio" : "Unmute audio"}
                 >
                   {isJazzAudioEnabled ? (
@@ -364,7 +388,7 @@ const GimiChallenge = () => {
                   )}
                 </button>
               </div>
-              <p className="gimi-video-label">jazz sax</p>
+              <p className="gimi-video-label">Jazz Sax</p>
             </div>
             <div className="gimi-video-example">
               <div className="gimi-video-container">
@@ -378,7 +402,11 @@ const GimiChallenge = () => {
                 />
                 <button 
                   className="gimi-audio-toggle"
-                  onClick={() => setIsJojoAudioEnabled(!isJojoAudioEnabled)}
+                  onClick={() => {
+                    const newState = !isJojoAudioEnabled;
+                    setIsJojoAudioEnabled(newState);
+                    handleAudioToggle('Jojo Stand Aura', newState);
+                  }}
                   aria-label={isJojoAudioEnabled ? "Mute audio" : "Unmute audio"}
                 >
                   {isJojoAudioEnabled ? (
@@ -392,7 +420,7 @@ const GimiChallenge = () => {
                   )}
                 </button>
               </div>
-              <p className="gimi-video-label">jojo stand aura</p>
+              <p className="gimi-video-label">Jojo Stand Aura</p>
             </div>
             <div className="gimi-video-example">
               <video
@@ -403,7 +431,7 @@ const GimiChallenge = () => {
                 playsInline
                 autoPlay
               />
-              <p className="gimi-video-label">stone moss</p>
+              <p className="gimi-video-label">Stone Moss</p>
             </div>
           </div>
           
@@ -421,7 +449,7 @@ const GimiChallenge = () => {
           Join the Challenge on Gimi.co
         </button>
 
-        <p className="gimi-cta-tagline">sign up. create. post. earn.</p>
+        <p className="gimi-cta-tagline">Sign up. Create. Post. Earn.</p>
       </section>
 
       {/* About Section */}
@@ -435,17 +463,17 @@ const GimiChallenge = () => {
               <li>All the art is generated by end-users like you, who get paid to run art tasks with their GPUs while they are sleeping. Anyone can host a worker node</li>
               <li>Because it's a decentralized network run on open source models, it's private, we don't mine your data, and you can render whatever you want without oppressive corporate policies</li>
               <li>Run out of free credits? Sogni supports in-app payments via its web app and its pro native apps on MacOS and iOS</li>
-              <li>Along with contests like this Sogni has an active <a href="https://discord.com/invite/2JjzA2zrrc" target="_blank" rel="noopener noreferrer">Discord community</a> and fun <a href="https://www.sogni.ai/leaderboard#artist" target="_blank" rel="noopener noreferrer">leaderboard contests</a></li>
+              <li>Along with contests like this Sogni has an active <a href="https://discord.com/invite/2JjzA2zrrc" target="_blank" rel="noopener noreferrer" onClick={() => trackEvent('Gimi Challenge', 'link_click', 'Discord Community')}>Discord community</a> and fun <a href="https://www.sogni.ai/leaderboard#artist" target="_blank" rel="noopener noreferrer" onClick={() => trackEvent('Gimi Challenge', 'link_click', 'Leaderboard')}>leaderboard contests</a></li>
             </ul>
           </div>
 
           <div className="gimi-about-column">
             <h3 className="gimi-about-title">About Sogni Photobooth</h3>
             <ul className="gimi-about-list">
-              <li>Photobooth is one of many open-source Sogni <a href="https://www.sogni.ai/super-apps" target="_blank" rel="noopener noreferrer">"SuperApps"</a> sample projects to show off what you can build on top of the Sogni developer SDK</li>
+              <li>Photobooth is one of many open-source Sogni <a href="https://www.sogni.ai/super-apps" target="_blank" rel="noopener noreferrer" onClick={() => trackEvent('Gimi Challenge', 'link_click', 'SuperApps')}>SuperApps</a> sample projects to show off what you can build on top of the Sogni developer SDK</li>
               <li>The developer SDK allows you to tap into the open source global render network and build something fun and profitable</li>
               <li>This application was completely vibe coded, written via AI, using Cursor / Claude 4. If we can build it, you can build it too!</li>
-              <li>Over 100k lines of code completely open-source on <a href="https://github.com/Sogni-AI/sogni-photobooth" target="_blank" rel="noopener noreferrer">GitHub</a></li>
+              <li>Over 100k lines of code completely open-source on <a href="https://github.com/Sogni-AI/sogni-photobooth" target="_blank" rel="noopener noreferrer" onClick={() => trackEvent('Gimi Challenge', 'link_click', 'GitHub Repo')}>GitHub</a></li>
             </ul>
           </div>
         </div>
@@ -456,12 +484,12 @@ const GimiChallenge = () => {
         <h3 className="gimi-fine-print-title">The Fine Print</h3>
         
         <ul className="gimi-fine-print-list">
-          <li>open to creators 18+</li>
-          <li>use <a href="https://photobooth.sogni.ai" target="_blank" rel="noopener noreferrer">photobooth.sogni.ai</a> for transformations</li>
-          <li>tag us in your posts (handles below)</li>
-          <li>no offensive/illegal content</li>
-          <li>rewards paid through Gimi.co based on engagement</li>
-          <li>bot/fake engagement gets disqualified</li>
+          <li>Open to creators 18+</li>
+          <li>Use <a href="https://photobooth.sogni.ai" target="_blank" rel="noopener noreferrer" onClick={() => trackEvent('Gimi Challenge', 'link_click', 'Fine Print Photobooth Link')}>photobooth.sogni.ai</a> for transformations</li>
+          <li>Tag us in your posts (handles below)</li>
+          <li>No offensive/illegal content</li>
+          <li>Rewards paid through Gimi.co based on engagement</li>
+          <li>Bot/fake engagement gets disqualified</li>
         </ul>
       </section>
 
@@ -477,6 +505,7 @@ const GimiChallenge = () => {
               target="_blank"
               rel="noopener noreferrer"
               className="gimi-social-link"
+              onClick={() => trackEvent('Gimi Challenge', 'social_link_click', social.platform)}
             >
               <span className="gimi-social-platform">{social.platform}:</span>
               <span className="gimi-social-handle">{social.handle}</span>
@@ -487,7 +516,7 @@ const GimiChallenge = () => {
 
       {/* Footer */}
       <footer className="gimi-footer">
-        <p className="gimi-powered-by">powered by <a href="https://sogni.ai" target="_blank" rel="noopener noreferrer">Sogni.ai</a></p>
+        <p className="gimi-powered-by">Powered by <a href="https://sogni.ai" target="_blank" rel="noopener noreferrer" onClick={() => trackEvent('Gimi Challenge', 'link_click', 'Footer Sogni Link')}>Sogni.ai</a></p>
       </footer>
     </div>
   );

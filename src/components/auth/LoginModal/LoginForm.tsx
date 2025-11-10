@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from 'react';
 import useForm, { ErrorData } from '../../../hooks/useForm';
 import FormField from '../../shared/FormField';
 import { useSogniAuth } from '../../../services/sogniAuth';
+import { trackEvent } from '../../../utils/analytics';
+import { getCampaignSource } from '../../../utils/campaignAttribution';
 import {
   ErrorMessage,
   FieldContainer,
@@ -87,6 +89,14 @@ function LoginForm({ onSignup, onClose }: Props) {
         username: payload.username,
         clientAuthenticated: client.account.currentAccount?.isAuthenicated
       });
+
+      // Track login conversion with campaign attribution
+      const campaignSource = getCampaignSource();
+      trackEvent('User', 'login_complete', campaignSource || 'organic');
+      if (campaignSource) {
+        trackEvent('Gimi Challenge', 'conversion_login', `Source: ${campaignSource}`);
+        console.log(`[Campaign] Login attributed to: ${campaignSource}`);
+      }
 
       // Store remember preference
       if (payload.remember) {

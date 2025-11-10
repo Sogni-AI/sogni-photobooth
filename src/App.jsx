@@ -20,6 +20,7 @@ import { refreshPhoto } from './services/PhotoRefresher';
 import { shareToTwitter } from './services/TwitterShare';
 import { themeConfigService } from './services/themeConfig';
 import { trackPageView, initializeGA, trackEvent } from './utils/analytics';
+import { getCampaignSource } from './utils/campaignAttribution';
 import { ensurePermanentUrl } from './utils/imageUpload.js';
 import { createPolaroidImage } from './utils/imageProcessing.js';
 import { getPhotoHashtag } from './services/TwitterShare.js';
@@ -4788,7 +4789,13 @@ const App = () => {
                 // Track demo render completion for non-authenticated users
                 trackDemoRenderCompletion();
                 
+                // Track generation with campaign attribution
+                const campaignSource = getCampaignSource();
                 trackEvent('Generation', 'complete', selectedStyle);
+                if (campaignSource) {
+                  trackEvent('Gimi Challenge', 'conversion_batch_complete', `Source: ${campaignSource}`);
+                }
+                
                 triggerBatchCelebration();
               }, 7000); // Additional 7 second delay (10 total)
             } else {
@@ -4820,7 +4827,13 @@ const App = () => {
               // Track demo render completion for non-authenticated users
               trackDemoRenderCompletion();
               
+              // Track generation with campaign attribution
+              const campaignSource = getCampaignSource();
               trackEvent('Generation', 'complete', selectedStyle);
+              if (campaignSource) {
+                trackEvent('Gimi Challenge', 'conversion_batch_complete', `Source: ${campaignSource}`);
+              }
+              
               triggerBatchCelebration();
             }
           }, 3000); // Initial 3 second delay
@@ -4862,8 +4875,12 @@ const App = () => {
           // Track demo render completion for non-authenticated users
           trackDemoRenderCompletion();
           
-          // Track successful generation completion
+          // Track successful generation completion with campaign attribution
+          const campaignSource = getCampaignSource();
           trackEvent('Generation', 'complete', selectedStyle);
+          if (campaignSource) {
+            trackEvent('Gimi Challenge', 'conversion_batch_complete', `Source: ${campaignSource}`);
+          }
           
           // Trigger celebration for successful batch completion
           triggerBatchCelebration();

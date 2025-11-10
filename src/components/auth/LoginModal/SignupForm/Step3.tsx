@@ -3,6 +3,8 @@ import { Step1Fields, Step2Fields } from '../types';
 import { FormContent, FormFooter, FormPanel } from '../common';
 import useForm from '../../../../hooks/useForm';
 import { useSogniAuth } from '../../../../services/sogniAuth';
+import { trackEvent } from '../../../../utils/analytics';
+import { getCampaignSource } from '../../../../utils/campaignAttribution';
 import Turnstile, { useTurnstile } from 'react-turnstile';
 import { TURNSTILE_KEY } from '../../../../config/turnstile';
 import '../styles.css';
@@ -52,6 +54,14 @@ function Step3({ step1, step2, onReturn, onContinue }: Props) {
       email,
       clientAuthenticated: client.account.currentAccount?.isAuthenicated
     });
+    
+    // Track signup conversion with campaign attribution
+    const campaignSource = getCampaignSource();
+    trackEvent('User', 'signup_complete', campaignSource || 'organic');
+    if (campaignSource) {
+      trackEvent('Gimi Challenge', 'conversion_signup', `Source: ${campaignSource}`);
+      console.log(`[Campaign] Signup attributed to: ${campaignSource}`);
+    }
     
     // Store remember preference
     if (remember) {

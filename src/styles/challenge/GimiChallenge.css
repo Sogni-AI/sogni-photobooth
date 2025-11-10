@@ -64,7 +64,6 @@
   line-height: 1.1;
   margin: 0 0 20px;
   letter-spacing: -0.02em;
-  text-transform: lowercase;
 }
 
 .gimi-hero-title .highlight {
@@ -123,7 +122,6 @@
   border-radius: 50px;
   cursor: pointer;
   transition: all 0.3s ease;
-  text-transform: lowercase;
   letter-spacing: 0.02em;
   position: relative;
   overflow: hidden;
@@ -169,7 +167,6 @@
   font-weight: 800;
   text-align: center;
   margin: 0 0 60px;
-  text-transform: lowercase;
   color: #ffffff;
 }
 
@@ -217,7 +214,6 @@
   font-weight: 700;
   margin: 0 0 15px;
   color: #ffffff;
-  text-transform: lowercase;
 }
 
 .gimi-step-description {
@@ -383,7 +379,6 @@
   font-weight: 700;
   margin: 30px auto 0;
   max-width: 700px;
-  text-transform: lowercase;
   font-style: italic;
   text-align: center;
 }
@@ -631,7 +626,6 @@
   color: #e0e0ff;
   text-align: center;
   margin: 0 0 30px;
-  text-transform: lowercase;
   line-height: 1.5;
 }
 
@@ -786,7 +780,6 @@
   font-weight: 700;
   color: #ffffff;
   margin: 0 0 15px;
-  text-transform: lowercase;
 }
 
 .gimi-example-text {
@@ -808,7 +801,6 @@
   margin-top: 30px;
   font-size: 1.2rem;
   color: #b8b8d4;
-  text-transform: lowercase;
   font-style: italic;
 }
 
@@ -839,7 +831,6 @@
   font-weight: 700;
   color: #ffffff;
   margin: 0 0 25px;
-  text-transform: lowercase;
   text-align: center;
 }
 
@@ -1012,10 +1003,15 @@
   }
 
   .gimi-prize-camera {
-    width: 140px;
-    bottom: 10px;
+    width: 100px;
+    bottom: auto;
+    top: 10px;
     left: 5px;
-    opacity: 0.85;
+    opacity: 0.7;
+  }
+
+  .gimi-prize-urgency {
+    padding-bottom: 20px;
   }
 
   .gimi-content-sloth {
@@ -1290,6 +1286,12 @@
   .gimi-prize-list li {
     font-size: 1rem;
     line-height: 1.6;
+  }
+
+  .gimi-prize-camera {
+    width: 80px;
+    top: 5px;
+    left: 5px;
   }
 
   .gimi-fine-print {
