@@ -308,7 +308,7 @@ const GimiChallenge = () => {
                 {transformationIndices.map((transformIndex, boxIndex) => {
                   const transformation = allTransformations[transformIndex];
                   return (
-                    <div key={boxIndex} className="gimi-transformation">
+                    <div key={`${boxIndex}-${transformIndex}`} className="gimi-transformation">
                       <img 
                         src={transformation.image} 
                         alt={`${transformation.name} transformation`} 
