@@ -3,15 +3,24 @@ import { trackEvent } from '../../utils/analytics';
 import { setCampaignSource } from '../../utils/campaignAttribution';
 import '../../styles/shared/GimiChallengeNotification.css';
 
+// MANUAL CONTROL: Set to true when you want to enable the campaign notification
+const ENABLE_GIMI_NOTIFICATION = false;
+
 const GimiChallengeNotification = () => {
   const [isVisible, setIsVisible] = useState(false);
   const [shouldRender, setShouldRender] = useState(false);
 
   useEffect(() => {
+    // Manual control check - campaign notification disabled until manually enabled
+    if (!ENABLE_GIMI_NOTIFICATION) {
+      console.log('[Gimi Challenge] Campaign notification manually disabled');
+      return;
+    }
+
     // Check if campaign has started (Nov 10, 2025 12:00 PM PDT)
     const campaignStartTime = new Date('2025-11-10T12:00:00-08:00').getTime();
     const now = Date.now();
-    
+
     if (now < campaignStartTime) {
       console.log('[Gimi Challenge] Campaign has not started yet');
       return;
