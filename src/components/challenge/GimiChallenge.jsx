@@ -99,9 +99,9 @@ const GimiChallenge = () => {
     { name: "bronze", image: "/gallery/prompts/headshot/sogni-photobooth-polished-bronze-raw.jpg" },
   ];
 
-  // Rotate transformations at different intervals
+  // Rotate transformations at different intervals (twice as fast)
   React.useEffect(() => {
-    const intervals = [5000, 6000, 7000, 8000]; // Different intervals for each box
+    const intervals = [2500, 3000, 3500, 4000]; // Different intervals for each box
     
     const timers = intervals.map((interval, boxIndex) => {
       return setInterval(() => {
