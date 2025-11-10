@@ -5,6 +5,7 @@ import useForm from '../../../../hooks/useForm';
 import { useSogniAuth } from '../../../../services/sogniAuth';
 import { trackEvent } from '../../../../utils/analytics';
 import { getCampaignSource } from '../../../../utils/campaignAttribution';
+import { getReferralSource } from '../../../../utils/referralTracking';
 import Turnstile, { useTurnstile } from 'react-turnstile';
 import { TURNSTILE_KEY } from '../../../../config/turnstile';
 import '../styles.css';
@@ -61,6 +62,14 @@ function Step3({ step1, step2, onReturn, onContinue }: Props) {
     if (campaignSource) {
       trackEvent('Gimi Challenge', 'conversion_signup', `Source: ${campaignSource}`);
       console.log(`[Campaign] Signup attributed to: ${campaignSource}`);
+    }
+    
+    // Track referral conversion
+    const referralSource = getReferralSource();
+    if (referralSource) {
+      trackEvent('Referral', 'conversion_signup', `Referred by: ${referralSource}`);
+      console.log(`[Referral] Signup attributed to referrer: ${referralSource}`);
+      // Note: The referral cookie persists for 30 days, so multiple conversions can be tracked
     }
     
     // Store remember preference

@@ -3,6 +3,7 @@ import '../../styles/stripe/PurchaseProgress.css';
 import { useEffect } from 'react';
 import { trackEvent } from '../../utils/analytics';
 import { getCampaignSource } from '../../utils/campaignAttribution';
+import { getReferralSource } from '../../utils/referralTracking';
 
 interface Props {
   purchase: PurchaseStatus | null;
@@ -27,6 +28,14 @@ function PurchaseProgress({ purchase, loading, onReset, onRefresh, onClose, curr
       if (campaignSource) {
         trackEvent('Gimi Challenge', 'conversion_purchase', `Source: ${campaignSource}, Product: ${productId}`);
         console.log(`[Campaign] Purchase attributed to: ${campaignSource}`);
+      }
+      
+      // Track referral conversion
+      const referralSource = getReferralSource();
+      if (referralSource) {
+        trackEvent('Referral', 'conversion_purchase', `Referred by: ${referralSource}, Product: ${productId}`);
+        console.log(`[Referral] Purchase attributed to referrer: ${referralSource}`);
+        // Note: The referral cookie persists for 30 days, so multiple conversions can be tracked
       }
     }
   }, [isCompleted, productId]);

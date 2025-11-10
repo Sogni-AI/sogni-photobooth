@@ -2,6 +2,7 @@ import React from 'react';
 import { Helmet } from 'react-helmet-async';
 import { trackEvent, trackPageView } from '../../utils/analytics';
 import { setCampaignSource } from '../../utils/campaignAttribution';
+import { markGimiChallengeVisit } from '../../utils/referralTracking';
 import '../../styles/challenge/GimiChallenge.css';
 
 const GimiChallenge = () => {
@@ -30,6 +31,9 @@ const GimiChallenge = () => {
     
     // Set campaign source for attribution tracking (30-day window)
     setCampaignSource('gimi-challenge');
+    
+    // Mark that user visited the Gimi Challenge page (for referral popup)
+    markGimiChallengeVisit();
   }, []);
 
   const handleCTAClick = () => {

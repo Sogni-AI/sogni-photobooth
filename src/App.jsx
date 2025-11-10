@@ -21,6 +21,7 @@ import { shareToTwitter } from './services/TwitterShare';
 import { themeConfigService } from './services/themeConfig';
 import { trackPageView, initializeGA, trackEvent } from './utils/analytics';
 import { getCampaignSource } from './utils/campaignAttribution';
+import { shouldShowGimiReferralPopup, clearGimiVisitCookie, markGimiPopupDismissed, setReferralSource, getReferralSource } from './utils/referralTracking';
 import { ensurePermanentUrl } from './utils/imageUpload.js';
 import { createPolaroidImage } from './utils/imageProcessing.js';
 import { getPhotoHashtag } from './services/TwitterShare.js';
@@ -73,6 +74,7 @@ import OutOfCreditsPopup from './components/shared/OutOfCreditsPopup';
 import LoginUpsellPopup from './components/shared/LoginUpsellPopup';
 import NetworkStatus from './components/shared/NetworkStatus';
 import ConfettiCelebration from './components/shared/ConfettiCelebration';
+import GimiReferralPopup from './components/shared/GimiReferralPopup';
 // import AnalyticsDashboard from './components/admin/AnalyticsDashboard';
 import { subscribeToConnectionState, getCurrentConnectionState } from './services/api';
 import StripePurchase from './components/stripe/StripePurchase.tsx';
@@ -277,6 +279,20 @@ const App = () => {
       appInitTimeRef.current = Date.now();
     }
   }, [authState.isAuthenticated]);
+  
+  // Check if we should show the Gimi referral popup after authentication
+  useEffect(() => {
+    if (authState.isAuthenticated && authState.user?.username) {
+      // Check if user visited Gimi Challenge and hasn't dismissed the popup
+      if (shouldShowGimiReferralPopup()) {
+        console.log('[Referral] User is authenticated and visited Gimi Challenge - showing referral popup');
+        // Small delay to let login/signup animations complete
+        setTimeout(() => {
+          setShowGimiReferralPopup(true);
+        }, 1000);
+      }
+    }
+  }, [authState.isAuthenticated, authState.user?.username]);
   
   // Log when payment method changes
   useEffect(() => {
@@ -824,6 +840,9 @@ const App = () => {
   // Add state for login upsell popup (for non-authenticated users who've used their demo render)
   const [showLoginUpsellPopup, setShowLoginUpsellPopup] = useState(false);
   
+  // Add state for Gimi referral popup (shown after login/signup if user visited Gimi Challenge page)
+  const [showGimiReferralPopup, setShowGimiReferralPopup] = useState(false);
+  
   // Connection state management
   const [connectionState, setConnectionState] = useState(getCurrentConnectionState());
   const [isGenerating, setIsGenerating] = useState(false);
@@ -941,6 +960,18 @@ const App = () => {
 
   const handleOutOfCreditsPopupClose = () => {
     setShowOutOfCreditsPopup(false);
+  };
+
+  // Handle Gimi referral popup close
+  const handleGimiReferralPopupClose = (dontRemindMe) => {
+    setShowGimiReferralPopup(false);
+    // Clear the visit cookie since we've shown the popup
+    clearGimiVisitCookie();
+    // If user checked "don't remind me", set the dismissal cookie
+    if (dontRemindMe) {
+      markGimiPopupDismissed();
+      console.log('[Referral] User opted not to be reminded about Gimi referral');
+    }
   };
 
   // Photos array - this will hold either regular photos or gallery photos depending on mode
@@ -1113,6 +1144,14 @@ const App = () => {
     const skipWelcomeParam = url.searchParams.get('skipWelcome');
     const themesParam = url.searchParams.get('themes');
     const searchParam = url.searchParams.get('search');
+    const referralParam = url.searchParams.get('referral');
+    
+    // Handle referral parameter - track the referring user
+    if (referralParam) {
+      console.log(`[Referral] Referral parameter detected: ${referralParam}`);
+      setReferralSource(referralParam);
+      trackEvent('Referral', 'visit', `Referred by: ${referralParam}`);
+    }
     
     // Skip welcome screen if requested (e.g., from browser extension)
     if (skipWelcomeParam === 'true') {
@@ -8775,6 +8814,14 @@ const App = () => {
         isOpen={showLoginUpsellPopup && currentPage !== 'prompts'}
         onClose={() => setShowLoginUpsellPopup(false)}
       />
+
+      {/* Gimi Referral Popup - shown after login/signup if user visited Gimi Challenge */}
+      {showGimiReferralPopup && authState.user?.username && (
+        <GimiReferralPopup
+          username={authState.user.username}
+          onClose={handleGimiReferralPopupClose}
+        />
+      )}
 
       {/* Network Status Notification */}
       <NetworkStatus 
