@@ -114,6 +114,15 @@
 }
 
 /* CTA Buttons */
+.gimi-cta-buttons {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  margin: 20px 0;
+}
+
 .gimi-cta-button {
   padding: 18px 48px;
   font-size: clamp(1rem, 2.5vw, 1.3rem);

@@ -44,6 +44,11 @@ const GimiChallenge = () => {
     window.open('https://gimi.co', '_blank', 'noopener,noreferrer');
   };
 
+  const handleCreateNowClick = () => {
+    trackEvent('Gimi Challenge', 'cta_click', 'Create Now Button');
+    window.location.href = '/?utm_campaign=Photobooth+Gimi';
+  };
+
   const handleVideoLinkClick = () => {
     trackEvent('Gimi Challenge', 'video_link_click', 'Video Content Link');
   };
@@ -54,7 +59,7 @@ const GimiChallenge = () => {
 
   const handleCopyReferralUrl = async () => {
     if (!user?.username) return;
-    const referralUrl = `https://photobooth.sogni.ai/?referral=${user.username}`;
+    const referralUrl = `https://photobooth.sogni.ai/?referral=${user.username}&utm_campaign=Photobooth+Gimi`;
     try {
       await navigator.clipboard.writeText(referralUrl);
       setCopied(true);
@@ -231,9 +236,14 @@ const GimiChallenge = () => {
             <p className="gimi-tagline">60 seconds to create. Unlimited ways to go viral.</p>
           </div>
 
-          <button className="gimi-cta-button gimi-cta-primary" onClick={handleCTAClick}>
-            Join the Challenge on Gimi.co
-          </button>
+          <div className="gimi-cta-buttons">
+            <button className="gimi-cta-button gimi-cta-primary" onClick={handleCreateNowClick}>
+              Create Now
+            </button>
+            <button className="gimi-cta-button gimi-cta-secondary" onClick={handleCTAClick}>
+              Join the Challenge on Gimi.co
+            </button>
+          </div>
         </div>
       </section>
 
@@ -464,10 +474,15 @@ const GimiChallenge = () => {
       {/* Ready to Win */}
       <section className="gimi-section gimi-cta-section">
         <h2 className="gimi-section-title">Ready to Win?</h2>
-        
-        <button className="gimi-cta-button gimi-cta-secondary" onClick={handleCTAClick}>
-          Join the Challenge on Gimi.co
-        </button>
+
+        <div className="gimi-cta-buttons">
+          <button className="gimi-cta-button gimi-cta-primary" onClick={handleCreateNowClick}>
+            Create Now
+          </button>
+          <button className="gimi-cta-button gimi-cta-secondary" onClick={handleCTAClick}>
+            Join the Challenge on Gimi.co
+          </button>
+        </div>
 
         <p className="gimi-cta-tagline">Sign up. Create. Post. Earn.</p>
       </section>
@@ -485,7 +500,7 @@ const GimiChallenge = () => {
             <div className="gimi-referral-url-box">
               <input 
                 type="text" 
-                value={`https://photobooth.sogni.ai/?referral=${user.username}`}
+                value={`https://photobooth.sogni.ai/?referral=${user.username}&utm_campaign=Photobooth+Gimi`}
                 readOnly 
                 className="gimi-referral-url-input"
                 onClick={(e) => e.target.select()}

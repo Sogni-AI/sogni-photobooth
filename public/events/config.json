@@ -2,53 +2,14 @@
   "version": "1.0",
   "defaultTheme": null,
   "themes": {
-    
-    "RIT": {
-      "label": "RIT X Sogni",
+    "founders-circle": {
+      "label": "Founder's Circle",
       "defaultAspectRatio": "narrow",
-      "framePadding": { "top": 0, "left": 0, "right": 0, "bottom": 46 },
-      "tweetTemplate": "Just took my AI photo at RIT via @sogni_protocol https://photobooth.sogni.ai",
+      "framePadding": { "top": 0, "left": 0, "right": 36, "bottom": 155 },
+      "tweetTemplate": "Just took my photo at the @sogni_protocol AI photobooth at Founder's Circle https://photobooth.sogni.ai",
       "frames": {
         "narrow": [
-          "/events/RIT/narrow_1.png?1"
-        ]
-      }
-    },
-    "RIT 2": {
-      "label": "RIT X Sogni 2",
-      "defaultAspectRatio": "narrow",
-      "framePadding": { "top": 0, "left": 0, "right": 0, "bottom": 0 },
-      "tweetTemplate": "Just took my AI photo at RIT via @sogni_protocol https://photobooth.sogni.ai",
-      "frames": {
-        "narrow": [
-          "/events/RIT2/narrow_1.png"
-        ]
-      }
-    },
-    "RIT 3": {
-      "label": "RIT X Sogni 3",
-      "defaultAspectRatio": "narrow",
-      "framePadding": { "top": 0, "left": 0, "right": 0, "bottom": 159 },
-      "tweetTemplate": "Just took my AI photo at RIT Creative Collisions Design and AI Workshop via @sogni_protocol https://photobooth.sogni.ai",
-      "frames": {
-        "narrow": [
-          "/events/RIT3/narrow_1.png"
-        ]
-      }
-    },
-    "taipeiblockchain": {
-      "label": "Taipei Blockchain Week 2025",
-      "defaultAspectRatio": "narrow",
-      "framePadding": { "top": 26, "left": 26, "right": 26, "bottom": 26 },
-      "tweetTemplate": "Just took my photo at the @sogni_protocol AI photobooth #TaipeiBlockchainWeek2025 https://photobooth.sogni.ai",
-      "frames": {
-        "narrow": [
-          "/events/taipei-blockchain-2025/narrow_1.png",
-          "/events/taipei-blockchain-2025/narrow_2.png",
-          "/events/taipei-blockchain-2025/narrow_3.png",
-          "/events/taipei-blockchain-2025/narrow_4.png",
-          "/events/taipei-blockchain-2025/narrow_5.png",
-          "/events/taipei-blockchain-2025/narrow_6.png"
+          "/events/founders-circle/narrow_1.png"
         ]
       }
     }

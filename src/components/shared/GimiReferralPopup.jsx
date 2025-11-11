@@ -10,8 +10,8 @@ import '../../styles/components/GimiReferralPopup.css';
 const GimiReferralPopup = ({ username, onClose }) => {
   const [dontRemindMe, setDontRemindMe] = useState(true); // Checked by default
   const [copied, setCopied] = useState(false);
-  
-  const referralUrl = `https://photobooth.sogni.ai/?referral=${username}`;
+
+  const referralUrl = `https://photobooth.sogni.ai/?referral=${username}&utm_campaign=Photobooth+Gimi`;
 
   const handleClose = () => {
     // Pass back whether user wants to be reminded or not
