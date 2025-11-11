@@ -702,7 +702,13 @@ const ImageAdjuster = ({
                 transformOrigin: 'center',
                 cursor: isDragging ? 'grabbing' : 'grab',
                 opacity: imageLoaded ? 1 : 0, // Hide until loaded
-                transition: 'opacity 0.3s ease'
+                transition: 'opacity 0.3s ease',
+                // Use contain to show the full source image without clipping
+                // This ensures the entire image is visible when resizing the widget
+                width: '100%',
+                height: '100%',
+                objectFit: 'contain',
+                objectPosition: 'center'
               }}
               onLoad={() => {
                 console.log('Image loaded with position:', position, 'scale:', scale);
