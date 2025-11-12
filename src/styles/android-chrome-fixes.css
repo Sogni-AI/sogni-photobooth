@@ -1,0 +1,221 @@
+/* Android Chrome-specific fixes to normalize rendering with iOS Safari
+   -----------------------------------------------------------------
+   Android Chrome tends to render text and elements larger than iOS Safari
+   even with the same CSS values. These fixes ensure consistent sizing.
+*/
+
+/* Target Android Chrome specifically - Uses a combination of feature queries */
+@media screen and (max-width: 600px) {
+  /* Override text size adjustment for Android */
+  html {
+    -webkit-text-size-adjust: 100% !important;
+    text-size-adjust: 100% !important;
+  }
+
+  body {
+    -webkit-text-size-adjust: 100% !important;
+    text-size-adjust: 100% !important;
+  }
+
+  /* Normalize font rendering */
+  * {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Fix header buttons (cog and ?) - scale down for Android */
+  .header-settings-btn,
+  .header-info-btn {
+    width: 36px !important;
+    height: 36px !important;
+    min-width: 36px !important;
+    min-height: 36px !important;
+    font-size: 18px !important;
+    transform: scale(0.95);
+  }
+
+  /* Fix all button text sizes */
+  button {
+    font-size: 0.95em;
+  }
+
+  /* Normalize heading sizes */
+  h1 {
+    font-size: 1.9em;
+  }
+
+  h2 {
+    font-size: 1.6em;
+  }
+
+  h3 {
+    font-size: 1.3em;
+  }
+
+  /* Fix polaroid label text in camera start menu - more aggressive scaling */
+  .polaroid-label {
+    font-size: 8.5px !important;
+    line-height: 1.1 !important;
+  }
+
+  .polaroid-wrapper:first-child .polaroid-label {
+    font-size: 12.5px !important;
+    line-height: 1.1 !important;
+  }
+
+  /* Normalize all Permanent Marker font sizes (main display font) */
+  .start-menu-title,
+  .shoot-your-own-btn,
+  .polaroid-caption,
+  .step-separator,
+  .polaroid-label,
+  [style*="Permanent Marker"] {
+    letter-spacing: 0.02em;
+  }
+
+  /* Normalize camera and folder emoji sizes in polaroids */
+  .polaroid-button.option-button.take-photo::after,
+  .polaroid-button.option-button.browse-photo::after {
+    font-size: 12px !important;
+  }
+
+  /* Scale down title and tagline for Android */
+  .camera-start-menu.phase-options .start-menu-title {
+    font-size: 1.52rem !important;
+    line-height: 1.1 !important;
+  }
+
+  .camera-start-menu.phase-options .start-menu-tagline {
+    font-size: 0.8rem !important;
+    line-height: 1.15 !important;
+  }
+
+  /* Scale down separators */
+  .step-separator {
+    font-size: 1.03rem !important;
+    line-height: 1.15 !important;
+  }
+
+  .photo-options-group .step-separator {
+    font-size: 1.0rem !important;
+  }
+
+  /* Scale down captions */
+  .polaroid-caption {
+    font-size: 0.9rem !important;
+    line-height: 1.15 !important;
+  }
+
+  /* Fix corner button text sizes */
+  .corner-btn {
+    font-size: 15px !important;
+    transform: scale(0.95);
+  }
+
+  /* Normalize input and textarea font sizes */
+  input,
+  textarea,
+  select {
+    font-size: 16px !important; /* Prevent zoom on focus */
+  }
+
+  /* Fix any inline styled text */
+  [style*="font-size"] {
+    line-height: 1.2 !important;
+  }
+
+  /* App-wide text normalization */
+  p {
+    font-size: 0.95em;
+    line-height: 1.4;
+  }
+
+  /* Modal and overlay text */
+  .modal-content,
+  .overlay-content {
+    font-size: 0.95em;
+  }
+
+  /* Gallery and film strip text */
+  .film-strip,
+  .gallery-text,
+  .photo-count {
+    font-size: 0.95em;
+  }
+
+  /* Auth/login text */
+  .login-text,
+  .auth-text {
+    font-size: 0.95em;
+  }
+
+  /* Settings panel text */
+  .settings-panel label,
+  .settings-panel span {
+    font-size: 0.95em;
+  }
+
+  /* Style dropdown text */
+  .style-dropdown-item {
+    font-size: 0.95em;
+  }
+
+  /* Normalize emoji rendering */
+  span[role="img"],
+  .emoji {
+    font-size: 0.95em;
+    display: inline-block;
+    vertical-align: middle;
+  }
+}
+
+/* Additional fixes for very small Android phones */
+@media screen and (max-width: 420px) and (orientation: portrait) {
+  .header-settings-btn,
+  .header-info-btn {
+    width: 34px !important;
+    height: 34px !important;
+    min-width: 34px !important;
+    min-height: 34px !important;
+    font-size: 16px !important;
+  }
+
+  .polaroid-label {
+    font-size: 9.5px !important;
+  }
+
+  .polaroid-wrapper:first-child .polaroid-label {
+    font-size: 12.5px !important;
+  }
+
+  /* Further scale down text for smaller phones */
+  .camera-start-menu.phase-options .start-menu-title {
+    font-size: 1.48rem !important;
+  }
+
+  .camera-start-menu.phase-options .start-menu-tagline {
+    font-size: 0.78rem !important;
+  }
+
+  .step-separator {
+    font-size: 0.98rem !important;
+  }
+
+  .polaroid-caption {
+    font-size: 0.88rem !important;
+  }
+
+  .corner-btn {
+    font-size: 14px !important;
+  }
+}
+
+/* Prevent Android from enlarging small text */
+@media screen and (-webkit-min-device-pixel-ratio: 0) {
+  select,
+  textarea,
+  input {
+    font-size: 16px !important;
+  }
+}
+
