@@ -23,7 +23,7 @@ interface LoginFields {
 const defaultState: LoginFields = {
   username: '',
   password: '',
-  remember: false
+  remember: true
 };
 
 async function validateLogin(fields: LoginFields) {
