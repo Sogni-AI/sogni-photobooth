@@ -5,6 +5,7 @@ import { isFluxKontextModel, getModelRanges, getModelDefaults } from '../../cons
 import { themeConfigService } from '../../services/themeConfig';
 import { sanitizeUrl, getUrlValidationError } from '../../utils/urlValidation';
 import { useSogniAuth } from '../../services/sogniAuth';
+import { isMobile } from '../../utils/index';
 import TagInput from './TagInput';
 
 interface AdvancedSettingsProps {
@@ -755,7 +756,7 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
           <input
             type="range"
             min={modelRanges.numImages?.min || 1}
-            max={modelRanges.numImages?.max || (isFluxKontext ? 8 : 32)}
+            max={modelRanges.numImages?.max || (isFluxKontext ? 8 : (isMobile() ? 16 : 32))}
             step={modelRanges.numImages?.step || 1}
             value={finalNumImages}
             onChange={(e) => onNumImagesChange?.(Number(e.target.value))}
@@ -1146,7 +1147,7 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
               {authState.isAuthenticated && authState.authMode === 'frontend' && (
                 <>
                   <div className="control-option worker-preference-section">
-                    <label className="control-label">Required<br/>Workers</label>
+                    <label className="control-label">Required Workers</label>
                     <TagInput
                       tags={settings.requiredWorkers}
                       onTagsChange={(tags) => updateSetting('requiredWorkers', tags)}
@@ -1158,7 +1159,7 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
                   </div>
 
                   <div className="control-option worker-preference-section">
-                    <label className="control-label">Preferred<br/>Workers</label>
+                    <label className="control-label">Preferred Workers</label>
                     <TagInput
                       tags={settings.preferWorkers}
                       onTagsChange={(tags) => updateSetting('preferWorkers', tags)}
@@ -1172,7 +1173,7 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
               )}
 
               <div className="control-option worker-preference-section">
-                <label className="control-label">Skip<br/>Workers</label>
+                <label className="control-label">Skip Workers</label>
                 <TagInput
                   tags={settings.skipWorkers}
                   onTagsChange={(tags) => updateSetting('skipWorkers', tags)}

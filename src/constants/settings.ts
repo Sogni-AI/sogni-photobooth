@@ -1,4 +1,5 @@
 import { Settings, AspectRatioOption, OutputFormat } from '../types/index';
+import { isMobile } from '../utils/index';
 
 // Default model IDs
 export const DEFAULT_MODEL_ID = 'coreml-sogniXLturbo_alpha1_ad'; // Sogni Turbo
@@ -110,14 +111,20 @@ export const isStableDiffusionModel = (modelValue: string): boolean => {
 
 // Model parameter ranges and constraints
 export const getModelRanges = (modelValue: string, isLoggedInWithFrontendAuth: boolean = false) => {
+  // Mobile device cap - max 16 images regardless of model or auth state
+  const MOBILE_MAX_IMAGES = 16;
+  const deviceIsMobile = isMobile();
+
   if (isFluxKontextModel(modelValue)) {
     // For Flux Kontext: default 8 when not logged in, 4 when logged in (to save user credits)
     const defaultNumImages = isLoggedInWithFrontendAuth ? 4 : 8;
+    // Cap at 16 for mobile devices, otherwise use 8
+    const maxImages = deviceIsMobile ? Math.min(8, MOBILE_MAX_IMAGES) : 8;
 
     return {
       guidance: { min: 1, max: 5, step: 0.1, default: 2.8 },
       inferenceSteps: { min: 18, max: 40, step: 1, default: 24 },
-      numImages: { min: 1, max: 8, step: 1, default: defaultNumImages },
+      numImages: { min: 1, max: maxImages, step: 1, default: defaultNumImages },
       schedulerOptions: ['Euler', 'Euler a', 'DPM++ 2M'],
       timeStepSpacingOptions: ['Simple', 'SGM Uniform', 'Beta', 'Normal', 'DDIM'],
     };
@@ -125,7 +132,11 @@ export const getModelRanges = (modelValue: string, isLoggedInWithFrontendAuth: b
 
   // Ranges for Stable Diffusion models (SDXL-based)
   // When user is logged in with frontend auth and spending own credits, allow up to 256 images
-  const maxImages = isLoggedInWithFrontendAuth ? 256 : 16;
+  let maxImages = isLoggedInWithFrontendAuth ? 256 : 16;
+  // Cap at 16 for mobile devices
+  if (deviceIsMobile) {
+    maxImages = Math.min(maxImages, MOBILE_MAX_IMAGES);
+  }
   // For SD: default 16 when not logged in, 8 when logged in (to save user credits)
   const defaultNumImages = isLoggedInWithFrontendAuth ? 8 : 16;
 

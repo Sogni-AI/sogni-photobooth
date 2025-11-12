@@ -58,31 +58,15 @@
     line-height: 1.1 !important;
   }
 
-  .polaroid-wrapper:first-child .polaroid-label {
+  .polaroid-options-container > .polaroid-wrapper:first-child .polaroid-label {
     font-size: 12.5px !important;
     line-height: 1.1 !important;
-  }
-
-  /* Normalize all Permanent Marker font sizes (main display font) */
-  .start-menu-title,
-  .shoot-your-own-btn,
-  .polaroid-caption,
-  .step-separator,
-  .polaroid-label,
-  [style*="Permanent Marker"] {
-    letter-spacing: 0.02em;
   }
 
   /* Normalize camera and folder emoji sizes in polaroids */
   .polaroid-button.option-button.take-photo::after,
   .polaroid-button.option-button.browse-photo::after {
     font-size: 12px !important;
-  }
-
-  /* Scale down title and tagline for Android */
-  .camera-start-menu.phase-options .start-menu-title {
-    font-size: 1.52rem !important;
-    line-height: 1.1 !important;
   }
 
   .camera-start-menu.phase-options .start-menu-tagline {
@@ -93,7 +77,7 @@
   /* Scale down separators */
   .step-separator {
     font-size: 1.03rem !important;
-    line-height: 1.15 !important;
+    line-height: 3 !important;
   }
 
   .photo-options-group .step-separator {
@@ -124,48 +108,75 @@
     line-height: 1.2 !important;
   }
 
-  /* App-wide text normalization */
+  /* App-wide text normalization - more aggressive scaling */
   p {
-    font-size: 0.95em;
+    font-size: 0.92em;
     line-height: 1.4;
   }
 
   /* Modal and overlay text */
   .modal-content,
-  .overlay-content {
-    font-size: 0.95em;
+  .overlay-content,
+  .control-overlay {
+    font-size: 0.92em;
+  }
+
+  /* Settings labels and text - but preserve section title emphasis */
+  .control-option label:not(.control-label) {
+    font-size: 0.92em !important;
+  }
+  
+  /* Ensure section titles remain prominent */
+  .control-label {
+    font-weight: 700 !important;
+    font-size: 15px !important;
+  }
+  
+  .toggle-text {
+    font-weight: 700 !important;
+    font-size: 15px !important;
   }
 
   /* Gallery and film strip text */
   .film-strip,
   .gallery-text,
   .photo-count {
-    font-size: 0.95em;
+    font-size: 0.92em;
   }
 
   /* Auth/login text */
   .login-text,
   .auth-text {
-    font-size: 0.95em;
+    font-size: 0.92em;
   }
 
   /* Settings panel text */
   .settings-panel label,
   .settings-panel span {
-    font-size: 0.95em;
+    font-size: 0.92em;
   }
 
   /* Style dropdown text */
   .style-dropdown-item {
-    font-size: 0.95em;
+    font-size: 0.92em;
   }
 
   /* Normalize emoji rendering */
   span[role="img"],
   .emoji {
-    font-size: 0.95em;
+    font-size: 0.92em;
     display: inline-block;
     vertical-align: middle;
+  }
+
+  /* Version info and analytics button */
+  .version-info {
+    font-size: 11px !important;
+  }
+
+  .view-analytics-btn {
+    font-size: 11px !important;
+    padding: 5px 10px !important;
   }
 }
 
@@ -184,13 +195,8 @@
     font-size: 9.5px !important;
   }
 
-  .polaroid-wrapper:first-child .polaroid-label {
+  .polaroid-options-container > .polaroid-wrapper:first-child .polaroid-label {
     font-size: 12.5px !important;
-  }
-
-  /* Further scale down text for smaller phones */
-  .camera-start-menu.phase-options .start-menu-title {
-    font-size: 1.48rem !important;
   }
 
   .camera-start-menu.phase-options .start-menu-tagline {
@@ -205,10 +211,41 @@
     font-size: 0.88rem !important;
   }
 
-  .corner-btn {
+  /* Smaller phones need even more aggressive scaling */
+  .corner-btn,
+  .splash-return-btn,
+  .corner-btn.continue-corner-btn,
+  .corner-btn.photos-corner-btn,
+  .corner-btn.intro-continue-btn {
+    font-size: 13.5px !important;
+    padding: 6px 12px !important;
+    padding-bottom: 7.5px !important;
+    min-height: 40px !important;
+  }
+
+  /* Settings buttons for smaller screens */
+  .dismiss-overlay-btn {
+    width: 30px !important;
+    height: 30px !important;
+    min-width: 30px !important;
+    min-height: 30px !important;
+    font-size: 18px !important;
+  }
+
+  .reset-settings-btn {
+    padding: 9px 13px !important;
     font-size: 14px !important;
   }
+
+  .aspect-ratio-button {
+    width: 40px !important;
+    height: 40px !important;
+    min-width: 40px !important;
+    min-height: 40px !important;
+  }
 }
+
+
 
 /* Prevent Android from enlarging small text */
 @media screen and (-webkit-min-device-pixel-ratio: 0) {

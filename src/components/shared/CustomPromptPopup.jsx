@@ -212,7 +212,7 @@ const CustomPromptPopup = ({
 
         <div className="custom-prompt-body">
           <label className="custom-prompt-label">
-            ✏️ What magical scene do you want to create?
+            ✏️ What scene do you want to create?
           </label>
           <div className="textarea-wrapper">
             <textarea
@@ -261,12 +261,6 @@ const CustomPromptPopup = ({
         </div>
 
         <div className="custom-prompt-footer">
-          <button 
-            className="custom-prompt-btn custom-prompt-btn-cancel"
-            onClick={handleCancel}
-          >
-            Maybe Later 🤔
-          </button>
           <button 
             className="custom-prompt-btn custom-prompt-btn-apply"
             onClick={handleApply}

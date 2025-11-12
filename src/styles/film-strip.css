@@ -594,7 +594,7 @@ body.has-selected-photo .film-frame.selected[data-enhancing="true"] .photo-label
   white-space: nowrap;
   font-size: 16px;
   z-index: 9999;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition: transform 0.2s, box-shadow 0.2s, opacity 0.3s;
   padding-bottom: 10px;
   font-family: "Permanent Marker", cursive;
 }
@@ -1040,7 +1040,7 @@ html body.has-selected-photo .film-strip-container.visible .film-frame.selected[
   /* Ensure consistent bottom padding on all mobile devices */
   .corner-btn.continue-corner-btn,
   .corner-btn.photos-corner-btn {
-    bottom: max(20px, calc(env(safe-area-inset-bottom) + 5px)) !important;
+    bottom: 20px !important;
   }
 }
 
