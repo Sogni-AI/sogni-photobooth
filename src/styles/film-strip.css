@@ -186,6 +186,18 @@ body.extension-mode .action-button:not(.use-prompt-btn) {
     grid-template-columns: calc(50% - 8px) calc(50% - 8px) !important;
     gap: 16px !important;
   }
+
+  /* Prevent background scrolling when a photo is selected in fullscreen */
+  .film-strip-container.has-selected {
+    overflow: hidden !important;
+    touch-action: none !important;
+  }
+
+  /* Also prevent body scrolling when photo is selected */
+  body.has-selected-photo {
+    overflow: hidden !important;
+    touch-action: none !important;
+  }
 }
 
 /* Force 2 columns on mobile/narrow screens */
@@ -219,6 +231,34 @@ body.extension-mode .action-button:not(.use-prompt-btn) {
     grid-template-columns: repeat(2, 1fr) !important;
     gap: 12px !important;
     padding: 70px 8px 20px 8px !important;
+  }
+}
+
+/* Add extra bottom padding on mobile portrait to allow scrolling past fixed corner buttons */
+@media screen and (max-width: 600px) and (orientation: portrait) {
+  .film-strip-content {
+    /* Extra bottom padding to clear the Menu and New Batch buttons */
+    padding-bottom: 60px !important;
+  }
+  
+  .film-strip-container .film-strip-content {
+    padding-bottom: 60px !important;
+  }
+  
+  [class*="film-strip-content"] {
+    padding-bottom: 60px !important;
+  }
+
+  /* Prevent background scrolling when a photo is selected in fullscreen */
+  .film-strip-container.has-selected {
+    overflow: hidden !important;
+    touch-action: none !important;
+  }
+
+  /* Also prevent body scrolling when photo is selected */
+  body.has-selected-photo {
+    overflow: hidden !important;
+    touch-action: none !important;
   }
 }
 
