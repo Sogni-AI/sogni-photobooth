@@ -1386,7 +1386,7 @@ html body.has-selected-photo .film-strip-container.visible .film-frame.selected[
   .photo-action-buttons {
     flex-wrap: nowrap;
     gap: 4px;
-    overflow-x: auto;
+    overflow: visible;
     padding: 0 8px;
   }
   
