@@ -118,6 +118,7 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onDismiss, bypassLocalStora
               loop
               playsInline
               muted={!isAudioEnabled}
+              disableRemotePlayback
               className="splash-video"
               onLoadedData={(e) => {
                 const video = e.target as HTMLVideoElement;

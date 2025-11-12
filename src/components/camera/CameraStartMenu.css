@@ -514,16 +514,17 @@ body:has(.camera-start-menu) div[style*="position: fixed"][style*="top: 24"][sty
 /* Hide help/settings/login buttons during intro phase */
 .camera-start-menu.phase-intro ~ .header-settings-btn,
 .camera-start-menu.phase-intro ~ .header-info-btn,
+.camera-start-menu.phase-intro ~ .auth-status-wrapper,
 body:has(.camera-start-menu.phase-intro) .header-settings-btn,
 body:has(.camera-start-menu.phase-intro) .header-info-btn,
-body:has(.camera-start-menu.phase-intro) div[style*="position: fixed"][style*="top: 24"][style*="left: 24"][style*="z-index: 1000"] {
+body:has(.camera-start-menu.phase-intro) .auth-status-wrapper {
   display: none !important;
 }
 
 /* Slide in header buttons from top after polaroids finish on options screen - only when coming from intro */
 body:has(.camera-start-menu.phase-options .options-section.with-animations) .header-settings-btn,
 body:has(.camera-start-menu.phase-options .options-section.with-animations) .header-info-btn,
-body:has(.camera-start-menu.phase-options .options-section.with-animations) div[style*="position: fixed"][style*="top: 24"][style*="left: 24"][style*="z-index: 1000"] {
+body:has(.camera-start-menu.phase-options .options-section.with-animations) .auth-status-wrapper {
   animation: slideDownFromTop 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   animation-delay: 2.7s;
   opacity: 0;
@@ -533,7 +534,7 @@ body:has(.camera-start-menu.phase-options .options-section.with-animations) div[
 /* No animations - header buttons appear immediately */
 body:has(.camera-start-menu.phase-options .options-section.no-animations) .header-settings-btn,
 body:has(.camera-start-menu.phase-options .options-section.no-animations) .header-info-btn,
-body:has(.camera-start-menu.phase-options .options-section.no-animations) div[style*="position: fixed"][style*="top: 24"][style*="left: 24"][style*="z-index: 1000"] {
+body:has(.camera-start-menu.phase-options .options-section.no-animations) .auth-status-wrapper {
   animation: none;
   opacity: 1;
   transform: translateY(0);
@@ -1111,6 +1112,7 @@ body:has(.camera-start-menu.phase-options .options-section.no-animations) div[st
   .camera-start-menu.phase-options .start-menu-title {
     font-size: 1.6rem;
     margin-bottom: 4px;
+    margin-top: 8px;
   }
 
   .camera-start-menu.phase-options .start-menu-tagline {
@@ -1120,12 +1122,13 @@ body:has(.camera-start-menu.phase-options .options-section.no-animations) div[st
     overflow: hidden;
     text-overflow: ellipsis;
     max-width: 100%;
+    line-height: 1.2 !important;
   }
   
   .start-menu-title {
     font-size: 1.6rem;
     margin-bottom: 4px;
-    margin-top: 5px;
+    margin-top: -3px;
   }
 
   .start-menu-tagline {
@@ -1135,6 +1138,7 @@ body:has(.camera-start-menu.phase-options .options-section.no-animations) div[st
     overflow: hidden;
     text-overflow: ellipsis;
     max-width: 100%;
+    line-height: 1.2 !important;
   }
 
   .style-selector-section {
@@ -1153,7 +1157,7 @@ body:has(.camera-start-menu.phase-options .options-section.no-animations) div[st
 
   /* Intro section on mobile */
   .camera-start-menu.phase-intro .start-menu-title {
-    margin-top: 2px !important;
+    margin-top: -6px !important;
   }
 
   .camera-start-menu.phase-intro .start-menu-tagline {
@@ -1187,10 +1191,31 @@ body:has(.camera-start-menu.phase-options .options-section.no-animations) div[st
   }
 
   .splash-return-btn {
-    bottom: 15px;
+    bottom: max(15px, calc(env(safe-area-inset-bottom) + 5px));
     left: 15px;
     padding: 8px 14px;
     font-size: 0.9rem;
+  }
+
+  /* Add top margin to prevent title overlap with login component */
+  .options-section {
+    margin-top: 10px;
+  }
+
+  /* Fix button sizes on Android */
+  .header-settings-btn,
+  .header-info-btn {
+    width: 38px !important;
+    height: 38px !important;
+    min-width: 38px !important;
+    min-height: 38px !important;
+    font-size: 20px !important;
+  }
+
+  .corner-btn {
+    font-size: 16px !important;
+    min-height: 44px !important;
+    max-height: 44px !important;
   }
 
   /* Stack polaroids like iPad - first one alone, then two side by side */
@@ -1205,13 +1230,13 @@ body:has(.camera-start-menu.phase-options .options-section.no-animations) div[st
 
   .polaroid-wrapper {
     align-items: center;
-    gap: 6px;
+    gap: 4px;
   }
 
   /* First polaroid with proper spacing from title */
   .polaroid-wrapper:first-child {
     margin-top: 18px;
-    margin-bottom: 8px;
+    margin-bottom: 2px;
   }
 
   .step-separator {
@@ -1248,7 +1273,7 @@ body:has(.camera-start-menu.phase-options .options-section.no-animations) div[st
 
   /* Keep "or" separator visible between horizontal photos */
   .photo-options-group .step-separator {
-    margin-bottom: 10px;
+    margin-bottom: 6px;
     align-self: center;
   }
 
@@ -1264,6 +1289,12 @@ body:has(.camera-start-menu.phase-options .options-section.no-animations) div[st
     padding-bottom: 26px;
     border: 3px solid white;
     border-radius: 0; /* No rounded corners */
+  }
+
+  /* Make first polaroid (Pick a vibe) larger for label display */
+  .polaroid-wrapper:first-child .polaroid-button {
+    width: 155px;
+    min-width: 155px;
   }
 
   .polaroid-button::before {
@@ -1312,16 +1343,26 @@ body:has(.camera-start-menu.phase-options .options-section.no-animations) div[st
   /* Fix camera and folder icons to stay in white strip */
   .polaroid-button.option-button.take-photo::after,
   .polaroid-button.option-button.browse-photo::after {
-    bottom: 3px !important;
-    left: 3px !important;
-    right: 3px !important;
+    content: '📸' !important;
+    position: absolute !important;
+    bottom: 4px !important;
+    left: 0 !important;
+    right: 0 !important;
     height: 15px !important;
-    font-size: 12px !important;
+    font-size: 13px !important;
     line-height: 15px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    text-align: center !important;
+    overflow: hidden !important;
+  }
+  
+  .polaroid-button.option-button.browse-photo::after {
+    content: '📁' !important;
   }
 
   .polaroid-caption {
-    font-size: 1rem;
+    font-size: 0.95rem;
   }
 
   .style-icon {
@@ -1425,32 +1466,38 @@ body:has(.camera-start-menu.phase-options .options-section.no-animations) div[st
   }
 
   .splash-return-btn {
-    bottom: 12px;
+    bottom: max(12px, calc(env(safe-area-inset-bottom) + 5px));
     left: 12px;
     padding: 8px 14px;
     font-size: 0.9rem;
   }
 
   .polaroid-button {
-    width: 115px;
-    min-width: 115px;
+    width: 110px;
+    min-width: 110px;
     padding: 8px;
-    padding-bottom: 36px;
+    padding-bottom: 34px;
     border: 2px solid white;
+  }
+
+  /* Make first polaroid (Pick a vibe) larger for label display */
+  .polaroid-wrapper:first-child .polaroid-button {
+    width: 130px;
+    min-width: 130px;
   }
 
   .polaroid-button::before {
     top: 8px;
     left: 8px;
     right: 8px;
-    bottom: 36px;
+    bottom: 34px;
   }
 
   .polaroid-content {
     top: 8px;
     left: 8px;
     right: 8px;
-    bottom: 36px;
+    bottom: 34px;
   }
 
   .polaroid-label {
@@ -1483,6 +1530,27 @@ body:has(.camera-start-menu.phase-options .options-section.no-animations) div[st
     bottom: -12px;
   }
 
+  /* Add top margin to prevent title overlap with login component */
+  .options-section {
+    margin-top: 10px;
+  }
+
+  /* Fix button sizes on Android */
+  .header-settings-btn,
+  .header-info-btn {
+    width: 38px !important;
+    height: 38px !important;
+    min-width: 38px !important;
+    min-height: 38px !important;
+    font-size: 20px !important;
+  }
+
+  .corner-btn {
+    font-size: 16px !important;
+    min-height: 44px !important;
+    max-height: 44px !important;
+  }
+
   .polaroid-options-container {
     gap: 10px;
     margin-top: 12px;
@@ -1490,6 +1558,27 @@ body:has(.camera-start-menu.phase-options .options-section.no-animations) div[st
 
   .photo-options-group {
     gap: 8px;
+  }
+
+  /* Fix camera and folder icons to stay in white strip */
+  .polaroid-button.option-button.take-photo::after,
+  .polaroid-button.option-button.browse-photo::after {
+    content: '📸' !important;
+    position: absolute !important;
+    bottom: 7px !important;
+    left: 0 !important;
+    right: 0 !important;
+    height: 20px !important;
+    font-size: 14px !important;
+    line-height: 20px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    text-align: center !important;
+    overflow: hidden !important;
+  }
+  
+  .polaroid-button.option-button.browse-photo::after {
+    content: '📁' !important;
   }
 
   .video-container .audio-toggle-btn {
@@ -1504,7 +1593,7 @@ body:has(.camera-start-menu.phase-options .options-section.no-animations) div[st
     height: 14px;
   }
 
-  
+
   .view-photos-button {
     font-size: 0.85rem;
     padding: 4px 10px;
@@ -1513,6 +1602,296 @@ body:has(.camera-start-menu.phase-options .options-section.no-animations) div[st
     max-width: 120px;
     margin-left: auto;
     margin-right: auto;
+  }
+}
+
+/* Cross-browser mobile fixes to normalize rendering between iOS and Android */
+/* Adjust base mobile styles for better consistency */
+@media (max-width: 600px) {
+  /* More consistent box-sizing across browsers */
+  .polaroid-button,
+  .polaroid-button::before,
+  .polaroid-content {
+    box-sizing: border-box;
+  }
+
+  /* Normalize text rendering */
+  .start-menu-title,
+  .start-menu-tagline,
+  .polaroid-caption,
+  .step-separator,
+  .polaroid-label {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Fine-tune polaroid sizing for better cross-browser consistency */
+  .polaroid-button {
+    width: 138px;
+    min-width: 138px;
+    padding: 7.5px;
+    padding-bottom: 27px;
+    border: 3px solid white;
+  }
+
+  /* First polaroid (Pick a vibe) - slightly larger */
+  .polaroid-wrapper:first-child .polaroid-button {
+    width: 158px;
+    min-width: 158px;
+    padding: 8px;
+    padding-bottom: 28px;
+  }
+
+  /* Adjust polaroid content areas to match new sizing */
+  .polaroid-button::before {
+    top: 7.5px;
+    left: 7.5px;
+    right: 7.5px;
+    bottom: 27px;
+  }
+
+  .polaroid-wrapper:first-child .polaroid-button::before {
+    top: 8px;
+    left: 8px;
+    right: 8px;
+    bottom: 28px;
+  }
+
+  .polaroid-content {
+    top: 7.5px;
+    left: 7.5px;
+    right: 7.5px;
+    bottom: 27px;
+  }
+
+  .polaroid-wrapper:first-child .polaroid-content {
+    top: 8px;
+    left: 8px;
+    right: 8px;
+    bottom: 28px;
+  }
+
+  /* Normalize label sizing */
+  .polaroid-label {
+    bottom: 3.5px;
+    left: 3.5px;
+    right: 3.5px;
+    height: 16px;
+    font-size: 9.5px;
+    line-height: 16px;
+  }
+
+  .polaroid-wrapper:first-child .polaroid-label {
+    font-size: 13.5px;
+    height: 18px;
+    line-height: 18px;
+    bottom: 4px;
+  }
+
+  /* Normalize icon positioning */
+  .polaroid-button.option-button.take-photo::after,
+  .polaroid-button.option-button.browse-photo::after {
+    bottom: 4.5px !important;
+    height: 16px !important;
+    font-size: 13px !important;
+    line-height: 16px !important;
+  }
+
+  /* Normalize caption sizing */
+  .polaroid-caption {
+    font-size: 0.94rem;
+    margin-top: 2px;
+    line-height: 1.2;
+  }
+
+  /* Normalize separator sizing and positioning */
+  .step-separator {
+    font-size: 1.08rem;
+    margin: 2.5px 0;
+    line-height: 1.2;
+    margin-bottom: 0; /* Reset for mobile - vertical layout */
+  }
+
+  /* No animations - separator appears immediately at final position */
+  .options-section.no-animations .step-separator {
+    transform: translateY(0);
+  }
+
+  .step-separator:nth-of-type(1) {
+    margin-top: 14px;
+    margin-bottom: 3px;
+  }
+
+  /* "or" separator in photo options */
+  .photo-options-group .step-separator {
+    margin-bottom: 7px;
+    font-size: 1.05rem;
+  }
+
+  /* Normalize spacing */
+  .photo-options-group {
+    gap: 11px;
+    margin-top: 4.5px;
+  }
+
+  .polaroid-options-container {
+    gap: 0px;
+    margin-top: 0px;
+    padding: 0;
+  }
+
+  .polaroid-wrapper:first-child {
+    margin-top: 17px;
+    margin-bottom: 1.5px;
+  }
+
+  .polaroid-wrapper {
+    gap: 3.5px;
+  }
+
+  /* Normalize reset link */
+  .polaroid-reset-link {
+    bottom: -13px;
+    font-size: 0.74rem;
+  }
+
+  /* Normalize title and tagline */
+  .camera-start-menu.phase-options .start-menu-title {
+    font-size: 1.58rem;
+    margin-bottom: 3.5px;
+    margin-top: 7px;
+    line-height: 1.15;
+  }
+
+  .camera-start-menu.phase-options .start-menu-tagline {
+    font-size: 0.83rem;
+    margin-bottom: 7px !important;
+    line-height: 1.18 !important;
+  }
+
+  .options-section {
+    margin-top: 8.5px;
+  }
+
+  /* Override animation keyframes for mobile - end at translateY(0) instead of -17.5px */
+  @keyframes slideUpSeparator {
+    0% {
+      opacity: 1;
+      transform: translateY(100vh);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0); /* Mobile: no vertical offset needed */
+    }
+  }
+
+  @keyframes fadeInUp {
+    0% {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0); /* Mobile: reset vertical offset */
+    }
+  }
+}
+
+/* Refined sizing for smaller phones */
+@media (max-width: 420px) and (orientation: portrait) {
+  .polaroid-button {
+    width: 113px;
+    min-width: 113px;
+    padding: 7px;
+    padding-bottom: 27px;
+  }
+
+  .polaroid-wrapper:first-child .polaroid-button {
+    width: 133px;
+    min-width: 133px;
+    padding: 7.5px;
+    padding-bottom: 28px;
+  }
+
+  .polaroid-button::before {
+    top: 7px;
+    left: 7px;
+    right: 7px;
+    bottom: 27px;
+  }
+
+  .polaroid-wrapper:first-child .polaroid-button::before {
+    top: 7.5px;
+    left: 7.5px;
+    right: 7.5px;
+    bottom: 28px;
+  }
+
+  .polaroid-content {
+    top: 7px;
+    left: 7px;
+    right: 7px;
+    bottom: 27px;
+  }
+
+  .polaroid-wrapper:first-child .polaroid-content {
+    top: 7.5px;
+    left: 7.5px;
+    right: 7.5px;
+    bottom: 28px;
+  }
+
+  .polaroid-label {
+    height: 17px;
+    font-size: 11px;
+    line-height: 17px;
+    bottom: 4px;
+  }
+
+  .polaroid-wrapper:first-child .polaroid-label {
+    font-size: 14px;
+    height: 18px;
+    line-height: 18px;
+  }
+
+  .polaroid-button.option-button.take-photo::after,
+  .polaroid-button.option-button.browse-photo::after {
+    bottom: 4.5px !important;
+    height: 17px !important;
+    font-size: 14px !important;
+    line-height: 17px !important;
+  }
+
+  .polaroid-caption {
+    font-size: 0.99rem;
+  }
+
+  .step-separator {
+    font-size: 1.0rem;
+  }
+
+  .photo-options-group {
+    gap: 8.5px;
+  }
+
+  .polaroid-options-container {
+    gap: 9px;
+    margin-top: 11px;
+  }
+
+  .camera-start-menu.phase-options .start-menu-title {
+    font-size: 1.52rem;
+    margin-top: 6px;
+  }
+
+  /* Ensure separators use correct positioning for smaller phones */
+  .step-separator {
+    margin-bottom: 0;
+  }
+
+  .options-section.no-animations .step-separator {
+    transform: translateY(0);
   }
 }
 
