@@ -604,6 +604,18 @@ const ImageAdjuster = ({
     
     // Convert to PNG blob first with maximum quality to preserve details
     canvas.toBlob(async (pngBlob) => {
+      // Validate that blob was created successfully (can fail on mobile Safari)
+      if (!pngBlob) {
+        console.error('❌ canvas.toBlob() failed - blob is null/undefined');
+        alert('Failed to process image. This can happen on mobile with large images. Please try with a smaller zoom or take a new photo.');
+        return;
+      }
+
+      console.log('✅ Canvas blob created successfully:', {
+        size: pngBlob.size,
+        type: pngBlob.type
+      });
+
       // Convert PNG to high-quality JPEG for efficient upload
       let finalBlob;
       try {
@@ -616,6 +628,13 @@ const ImageAdjuster = ({
         console.warn('ImageAdjuster: JPEG conversion failed, using PNG:', conversionError);
         finalBlob = pngBlob;
         console.log(`📊 ImageAdjuster: PNG format (fallback)`);
+      }
+
+      // Validate final blob before confirming
+      if (!finalBlob) {
+        console.error('❌ Final blob is null after conversion');
+        alert('Failed to process image. Please try again.');
+        return;
       }
 
       // Log final file size being transmitted

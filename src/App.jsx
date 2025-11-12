@@ -7975,6 +7975,20 @@ const App = () => {
       });
     }
     
+    // Validate adjustedBlob before proceeding
+    if (!adjustedBlob || !(adjustedBlob instanceof Blob)) {
+      console.error('❌ Invalid blob received from ImageAdjuster:', adjustedBlob);
+      alert('Failed to process image. Please try again.');
+      setShowStartMenu(true);
+      return;
+    }
+
+    console.log('📸 Processing adjusted blob:', {
+      size: adjustedBlob.size,
+      type: adjustedBlob.type,
+      source: currentUploadedSource
+    });
+
     // Create a new photo item with temporary placeholder
     const newPhoto = {
       id: Date.now().toString(),
@@ -7993,10 +8007,44 @@ const App = () => {
     setRegularPhotos((previous) => [...previous, newPhoto]);
     const newPhotoIndex = regularPhotos.length;
 
-    // Create data URL from the adjusted blob
+    // Create data URL from the adjusted blob with error handling
     const reader = new FileReader();
+    
+    reader.addEventListener('error', (error) => {
+      console.error('❌ FileReader error when processing adjusted blob:', error);
+      setRegularPhotos(prev => {
+        const updated = [...prev];
+        if (updated[newPhotoIndex]) {
+          updated[newPhotoIndex] = {
+            ...updated[newPhotoIndex],
+            generating: false,
+            error: 'Failed to process image'
+          };
+        }
+        return updated;
+      });
+    });
+    
     reader.addEventListener('load', async (event) => {
       const adjustedDataUrl = event.target.result;
+      
+      if (!adjustedDataUrl) {
+        console.error('❌ FileReader produced empty dataUrl');
+        setRegularPhotos(prev => {
+          const updated = [...prev];
+          if (updated[newPhotoIndex]) {
+            updated[newPhotoIndex] = {
+              ...updated[newPhotoIndex],
+              generating: false,
+              error: 'Failed to process image'
+            };
+          }
+          return updated;
+        });
+        return;
+      }
+      
+      console.log('✅ Successfully created dataUrl from adjusted blob');
       
       // Update the photo with the adjusted data URL as placeholder
       setRegularPhotos(prev => {
@@ -8013,6 +8061,7 @@ const App = () => {
       // Use the adjusted blob for generation
       generateFromBlob(adjustedBlob, newPhotoIndex, adjustedDataUrl, false, currentUploadedSource === 'camera' ? 'camera' : 'upload');
     });
+    
     reader.readAsDataURL(adjustedBlob);
   };
 
@@ -8044,8 +8093,15 @@ const App = () => {
         if (!response.ok) throw new Error('Failed to load Einstein fallback');
         
         const blob = await response.blob();
+        
+        // Wait for blob to be fully ready before creating URL
+        // This prevents race conditions on mobile
+        await new Promise(resolve => setTimeout(resolve, 10));
+        
         const tempUrl = URL.createObjectURL(blob);
         
+        // Einstein is just a fallback - don't save it to state
+        // Only the adjusted version will be saved when user confirms
         setCurrentUploadedImageUrl(tempUrl);
         setCurrentUploadedSource('camera'); // Treat as camera source for UI
         setShowImageAdjuster(true);
