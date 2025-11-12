@@ -85,8 +85,8 @@
     .film-frame.selected .photo-label {
       position: absolute !important;
       bottom: 26px !important;
-      left: 10px !important;
-      right: 10px !important;
+      left: 5px !important;
+      right: 5px !important;
       height: 40px !important;
       display: block !important;
       line-height: 40px !important;
@@ -98,6 +98,7 @@
       white-space: nowrap !important;
       overflow: hidden !important;
       box-sizing: border-box !important;
+      padding: 0 5px !important;
     }
     
     /* Hide back to camera button when a photo is selected */

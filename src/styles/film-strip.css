@@ -275,8 +275,8 @@ body.extension-mode .action-button:not(.use-prompt-btn) {
   .film-frame .photo-label {
     position: relative !important;
     bottom: 10px !important;
-    left: 5px !important;
-    right: 5px !important;
+    left: 3px !important;
+    right: 3px !important;
     text-align: center !important;
     font-size: 12px !important;
     height: 30px !important; /* Fixed height for label */
@@ -288,6 +288,7 @@ body.extension-mode .action-button:not(.use-prompt-btn) {
     width: auto !important;
     box-sizing: border-box !important;
     display: block !important;
+    padding: 0 3px !important;
   }
 
   /* Larger font for loaded photos on mobile */
@@ -446,8 +447,8 @@ body.extension-mode .action-button:not(.use-prompt-btn) {
 .film-frame .photo-label {
   position: absolute !important;
   bottom: 8px !important;
-  left: 10px !important;
-  right: 10px !important;
+  left: 5px !important;
+  right: 5px !important;
   height: 40px !important;
   display: block !important;
   line-height: 40px !important;
@@ -461,7 +462,7 @@ body.extension-mode .action-button:not(.use-prompt-btn) {
   /* Use block display with defined width for ellipsis to work */
   width: auto !important;
   box-sizing: border-box !important;
-  padding: 0 15px !important;
+  padding: 0 5px !important;
 }
 
 /* Larger font size for completed photos with hashtags */
@@ -849,8 +850,8 @@ body .film-frame.selected,
 .film-frame.selected .photo-label {
   position: absolute !important;
   bottom: 20px !important;
-  left: 20px !important;
-  right: 20px !important;
+  left: 5px !important;
+  right: 5px !important;
   height: 40px !important;
   display: block !important;
   line-height: 33px !important;
@@ -862,7 +863,7 @@ body .film-frame.selected,
   white-space: nowrap !important;
   overflow: hidden !important;
   z-index: 10000 !important; /* Higher z-index to ensure visibility */
-  padding: 0 30px !important;
+  padding: 0 5px !important;
   /* Use block display with defined width for ellipsis to work */
   width: auto !important;
   box-sizing: border-box !important;

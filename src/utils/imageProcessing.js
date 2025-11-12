@@ -264,8 +264,8 @@ export async function createPolaroidImage(imageUrl, label, options = {}) {
         // Position label in the bottom white area, a bit higher from the bottom for better visual balance
         const labelY = polaroidHeight - (frameBottomWidth / 2);
         
-        // Constrain label length if too long
-        const maxLabelWidth = polaroidWidth - 20; // Increased padding
+        // Constrain label length if too long - allow text to span nearly full width
+        const maxLabelWidth = polaroidWidth - 10; // Minimal padding (5px each side)
         let displayLabel = textToDraw;
         
         if (ctx.measureText(textToDraw).width > maxLabelWidth) {

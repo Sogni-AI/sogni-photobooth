@@ -4339,7 +4339,7 @@ const App = () => {
                 error: null,
                 originalDataUrl: dataUrl, // Use reference photo as placeholder
                 newlyArrived: false,
-                statusText: 'Calling Art Robot...',
+                statusText: 'Calling Art Robot',
                 sourceType, // Include sourceType in generated photos
                 promptKey: (selectedStyle && selectedStyle !== 'custom' && selectedStyle !== 'random' && selectedStyle !== 'randomMix' && selectedStyle !== 'oneOfEach') ? selectedStyle : undefined, // Track which style is being used
                 customSceneName: selectedStyle === 'custom' && customSceneName ? customSceneName : undefined, // Store custom scene name at creation time
@@ -4623,8 +4623,8 @@ const App = () => {
                   loading: true,
                   progress: displayProgress,
                   statusText: displayProgress > 0 
-                    ? `${currentWorkerName} makin' art... ${displayProgress}%`
-                    : `${currentWorkerName} makin' art...`,
+                    ? `${currentWorkerName} makin' art ${displayProgress}%`
+                    : `${currentWorkerName} makin' art`,
                   workerName: currentWorkerName, // Update the cached worker name
                   jobId,
                   lastProgressTime: Date.now()
@@ -4670,7 +4670,7 @@ const App = () => {
                   ...updated[photoIndex],
                   generating: true,
                   loading: true,
-                  statusText: workerName ? `${workerName} starting...` : 'Worker starting...',
+                  statusText: workerName ? `${workerName} starting` : 'Worker starting',
                   workerName: workerName || 'Worker',
                   jobId,
                   jobIndex,
@@ -7341,7 +7341,7 @@ const App = () => {
           error: null,
           originalDataUrl: lastPhotoData.dataUrl,
           newlyArrived: false,
-          statusText: 'Calling Art Robot...',
+          statusText: 'Calling Art Robot',
           stylePrompt: '', // Use context stylePrompt here? Or keep empty?
           customSceneName: selectedStyle === 'custom' && customSceneName ? customSceneName : undefined, // Store custom scene name for "More" photos
           sourceType: sourceType, // Store sourceType in photo object for reference

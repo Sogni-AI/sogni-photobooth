@@ -87,7 +87,7 @@ export const refreshPhoto = async (options) => {
         loading: true,
         progress: 0,
         error: null,
-        statusText: 'Calling Art Robot...',
+        statusText: 'Calling Art Robot',
         refreshTimeoutId: null,
         currentRefreshJobId: null,
       };
@@ -350,8 +350,8 @@ export const refreshPhoto = async (options) => {
             ...current,
             progress: progressPercent,
             statusText: progressPercent > 0 
-              ? `${currentWorkerName} makin' art... ${progressPercent}%`
-              : `${currentWorkerName} makin' art...`,
+              ? `${currentWorkerName} makin' art ${progressPercent}%`
+              : `${currentWorkerName} makin' art`,
             workerName: currentWorkerName
           };
           return updated;
