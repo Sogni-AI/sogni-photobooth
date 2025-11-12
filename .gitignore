@@ -74,4 +74,7 @@ Thumbs.db
 test-results/
 playwright-report/
 
+# Runtime data files
+server/mobile-shares.json
+
 server/uploads/contest/gallery-submissions/
