@@ -1386,6 +1386,21 @@ const App = () => {
         // Pre-load theme configuration
         await themeConfigService.loadConfig();
         
+        // Validate that the current theme exists in the config
+        if (tezdevTheme !== 'off') {
+          const theme = await themeConfigService.getTheme(tezdevTheme);
+          if (!theme) {
+            // Theme no longer exists - reset to 'off' and clear from storage
+            console.warn(`Theme '${tezdevTheme}' not found in config, resetting to 'off'`);
+            updateSetting('tezdevTheme', 'off');
+            saveSettingsToCookies({ tezdevTheme: 'off' });
+            // Note: No need to return here, we'll check for default theme below
+          } else {
+            // Theme exists and is valid, no action needed
+            return;
+          }
+        }
+        
         // Set default theme if current theme is 'off' and there's a default configured
         if (tezdevTheme === 'off') {
           const defaultTheme = await themeConfigService.getDefaultTheme();
@@ -4529,8 +4544,7 @@ const App = () => {
 
       activeProjectReference.current = project.id;
       activeProjectObjectReference.current = project;
-      console.log('Project created:', project.id, 'with jobs:', project.jobs);
-      console.log('Initializing job map for project', project.id);
+      console.log('Project created:', project.id, 'with jobs:', project.jobs);;
       
       // Start project timeout management
       clearAllTimeouts(); // Clear any existing timeouts
