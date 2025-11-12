@@ -98,6 +98,7 @@ const PhotoGallery = ({
   selectedSubIndex = 0,
   outputFormat = 'png',
   handleShareToX,
+  handleShareQRCode,
   slothicornAnimationEnabled,
   backgroundAnimationsEnabled = false,
   tezdevTheme = 'off',
@@ -2690,6 +2691,7 @@ const PhotoGallery = ({
               <ShareMenu
                 onShareToTwitter={() => handleShareToX(selectedPhotoIndex)}
                 onSubmitToGallery={handleGallerySubmitRequest}
+                onShareQRCode={handleShareQRCode ? () => handleShareQRCode(selectedPhotoIndex) : undefined}
                 disabled={
                   selectedPhoto.loading || 
                   selectedPhoto.enhancing ||
@@ -5938,6 +5940,7 @@ PhotoGallery.propTypes = {
   desiredHeight: PropTypes.number.isRequired,
   selectedSubIndex: PropTypes.number,
   handleShareToX: PropTypes.func.isRequired,
+  handleShareQRCode: PropTypes.func,
   slothicornAnimationEnabled: PropTypes.bool.isRequired,
   backgroundAnimationsEnabled: PropTypes.bool,
   tezdevTheme: PropTypes.string,

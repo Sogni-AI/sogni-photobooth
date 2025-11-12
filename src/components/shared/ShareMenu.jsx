@@ -4,11 +4,12 @@ import '../../styles/components/ShareMenu.css';
 
 /**
  * ShareMenu - A dropdown menu for sharing options
- * Shows "Share to Twitter" and "Submit to Gallery" options
+ * Shows "Share to Twitter", "Share QR Code", and "Submit to Gallery" options
  */
 const ShareMenu = ({ 
   onShareToTwitter, 
   onSubmitToGallery,
+  onShareQRCode,
   disabled = false,
   hasPromptKey = false,
   tezdevTheme = 'off'
@@ -50,6 +51,14 @@ const ShareMenu = ({
     onSubmitToGallery();
   };
 
+  const handleShareQRCode = (e) => {
+    e.stopPropagation();
+    setIsOpen(false);
+    if (onShareQRCode) {
+      onShareQRCode();
+    }
+  };
+
   return (
     <div className="share-menu-container" ref={menuRef}>
       <button
@@ -74,7 +83,19 @@ const ShareMenu = ({
             </svg>
             Share to Twitter
           </button>
-          
+
+          {onShareQRCode && (
+            <button
+              className="share-menu-option qr-option"
+              onClick={handleShareQRCode}
+            >
+              <svg fill="currentColor" width="16" height="16" viewBox="0 0 24 24">
+                <path d="M3 11h8V3H3v8zm2-6h4v4H5V5zM3 21h8v-8H3v8zm2-6h4v4H5v-4zM13 3v8h8V3h-8zm6 6h-4V5h4v4zM13 13h2v2h-2zM15 15h2v2h-2zM13 17h2v2h-2zM15 19h2v2h-2zM17 17h2v2h-2zM17 13h2v2h-2zM19 15h2v2h-2z"/>
+              </svg>
+              Share QR Code
+            </button>
+          )}
+
           {hasPromptKey && (
             <button
               className="share-menu-option gallery-option"
@@ -95,6 +116,7 @@ const ShareMenu = ({
 ShareMenu.propTypes = {
   onShareToTwitter: PropTypes.func.isRequired,
   onSubmitToGallery: PropTypes.func.isRequired,
+  onShareQRCode: PropTypes.func,
   disabled: PropTypes.bool,
   hasPromptKey: PropTypes.bool,
   tezdevTheme: PropTypes.string

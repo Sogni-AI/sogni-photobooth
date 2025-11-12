@@ -61,6 +61,10 @@
   color: #764ba2;
 }
 
+.share-menu-option.qr-option svg {
+  color: #4CAF50;
+}
+
 /* Add a subtle divider between options when both are present */
 .share-menu-option + .share-menu-option {
   border-top: 1px solid #e0e0e0;

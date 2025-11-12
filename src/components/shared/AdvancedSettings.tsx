@@ -108,10 +108,6 @@ interface AdvancedSettingsProps {
   sensitiveContentFilter?: boolean;
   /** Handler for sensitive content filter change */
   onSensitiveContentFilterChange?: (enabled: boolean) => void;
-  /** Kiosk mode enabled state */
-  kioskMode?: boolean;
-  /** Handler for kiosk mode change */
-  onKioskModeChange?: (enabled: boolean) => void;
   /** Show splash on inactivity state */
   showSplashOnInactivity?: boolean;
   /** Handler for show splash on inactivity change */
@@ -307,8 +303,6 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
     onOutputFormatChange,
     sensitiveContentFilter = false,
     onSensitiveContentFilterChange,
-    kioskMode = false,
-    onKioskModeChange,
     showSplashOnInactivity = false,
     onShowSplashOnInactivityChange,
   } = props;
@@ -468,15 +462,6 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
     }
   };
 
-
-  const handleKioskModeChange = (enabled: boolean) => {
-    // Use the provided handler or fallback to context
-    if (onKioskModeChange) {
-      onKioskModeChange(enabled);
-    } else {
-      updateSetting('kioskMode', enabled);
-    }
-  };
 
   const handleShowSplashOnInactivityChange = (enabled: boolean) => {
     // Use the provided handler or fallback to context
@@ -1198,17 +1183,6 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
                 </div>
               </div>
 
-              {/* Kiosk Mode toggle */}
-              <div className="control-option checkbox">
-                <input
-                  type="checkbox"
-                  id="kiosk-mode-toggle"
-                  checked={kioskMode || settings.kioskMode}
-                  onChange={(e) => handleKioskModeChange(e.target.checked)}
-                />
-                <label htmlFor="kiosk-mode-toggle" className="control-label">Kiosk Mode (Share via QR Code)</label>
-              </div>
-              
               {/* Show Splash on Inactivity toggle */}
               <div className="control-option checkbox">
                 <input

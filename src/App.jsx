@@ -2229,15 +2229,9 @@ const App = () => {
 
   // Update the handler for initiating Twitter share
   const handleShareToX = async (photoIndex) => {
-    // Check if Kiosk Mode is enabled
-    if (kioskMode) {
-      // Generate QR code for mobile sharing
-      await handleKioskModeShare(photoIndex);
-    } else {
-      // Set the photo index and open the modal
-      setTwitterPhotoIndex(photoIndex);
-      setShowTwitterModal(true);
-    }
+    // Set the photo index and open the modal
+    setTwitterPhotoIndex(photoIndex);
+    setShowTwitterModal(true);
   };
 
   // Handle Kiosk Mode sharing with QR code
@@ -6450,6 +6444,7 @@ const App = () => {
                 outputFormat={outputFormat}
                 sensitiveContentFilter={sensitiveContentFilter}
                 handleShareToX={handleShareToX}
+                handleShareQRCode={handleKioskModeShare}
                 slothicornAnimationEnabled={slothicornAnimationEnabled}
                 backgroundAnimationsEnabled={backgroundAnimationsEnabled}
                 tezdevTheme={tezdevTheme}
@@ -8320,11 +8315,6 @@ const App = () => {
             updateSetting('sensitiveContentFilter', value);
             saveSettingsToCookies({ sensitiveContentFilter: value });
           }}
-          kioskMode={kioskMode}
-          onKioskModeChange={(value) => {
-            updateSetting('kioskMode', value);
-            saveSettingsToCookies({ kioskMode: value });
-          }}
           showSplashOnInactivity={showSplashOnInactivity}
           onShowSplashOnInactivityChange={(value) => {
             updateSetting('showSplashOnInactivity', value);
@@ -8666,6 +8656,7 @@ const App = () => {
           outputFormat={outputFormat}
           sensitiveContentFilter={sensitiveContentFilter}
           handleShareToX={handleShareToX}
+          handleShareQRCode={handleKioskModeShare}
           slothicornAnimationEnabled={slothicornAnimationEnabled}
           backgroundAnimationsEnabled={backgroundAnimationsEnabled}
           tezdevTheme={tezdevTheme}
