@@ -138,6 +138,17 @@ export function shouldShowGimiReferralPopup() {
     return false;
   }
 
+  // Check if any Gimi popup was dismissed this session
+  try {
+    const dismissedThisSession = sessionStorage.getItem('gimi-popup-dismissed-session');
+    if (dismissedThisSession === 'true') {
+      console.log('[Referral] Popup blocked - dismissed this session');
+      return false;
+    }
+  } catch (error) {
+    console.error('[Referral] Failed to check session dismissal:', error);
+  }
+
   // Check 60-second cooldown for ANY Gimi popup (notification or referral)
   try {
     const lastGimiPopupTime = localStorage.getItem('gimi-last-popup-time');

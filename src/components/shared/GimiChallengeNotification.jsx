@@ -26,6 +26,13 @@ const GimiChallengeNotification = () => {
       return;
     }
 
+    // Check if any Gimi popup was dismissed this session
+    const dismissedThisSession = sessionStorage.getItem('gimi-popup-dismissed-session');
+    if (dismissedThisSession === 'true') {
+      console.log('[Gimi Challenge] Notification blocked - popup dismissed this session');
+      return;
+    }
+
     // Check 60-second cooldown for ANY Gimi popup (notification or referral)
     const lastGimiPopupTime = localStorage.getItem('gimi-last-popup-time');
     if (lastGimiPopupTime) {
@@ -74,6 +81,9 @@ const GimiChallengeNotification = () => {
     trackEvent('Gimi Challenge', 'notification_dismissed', 'Popup Dismissed');
     // Set cookie with current timestamp
     setCookie('gimi-challenge-dismissed', Date.now().toString(), 1);
+    // Mark as dismissed for this session
+    sessionStorage.setItem('gimi-popup-dismissed-session', 'true');
+    console.log('[Gimi Challenge] Notification dismissed - blocked for rest of session');
     
     // Remove from DOM after animation
     setTimeout(() => {

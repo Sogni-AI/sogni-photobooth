@@ -21,6 +21,9 @@ const GimiReferralPopup = ({ username, onClose }) => {
   }, []);
 
   const handleClose = () => {
+    // Mark as dismissed for this session (prevents any popup from showing again)
+    sessionStorage.setItem('gimi-popup-dismissed-session', 'true');
+    console.log('[Gimi Referral] Popup dismissed - blocked for rest of session');
     // Pass back whether user wants to be reminded or not
     onClose(dontRemindMe);
   };
