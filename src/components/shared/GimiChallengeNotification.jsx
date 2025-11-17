@@ -4,7 +4,7 @@ import { setCampaignSource } from '../../utils/campaignAttribution';
 import '../../styles/shared/GimiChallengeNotification.css';
 
 // MANUAL CONTROL: Set to true when you want to enable the campaign notification
-const ENABLE_GIMI_NOTIFICATION = false;
+const ENABLE_GIMI_NOTIFICATION = true;
 
 const GimiChallengeNotification = () => {
   const [isVisible, setIsVisible] = useState(false);
@@ -26,6 +26,25 @@ const GimiChallengeNotification = () => {
       return;
     }
 
+    // Check 60-second cooldown for ANY Gimi popup (notification or referral)
+    const lastGimiPopupTime = localStorage.getItem('gimi-last-popup-time');
+    if (lastGimiPopupTime) {
+      const timeSinceLastPopup = Date.now() - parseInt(lastGimiPopupTime, 10);
+      const sixtySeconds = 60 * 1000;
+      
+      if (timeSinceLastPopup < sixtySeconds) {
+        console.log('[Gimi Challenge] Notification blocked - 60s cooldown active');
+        return;
+      }
+    }
+
+    // Check if referral popup was shown (don't show notification if popup was shown)
+    const gimiChallengeVisited = localStorage.getItem('gimi-challenge-visited');
+    if (gimiChallengeVisited === 'true') {
+      console.log('[Gimi Challenge] Referral popup takes priority, skipping notification');
+      return;
+    }
+
     // Check if notification was dismissed recently (within 24 hours)
     const dismissedTime = getCookie('gimi-challenge-dismissed');
     if (dismissedTime) {
@@ -42,6 +61,8 @@ const GimiChallengeNotification = () => {
     setShouldRender(true);
     const showTimer = setTimeout(() => {
       setIsVisible(true);
+      // Set the last popup time to prevent other popups for 60 seconds
+      localStorage.setItem('gimi-last-popup-time', Date.now().toString());
       trackEvent('Gimi Challenge', 'notification_shown', 'Popup Notification');
     }, 5000);
 
@@ -80,11 +101,17 @@ const GimiChallengeNotification = () => {
         ×
       </button>
       <div className="gimi-notification-content" onClick={handleClick}>
-        <img 
-          src="/promo/gimi/Photobooth_gimi-1920x400.jpg" 
-          alt="Gimi Challenge - Turn one photo into 8 viral posts and win $2,000" 
-          className="gimi-notification-image"
-        />
+        <div className="gimi-notification-circle-container">
+          <img 
+            src="/promo/gimi/Sogni_Photobooth_gimi-800x800_v2f_green.png" 
+            alt="Gimi Challenge - Turn one photo into 8 viral posts and win $1,000" 
+            className="gimi-notification-image"
+          />
+        </div>
+        <div className="gimi-notification-badge">
+          <div className="gimi-notification-badge-moneybag">💰</div>
+          <div className="gimi-notification-badge-amount">$1K</div>
+        </div>
       </div>
     </div>
   );

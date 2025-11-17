@@ -24,14 +24,14 @@ const PageMetadata = () => {
         twitterDescription: 'Administration panel for moderating AI-generated Halloween photo contest entries and viewing results.'
       },
       '/challenge/gimi': {
-        title: 'Turn One Photo Into 8 Viral Posts – $2,000 Gimi Challenge | Sogni AI Photobooth',
-        description: 'Join the Sogni x Gimi Creator Challenge! Create 8 viral photo transformations in 60 seconds and compete for $2,000 USDC. Use photobooth.sogni.ai with 200+ AI styles. Sign up free on Gimi.co.',
-        ogTitle: 'Turn One Photo Into 8 Viral Posts – Win $2,000!',
-        ogDescription: 'Join the Sogni x Gimi Creator Challenge! Create 8 viral photo transformations in 60 seconds with 200+ AI styles. Compete for $2,000 USDC based on engagement. Sign up free on Gimi.co.',
-        ogImage: 'https://photobooth.sogni.ai/promo/gimi/Photobooth_gimi-1920x400.jpg',
-        twitterTitle: 'Turn One Photo Into 8 Viral Posts – Win $2,000!',
-        twitterDescription: 'Join the Sogni x Gimi Creator Challenge! Create viral AI photo transformations in 60 seconds. 200+ styles. $2,000 USDC prize pool. Sign up free on Gimi.co.',
-        twitterImage: 'https://photobooth.sogni.ai/promo/gimi/Photobooth_gimi-1920x400.jpg',
+        title: 'Turn One Photo Into 8 Viral Posts – $1,000 Gimi Challenge | Sogni AI Photobooth',
+        description: 'Join the Sogni x Gimi Creator Challenge! Create 8 viral photo transformations in 60 seconds and compete for $1,000 USDC. Use photobooth.sogni.ai with 200+ AI styles. Sign up free on Gimi.co.',
+        ogTitle: 'Turn One Photo Into 8 Viral Posts – Win $1,000!',
+        ogDescription: 'Join the Sogni x Gimi Creator Challenge! Create 8 viral photo transformations in 60 seconds with 200+ AI styles. Compete for $1,000 USDC based on engagement. Sign up free on Gimi.co.',
+        ogImage: 'https://photobooth.sogni.ai/promo/gimi/Sogni_Photobooth_gimi-800x800_v2f_green.png',
+        twitterTitle: 'Turn One Photo Into 8 Viral Posts – Win $1,000!',
+        twitterDescription: 'Join the Sogni x Gimi Creator Challenge! Create viral AI photo transformations in 60 seconds. 200+ styles. $1,000 USDC prize pool. Sign up free on Gimi.co.',
+        twitterImage: 'https://photobooth.sogni.ai/promo/gimi/Sogni_Photobooth_gimi-800x800_v2f_green.png',
         keywords: 'AI photo challenge, creator challenge, Gimi.co, viral content, AI photobooth, photo transformation, creator rewards, USDC prizes, social media content, TikTok challenge, Instagram challenge'
       },
       default: {

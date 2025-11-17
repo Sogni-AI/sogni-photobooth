@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import '../../styles/components/GimiReferralPopup.css';
 
@@ -8,10 +8,17 @@ import '../../styles/components/GimiReferralPopup.css';
  * Provides their personalized referral URL
  */
 const GimiReferralPopup = ({ username, onClose }) => {
-  const [dontRemindMe, setDontRemindMe] = useState(true); // Checked by default
+  const [dontRemindMe, setDontRemindMe] = useState(false); // Not checked by default
   const [copied, setCopied] = useState(false);
 
   const referralUrl = `https://photobooth.sogni.ai/?referral=${username}&utm_campaign=Photobooth+Gimi`;
+
+  // Set the popup timestamp when component mounts (when it's shown)
+  useEffect(() => {
+    // Set the last popup time to prevent other popups for 60 seconds
+    localStorage.setItem('gimi-last-popup-time', Date.now().toString());
+    console.log('[Gimi Referral] Popup shown - 60s cooldown activated');
+  }, []);
 
   const handleClose = () => {
     // Pass back whether user wants to be reminded or not
@@ -40,10 +47,12 @@ const GimiReferralPopup = ({ username, onClose }) => {
         {/* Banner Image */}
         <div className="gimi-referral-banner">
           <img 
-            src="/promo/gimi/Photobooth_gimi-1920x400.jpg" 
+            src="/promo/gimi/Sogni_Photobooth_gimi-800x800_v2f_green.png" 
             alt="Gimi Challenge Banner" 
             className="gimi-referral-banner-image"
           />
+          <div className="gimi-referral-banner-moneybag">💰</div>
+          <div className="gimi-referral-banner-prize">$1,000</div>
         </div>
 
         {/* Content */}

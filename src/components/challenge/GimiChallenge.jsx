@@ -190,23 +190,23 @@ const GimiChallenge = () => {
   return (
     <div className="gimi-challenge-container">
       <Helmet>
-        <title>Turn One Photo Into 8 Viral Posts – $2,000 Gimi Challenge | Sogni AI Photobooth</title>
-        <meta name="description" content="Join the Sogni x Gimi Creator Challenge! Create 8 viral photo transformations in 60 seconds and compete for $2,000 USDC. Use photobooth.sogni.ai with 200+ AI styles. Sign up free on Gimi.co." />
+        <title>Turn One Photo Into 8 Viral Posts – $1,000 Gimi Challenge | Sogni AI Photobooth</title>
+        <meta name="description" content="Join the Sogni x Gimi Creator Challenge! Create 8 viral photo transformations in 60 seconds and compete for $1,000 USDC. Use photobooth.sogni.ai with 200+ AI styles. Sign up free on Gimi.co." />
         
         {/* Open Graph / Facebook */}
-        <meta property="og:title" content="Turn One Photo Into 8 Viral Posts – Win $2,000!" />
-        <meta property="og:description" content="Join the Sogni x Gimi Creator Challenge! Create 8 viral photo transformations in 60 seconds with 200+ AI styles. Compete for $2,000 USDC based on engagement. Sign up free on Gimi.co." />
+        <meta property="og:title" content="Turn One Photo Into 8 Viral Posts – Win $1,000!" />
+        <meta property="og:description" content="Join the Sogni x Gimi Creator Challenge! Create 8 viral photo transformations in 60 seconds with 200+ AI styles. Compete for $1,000 USDC based on engagement. Sign up free on Gimi.co." />
         <meta property="og:type" content="website" />
         <meta property="og:url" content="https://photobooth.sogni.ai/challenge/gimi" />
-        <meta property="og:image" content="https://photobooth.sogni.ai/promo/gimi/Photobooth_gimi-1920x400.jpg" />
-        <meta property="og:image:width" content="1920" />
-        <meta property="og:image:height" content="400" />
+        <meta property="og:image" content="https://photobooth.sogni.ai/promo/gimi/Sogni_Photobooth_gimi-800x800_v2f_green.png" />
+        <meta property="og:image:width" content="800" />
+        <meta property="og:image:height" content="800" />
         
         {/* Twitter */}
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="Turn One Photo Into 8 Viral Posts – Win $2,000!" />
-        <meta name="twitter:description" content="Join the Sogni x Gimi Creator Challenge! Create viral AI photo transformations in 60 seconds. 200+ styles. $2,000 USDC prize pool. Sign up free on Gimi.co." />
-        <meta name="twitter:image" content="https://photobooth.sogni.ai/promo/gimi/Photobooth_gimi-1920x400.jpg" />
+        <meta name="twitter:title" content="Turn One Photo Into 8 Viral Posts – Win $1,000!" />
+        <meta name="twitter:description" content="Join the Sogni x Gimi Creator Challenge! Create viral AI photo transformations in 60 seconds. 200+ styles. $1,000 USDC prize pool. Sign up free on Gimi.co." />
+        <meta name="twitter:image" content="https://photobooth.sogni.ai/promo/gimi/Sogni_Photobooth_gimi-800x800_v2f_green.png" />
         <meta name="twitter:site" content="@sogni_protocol" />
         
         {/* Additional SEO */}
@@ -217,8 +217,8 @@ const GimiChallenge = () => {
       {/* Banner Section */}
       <section className="gimi-banner">
         <img 
-          src="/promo/gimi/Photobooth_gimi-1920x400.jpg" 
-          alt="Gimi Challenge - Turn one photo into 8 viral posts and win $2,000" 
+          src="/promo/gimi/Sogni_Photobooth_gimi-800x800_v2f_green.png" 
+          alt="Gimi Challenge - Turn one photo into 8 viral posts and win $1,000" 
           className="gimi-banner-image"
         />
       </section>
@@ -232,7 +232,7 @@ const GimiChallenge = () => {
           <p className="gimi-hero-subtitle">(and get paid for it)</p>
           
           <div className="gimi-hero-description">
-            <p>We're giving away <strong>$2,000</strong> to creators who make the best Photobooth content</p>
+            <p>We're giving away <strong>$1,000</strong> to creators who make the best Photobooth content</p>
             <p className="gimi-tagline">60 seconds to create. Unlimited ways to go viral.</p>
           </div>
 
@@ -296,7 +296,7 @@ const GimiChallenge = () => {
         <h2 className="gimi-section-title">The Prize</h2>
 
         <div className="gimi-prize-amount">
-          <span className="gimi-currency">$2,000</span>
+          <span className="gimi-currency">$1,000</span>
           <span className="gimi-currency-type">USDC</span>
           <span className="gimi-prize-recipients">paid out to creators</span>
         </div>

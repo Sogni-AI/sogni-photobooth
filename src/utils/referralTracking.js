@@ -133,6 +133,27 @@ export function clearReferralSource() {
  * @returns {boolean}
  */
 export function shouldShowGimiReferralPopup() {
-  return hasVisitedGimiChallenge() && !hasGimiPopupBeenDismissed();
+  // First check basic conditions
+  if (!hasVisitedGimiChallenge() || hasGimiPopupBeenDismissed()) {
+    return false;
+  }
+
+  // Check 60-second cooldown for ANY Gimi popup (notification or referral)
+  try {
+    const lastGimiPopupTime = localStorage.getItem('gimi-last-popup-time');
+    if (lastGimiPopupTime) {
+      const timeSinceLastPopup = Date.now() - parseInt(lastGimiPopupTime, 10);
+      const sixtySeconds = 60 * 1000;
+      
+      if (timeSinceLastPopup < sixtySeconds) {
+        console.log('[Referral] Popup blocked - 60s cooldown active');
+        return false;
+      }
+    }
+  } catch (error) {
+    console.error('[Referral] Failed to check popup cooldown:', error);
+  }
+
+  return true;
 }
 
