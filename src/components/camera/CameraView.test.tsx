@@ -1,6 +1,7 @@
 /** @jsxImportSource react */
 import React, { createRef } from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render } from '@testing-library/react';
+import { screen, fireEvent } from '@testing-library/dom';
 import { CameraView } from './CameraView';
 
 // Use React in a way that TypeScript recognizes

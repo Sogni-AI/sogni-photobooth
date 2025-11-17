@@ -2,14 +2,14 @@
   "version": "1.0",
   "defaultTheme": null,
   "themes": {
-    "founders-circle": {
-      "label": "Founder's Circle",
+    "function1": {
+      "label": "Function 1",
       "defaultAspectRatio": "narrow",
-      "framePadding": { "top": 0, "left": 0, "right": 36, "bottom": 155 },
-      "tweetTemplate": "Just took my photo at the @sogni_protocol AI photobooth at Founder's Circle https://photobooth.sogni.ai",
+      "framePadding": { "top": 0, "left": 0, "right": 0, "bottom": 135 },
+      "tweetTemplate": "Just took my photo at the @sogni_protocol AI Photobooth at Function 1! https://photobooth.sogni.ai",
       "frames": {
         "narrow": [
-          "/events/founders-circle/narrow_1.png"
+          "/events/function1/narrow_1.png"
         ]
       }
     }
