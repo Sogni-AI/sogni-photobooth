@@ -90,15 +90,35 @@ For the best local development experience, we use Nginx as a reverse proxy to ha
    127.0.0.1 photobooth-api-local.sogni.ai
    ```
 
-**b. Ensure SSL Certificate is Valid:**
-   The Nginx configuration (`scripts/nginx/local.conf`) is set up to use SSL certificates located at:
+**b. Create SSL Certificates:**
+   The Nginx configuration requires SSL certificates for both domains. Create them with this one-liner:
+
+   ```bash
+   # Create SSL directory and generate self-signed certificate
+   mkdir -p /opt/homebrew/etc/nginx/ssl && \
+   cd /opt/homebrew/etc/nginx/ssl && \
+   openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+     -keyout sogni-local.key \
+     -out sogni-local.crt \
+     -subj "/C=US/ST=State/L=City/O=Development/CN=*.sogni.ai" \
+     -addext "subjectAltName=DNS:photobooth-local.sogni.ai,DNS:photobooth-api-local.sogni.ai,DNS:*.sogni.ai"
+   ```
+
+   This creates certificates at:
    - `/opt/homebrew/etc/nginx/ssl/sogni-local.crt`
    - `/opt/homebrew/etc/nginx/ssl/sogni-local.key`
 
-   These certificates **must be valid for both** `photobooth-local.sogni.ai` and `photobooth-api-local.sogni.ai`.
-   If you\'re not using Nginx, you can still run the frontend on http://localhost:5175 and the backend on http://localhost:3001. However, the API calls from the frontend (if accessed via localhost:5175) are configured in `src/config/urls.ts` to also target `https://photobooth-api-local.sogni.ai` by default for the `development` environment, which would require the hosts file and a running Nginx (or direct backend exposure on that domain with valid SSL for that domain).
+   **Browser Certificate Warning:** When you first visit https://photobooth-local.sogni.ai, your browser will show a security warning about the self-signed certificate. Click **"Advanced"** → **"Proceed"** to continue. This is normal for local development.
 
-### 4 · Configure Nginx and Run in dev mode (two terminals)
+   *Optional: To trust the certificate system-wide and avoid the warning:*
+   ```bash
+   sudo security add-trusted-cert -d -r trustRoot \
+     -k /Library/Keychains/System.keychain \
+     /opt/homebrew/etc/nginx/ssl/sogni-local.crt
+   # Restart your browser after running this
+   ```
+
+### 4 · Configure Nginx and Run in dev mode
 
 Before starting the development servers, ensure Nginx is running and configured to use the local setup.
 
@@ -109,16 +129,21 @@ Before starting the development servers, ensure Nginx is running and configured 
    # Run from the project root directory
    cp scripts/nginx/local.conf /opt/homebrew/etc/nginx/servers/photobooth-local.conf
    ```
-   *(Note: You might need `sudo` depending on permissions. Alternatively, you could create a symbolic link instead of copying.)*
 
-**b. Reload Nginx:**
-   Apply the configuration changes by reloading or restarting Nginx.
+**b. Start/Restart Nginx:**
+   Start Nginx to apply the configuration. You'll need to enter your password:
 
    ```bash
-   # Example for Homebrew Nginx
-   brew services restart nginx
-   # Or, using nginx directly:
-   # sudo nginx -s reload
+   # Start Nginx (if not running)
+   sudo nginx
+
+   # Or restart if already running
+   sudo nginx -s reload
+   ```
+
+   Verify Nginx is running:
+   ```bash
+   ps aux | grep nginx | grep -v grep
    ```
 
 **c. Run Development Servers:**
@@ -131,17 +156,38 @@ cd server && npm run dev
 # Terminal 2 – frontend (in project root)
 npm run dev
 ```
-Visit **https://photobooth-local.sogni.ai**. The frontend will make API calls to **https://photobooth-api-local.sogni.ai**.
+
+**d. Access the Application:**
+   Visit **https://photobooth-local.sogni.ai**. The frontend will make API calls to **https://photobooth-api-local.sogni.ai**.
+
+   *Note: Your browser will show a security warning about the self-signed certificate. Click "Advanced" → "Proceed" to continue (see Step 3b above).*
 
 ### Optional script runner
 
-If you prefer not to keep terminals open, you can use the script runner. This will start the services in the background and log to files in the 
+If you prefer not to keep terminals open, you can use the script runner. This will start the services in the background and log to files in the
 `logs/` directory.
 
 ```bash
 ./scripts/run.sh start   # starts front & back in background
 ./scripts/run.sh status  # see logs / ports
 ```
+
+### Troubleshooting Local Setup
+
+**"This site can't be reached" / ERR_CONNECTION_REFUSED:**
+- Make sure both frontend (port 5175) and backend (port 3001) are running
+- Verify Nginx is running: `ps aux | grep nginx | grep -v grep`
+- If Nginx isn't running, start it: `sudo nginx`
+- Check that SSL certificates exist: `ls -la /opt/homebrew/etc/nginx/ssl/`
+
+**ERR_CERT_AUTHORITY_INVALID:**
+- This is expected with self-signed certificates
+- Click "Advanced" → "Proceed" in your browser
+- Or trust the certificate system-wide (see Step 3b above)
+
+**Port already in use:**
+- The `npm run dev` commands automatically kill processes on ports 5175 and 3001
+- If you see errors, manually kill the processes: `npx kill-port 5175 3001`
 
 ---
 
@@ -226,11 +272,6 @@ The application utilizes Redis for session management and persistence of Twitter
    - Improves scalability when deploying to multiple server instances
 
 Redis is optional - if not available, the system will use in-memory storage as a fallback.
-
-### SSL & Custom Domain (optional)
-Running Nginx with the provided `scripts/nginx/local.conf` uses SSL certificates (expected at `/opt/homebrew/etc/nginx/ssl/sogni-local.crt` and `sogni-local.key` - see **Quick Start - Step 3b** for creation/validation instructions using `openssl`) so you can use **https://photobooth-local.sogni.ai** for the frontend and **https://photobooth-api-local.sogni.ai** for the backend, with secure cookies and proper CORS handling.
-
-The `./scripts/run.sh nginx` command is deprecated. Manual Nginx configuration and certificate management as described in **Quick Start - Step 3** is the recommended approach for this setup.
 
 ---
 
