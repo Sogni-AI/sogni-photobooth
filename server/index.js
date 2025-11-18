@@ -326,8 +326,9 @@ const handleGimiChallengeRoute = (req, res) => {
     const gimiDesc = 'Join the Sogni x Gimi Creator Challenge! Create 8 viral photo transformations in 60 seconds and compete for $1,000 USDC. Use photobooth.sogni.ai with 200+ AI styles. Sign up free on Gimi.co.';
     const gimiOgTitle = 'Turn One Photo Into 8 Viral Posts – Win $1,000!';
     const gimiOgDesc = 'Join the Sogni x Gimi Creator Challenge! Create 8 viral photo transformations in 60 seconds with 200+ AI styles. Compete for $1,000 USDC based on engagement. Sign up free on Gimi.co.';
-    const gimiUrl = 'https://photobooth.sogni.ai/challenge/gimi?1';
-    const gimiImage = 'https://photobooth.sogni.ai/promo/gimi/Sogni Gimi Photobooth Banner.jpg';
+    const gimiUrl = 'https://photobooth.sogni.ai/challenge/gimi?3';
+    // Use square image for social sharing (800x800) - better for Facebook/Twitter cropping
+    const gimiImage = 'https://photobooth.sogni.ai/promo/gimi/Sogni_Photobooth_gimi-800x800_v2f_green.png';
 
     // Replace meta tags with Gimi challenge-specific content
     modifiedHtml = modifiedHtml.replace('<title>Sogni AI Photobooth</title>', `<title>${gimiTitle}</title>`);
@@ -335,11 +336,15 @@ const handleGimiChallengeRoute = (req, res) => {
     modifiedHtml = modifiedHtml.replace('content="Sogni-AI/sogni-photobooth: Sogni Photobooth: Capture and transform your photos with AI styles"', `content="${gimiOgTitle}"`);
     modifiedHtml = modifiedHtml.replace(/Sogni Photobooth: Capture and transform your photos with AI styles/g, gimiOgDesc);
     modifiedHtml = modifiedHtml.replace(/content="https:\/\/photobooth\.sogni\.ai\/"/g, `content="${gimiUrl}"`);
-    modifiedHtml = modifiedHtml.replace(/content="https:\/\/photobooth\.sogni\.ai\/icons\/icon-512x512\.png"/g, `content="${gimiImage}"`);
     
-    // Replace og:image dimension tags for proper social sharing
-    modifiedHtml = modifiedHtml.replace(/property="og:image:width" content="\d+"/g, `property="og:image:width" content="1920"`);
-    modifiedHtml = modifiedHtml.replace(/property="og:image:height" content="\d+"/g, `property="og:image:height" content="400"`);
+    // Replace specific image URLs with Gimi banner (targeting known default images)
+    modifiedHtml = modifiedHtml.replace(/content="https:\/\/photobooth\.sogni\.ai\/icons\/icon-512x512\.png"/g, `content="${gimiImage}"`);
+    modifiedHtml = modifiedHtml.replace(/content="https:\/\/repository-images\.githubusercontent\.com\/[^"]+"/g, `content="${gimiImage}"`);
+    
+    // Replace og:image and twitter:image dimension tags for the square format (800x800)
+    modifiedHtml = modifiedHtml.replace(/<meta property="og:image:width" content="\d+"/, `<meta property="og:image:width" content="800"`);
+    modifiedHtml = modifiedHtml.replace(/<meta property="og:image:height" content="\d+"/, `<meta property="og:image:height" content="800"`);
+    modifiedHtml = modifiedHtml.replace(/<meta name="twitter:card" content="[^"]*"/, `<meta name="twitter:card" content="summary_large_image"`);
 
     res.set({
       'Cache-Control': 'no-cache, no-store, must-revalidate',
