@@ -28,6 +28,26 @@
   transition: transform 0.3s ease;
 }
 
+/* Show wide banner by default, hide square */
+.gimi-banner-wide {
+  display: block;
+}
+
+.gimi-banner-square {
+  display: none;
+}
+
+/* On mobile portrait, show square and hide wide */
+@media (max-width: 768px) and (orientation: portrait) {
+  .gimi-banner-wide {
+    display: none;
+  }
+  
+  .gimi-banner-square {
+    display: block;
+  }
+}
+
 .gimi-banner-image:hover {
   transform: scale(1.02);
   box-shadow: 0 16px 56px rgba(138, 43, 226, 0.6);

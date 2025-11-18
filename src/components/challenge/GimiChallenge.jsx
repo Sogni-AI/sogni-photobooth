@@ -216,10 +216,17 @@ const GimiChallenge = () => {
 
       {/* Banner Section */}
       <section className="gimi-banner">
+        {/* Wide banner for desktop */}
         <img 
           src="/promo/gimi/Sogni Gimi Photobooth Banner.jpg" 
           alt="Gimi Challenge - Turn one photo into 8 viral posts and win $1,000" 
-          className="gimi-banner-image"
+          className="gimi-banner-image gimi-banner-wide"
+        />
+        {/* Square banner for mobile portrait */}
+        <img 
+          src="/promo/gimi/Sogni_Photobooth_gimi-800x800_v2f_green.png" 
+          alt="Gimi Challenge - Turn one photo into 8 viral posts and win $1,000" 
+          className="gimi-banner-image gimi-banner-square"
         />
       </section>
 
