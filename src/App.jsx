@@ -280,20 +280,6 @@ const App = () => {
     }
   }, [authState.isAuthenticated]);
   
-  // Check if we should show the Gimi referral popup after authentication
-  useEffect(() => {
-    if (authState.isAuthenticated && authState.user?.username) {
-      // Check if user visited Gimi Challenge and hasn't dismissed the popup
-      if (shouldShowGimiReferralPopup()) {
-        console.log('[Referral] User is authenticated and visited Gimi Challenge - showing referral popup');
-        // Small delay to let login/signup animations complete
-        setTimeout(() => {
-          setShowGimiReferralPopup(true);
-        }, 1000);
-      }
-    }
-  }, [authState.isAuthenticated, authState.user?.username]);
-  
   // Log when payment method changes
   useEffect(() => {
     console.log('💳 Payment method updated:', walletTokenType);
@@ -898,6 +884,17 @@ const App = () => {
       setTimeout(() => {
         setShowConfetti(true);
       }, 600);
+    }
+
+    // Check if we should show the Gimi referral popup after batch completion
+    if (authState.isAuthenticated && authState.user?.username) {
+      if (shouldShowGimiReferralPopup()) {
+        console.log('[Referral] Batch completed - showing referral popup for Gimi Challenge visitor');
+        // Delay to let confetti and batch completion animations settle
+        setTimeout(() => {
+          setShowGimiReferralPopup(true);
+        }, 2000);
+      }
     }
   };
 
@@ -8164,8 +8161,32 @@ const App = () => {
   // Handle opening ImageAdjuster for next batch generation from PhotoGallery
   const handleOpenImageAdjusterForNextBatch = async () => {
     if (!lastAdjustedPhoto) {
-      console.warn('No lastAdjustedPhoto available for next batch');
-      return;
+      console.warn('No lastAdjustedPhoto available for next batch - loading Einstein fallback');
+      // Load Einstein fallback just like handleThumbnailClick does
+      try {
+        console.log('📷 Loading Einstein fallback for next batch');
+        const response = await fetch('/albert-einstein-sticks-out-his-tongue.jpg');
+        if (!response.ok) throw new Error('Failed to load Einstein fallback');
+        
+        const blob = await response.blob();
+        
+        // Wait for blob to be fully ready before creating URL
+        // This prevents race conditions on mobile
+        await new Promise(resolve => setTimeout(resolve, 10));
+        
+        const tempUrl = URL.createObjectURL(blob);
+        
+        // Einstein is just a fallback - don't save it to state
+        // Only the adjusted version will be saved when user confirms
+        setCurrentUploadedImageUrl(tempUrl);
+        setCurrentUploadedSource('camera'); // Treat as camera source for UI
+        setShowImageAdjuster(true);
+        return;
+      } catch (error) {
+        console.error('Failed to load Einstein fallback:', error);
+        alert('Failed to load photo. Please take a new photo.');
+        return;
+      }
     }
     
     if (lastAdjustedPhoto.blob) {

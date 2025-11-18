@@ -41,7 +41,7 @@ const GimiChallenge = () => {
 
   const handleCTAClick = () => {
     trackEvent('Gimi Challenge', 'cta_click', 'Join Challenge Button');
-    window.open('https://gimi.co', '_blank', 'noopener,noreferrer');
+    window.open('https://app.gimi.co/en/campaigns/pimp-your-selfie-with-photobooth-by-sogni-ai', '_blank', 'noopener,noreferrer');
   };
 
   const handleCreateNowClick = () => {
@@ -198,15 +198,15 @@ const GimiChallenge = () => {
         <meta property="og:description" content="Join the Sogni x Gimi Creator Challenge! Create 8 viral photo transformations in 60 seconds with 200+ AI styles. Compete for $1,000 USDC based on engagement. Sign up free on Gimi.co." />
         <meta property="og:type" content="website" />
         <meta property="og:url" content="https://photobooth.sogni.ai/challenge/gimi" />
-        <meta property="og:image" content="https://photobooth.sogni.ai/promo/gimi/Sogni_Photobooth_gimi-800x800_v2f_green.png" />
-        <meta property="og:image:width" content="800" />
-        <meta property="og:image:height" content="800" />
+        <meta property="og:image" content="https://photobooth.sogni.ai/promo/gimi/Sogni Gimi Photobooth Banner.jpg" />
+        <meta property="og:image:width" content="1920" />
+        <meta property="og:image:height" content="400" />
         
         {/* Twitter */}
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content="Turn One Photo Into 8 Viral Posts – Win $1,000!" />
         <meta name="twitter:description" content="Join the Sogni x Gimi Creator Challenge! Create viral AI photo transformations in 60 seconds. 200+ styles. $1,000 USDC prize pool. Sign up free on Gimi.co." />
-        <meta name="twitter:image" content="https://photobooth.sogni.ai/promo/gimi/Sogni_Photobooth_gimi-800x800_v2f_green.png" />
+        <meta name="twitter:image" content="https://photobooth.sogni.ai/promo/gimi/Sogni Gimi Photobooth Banner.jpg" />
         <meta name="twitter:site" content="@sogni_protocol" />
         
         {/* Additional SEO */}
@@ -217,7 +217,7 @@ const GimiChallenge = () => {
       {/* Banner Section */}
       <section className="gimi-banner">
         <img 
-          src="/promo/gimi/Sogni_Photobooth_gimi-800x800_v2f_green.png" 
+          src="/promo/gimi/Sogni Gimi Photobooth Banner.jpg" 
           alt="Gimi Challenge - Turn one photo into 8 viral posts and win $1,000" 
           className="gimi-banner-image"
         />
@@ -272,7 +272,7 @@ const GimiChallenge = () => {
             <div className="gimi-step-number">3</div>
             <h3 className="gimi-step-title">Submit & Earn</h3>
             <p className="gimi-step-description">
-              Drop your post link on the <a href="https://gimi.co" target="_blank" rel="noopener noreferrer" onClick={() => trackEvent('Gimi Challenge', 'link_click', 'Gimi.co Link')}>Gimi.co</a> campaign page → once approved, you start earning based on engagement
+              Drop your post link on the <a href="https://app.gimi.co/en/campaigns/pimp-your-selfie-with-photobooth-by-sogni-ai" target="_blank" rel="noopener noreferrer" onClick={() => trackEvent('Gimi Challenge', 'link_click', 'Gimi.co Link')}>Gimi.co</a> campaign page → once approved, you start earning based on engagement
             </p>
           </div>
         </div>

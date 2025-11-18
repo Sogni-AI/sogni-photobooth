@@ -28,10 +28,10 @@ const PageMetadata = () => {
         description: 'Join the Sogni x Gimi Creator Challenge! Create 8 viral photo transformations in 60 seconds and compete for $1,000 USDC. Use photobooth.sogni.ai with 200+ AI styles. Sign up free on Gimi.co.',
         ogTitle: 'Turn One Photo Into 8 Viral Posts – Win $1,000!',
         ogDescription: 'Join the Sogni x Gimi Creator Challenge! Create 8 viral photo transformations in 60 seconds with 200+ AI styles. Compete for $1,000 USDC based on engagement. Sign up free on Gimi.co.',
-        ogImage: 'https://photobooth.sogni.ai/promo/gimi/Sogni_Photobooth_gimi-800x800_v2f_green.png',
+        ogImage: 'https://photobooth.sogni.ai/promo/gimi/Sogni Gimi Photobooth Banner.jpg',
         twitterTitle: 'Turn One Photo Into 8 Viral Posts – Win $1,000!',
         twitterDescription: 'Join the Sogni x Gimi Creator Challenge! Create viral AI photo transformations in 60 seconds. 200+ styles. $1,000 USDC prize pool. Sign up free on Gimi.co.',
-        twitterImage: 'https://photobooth.sogni.ai/promo/gimi/Sogni_Photobooth_gimi-800x800_v2f_green.png',
+        twitterImage: 'https://photobooth.sogni.ai/promo/gimi/Sogni Gimi Photobooth Banner.jpg',
         keywords: 'AI photo challenge, creator challenge, Gimi.co, viral content, AI photobooth, photo transformation, creator rewards, USDC prizes, social media content, TikTok challenge, Instagram challenge'
       },
       default: {

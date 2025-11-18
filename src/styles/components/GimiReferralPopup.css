@@ -25,16 +25,17 @@
 }
 
 .gimi-referral-container {
-  background: #1a1a1a;
-  border-radius: 16px;
-  max-width: 500px;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  border-radius: 20px;
+  max-width: 900px;
   max-height: 90vh;
   width: 100%;
   position: relative;
   overflow-y: auto;
   overflow-x: hidden;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 20px 60px rgba(138, 43, 226, 0.4);
   animation: slideUp 0.3s ease-out;
+  border: 2px solid rgba(138, 43, 226, 0.3);
 }
 
 @keyframes slideUp {
@@ -55,8 +56,9 @@
   justify-content: center;
   align-items: center;
   padding: 0;
-  background: linear-gradient(135deg, rgba(138, 43, 226, 0.1) 0%, rgba(255, 0, 255, 0.05) 100%);
+  background: transparent;
   position: relative;
+  border-radius: 20px 20px 0 0;
 }
 
 .gimi-referral-banner-image {
@@ -65,18 +67,19 @@
   max-height: 280px;
   height: auto;
   display: block;
-  border-radius: 16px 16px 0 0;
-  box-shadow: 0 4px 16px rgba(138, 43, 226, 0.3);
-  object-fit: contain;
+  border-radius: 20px 20px 0 0;
+  box-shadow: none;
+  object-fit: cover;
+  object-position: center;
 }
 
 .gimi-referral-banner-moneybag {
   position: absolute;
-  bottom: 16px;
-  left: 24px;
-  font-size: 2.5rem;
+  bottom: 12px;
+  left: 20px;
+  font-size: 2.2rem;
   animation: referralMoneybagBounce 2s ease-in-out infinite;
-  filter: drop-shadow(0 0 12px rgba(255, 215, 0, 0.9)) drop-shadow(0 4px 8px rgba(0, 0, 0, 0.5));
+  filter: drop-shadow(0 0 16px rgba(255, 215, 0, 1)) drop-shadow(0 4px 8px rgba(0, 0, 0, 0.8));
   pointer-events: none;
 }
 
@@ -97,9 +100,9 @@
 
 .gimi-referral-banner-prize {
   position: absolute;
-  bottom: 20px;
-  right: 24px;
-  font-size: 2.2rem;
+  bottom: 12px;
+  right: 20px;
+  font-size: 2rem;
   font-weight: 900;
   color: #ffdd00;
   text-shadow: 

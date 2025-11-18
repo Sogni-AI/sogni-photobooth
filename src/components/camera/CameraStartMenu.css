@@ -943,7 +943,7 @@ body:has(.camera-start-menu.phase-options .options-section.no-animations) .auth-
 .polaroid-button.option-button.take-photo::after {
   content: '📸';
   position: absolute;
-  bottom: 12px;
+  bottom: 9px;
   left: 10px;
   right: 10px;
   height: 30px;
@@ -952,7 +952,7 @@ body:has(.camera-start-menu.phase-options .options-section.no-animations) .auth-
   align-items: center;
   justify-content: center;
   font-family: "Permanent Marker", cursive;
-  font-size: 16px;
+  font-size: 22px;
   font-weight: 400;
   color: #333;
   text-transform: lowercase;
@@ -966,7 +966,7 @@ body:has(.camera-start-menu.phase-options .options-section.no-animations) .auth-
 .polaroid-button.option-button.browse-photo::after {
   content: '📁';
   position: absolute;
-  bottom: 12px;
+  bottom: 9px;
   left: 10px;
   right: 10px;
   height: 30px;
@@ -975,7 +975,7 @@ body:has(.camera-start-menu.phase-options .options-section.no-animations) .auth-
   align-items: center;
   justify-content: center;
   font-family: "Permanent Marker", cursive;
-  font-size: 16px;
+  font-size: 22px;
   font-weight: 400;
   color: #333;
   text-transform: lowercase;

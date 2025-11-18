@@ -21,9 +21,9 @@ const GimiReferralPopup = ({ username, onClose }) => {
   }, []);
 
   const handleClose = () => {
-    // Mark as dismissed for this session (prevents any popup from showing again)
-    sessionStorage.setItem('gimi-popup-dismissed-session', 'true');
-    console.log('[Gimi Referral] Popup dismissed - blocked for rest of session');
+    // Mark as dismissed for this session (prevents THIS popup from showing again)
+    sessionStorage.setItem('gimi-referral-dismissed-session', 'true');
+    console.log('[Gimi Referral] Referral popup dismissed - blocked for rest of session');
     // Pass back whether user wants to be reminded or not
     onClose(dontRemindMe);
   };
@@ -50,7 +50,7 @@ const GimiReferralPopup = ({ username, onClose }) => {
         {/* Banner Image */}
         <div className="gimi-referral-banner">
           <img 
-            src="/promo/gimi/Sogni_Photobooth_gimi-800x800_v2f_green.png" 
+            src="/promo/gimi/Sogni Gimi Photobooth Banner.jpg" 
             alt="Gimi Challenge Banner" 
             className="gimi-referral-banner-image"
           />

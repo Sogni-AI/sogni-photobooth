@@ -138,11 +138,11 @@ export function shouldShowGimiReferralPopup() {
     return false;
   }
 
-  // Check if any Gimi popup was dismissed this session
+  // Check if the REFERRAL popup specifically was dismissed this session
   try {
-    const dismissedThisSession = sessionStorage.getItem('gimi-popup-dismissed-session');
-    if (dismissedThisSession === 'true') {
-      console.log('[Referral] Popup blocked - dismissed this session');
+    const referralDismissedThisSession = sessionStorage.getItem('gimi-referral-dismissed-session');
+    if (referralDismissedThisSession === 'true') {
+      console.log('[Referral] Referral popup blocked - dismissed this session');
       return false;
     }
   } catch (error) {
@@ -167,4 +167,5 @@ export function shouldShowGimiReferralPopup() {
 
   return true;
 }
+
 

@@ -26,10 +26,10 @@ const GimiChallengeNotification = () => {
       return;
     }
 
-    // Check if any Gimi popup was dismissed this session
-    const dismissedThisSession = sessionStorage.getItem('gimi-popup-dismissed-session');
-    if (dismissedThisSession === 'true') {
-      console.log('[Gimi Challenge] Notification blocked - popup dismissed this session');
+    // Check if NOTIFICATION was dismissed this session
+    const notificationDismissedThisSession = sessionStorage.getItem('gimi-notification-dismissed-session');
+    if (notificationDismissedThisSession === 'true') {
+      console.log('[Gimi Challenge] Notification blocked - dismissed this session');
       return;
     }
 
@@ -45,10 +45,11 @@ const GimiChallengeNotification = () => {
       }
     }
 
-    // Check if referral popup was shown (don't show notification if popup was shown)
-    const gimiChallengeVisited = localStorage.getItem('gimi-challenge-visited');
-    if (gimiChallengeVisited === 'true') {
-      console.log('[Gimi Challenge] Referral popup takes priority, skipping notification');
+    // Don't show notification if user has visited the challenge page
+    // (they should see the referral popup on login instead)
+    const hasVisited = localStorage.getItem('sogni_gimi_visit');
+    if (hasVisited) {
+      console.log('[Gimi Challenge] User visited challenge page - referral popup takes priority');
       return;
     }
 
@@ -81,8 +82,8 @@ const GimiChallengeNotification = () => {
     trackEvent('Gimi Challenge', 'notification_dismissed', 'Popup Dismissed');
     // Set cookie with current timestamp
     setCookie('gimi-challenge-dismissed', Date.now().toString(), 1);
-    // Mark as dismissed for this session
-    sessionStorage.setItem('gimi-popup-dismissed-session', 'true');
+    // Mark as dismissed for this session (notification-specific)
+    sessionStorage.setItem('gimi-notification-dismissed-session', 'true');
     console.log('[Gimi Challenge] Notification dismissed - blocked for rest of session');
     
     // Remove from DOM after animation
@@ -111,16 +112,14 @@ const GimiChallengeNotification = () => {
         ×
       </button>
       <div className="gimi-notification-content" onClick={handleClick}>
-        <div className="gimi-notification-circle-container">
-          <img 
-            src="/promo/gimi/Sogni_Photobooth_gimi-800x800_v2f_green.png" 
-            alt="Gimi Challenge - Turn one photo into 8 viral posts and win $1,000" 
-            className="gimi-notification-image"
-          />
-        </div>
-        <div className="gimi-notification-badge">
-          <div className="gimi-notification-badge-moneybag">💰</div>
-          <div className="gimi-notification-badge-amount">$1K</div>
+        <img 
+          src="/promo/gimi/Sogni Gimi Photobooth Banner.jpg" 
+          alt="Gimi Challenge - Turn one photo into 8 viral posts and win $1,000" 
+          className="gimi-notification-image"
+        />
+        <div className="gimi-notification-overlay">
+          <div className="gimi-notification-moneybag">💰</div>
+          <div className="gimi-notification-prize">$1,000</div>
         </div>
       </div>
     </div>
