@@ -326,7 +326,7 @@ const handleGimiChallengeRoute = (req, res) => {
     const gimiDesc = 'Join the Sogni x Gimi Creator Challenge! Create 8 viral photo transformations in 60 seconds and compete for $1,000 USDC. Use photobooth.sogni.ai with 200+ AI styles. Sign up free on Gimi.co.';
     const gimiOgTitle = 'Turn One Photo Into 8 Viral Posts – Win $1,000!';
     const gimiOgDesc = 'Join the Sogni x Gimi Creator Challenge! Create 8 viral photo transformations in 60 seconds with 200+ AI styles. Compete for $1,000 USDC based on engagement. Sign up free on Gimi.co.';
-    const gimiUrl = 'https://photobooth.sogni.ai/challenge/gimi';
+    const gimiUrl = 'https://photobooth.sogni.ai/challenge/gimi?1';
     const gimiImage = 'https://photobooth.sogni.ai/promo/gimi/Sogni Gimi Photobooth Banner.jpg';
 
     // Replace meta tags with Gimi challenge-specific content

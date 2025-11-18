@@ -112,6 +112,7 @@ const GimiChallengeNotification = () => {
         ×
       </button>
       <div className="gimi-notification-content" onClick={handleClick}>
+        {/* Rectangular version for desktop */}
         <img 
           src="/promo/gimi/Sogni Gimi Photobooth Banner.jpg" 
           alt="Gimi Challenge - Turn one photo into 8 viral posts and win $1,000" 
@@ -120,6 +121,19 @@ const GimiChallengeNotification = () => {
         <div className="gimi-notification-overlay">
           <div className="gimi-notification-moneybag">💰</div>
           <div className="gimi-notification-prize">$1,000</div>
+        </div>
+        
+        {/* Circular version for mobile portrait */}
+        <div className="gimi-notification-circle-container">
+          <img 
+            src="/promo/gimi/Sogni_Photobooth_gimi-800x800_v2f_green.png" 
+            alt="Gimi Challenge - Turn one photo into 8 viral posts and win $1,000" 
+            className="gimi-notification-circle-image"
+          />
+        </div>
+        <div className="gimi-notification-badge">
+          <div className="gimi-notification-badge-moneybag">💰</div>
+          <div className="gimi-notification-badge-amount">$1K</div>
         </div>
       </div>
     </div>
