@@ -74,22 +74,8 @@ if [ $? -ne 0 ]; then
   exit 1
 fi
 
-# Optimize gallery files sync - only upload if they don't exist or are different
-# This prevents redundant uploads of large gallery images on subsequent deployments
-show_step "Optimizing gallery files sync (skip existing files)"
-if [ -d "dist/gallery/prompts" ]; then
-  echo "📸 Syncing gallery prompt images (skipping existing files)..."
-  # --ignore-existing: Skip files that already exist on the destination
-  # --size-only: Only transfer if file sizes differ (faster than checksum for large images)
-  rsync -ar --progress --ignore-existing --size-only dist/gallery/prompts/ $REMOTE_HOST:$REMOTE_FRONTEND_PATH/gallery/prompts/
-  if [ $? -ne 0 ]; then
-    echo "⚠️ Warning: Gallery files sync had issues, but continuing deployment"
-  else
-    echo "✅ Gallery files synced efficiently (existing files skipped)"
-  fi
-else
-  echo "ℹ️ No gallery/prompts directory found in dist, skipping gallery sync"
-fi
+# Note: Gallery images are now served from Cloudflare R2, no need to sync them
+# CDN URL is configured in src/config/urls.ts (assetUrl property)
 
 # Fix file and directory permissions to ensure nginx can serve files
 show_step "Setting correct file and directory permissions"

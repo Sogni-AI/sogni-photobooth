@@ -3,6 +3,7 @@ import StyleDropdown from '../shared/StyleDropdown';
 import { styleIdToDisplay } from '../../utils';
 import { generateGalleryFilename } from '../../utils/galleryLoader';
 import { CUSTOM_PROMPT_IMAGE_KEY } from '../shared/CustomPromptPopup';
+import urls from '../../config/urls';
 import './CameraStartMenu.css';
 
 const AUDIO_ENABLED_KEY = 'sogni_splash_audio_enabled';
@@ -219,7 +220,7 @@ const CameraStartMenu: React.FC<CameraStartMenuProps> = ({
     if (isSamplerMode && randomStyleForSamplers) {
       try {
         const expectedFilename = generateGalleryFilename(randomStyleForSamplers);
-        const imagePath = `/gallery/prompts/${portraitType}/${expectedFilename}`;
+        const imagePath = `${urls.assetUrl}/gallery/prompts/${portraitType}/${expectedFilename}`;
         console.log('✅ Generated sampler image path:', imagePath);
         return imagePath;
       } catch (error) {
@@ -235,7 +236,7 @@ const CameraStartMenu: React.FC<CameraStartMenuProps> = ({
     if (isIndividualStyle) {
       try {
         const expectedFilename = generateGalleryFilename(selectedStyle);
-        const imagePath = `/gallery/prompts/${portraitType}/${expectedFilename}`;
+        const imagePath = `${urls.assetUrl}/gallery/prompts/${portraitType}/${expectedFilename}`;
         console.log('✅ Generated individual style image path:', imagePath);
         return imagePath;
       } catch (error) {
@@ -361,7 +362,7 @@ const CameraStartMenu: React.FC<CameraStartMenuProps> = ({
                 <div className="intro-video-container">
                   <video
                     ref={(el) => setVideoRef(el)}
-                    src="https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/videos/photobooth-small-yellow-40kbps.mp4"
+                    src={`${urls.assetUrl}/videos/photobooth-small-yellow-40kbps.mp4`}
                     autoPlay
                     loop
                     playsInline

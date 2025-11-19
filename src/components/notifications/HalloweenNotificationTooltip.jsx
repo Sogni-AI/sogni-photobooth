@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { useMusicPlayer } from '../../context/MusicPlayerContext';
+import urls from '../../config/urls';
 import '../../styles/HalloweenNotificationTooltip.css';
 
 const HALLOWEEN_IMAGES = [
-  '/gallery/prompts/medium/sogni-photobooth-dream-stalker-raw.jpg',
-  '/gallery/prompts/medium/sogni-photobooth-clown-from-hell-raw.jpg',
-  '/gallery/prompts/medium/sogni-photobooth-corpse-bride-raw.jpg',
-  '/gallery/prompts/medium/sogni-photobooth-haunted-prom-queen-raw.jpg',
-  '/gallery/prompts/medium/sogni-photobooth-midsommar-bloom-raw.jpg'
+  `${urls.assetUrl}/gallery/prompts/medium/sogni-photobooth-dream-stalker-raw.jpg`,
+  `${urls.assetUrl}/gallery/prompts/medium/sogni-photobooth-clown-from-hell-raw.jpg`,
+  `${urls.assetUrl}/gallery/prompts/medium/sogni-photobooth-corpse-bride-raw.jpg`,
+  `${urls.assetUrl}/gallery/prompts/medium/sogni-photobooth-haunted-prom-queen-raw.jpg`,
+  `${urls.assetUrl}/gallery/prompts/medium/sogni-photobooth-midsommar-bloom-raw.jpg`
 ];
 
 const HalloweenNotificationTooltip = ({ onNavigate }) => {

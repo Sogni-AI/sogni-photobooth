@@ -5,30 +5,35 @@
 interface EnvironmentURLs {
   publicUrl: string;
   apiUrl: string;
+  assetUrl: string; // CDN URL for static assets like gallery images
 }
 
 // Production URLs
 const productionUrls: EnvironmentURLs = {
   publicUrl: 'https://photobooth.sogni.ai',
   apiUrl: 'https://photobooth-api.sogni.ai',
+  assetUrl: 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev',
 };
 
 // Staging URLs
 const stagingUrls: EnvironmentURLs = {
   publicUrl: 'https://photobooth-staging.sogni.ai',
   apiUrl: 'https://photobooth-api-staging.sogni.ai',
+  assetUrl: 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev',
 };
 
 // Local development URLs (when accessed via localhost:5175 directly)
 const developmentUrls: EnvironmentURLs = {
   publicUrl: 'http://localhost:5175',
   apiUrl: 'https://photobooth-api-local.sogni.ai',
+  assetUrl: 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev',
 };
 
 // Local secure development URLs (for https://photobooth-local.sogni.ai)
 const localSecureUrls: EnvironmentURLs = {
   publicUrl: 'https://photobooth-local.sogni.ai',
   apiUrl: 'https://photobooth-api-local.sogni.ai',
+  assetUrl: 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev',
 };
 
 // Get URLs based on environment

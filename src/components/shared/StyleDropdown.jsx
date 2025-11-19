@@ -6,6 +6,7 @@ import { getThemeGroupPreferences, saveThemeGroupPreferences, getFavoriteImages 
 import { isFluxKontextModel } from '../../constants/settings';
 import { generateGalleryFilename } from '../../utils/galleryLoader';
 import CustomPromptPopup, { CUSTOM_PROMPT_IMAGE_KEY } from './CustomPromptPopup';
+import urls from '../../config/urls';
 import '../../styles/style-dropdown.css';
 import PropTypes from 'prop-types';
 import { getAttributionText } from '../../config/ugcAttributions';
@@ -743,7 +744,7 @@ const StyleDropdown = ({
             } else {
               try {
                 const expectedFilename = generateGalleryFilename(styleKey);
-                previewImagePath = `/gallery/prompts/${portraitType}/${expectedFilename}`;
+                previewImagePath = `${urls.assetUrl}/gallery/prompts/${portraitType}/${expectedFilename}`;
               } catch (error) {
                 // If filename generation fails, we'll just show no preview
                 previewImagePath = null;

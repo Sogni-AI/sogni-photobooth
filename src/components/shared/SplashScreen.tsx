@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import urls from '../../config/urls';
 import './SplashScreen.css';
 
 // Updated key for splash screen visibility to force existing users to see it
@@ -113,7 +114,7 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onDismiss, bypassLocalStora
           <div className="video-container">
             <video 
               ref={(el) => setVideoRef(el)}
-              src="https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/videos/photobooth-small-yellow-40kbps.mp4"
+              src={`${urls.assetUrl}/videos/photobooth-small-yellow-40kbps.mp4`}
               autoPlay
               loop
               playsInline

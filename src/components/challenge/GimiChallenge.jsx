@@ -4,6 +4,7 @@ import { trackEvent, trackPageView } from '../../utils/analytics';
 import { setCampaignSource } from '../../utils/campaignAttribution';
 import { markGimiChallengeVisit } from '../../utils/referralTracking';
 import { useSogniAuth } from '../../services/sogniAuth';
+import urls from '../../config/urls';
 import '../../styles/challenge/GimiChallenge.css';
 
 const GimiChallenge = () => {
@@ -72,56 +73,56 @@ const GimiChallenge = () => {
 
   // All available transformations - large pool to avoid repetition (using real files)
   const allTransformations = [
-    { name: "cyberpunk", image: "/gallery/prompts/headshot/sogni-photobooth-neon-cyberpunk-raw.jpg" },
-    { name: "renaissance", image: "/gallery/prompts/headshot/sogni-photobooth-gilded-renaissance-raw.jpg" },
-    { name: "ascii art", image: "/gallery/prompts/headshot/sogni-photobooth-ascii-terminal-raw.jpg" },
-    { name: "90s party", image: "/gallery/prompts/headshot/sogni-photobooth-1990s-house-party-raw.jpg" },
-    { name: "club dj", image: "/gallery/prompts/headshot/sogni-photobooth-club-d-j-raw.jpg" },
-    { name: "professional", image: "/gallery/prompts/headshot/sogni-photobooth-magazine-cover-studio-raw.jpg" },
-    { name: "anime", image: "/gallery/prompts/headshot/sogni-photobooth-anime-classic-raw.jpg" },
-    { name: "claymation", image: "/gallery/prompts/headshot/sogni-photobooth-claymation-studio-raw.jpg" },
-    { name: "comic manga", image: "/gallery/prompts/headshot/sogni-photobooth-comic-manga-raw.jpg" },
-    { name: "crystal crown", image: "/gallery/prompts/headshot/sogni-photobooth-crystal-crown-prism-raw.jpg" },
-    { name: "pixel art", image: "/gallery/prompts/headshot/sogni-photobooth-pixel-art-raw.jpg" },
-    { name: "pop art", image: "/gallery/prompts/headshot/sogni-photobooth-popart-raw.jpg" },
-    { name: "vaporwave", image: "/gallery/prompts/headshot/sogni-photobooth-vaporwave-raw.jpg" },
-    { name: "baroque", image: "/gallery/prompts/headshot/sogni-photobooth-neo-baroque-raw.jpg" },
-    { name: "film noir", image: "/gallery/prompts/headshot/sogni-photobooth-neo-noir-raw.jpg" },
-    { name: "van gogh", image: "/gallery/prompts/headshot/sogni-photobooth-vangogh-swirl-raw.jpg" },
-    { name: "picasso", image: "/gallery/prompts/headshot/sogni-photobooth-picasso-cubist-raw.jpg" },
-    { name: "klimt gold", image: "/gallery/prompts/headshot/sogni-photobooth-klimt-gilded-raw.jpg" },
-    { name: "ink wash", image: "/gallery/prompts/headshot/sogni-photobooth-ink-wash-raw.jpg" },
-    { name: "retro vhs", image: "/gallery/prompts/headshot/sogni-photobooth-retro-v-h-s-raw.jpg" },
-    { name: "synthwave", image: "/gallery/prompts/headshot/sogni-photobooth-synthwave-grid-raw.jpg" },
-    { name: "graffiti", image: "/gallery/prompts/headshot/sogni-photobooth-graffiti-stencil-raw.jpg" },
-    { name: "etching", image: "/gallery/prompts/headshot/sogni-photobooth-etching-vintage-raw.jpg" },
-    { name: "stone moss", image: "/gallery/prompts/headshot/sogni-photobooth-stone-moss-raw.jpg" },
-    { name: "jojo aura", image: "/gallery/prompts/headshot/sogni-photobooth-jojo-stand-aura-raw.jpg" },
-    { name: "halftone", image: "/gallery/prompts/headshot/sogni-photobooth-halftone-ben-day-raw.jpg" },
-    { name: "banksy", image: "/gallery/prompts/headshot/sogni-photobooth-banksy-stencil-raw.jpg" },
-    { name: "arcade vector", image: "/gallery/prompts/headshot/sogni-photobooth-arcade-vector-raw.jpg" },
-    { name: "art nouveau", image: "/gallery/prompts/headshot/sogni-photobooth-art-nouveau-gold-raw.jpg" },
-    { name: "chalk pastel", image: "/gallery/prompts/headshot/sogni-photobooth-chalk-pastel-raw.jpg" },
-    { name: "drip paint", image: "/gallery/prompts/headshot/sogni-photobooth-drip-paint-raw.jpg" },
-    { name: "gothic", image: "/gallery/prompts/headshot/sogni-photobooth-dark-queen-raw.jpg" },
-    { name: "medieval", image: "/gallery/prompts/headshot/sogni-photobooth-royal-bust-raw.jpg" },
-    { name: "disco ball", image: "/gallery/prompts/headshot/sogni-photobooth-disco-ball-reflections-raw.jpg" },
-    { name: "punk rocker", image: "/gallery/prompts/headshot/sogni-photobooth-punk-rocker-raw.jpg" },
-    { name: "retro futurism", image: "/gallery/prompts/headshot/sogni-photobooth-retro-futurist-raw.jpg" },
-    { name: "stained glass", image: "/gallery/prompts/headshot/sogni-photobooth-stained-ink-marbling-raw.jpg" },
-    { name: "kusama dots", image: "/gallery/prompts/headshot/sogni-photobooth-kusama-dots-raw.jpg" },
-    { name: "roman statue", image: "/gallery/prompts/headshot/sogni-photobooth-statue-roman-raw.jpg" },
-    { name: "barbie", image: "/gallery/prompts/headshot/sogni-photobooth-barbie-raw.jpg" },
-    { name: "ghibli", image: "/gallery/prompts/headshot/sogni-photobooth-ghibli-meadow-raw.jpg" },
-    { name: "jazz sax", image: "/gallery/prompts/headshot/sogni-photobooth-jazz-saxophonist-raw.jpg" },
-    { name: "nft ape", image: "/gallery/prompts/headshot/sogni-photobooth-nft-bored-ape-raw.jpg" },
-    { name: "crypto punk", image: "/gallery/prompts/headshot/sogni-photobooth-nft-crypto-punk-raw.jpg" },
-    { name: "tron", image: "/gallery/prompts/headshot/sogni-photobooth-tron-don-raw.jpg" },
-    { name: "watercolor", image: "/gallery/prompts/headshot/sogni-photobooth-storybook-watercolor-raw.jpg" },
-    { name: "origami", image: "/gallery/prompts/headshot/sogni-photobooth-origami-shadowbox-raw.jpg" },
-    { name: "sepia photo", image: "/gallery/prompts/headshot/sogni-photobooth-sepia-daguerreotype-raw.jpg" },
-    { name: "pointillism", image: "/gallery/prompts/headshot/sogni-photobooth-pointillism-dots-raw.jpg" },
-    { name: "bronze", image: "/gallery/prompts/headshot/sogni-photobooth-polished-bronze-raw.jpg" },
+    { name: "cyberpunk", image: `${urls.assetUrl}/gallery/prompts/headshot/sogni-photobooth-neon-cyberpunk-raw.jpg` },
+    { name: "renaissance", image: `${urls.assetUrl}/gallery/prompts/headshot/sogni-photobooth-gilded-renaissance-raw.jpg` },
+    { name: "ascii art", image: `${urls.assetUrl}/gallery/prompts/headshot/sogni-photobooth-ascii-terminal-raw.jpg` },
+    { name: "90s party", image: `${urls.assetUrl}/gallery/prompts/headshot/sogni-photobooth-1990s-house-party-raw.jpg` },
+    { name: "club dj", image: `${urls.assetUrl}/gallery/prompts/headshot/sogni-photobooth-club-d-j-raw.jpg` },
+    { name: "professional", image: `${urls.assetUrl}/gallery/prompts/headshot/sogni-photobooth-magazine-cover-studio-raw.jpg` },
+    { name: "anime", image: `${urls.assetUrl}/gallery/prompts/headshot/sogni-photobooth-anime-classic-raw.jpg` },
+    { name: "claymation", image: `${urls.assetUrl}/gallery/prompts/headshot/sogni-photobooth-claymation-studio-raw.jpg` },
+    { name: "comic manga", image: `${urls.assetUrl}/gallery/prompts/headshot/sogni-photobooth-comic-manga-raw.jpg` },
+    { name: "crystal crown", image: `${urls.assetUrl}/gallery/prompts/headshot/sogni-photobooth-crystal-crown-prism-raw.jpg` },
+    { name: "pixel art", image: `${urls.assetUrl}/gallery/prompts/headshot/sogni-photobooth-pixel-art-raw.jpg` },
+    { name: "pop art", image: `${urls.assetUrl}/gallery/prompts/headshot/sogni-photobooth-popart-raw.jpg` },
+    { name: "vaporwave", image: `${urls.assetUrl}/gallery/prompts/headshot/sogni-photobooth-vaporwave-raw.jpg` },
+    { name: "baroque", image: `${urls.assetUrl}/gallery/prompts/headshot/sogni-photobooth-neo-baroque-raw.jpg` },
+    { name: "film noir", image: `${urls.assetUrl}/gallery/prompts/headshot/sogni-photobooth-neo-noir-raw.jpg` },
+    { name: "van gogh", image: `${urls.assetUrl}/gallery/prompts/headshot/sogni-photobooth-vangogh-swirl-raw.jpg` },
+    { name: "picasso", image: `${urls.assetUrl}/gallery/prompts/headshot/sogni-photobooth-picasso-cubist-raw.jpg` },
+    { name: "klimt gold", image: `${urls.assetUrl}/gallery/prompts/headshot/sogni-photobooth-klimt-gilded-raw.jpg` },
+    { name: "ink wash", image: `${urls.assetUrl}/gallery/prompts/headshot/sogni-photobooth-ink-wash-raw.jpg` },
+    { name: "retro vhs", image: `${urls.assetUrl}/gallery/prompts/headshot/sogni-photobooth-retro-v-h-s-raw.jpg` },
+    { name: "synthwave", image: `${urls.assetUrl}/gallery/prompts/headshot/sogni-photobooth-synthwave-grid-raw.jpg` },
+    { name: "graffiti", image: `${urls.assetUrl}/gallery/prompts/headshot/sogni-photobooth-graffiti-stencil-raw.jpg` },
+    { name: "etching", image: `${urls.assetUrl}/gallery/prompts/headshot/sogni-photobooth-etching-vintage-raw.jpg` },
+    { name: "stone moss", image: `${urls.assetUrl}/gallery/prompts/headshot/sogni-photobooth-stone-moss-raw.jpg` },
+    { name: "jojo aura", image: `${urls.assetUrl}/gallery/prompts/headshot/sogni-photobooth-jojo-stand-aura-raw.jpg` },
+    { name: "halftone", image: `${urls.assetUrl}/gallery/prompts/headshot/sogni-photobooth-halftone-ben-day-raw.jpg` },
+    { name: "banksy", image: `${urls.assetUrl}/gallery/prompts/headshot/sogni-photobooth-banksy-stencil-raw.jpg` },
+    { name: "arcade vector", image: `${urls.assetUrl}/gallery/prompts/headshot/sogni-photobooth-arcade-vector-raw.jpg` },
+    { name: "art nouveau", image: `${urls.assetUrl}/gallery/prompts/headshot/sogni-photobooth-art-nouveau-gold-raw.jpg` },
+    { name: "chalk pastel", image: `${urls.assetUrl}/gallery/prompts/headshot/sogni-photobooth-chalk-pastel-raw.jpg` },
+    { name: "drip paint", image: `${urls.assetUrl}/gallery/prompts/headshot/sogni-photobooth-drip-paint-raw.jpg` },
+    { name: "gothic", image: `${urls.assetUrl}/gallery/prompts/headshot/sogni-photobooth-dark-queen-raw.jpg` },
+    { name: "medieval", image: `${urls.assetUrl}/gallery/prompts/headshot/sogni-photobooth-royal-bust-raw.jpg` },
+    { name: "disco ball", image: `${urls.assetUrl}/gallery/prompts/headshot/sogni-photobooth-disco-ball-reflections-raw.jpg` },
+    { name: "punk rocker", image: `${urls.assetUrl}/gallery/prompts/headshot/sogni-photobooth-punk-rocker-raw.jpg` },
+    { name: "retro futurism", image: `${urls.assetUrl}/gallery/prompts/headshot/sogni-photobooth-retro-futurist-raw.jpg` },
+    { name: "stained glass", image: `${urls.assetUrl}/gallery/prompts/headshot/sogni-photobooth-stained-ink-marbling-raw.jpg` },
+    { name: "kusama dots", image: `${urls.assetUrl}/gallery/prompts/headshot/sogni-photobooth-kusama-dots-raw.jpg` },
+    { name: "roman statue", image: `${urls.assetUrl}/gallery/prompts/headshot/sogni-photobooth-statue-roman-raw.jpg` },
+    { name: "barbie", image: `${urls.assetUrl}/gallery/prompts/headshot/sogni-photobooth-barbie-raw.jpg` },
+    { name: "ghibli", image: `${urls.assetUrl}/gallery/prompts/headshot/sogni-photobooth-ghibli-meadow-raw.jpg` },
+    { name: "jazz sax", image: `${urls.assetUrl}/gallery/prompts/headshot/sogni-photobooth-jazz-saxophonist-raw.jpg` },
+    { name: "nft ape", image: `${urls.assetUrl}/gallery/prompts/headshot/sogni-photobooth-nft-bored-ape-raw.jpg` },
+    { name: "crypto punk", image: `${urls.assetUrl}/gallery/prompts/headshot/sogni-photobooth-nft-crypto-punk-raw.jpg` },
+    { name: "tron", image: `${urls.assetUrl}/gallery/prompts/headshot/sogni-photobooth-tron-don-raw.jpg` },
+    { name: "watercolor", image: `${urls.assetUrl}/gallery/prompts/headshot/sogni-photobooth-storybook-watercolor-raw.jpg` },
+    { name: "origami", image: `${urls.assetUrl}/gallery/prompts/headshot/sogni-photobooth-origami-shadowbox-raw.jpg` },
+    { name: "sepia photo", image: `${urls.assetUrl}/gallery/prompts/headshot/sogni-photobooth-sepia-daguerreotype-raw.jpg` },
+    { name: "pointillism", image: `${urls.assetUrl}/gallery/prompts/headshot/sogni-photobooth-pointillism-dots-raw.jpg` },
+    { name: "bronze", image: `${urls.assetUrl}/gallery/prompts/headshot/sogni-photobooth-polished-bronze-raw.jpg` },
   ];
 
   // Rotate transformations at different intervals
@@ -152,12 +153,12 @@ const GimiChallenge = () => {
   }, []);
 
   const styles = [
-    { name: "1990's House Party host", emoji: "🎉", image: "/gallery/prompts/headshot/sogni-photobooth-1990s-house-party-raw.jpg" },
-    { name: "Cyberpunk street racer", emoji: "🏍️", image: "/gallery/prompts/headshot/sogni-photobooth-neon-cyberpunk-raw.jpg" },
-    { name: "Renaissance painting", emoji: "🎨", image: "/gallery/prompts/headshot/sogni-photobooth-gilded-renaissance-raw.jpg" },
-    { name: "Club DJ in Tokyo", emoji: "🎧", image: "/gallery/prompts/headshot/sogni-photobooth-club-d-j-raw.jpg" },
-    { name: "Professional headshot", emoji: "💼", image: "/gallery/prompts/headshot/sogni-photobooth-magazine-cover-studio-raw.jpg" },
-    { name: "ASCII Terminal hacker", emoji: "💻", image: "/gallery/prompts/headshot/sogni-photobooth-ascii-terminal-raw.jpg" },
+    { name: "1990's House Party host", emoji: "🎉", image: `${urls.assetUrl}/gallery/prompts/headshot/sogni-photobooth-1990s-house-party-raw.jpg` },
+    { name: "Cyberpunk street racer", emoji: "🏍️", image: `${urls.assetUrl}/gallery/prompts/headshot/sogni-photobooth-neon-cyberpunk-raw.jpg` },
+    { name: "Renaissance painting", emoji: "🎨", image: `${urls.assetUrl}/gallery/prompts/headshot/sogni-photobooth-gilded-renaissance-raw.jpg` },
+    { name: "Club DJ in Tokyo", emoji: "🎧", image: `${urls.assetUrl}/gallery/prompts/headshot/sogni-photobooth-club-d-j-raw.jpg` },
+    { name: "Professional headshot", emoji: "💼", image: `${urls.assetUrl}/gallery/prompts/headshot/sogni-photobooth-magazine-cover-studio-raw.jpg` },
+    { name: "ASCII Terminal hacker", emoji: "💻", image: `${urls.assetUrl}/gallery/prompts/headshot/sogni-photobooth-ascii-terminal-raw.jpg` },
     { name: "200+ other wild styles", emoji: "✨", image: null }
   ];
 
@@ -399,7 +400,7 @@ const GimiChallenge = () => {
               <div className="gimi-video-container">
                 <video
                   className="gimi-video-player"
-                  src="https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/videos/sogni-photobooth-video-demo_832x1216.mp4"
+                  src={`${urls.assetUrl}/videos/sogni-photobooth-video-demo_832x1216.mp4`}
                   loop
                   muted={!isJazzAudioEnabled}
                   playsInline
@@ -431,7 +432,7 @@ const GimiChallenge = () => {
               <div className="gimi-video-container">
                 <video
                   className="gimi-video-player"
-                  src="https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/videos/sogni-photobooth-jojo-stand-aura-raw.mp4"
+                  src={`${urls.assetUrl}/videos/sogni-photobooth-jojo-stand-aura-raw.mp4`}
                   loop
                   muted={!isJojoAudioEnabled}
                   playsInline
@@ -462,7 +463,7 @@ const GimiChallenge = () => {
             <div className="gimi-video-example">
               <video
                 className="gimi-video-player"
-                src="https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/videos/sogni-photobooth-stonemoss-raw.mp4"
+                src={`${urls.assetUrl}/videos/sogni-photobooth-stonemoss-raw.mp4`}
                 loop
                 muted
                 playsInline

@@ -27,6 +27,7 @@ import { createPolaroidImage } from './utils/imageProcessing.js';
 import { getPhotoHashtag } from './services/TwitterShare.js';
 import { trackShareWithStyle } from './services/analyticsService';
 import { CUSTOM_PROMPT_IMAGE_KEY } from './components/shared/CustomPromptPopup';
+import urls from './config/urls';
 import clickSound from './click.mp3';
 import cameraWindSound from './camera-wind.mp3';
 // import helloSound from './hello.mp3';
@@ -8567,7 +8568,7 @@ const App = () => {
                 {(() => {
                   // Generate the full gallery image path
                   const stylePreviewImage = selectedStyle && selectedStyle !== 'custom'
-                    ? `/gallery/prompts/${portraitType}/${generateGalleryFilename(selectedStyle)}`
+                    ? `${urls.assetUrl}/gallery/prompts/${portraitType}/${generateGalleryFilename(selectedStyle)}`
                     : null;
                   return stylePreviewImage ? (
                     <img

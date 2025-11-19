@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 
 import PropTypes from 'prop-types';
+import urls from '../../config/urls';
 import { getCustomDimensions } from '../../utils/imageProcessing';
 import { useApp } from '../../context/AppContext.tsx';
 import { themeConfigService } from '../../services/themeConfig';
@@ -52,7 +53,7 @@ const ImageAdjuster = ({
     if (isIndividualStyle) {
       try {
         const expectedFilename = generateGalleryFilename(selectedStyle);
-        return `/gallery/prompts/${portraitType || 'medium'}/${expectedFilename}`;
+        return `${urls.assetUrl}/gallery/prompts/${portraitType || 'medium'}/${expectedFilename}`;
       } catch (error) {
         console.warn('Error generating style preview image:', error);
         return null;

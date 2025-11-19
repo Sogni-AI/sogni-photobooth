@@ -7,6 +7,7 @@ import { useApp } from '../../context/AppContext';
 import { useNavigation } from '../AppRouter';
 import { styleIdToDisplay } from '../../utils';
 import { getAttributionText, hasPromptAttribution } from '../../config/ugcAttributions';
+import urls from '../../config/urls';
 import promptsDataRaw from '../../prompts.json';
 import '../../styles/film-strip.css'; // Reuse existing film-strip styles
 import '../../styles/events/HalloweenEvent.css';
@@ -54,7 +55,7 @@ const HalloweenEvent = () => {
       })
       .map(key => ({
         key,
-        img: `/gallery/prompts/${folder}/sogni-photobooth-${key.replace(/([A-Z])/g, '-$1').toLowerCase()}-raw.jpg`,
+        img: `${urls.assetUrl}/gallery/prompts/${folder}/sogni-photobooth-${key.replace(/([A-Z])/g, '-$1').toLowerCase()}-raw.jpg`,
         title: styleIdToDisplay(key),
         hasAttribution: hasPromptAttribution(key)
       }));
@@ -429,19 +430,19 @@ const HalloweenEvent = () => {
               <div className="halloween-inspiration">
                 <div className="halloween-gallery">
                   <div className="halloween-polaroid">
-                    <img src="/gallery/prompts/medium/sogni-photobooth-dream-stalker-raw.jpg" alt="Dream Stalker" />
+                    <img src={`${urls.assetUrl}/gallery/prompts/medium/sogni-photobooth-dream-stalker-raw.jpg`} alt="Dream Stalker" />
                   </div>
                   <div className="halloween-polaroid">
-                    <img src="/gallery/prompts/medium/sogni-photobooth-clown-from-hell-raw.jpg" alt="Clown from Hell" />
+                    <img src={`${urls.assetUrl}/gallery/prompts/medium/sogni-photobooth-clown-from-hell-raw.jpg`} alt="Clown from Hell" />
                   </div>
                   <div className="halloween-polaroid">
-                    <img src="/gallery/prompts/medium/sogni-photobooth-corpse-bride-raw.jpg" alt="Corpse Bride" />
+                    <img src={`${urls.assetUrl}/gallery/prompts/medium/sogni-photobooth-corpse-bride-raw.jpg`} alt="Corpse Bride" />
                   </div>
                   <div className="halloween-polaroid">
-                    <img src="/gallery/prompts/medium/sogni-photobooth-haunted-prom-queen-raw.jpg" alt="Haunted Prom Queen" />
+                    <img src={`${urls.assetUrl}/gallery/prompts/medium/sogni-photobooth-haunted-prom-queen-raw.jpg`} alt="Haunted Prom Queen" />
                   </div>
                   <div className="halloween-polaroid">
-                    <img src="/gallery/prompts/medium/sogni-photobooth-midsommar-bloom-raw.jpg" alt="Midsommar Bloom" />
+                    <img src={`${urls.assetUrl}/gallery/prompts/medium/sogni-photobooth-midsommar-bloom-raw.jpg`} alt="Midsommar Bloom" />
                   </div>
                 </div>
               </div>

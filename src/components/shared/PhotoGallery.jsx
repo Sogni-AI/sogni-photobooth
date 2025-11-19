@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import QRCode from 'qrcode';
 
 import PropTypes from 'prop-types';
+import urls from '../../config/urls';
 import '../../styles/film-strip.css'; // Using film-strip.css which contains the gallery styles
 import '../../styles/components/PhotoGallery.css';
 import { createPolaroidImage } from '../../utils/imageProcessing';
@@ -2277,7 +2278,7 @@ const PhotoGallery = ({
             {(() => {
               // Generate the full gallery image path
               const stylePreviewImage = selectedStyle && selectedStyle !== 'custom'
-                ? `/gallery/prompts/${portraitType}/${generateGalleryFilename(selectedStyle)}`
+                ? `${urls.assetUrl}/gallery/prompts/${portraitType}/${generateGalleryFilename(selectedStyle)}`
                 : null;
               return stylePreviewImage ? (
                 <img
@@ -4951,29 +4952,29 @@ const PhotoGallery = ({
                   <video
                     src={(() => {
                       if (photo.promptKey === 'jazzSaxophonist') {
-                        return "https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/videos/sogni-photobooth-video-demo_832x1216.mp4";
+                        return `${urls.assetUrl}/videos/sogni-photobooth-video-demo_832x1216.mp4`;
                       } else if (photo.promptKey === 'kittySwarm') {
-                        return "https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/videos/sogni-photobooth-kittyswarm-raw.mp4";
+                        return `${urls.assetUrl}/videos/sogni-photobooth-kittyswarm-raw.mp4`;
                       } else if (photo.promptKey === 'stoneMoss') {
-                        return "https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/videos/sogni-photobooth-stonemoss-raw.mp4";
+                        return `${urls.assetUrl}/videos/sogni-photobooth-stonemoss-raw.mp4`;
                       } else if (photo.promptKey === 'dapperVictorian') {
-                        return "https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/videos/sogni-photobooth-dappervictorian-raw.mp4";
+                        return `${urls.assetUrl}/videos/sogni-photobooth-dappervictorian-raw.mp4`;
                       } else if (photo.promptKey === 'prismKaleidoscope') {
-                        return "https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/videos/sogni-photobooth-prism-kaleidoscope-raw.mp4";
+                        return `${urls.assetUrl}/videos/sogni-photobooth-prism-kaleidoscope-raw.mp4`;
                       } else if (photo.promptKey === 'apocalypseRooftop') {
-                        return "https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/videos/sogni-photobooth-apocalypserooftop-raw.mp4";
+                        return `${urls.assetUrl}/videos/sogni-photobooth-apocalypserooftop-raw.mp4`;
                       } else if (photo.promptKey === 'anime1990s') {
                         const animeVideos = [
-                          "https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/videos/sogni-photobooth-anime1990s-raw.mp4",
-                          "https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/videos/sogni-photobooth-anime1990s-raw2.mp4"
+                          `${urls.assetUrl}/videos/sogni-photobooth-anime1990s-raw.mp4`,
+                          `${urls.assetUrl}/videos/sogni-photobooth-anime1990s-raw2.mp4`
                         ];
                         return animeVideos[currentVideoIndex] || animeVideos[0];
                       } else if (photo.promptKey === 'nftBoredApe') {
-                        return "https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/videos/sogni-photobooth-nft-bored-ape-raw.mp4";
+                        return `${urls.assetUrl}/videos/sogni-photobooth-nft-bored-ape-raw.mp4`;
                       } else if (photo.promptKey === 'clownPastel') {
-                        return "https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/videos/sogni-photobooth-clown-pastel-raw.mp4";
+                        return `${urls.assetUrl}/videos/sogni-photobooth-clown-pastel-raw.mp4`;
                       } else if (photo.promptKey === 'jojoStandAura') {
-                        return "https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/videos/sogni-photobooth-jojo-stand-aura-raw.mp4";
+                        return `${urls.assetUrl}/videos/sogni-photobooth-jojo-stand-aura-raw.mp4`;
                       }
                       return "";
                     })()}
@@ -4983,8 +4984,8 @@ const PhotoGallery = ({
                     onEnded={() => {
                       if (photo.promptKey === 'anime1990s') {
                         const animeVideos = [
-                          "https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/videos/sogni-photobooth-anime1990s-raw.mp4",
-                          "https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/videos/sogni-photobooth-anime1990s-raw2.mp4"
+                          `${urls.assetUrl}/videos/sogni-photobooth-anime1990s-raw.mp4`,
+                          `${urls.assetUrl}/videos/sogni-photobooth-anime1990s-raw2.mp4`
                         ];
                         const nextIndex = (currentVideoIndex + 1) % animeVideos.length;
                         setCurrentVideoIndex(nextIndex);

@@ -1,4 +1,5 @@
 import { styleIdToDisplay } from './index';
+import urls from '../config/urls';
 
 /**
  * Converts camelCase prompt key to kebab-case filename
@@ -111,7 +112,7 @@ export const loadGalleryImages = async (stylePrompts, portraitType = 'medium') =
 
       // Generate the expected filename using strict naming convention
       const expectedFilename = generateGalleryFilename(promptKey);
-      const imagePath = `/gallery/prompts/${subdirectory}/${expectedFilename}`;
+      const imagePath = `${urls.assetUrl}/gallery/prompts/${subdirectory}/${expectedFilename}`;
 
       // Create photo object - will show placeholder if file doesn't exist
       const galleryPhoto = {
