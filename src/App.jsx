@@ -18,6 +18,7 @@ import { createFrontendClientAdapter } from './services/frontendSogniAdapter';
 import { enhancePhoto, undoEnhancement, redoEnhancement } from './services/PhotoEnhancer';
 import { refreshPhoto } from './services/PhotoRefresher';
 import { shareToTwitter } from './services/TwitterShare';
+import { shareViaWebShare, isWebShareSupported } from './services/WebShare';
 import { themeConfigService } from './services/themeConfig';
 import { trackPageView, initializeGA, trackEvent } from './utils/analytics';
 import { getCampaignSource } from './utils/campaignAttribution';
@@ -2286,6 +2287,44 @@ const App = () => {
     // Set the photo index and open the modal
     setTwitterPhotoIndex(photoIndex);
     setShowTwitterModal(true);
+  };
+
+  // Handle generic Web Share API share
+  const handleShareViaWebShare = async (photoIndex) => {
+    console.log('📤 Web Share - Starting share process');
+    
+    if (!photos[photoIndex] || !photos[photoIndex].images || !photos[photoIndex].images[0]) {
+      console.error('No image selected for Web Share');
+      setBackendError({
+        type: 'no_image',
+        title: '📷 No Image Selected',
+        message: 'Please select a photo from your gallery before sharing.',
+        canRetry: false
+      });
+      return;
+    }
+
+    // Call the Web Share service
+    await shareViaWebShare({
+      photoIndex,
+      photos,
+      setBackendError,
+      tezdevTheme,
+      aspectRatio,
+      outputFormat,
+      sogniWatermark: settings.sogniWatermark,
+      sogniWatermarkSize: settings.sogniWatermarkSize,
+      sogniWatermarkMargin: settings.sogniWatermarkMargin,
+    });
+
+    // Track analytics for Web Share
+    await trackShareWithStyle(selectedStyle, stylePrompts, 'webshare', {
+      photoIndex,
+      tezdevTheme,
+      aspectRatio,
+      outputFormat,
+      hasWatermark: settings.sogniWatermark,
+    });
   };
 
   // Handle Kiosk Mode sharing with QR code
@@ -6497,6 +6536,7 @@ const App = () => {
                 outputFormat={outputFormat}
                 sensitiveContentFilter={sensitiveContentFilter}
                 handleShareToX={handleShareToX}
+                handleShareViaWebShare={handleShareViaWebShare}
                 handleShareQRCode={handleKioskModeShare}
                 slothicornAnimationEnabled={slothicornAnimationEnabled}
                 backgroundAnimationsEnabled={backgroundAnimationsEnabled}
@@ -8789,6 +8829,7 @@ const App = () => {
           outputFormat={outputFormat}
           sensitiveContentFilter={sensitiveContentFilter}
           handleShareToX={handleShareToX}
+          handleShareViaWebShare={handleShareViaWebShare}
           handleShareQRCode={handleKioskModeShare}
           slothicornAnimationEnabled={slothicornAnimationEnabled}
           backgroundAnimationsEnabled={backgroundAnimationsEnabled}

@@ -4,15 +4,18 @@ import '../../styles/components/ShareMenu.css';
 
 /**
  * ShareMenu - A dropdown menu for sharing options
- * Shows "Share to Twitter", "Share QR Code", and "Submit to Gallery" options
+ * Shows "Share to Twitter", "Share..." (Web Share API), "Share QR Code", and "Submit to Gallery" options
  */
-const ShareMenu = ({ 
-  onShareToTwitter, 
+const ShareMenu = ({
+  onShareToTwitter,
+  onShareViaWebShare,
   onSubmitToGallery,
   onShareQRCode,
   disabled = false,
   hasPromptKey = false,
-  tezdevTheme = 'off'
+  tezdevTheme = 'off',
+  showWebShare = false,
+  isMobileDevice = false
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef(null);
@@ -45,6 +48,14 @@ const ShareMenu = ({
     onShareToTwitter();
   };
 
+  const handleShareViaWebShare = (e) => {
+    e.stopPropagation();
+    setIsOpen(false);
+    if (onShareViaWebShare) {
+      onShareViaWebShare();
+    }
+  };
+
   const handleSubmitToGallery = (e) => {
     e.stopPropagation();
     setIsOpen(false);
@@ -67,22 +78,36 @@ const ShareMenu = ({
         disabled={disabled}
       >
         <svg fill="currentColor" width="16" height="16" viewBox="0 0 24 24">
-          <path d="M22.46 6c-.77.35-1.6.58-2.46.67.9-.53 1.59-1.37 1.92-2.38-.84.5-1.78.86-2.79 1.07C18.27 4.49 17.01 4 15.63 4c-2.38 0-4.31 1.94-4.31 4.31 0 .34.04.67.11.99C7.83 9.09 4.16 7.19 1.69 4.23-.07 6.29.63 8.43 2.49 9.58c-.71-.02-1.38-.22-1.97-.54v.05c0 2.09 1.49 3.83 3.45 4.23-.36.1-.74.15-1.14.15-.28 0-.55-.03-.81-.08.55 1.71 2.14 2.96 4.03 3-1.48 1.16-3.35 1.85-5.37 1.85-.35 0-.69-.02-1.03-.06 1.92 1.23 4.2 1.95 6.67 1.95 8.01 0 12.38-6.63 12.38-12.38 0-.19 0-.38-.01-.56.85-.61 1.58-1.37 2.16-2.24z"/>
+          <path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92c0-1.61-1.31-2.92-2.92-2.92zM18 4c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zM6 13c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm12 7.02c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1z"/>
         </svg>
         {tezdevTheme !== 'off' ? 'Share' : 'Share'}
       </button>
 
       {isOpen && (
         <div className="share-menu-dropdown">
-          <button
-            className="share-menu-option"
-            onClick={handleShareToTwitter}
-          >
-            <svg fill="currentColor" width="16" height="16" viewBox="0 0 24 24">
-              <path d="M22.46 6c-.77.35-1.6.58-2.46.67.9-.53 1.59-1.37 1.92-2.38-.84.5-1.78.86-2.79 1.07C18.27 4.49 17.01 4 15.63 4c-2.38 0-4.31 1.94-4.31 4.31 0 .34.04.67.11.99C7.83 9.09 4.16 7.19 1.69 4.23-.07 6.29.63 8.43 2.49 9.58c-.71-.02-1.38-.22-1.97-.54v.05c0 2.09 1.49 3.83 3.45 4.23-.36.1-.74.15-1.14.15-.28 0-.55-.03-.81-.08.55 1.71 2.14 2.96 4.03 3-1.48 1.16-3.35 1.85-5.37 1.85-.35 0-.69-.02-1.03-.06 1.92 1.23 4.2 1.95 6.67 1.95 8.01 0 12.38-6.63 12.38-12.38 0-.19 0-.38-.01-.56.85-.61 1.58-1.37 2.16-2.24z"/>
-            </svg>
-            Share to Twitter
-          </button>
+          {!isMobileDevice && (
+            <button
+              className="share-menu-option"
+              onClick={handleShareToTwitter}
+            >
+              <svg fill="currentColor" width="16" height="16" viewBox="0 0 24 24">
+                <path d="M22.46 6c-.77.35-1.6.58-2.46.67.9-.53 1.59-1.37 1.92-2.38-.84.5-1.78.86-2.79 1.07C18.27 4.49 17.01 4 15.63 4c-2.38 0-4.31 1.94-4.31 4.31 0 .34.04.67.11.99C7.83 9.09 4.16 7.19 1.69 4.23-.07 6.29.63 8.43 2.49 9.58c-.71-.02-1.38-.22-1.97-.54v.05c0 2.09 1.49 3.83 3.45 4.23-.36.1-.74.15-1.14.15-.28 0-.55-.03-.81-.08.55 1.71 2.14 2.96 4.03 3-1.48 1.16-3.35 1.85-5.37 1.85-.35 0-.69-.02-1.03-.06 1.92 1.23 4.2 1.95 6.67 1.95 8.01 0 12.38-6.63 12.38-12.38 0-.19 0-.38-.01-.56.85-.61 1.58-1.37 2.16-2.24z"/>
+              </svg>
+              Share to Twitter
+            </button>
+          )}
+
+          {showWebShare && onShareViaWebShare && (
+            <button
+              className="share-menu-option webshare-option"
+              onClick={handleShareViaWebShare}
+            >
+              <svg fill="currentColor" width="16" height="16" viewBox="0 0 24 24">
+                <path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92c0-1.61-1.31-2.92-2.92-2.92zM18 4c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zM6 13c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm12 7.02c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1z"/>
+              </svg>
+              Share...
+            </button>
+          )}
 
           {onShareQRCode && (
             <button
@@ -115,11 +140,14 @@ const ShareMenu = ({
 
 ShareMenu.propTypes = {
   onShareToTwitter: PropTypes.func.isRequired,
+  onShareViaWebShare: PropTypes.func,
   onSubmitToGallery: PropTypes.func.isRequired,
   onShareQRCode: PropTypes.func,
   disabled: PropTypes.bool,
   hasPromptKey: PropTypes.bool,
-  tezdevTheme: PropTypes.string
+  tezdevTheme: PropTypes.string,
+  showWebShare: PropTypes.bool,
+  isMobileDevice: PropTypes.bool
 };
 
 export default ShareMenu;

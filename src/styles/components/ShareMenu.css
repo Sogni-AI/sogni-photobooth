@@ -57,6 +57,14 @@
   color: #1DA1F2;
 }
 
+.share-menu-option.webshare-option svg {
+  color: #5856D6;
+}
+
+.share-menu-option.instagram-option svg {
+  color: #E4405F;
+}
+
 .share-menu-option.gallery-option svg {
   color: #764ba2;
 }

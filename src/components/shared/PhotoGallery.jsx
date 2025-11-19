@@ -18,6 +18,7 @@ import { themeConfigService } from '../../services/themeConfig';
 import { useApp } from '../../context/AppContext';
 import { trackDownloadWithStyle } from '../../services/analyticsService';
 import { downloadImagesAsZip } from '../../utils/bulkDownload';
+import { isWebShareSupported } from '../../services/WebShare';
 import CustomPromptPopup from './CustomPromptPopup';
 import ShareMenu from './ShareMenu';
 import GallerySubmissionConfirm from './GallerySubmissionConfirm';
@@ -99,6 +100,7 @@ const PhotoGallery = ({
   selectedSubIndex = 0,
   outputFormat = 'png',
   handleShareToX,
+  handleShareViaWebShare,
   handleShareQRCode,
   slothicornAnimationEnabled,
   backgroundAnimationsEnabled = false,
@@ -2742,8 +2744,11 @@ const PhotoGallery = ({
             ) : (
               <ShareMenu
                 onShareToTwitter={() => handleShareToX(selectedPhotoIndex)}
+                onShareViaWebShare={handleShareViaWebShare ? () => handleShareViaWebShare(selectedPhotoIndex) : undefined}
                 onSubmitToGallery={handleGallerySubmitRequest}
                 onShareQRCode={handleShareQRCode ? () => handleShareQRCode(selectedPhotoIndex) : undefined}
+                showWebShare={isWebShareSupported()}
+                isMobileDevice={isMobile()}
                 disabled={
                   selectedPhoto.loading || 
                   selectedPhoto.enhancing ||
@@ -6008,6 +6013,7 @@ PhotoGallery.propTypes = {
   desiredHeight: PropTypes.number.isRequired,
   selectedSubIndex: PropTypes.number,
   handleShareToX: PropTypes.func.isRequired,
+  handleShareViaWebShare: PropTypes.func,
   handleShareQRCode: PropTypes.func,
   slothicornAnimationEnabled: PropTypes.bool.isRequired,
   backgroundAnimationsEnabled: PropTypes.bool,
