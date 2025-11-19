@@ -6,6 +6,14 @@ const PageMetadata = () => {
     
     // Define metadata for different routes
     const routeMetadata = {
+      '/event/halloween': {
+        // Don't override Halloween event metadata - it has custom Helmet tags
+        skipUpdate: true
+      },
+      '/event/winter': {
+        // Don't override Winter event metadata - it has custom Helmet tags
+        skipUpdate: true
+      },
       '/contest/vote': {
         title: '🎃 Halloween Contest - Vote Now! | Sogni AI Photobooth',
         description: 'Vote for your favorite AI-generated Halloween photos! Browse amazing AI art created by the community and support your favorites by voting.',
@@ -35,17 +43,23 @@ const PageMetadata = () => {
         keywords: 'AI photo challenge, creator challenge, Gimi.co, viral content, AI photobooth, photo transformation, creator rewards, USDC prizes, social media content, TikTok challenge, Instagram challenge'
       },
       default: {
-        title: 'Sogni AI Photobooth',
-        description: 'Sogni Photobooth: Capture and transform your photos with AI styles',
-        ogTitle: 'Sogni AI Photobooth',
-        ogDescription: 'Sogni Photobooth: Capture and transform your photos with AI styles',
-        twitterTitle: 'Sogni-AI/sogni-photobooth: Sogni Photobooth: Capture and transform your photos with AI styles',
-        twitterDescription: 'Sogni Photobooth: Capture and transform your photos with AI styles'
+        title: 'Sogni AI Photobooth | Free AI Headshot Generator & Portrait Maker',
+        description: 'Create stunning AI headshots and portraits with Sogni Photobooth—your all-in-one AI headshot generator, free AI portrait generator, and anime PFP maker. Transform your photos with 200+ styles in seconds!',
+        ogTitle: 'Sogni AI Photobooth | Free AI Headshot Generator & Portrait Maker',
+        ogDescription: 'Create stunning AI headshots and portraits with Sogni Photobooth—your free AI portrait generator and anime PFP maker. Transform your photos with 200+ AI styles in seconds!',
+        twitterTitle: 'Sogni AI Photobooth | Free AI Headshot & Portrait Generator',
+        twitterDescription: 'Create stunning AI headshots, portraits, and anime PFPs with our free AI generator. 200+ styles, instant results!',
+        keywords: 'AI headshot generator, free AI portrait generator, AI portrait generator, PFP maker, anime PFP maker, AI photo generator, AI photobooth, AI selfie generator, profile picture maker, anime avatar creator, AI art generator, portrait AI, headshot maker, AI image generator, photo transformer'
       }
     };
 
     // Get metadata for current route or use default
     const metadata = routeMetadata[pathname] || routeMetadata.default;
+
+    // Skip metadata updates for routes that have custom Helmet tags
+    if (metadata.skipUpdate) {
+      return;
+    }
 
     // Update document title
     document.title = metadata.title;

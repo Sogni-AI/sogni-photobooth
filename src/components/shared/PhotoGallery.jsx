@@ -2747,6 +2747,12 @@ const PhotoGallery = ({
                 onShareViaWebShare={handleShareViaWebShare ? () => handleShareViaWebShare(selectedPhotoIndex) : undefined}
                 onSubmitToGallery={handleGallerySubmitRequest}
                 onShareQRCode={handleShareQRCode ? () => handleShareQRCode(selectedPhotoIndex) : undefined}
+                onSubmitToPromptContest={() => {
+                  // Handle winter prompt contest submission
+                  console.log('❄️ Submitting to winter prompt contest');
+                  // This will use the same gallery submission flow but with winter context
+                  handleGallerySubmitRequest();
+                }}
                 showWebShare={isWebShareSupported()}
                 isMobileDevice={isMobile()}
                 disabled={
@@ -2758,6 +2764,7 @@ const PhotoGallery = ({
                   selectedPhoto.images.length === 0
                 }
                 hasPromptKey={!!(selectedPhoto.promptKey || selectedPhoto.selectedStyle) && (selectedPhoto.promptKey !== 'custom' && selectedPhoto.selectedStyle !== 'custom')}
+                isCustomPromptWithWinterContext={!!settings.winterContext && (selectedStyle === 'custom' || selectedPhoto.selectedStyle === 'custom' || selectedPhoto.promptKey === 'custom')}
                 tezdevTheme={tezdevTheme}
               />
             )}

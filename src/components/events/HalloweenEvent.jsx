@@ -7,6 +7,7 @@ import { useApp } from '../../context/AppContext';
 import { useNavigation } from '../AppRouter';
 import { styleIdToDisplay } from '../../utils';
 import { getAttributionText, hasPromptAttribution } from '../../config/ugcAttributions';
+import { generateGalleryFilename } from '../../utils/galleryLoader';
 import urls from '../../config/urls';
 import promptsDataRaw from '../../prompts.json';
 import '../../styles/film-strip.css'; // Reuse existing film-strip styles
@@ -55,7 +56,7 @@ const HalloweenEvent = () => {
       })
       .map(key => ({
         key,
-        img: `${urls.assetUrl}/gallery/prompts/${folder}/sogni-photobooth-${key.replace(/([A-Z])/g, '-$1').toLowerCase()}-raw.jpg`,
+        img: `${urls.assetUrl}/gallery/prompts/${folder}/${generateGalleryFilename(key)}`,
         title: styleIdToDisplay(key),
         hasAttribution: hasPromptAttribution(key)
       }));

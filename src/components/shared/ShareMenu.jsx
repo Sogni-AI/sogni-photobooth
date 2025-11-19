@@ -4,15 +4,17 @@ import '../../styles/components/ShareMenu.css';
 
 /**
  * ShareMenu - A dropdown menu for sharing options
- * Shows "Share to Twitter", "Share..." (Web Share API), "Share QR Code", and "Submit to Gallery" options
+ * Shows "Share to Twitter", "Share..." (Web Share API), "Share QR Code", "Submit to Gallery", and "Submit to Prompt Contest" options
  */
 const ShareMenu = ({
   onShareToTwitter,
   onShareViaWebShare,
   onSubmitToGallery,
   onShareQRCode,
+  onSubmitToPromptContest,
   disabled = false,
   hasPromptKey = false,
+  isCustomPromptWithWinterContext = false,
   tezdevTheme = 'off',
   showWebShare = false,
   isMobileDevice = false
@@ -67,6 +69,14 @@ const ShareMenu = ({
     setIsOpen(false);
     if (onShareQRCode) {
       onShareQRCode();
+    }
+  };
+
+  const handleSubmitToPromptContest = (e) => {
+    e.stopPropagation();
+    setIsOpen(false);
+    if (onSubmitToPromptContest) {
+      onSubmitToPromptContest();
     }
   };
 
@@ -132,6 +142,18 @@ const ShareMenu = ({
               Submit to Gallery
             </button>
           )}
+
+          {isCustomPromptWithWinterContext && onSubmitToPromptContest && (
+            <button
+              className="share-menu-option contest-option"
+              onClick={handleSubmitToPromptContest}
+            >
+              <svg fill="currentColor" width="16" height="16" viewBox="0 0 24 24">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+              </svg>
+              Submit to Prompt Contest
+            </button>
+          )}
         </div>
       )}
     </div>
@@ -143,8 +165,10 @@ ShareMenu.propTypes = {
   onShareViaWebShare: PropTypes.func,
   onSubmitToGallery: PropTypes.func.isRequired,
   onShareQRCode: PropTypes.func,
+  onSubmitToPromptContest: PropTypes.func,
   disabled: PropTypes.bool,
   hasPromptKey: PropTypes.bool,
+  isCustomPromptWithWinterContext: PropTypes.bool,
   tezdevTheme: PropTypes.string,
   showWebShare: PropTypes.bool,
   isMobileDevice: PropTypes.bool

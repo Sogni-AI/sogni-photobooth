@@ -1720,6 +1720,15 @@ const App = () => {
   }, [selectedPhotoIndex, showPhotoGrid, showStartMenu]);
 
   // --- Ensure handlers are defined here, before any JSX or usage ---
+  // Helper function to check if a style is from the Christmas/Winter category
+  const isWinterStyle = (styleKey) => {
+    if (!styleKey || styleKey === 'custom' || styleKey === 'random' || styleKey === 'randomMix' || styleKey === 'oneOfEach' || styleKey === 'browseGallery') {
+      return false;
+    }
+    const winterPrompts = promptsDataRaw['christmas-winter']?.prompts || {};
+    return styleKey in winterPrompts;
+  };
+
   // Update handleUpdateStyle to use updateSetting and update URL
   const handleUpdateStyle = (style) => {
     // Handle special case for browseGallery
@@ -1729,11 +1738,21 @@ const App = () => {
       updateUrlWithPrompt(null); // Clear URL parameter
       setCurrentHashtag(null); // Clear hashtag
       updateSetting('halloweenContext', false); // Clear Halloween context
+      updateSetting('winterContext', false); // Clear Winter context
       // Mark that user has explicitly selected a style
       localStorage.setItem('sogni_style_explicitly_selected', 'true');
       return;
     }
     
+    // Auto-switch to DreamShaper for Christmas/Winter styles
+    if (isWinterStyle(style)) {
+      console.log('❄️ Christmas/Winter style detected, auto-switching to DreamShaper model');
+      updateSetting('selectedModel', 'coreml-dreamshaperXL_v21TurboDPMSDE');
+      updateSetting('winterContext', true);
+    } else {
+      // Clear winter context for non-winter styles
+      updateSetting('winterContext', false);
+    }
     
     updateSetting('selectedStyle', style); 
     if (style === 'custom') {
@@ -1983,6 +2002,11 @@ const App = () => {
     if (galleryMetadata?.model) {
       console.log('🤖 [App] Switching to gallery entry model FIRST:', galleryMetadata.model);
       switchToModel(galleryMetadata.model);
+    } else if (isWinterStyle(promptKey)) {
+      // Auto-switch to DreamShaper for Christmas/Winter styles
+      console.log('❄️ Christmas/Winter style detected from gallery, auto-switching to DreamShaper model');
+      updateSetting('selectedModel', 'coreml-dreamshaperXL_v21TurboDPMSDE');
+      updateSetting('winterContext', true);
     }
     
     // Now update style and URL for deep linking
@@ -1994,6 +2018,12 @@ const App = () => {
       updateSetting('positivePrompt', prompt);
       // Clear Halloween context when switching to a preset style
       updateSetting('halloweenContext', false);
+      // Set winter context if it's a winter style
+      if (isWinterStyle(promptKey)) {
+        updateSetting('winterContext', true);
+      } else {
+        updateSetting('winterContext', false);
+      }
     }
     
     // If a gallery variation is selected, use its seed
@@ -2717,10 +2747,12 @@ const App = () => {
     // Store the message for potential retry
     setLastTwitterMessage(customMessage);
     
-    // Create a clean URL - use /event/halloween path if user came from Halloween event
+    // Create a clean URL - use /event path if user came from an event
     const shareUrl = new URL(window.location.origin);
     if (settings.halloweenContext) {
       shareUrl.pathname = '/event/halloween';
+    } else if (settings.winterContext) {
+      shareUrl.pathname = '/event/winter';
     }
     
     // Only add the prompt parameter if we have a hashtag and it's not from a custom prompt

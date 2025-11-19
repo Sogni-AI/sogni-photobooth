@@ -1,12 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import PropTypes from 'prop-types';
-import '../../styles/events/HalloweenPromptPopup.css';
+import '../../styles/events/WinterPromptPopup.css';
 
 /**
- * HalloweenPromptPopup - Halloween-themed version of CustomPromptPopup for costume submissions
+ * WinterPromptPopup - Winter-themed version of CustomPromptPopup for style submissions
  */
-const HalloweenPromptPopup = ({ 
+const WinterPromptPopup = ({ 
   isOpen, 
   onClose, 
   onApply,
@@ -17,18 +17,18 @@ const HalloweenPromptPopup = ({
   const textareaRef = useRef(null);
   const popupRef = useRef(null);
 
-  // Halloween-themed placeholder examples
-  const halloweenPlaceholders = [
-    "as a vampire in a gothic castle with candelabras 🧛‍♀️🕯️",
-    "dressed as a witch brewing a glowing potion 🧙‍♀️✨",
-    "as a zombie apocalypse survivor in a haunted city 🧟‍♂️🌃",
-    "wearing a Day of the Dead skull makeup with marigolds 💀🌼",
-    "as a werewolf howling at a full moon in misty forest 🐺🌕",
-    "dressed as a steampunk ghost hunter with Victorian gear 👻⚙️",
-    "as a mummy emerging from ancient Egyptian tomb 🏺✨",
-    "wearing a creepy vintage porcelain doll costume 🎎👁️"
+  // Winter-themed placeholder examples
+  const winterPlaceholders = [
+    "wearing elegant white fur coat in a snowy alpine landscape ❄️🏔️",
+    "dressed in cozy winter sweater with falling snowflakes all around ☃️❄️",
+    "as an ice queen with glittering frozen crown in palace ✨👑",
+    "wearing festive holiday outfit with warm golden lights 🎄✨",
+    "in a frosted winter forest with magical aurora lights 🌲💫",
+    "dressed as elegant snow fairy with iridescent wings ❄️🧚",
+    "wearing luxurious winter fashion with autumn leaves transitioning to snow 🍂❄️",
+    "in a cozy cabin scene with warm firelight and snowfall outside 🔥❄️"
   ];
-  const [currentPlaceholder, setCurrentPlaceholder] = useState(halloweenPlaceholders[0]);
+  const [currentPlaceholder, setCurrentPlaceholder] = useState(winterPlaceholders[0]);
 
   // Auto-focus the textarea when the popup opens
   useEffect(() => {
@@ -40,9 +40,9 @@ const HalloweenPromptPopup = ({
       // Rotate placeholder examples
       const placeholderInterval = setInterval(() => {
         setCurrentPlaceholder(prev => {
-          const currentIndex = halloweenPlaceholders.indexOf(prev);
-          const nextIndex = (currentIndex + 1) % halloweenPlaceholders.length;
-          return halloweenPlaceholders[nextIndex];
+          const currentIndex = winterPlaceholders.indexOf(prev);
+          const nextIndex = (currentIndex + 1) % winterPlaceholders.length;
+          return winterPlaceholders[nextIndex];
         });
       }, 4000);
       return () => clearInterval(placeholderInterval);
@@ -109,38 +109,38 @@ const HalloweenPromptPopup = ({
     setTimeout(() => setShowSparkles(false), 500);
   };
 
-  // Get spooky encouraging message based on character count
+  // Get encouraging message based on character count
   const getEncouragingMessage = () => {
     const length = promptText.length;
-    if (length === 0) return "👻 Time to get spooky!";
-    if (length < 20) return "🎃 Keep going, getting creepier!";
-    if (length < 50) return "🕷️ Nice! Add more spooky details!";
-    if (length < 100) return "🧙‍♀️ Wow! This is getting frightfully good!";
-    if (length < 200) return "🦇 Amazing detail! This will be scary good!";
-    return "💀 You're a Halloween master! ✨";
+    if (length === 0) return "❄️ Let your creativity flow!";
+    if (length < 20) return "🍂 Keep going, getting interesting!";
+    if (length < 50) return "✨ Nice! Add more magical details!";
+    if (length < 100) return "⛄ Wow! This is getting beautifully detailed!";
+    if (length < 200) return "🎄 Amazing detail! This will be stunning!";
+    return "❄️ You're a winter wizard! ✨";
   };
 
   if (!isOpen) return null;
 
   return ReactDOM.createPortal(
-    <div className="halloween-prompt-overlay">
-      <div className="halloween-prompt-popup" ref={popupRef}>
-        {/* Floating Halloween decorations */}
-        <div className="halloween-sparkles-container">
-          <span className="halloween-sparkle sparkle-1">🎃</span>
-          <span className="halloween-sparkle sparkle-2">👻</span>
-          <span className="halloween-sparkle sparkle-3">🦇</span>
-          <span className="halloween-sparkle sparkle-4">🕷️</span>
+    <div className="winter-prompt-overlay">
+      <div className="winter-prompt-popup" ref={popupRef}>
+        {/* Floating Winter decorations */}
+        <div className="winter-sparkles-container">
+          <span className="winter-sparkle sparkle-1">❄️</span>
+          <span className="winter-sparkle sparkle-2">🍂</span>
+          <span className="winter-sparkle sparkle-3">✨</span>
+          <span className="winter-sparkle sparkle-4">🧊</span>
         </div>
 
-        <div className="halloween-prompt-header">
+        <div className="winter-prompt-header">
           <h3>
-            <span className="header-emoji">🎃</span>
-            Create Your Costume!
-            <span className="header-emoji">👻</span>
+            <span className="header-emoji">❄️</span>
+            Create Your Winter Style!
+            <span className="header-emoji">✨</span>
           </h3>
           <button 
-            className="halloween-prompt-close"
+            className="winter-prompt-close"
             onClick={handleCancel}
             aria-label="Close"
           >
@@ -148,14 +148,14 @@ const HalloweenPromptPopup = ({
           </button>
         </div>
 
-        <div className="halloween-prompt-body">
-          <label className="halloween-prompt-label">
-            🎨 Describe your spooky costume vision:
+        <div className="winter-prompt-body">
+          <label className="winter-prompt-label">
+            🎨 Describe your winter vision:
           </label>
           <div className="textarea-wrapper">
             <textarea
               ref={textareaRef}
-              className={`halloween-prompt-textarea ${showSparkles ? 'typing-sparkle' : ''}`}
+              className={`winter-prompt-textarea ${showSparkles ? 'typing-sparkle' : ''}`}
               placeholder={currentPlaceholder}
               value={promptText}
               onChange={handleTextChange}
@@ -177,19 +177,19 @@ const HalloweenPromptPopup = ({
           </div>
         </div>
 
-        <div className="halloween-prompt-footer">
+        <div className="winter-prompt-footer">
           <button 
-            className="halloween-prompt-btn halloween-prompt-btn-cancel"
+            className="winter-prompt-btn winter-prompt-btn-cancel"
             onClick={handleCancel}
           >
-            Not Yet 🦇
+            Not Yet ❄️
           </button>
           <button 
-            className="halloween-prompt-btn halloween-prompt-btn-apply"
+            className="winter-prompt-btn winter-prompt-btn-apply"
             onClick={handleApply}
             disabled={!promptText.trim()}
           >
-            Summon the Magic 🎃✨
+            Create Magic ✨
           </button>
         </div>
       </div>
@@ -198,12 +198,12 @@ const HalloweenPromptPopup = ({
   );
 };
 
-HalloweenPromptPopup.propTypes = {
+WinterPromptPopup.propTypes = {
   isOpen: PropTypes.bool.isRequired,
   onClose: PropTypes.func.isRequired,
   onApply: PropTypes.func.isRequired,
   currentPrompt: PropTypes.string
 };
 
-export default HalloweenPromptPopup;
+export default WinterPromptPopup;
 

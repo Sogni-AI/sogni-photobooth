@@ -4,6 +4,7 @@ import AnalyticsDashboard from './admin/AnalyticsDashboard';
 import Moderate from './admin/Moderate';
 import ContestVote from './contest/ContestVote';
 import HalloweenEvent from './events/HalloweenEvent';
+import WinterEvent from './events/WinterEvent';
 import GimiChallenge from './challenge/GimiChallenge';
 import { MusicPlayerProvider } from '../context/MusicPlayerContext';
 import GlobalMusicPlayer from './shared/GlobalMusicPlayer';
@@ -31,6 +32,9 @@ const AppRouter = () => {
     if (hash === '#halloween' || pathname === '/halloween' || pathname === '/event/halloween') {
       return 'halloween';
     }
+    if (hash === '#winter' || pathname === '/winter' || pathname === '/event/winter') {
+      return 'winter';
+    }
     if (pathname === '/challenge/gimi') {
       return 'gimi-challenge';
     }
@@ -46,6 +50,11 @@ const AppRouter = () => {
   const navigateToHalloween = () => {
     setCurrentRoute('halloween');
     window.history.pushState({}, '', '/event/halloween');
+  };
+
+  const navigateToWinter = () => {
+    setCurrentRoute('winter');
+    window.history.pushState({}, '', '/event/winter');
   };
 
   const navigateToContestVote = () => {
@@ -70,6 +79,8 @@ const AppRouter = () => {
         setCurrentRoute('contest-vote');
       } else if (hash === '#halloween' || pathname === '/halloween' || pathname === '/event/halloween') {
         setCurrentRoute('halloween');
+      } else if (hash === '#winter' || pathname === '/winter' || pathname === '/event/winter') {
+        setCurrentRoute('winter');
       } else if (pathname === '/challenge/gimi') {
         setCurrentRoute('gimi-challenge');
       } else {
@@ -89,10 +100,10 @@ const AppRouter = () => {
   }, []);
 
   // Determine if we should show the Gimi Challenge notification
-  const shouldShowNotification = currentRoute === 'main' || currentRoute === 'halloween';
+  const shouldShowNotification = currentRoute === 'main' || currentRoute === 'halloween' || currentRoute === 'winter';
 
   return (
-    <NavigationContext.Provider value={{ navigateToCamera, navigateToContestVote, navigateToGimiChallenge }}>
+    <NavigationContext.Provider value={{ navigateToCamera, navigateToContestVote, navigateToGimiChallenge, navigateToWinter }}>
       <MusicPlayerProvider>
         {/* Dynamic page metadata for SEO and social sharing */}
         <PageMetadata />
@@ -111,6 +122,8 @@ const AppRouter = () => {
           <ContestVote />
         ) : currentRoute === 'halloween' ? (
           <HalloweenEvent />
+        ) : currentRoute === 'winter' ? (
+          <WinterEvent />
         ) : currentRoute === 'gimi-challenge' ? (
           <GimiChallenge />
         ) : (
