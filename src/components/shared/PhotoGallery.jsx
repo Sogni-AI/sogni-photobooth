@@ -977,6 +977,46 @@ const PhotoGallery = ({
     return filtered;
   }, [isPromptSelectorMode, photos, themeGroupState, stylePrompts, selectedModel, searchTerm, favoriteImageIds, blockedPromptIds]);
 
+  // Handle deep link gallery parameter on load - must come after filteredPhotos is defined
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const galleryParam = url.searchParams.get('gallery');
+    
+    if (galleryParam && isPromptSelectorMode && selectedPhotoIndex !== null && !wantsFullscreen) {
+      const currentPhoto = (isPromptSelectorMode ? filteredPhotos : photos)[selectedPhotoIndex];
+      const promptKey = currentPhoto?.promptKey || currentPhoto?.selectedStyle;
+      
+      if (promptKey === galleryParam) {
+        console.log('🖼️ Gallery deep link detected, enabling fullscreen mode');
+        setWantsFullscreen(true);
+      }
+    }
+  }, [isPromptSelectorMode, selectedPhotoIndex, filteredPhotos, photos, wantsFullscreen]);
+  
+  // Update URL when entering/exiting gallery fullscreen mode - must come after filteredPhotos is defined
+  useEffect(() => {
+    if (isPromptSelectorMode && selectedPhotoIndex !== null) {
+      const currentPhoto = (isPromptSelectorMode ? filteredPhotos : photos)[selectedPhotoIndex];
+      const promptKey = currentPhoto?.promptKey || currentPhoto?.selectedStyle;
+      
+      if (wantsFullscreen && promptKey) {
+        // Update URL with gallery parameter for deep linking
+        const url = new URL(window.location.href);
+        url.searchParams.set('gallery', promptKey);
+        window.history.replaceState({}, '', url);
+        console.log('🖼️ Updated URL with gallery param:', promptKey);
+      } else if (!wantsFullscreen) {
+        // Remove gallery parameter when exiting fullscreen
+        const url = new URL(window.location.href);
+        if (url.searchParams.has('gallery')) {
+          url.searchParams.delete('gallery');
+          window.history.replaceState({}, '', url);
+          console.log('🖼️ Removed gallery param from URL');
+        }
+      }
+    }
+  }, [wantsFullscreen, selectedPhotoIndex, isPromptSelectorMode, filteredPhotos, photos]);
+
   // Get readable style display text for photo labels (no hashtags)
   const getStyleDisplayText = useCallback((photo) => {
     // Gallery images already have promptDisplay
@@ -2670,9 +2710,11 @@ const PhotoGallery = ({
                     }
                     
                     if (isPromptSelectorMode && onPromptSelect && selectedPhoto.promptKey) {
-                      // If a gallery variation is selected, pass the seed to use that variation
+                      // If a gallery variation is selected, pass the seed and metadata to use that variation
                       const seedToUse = selectedPhoto.gallerySeed !== undefined ? selectedPhoto.gallerySeed : undefined;
-                      onPromptSelect(selectedPhoto.promptKey, seedToUse);
+                      const metadataToUse = selectedPhoto.galleryMetadata || undefined;
+                      console.log('🎯 Using this style with metadata:', metadataToUse);
+                      onPromptSelect(selectedPhoto.promptKey, seedToUse, metadataToUse);
                     } else if (onUseGalleryPrompt && selectedPhoto.promptKey) {
                       const seedToUse = selectedPhoto.gallerySeed !== undefined ? selectedPhoto.gallerySeed : undefined;
                       onUseGalleryPrompt(selectedPhoto.promptKey, seedToUse);
@@ -5658,7 +5700,14 @@ const PhotoGallery = ({
           }
           originalImage={(isPromptSelectorMode ? filteredPhotos : photos)[selectedPhotoIndex]}
           onImageSelect={(entry) => {
-            if (!entry.imageUrl) return;
+            console.log('🖼️ [PhotoGallery] onImageSelect called - Gallery entry clicked (preview only)');
+            
+            if (!entry.imageUrl) {
+              console.warn('🖼️ [PhotoGallery] No imageUrl, returning');
+              return;
+            }
+            
+            // Don't switch models here - that should only happen when "Use this style" is clicked
             
             // In prompt selector mode, we need to update the filtered photo directly
             // Don't update photos array as that's for user-generated images
@@ -5692,6 +5741,15 @@ const PhotoGallery = ({
           }}
           onEntriesLoaded={(count) => setHasGalleryEntries(count > 0)}
           showKeyboardHint={true}
+          onModelSelect={(modelId) => {
+            console.log('🤖 [PhotoGallery] Switching model to:', modelId);
+            if (switchToModel) {
+              console.log('🤖 [PhotoGallery] Calling switchToModel');
+              switchToModel(modelId);
+            } else {
+              console.warn('🤖 [PhotoGallery] switchToModel not provided!');
+            }
+          }}
         />
       )}
       {/* Only render slothicorn if animation is enabled */}

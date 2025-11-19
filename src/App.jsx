@@ -1143,6 +1143,7 @@ const App = () => {
     const themesParam = url.searchParams.get('themes');
     const searchParam = url.searchParams.get('search');
     const referralParam = url.searchParams.get('referral');
+    const galleryParam = url.searchParams.get('gallery');
     
     // Handle referral parameter - track the referring user
     if (referralParam) {
@@ -1256,6 +1257,34 @@ const App = () => {
       }
     }
   }, [stylePrompts, selectedStyle, promptsData, currentPage]); // updateSetting is stable, doesn't need to be a dependency
+  
+  // Handle gallery URL parameter for deep linking to Community Gallery
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const galleryParam = url.searchParams.get('gallery');
+    
+    if (galleryParam && currentPage === 'prompts' && galleryPhotos.length > 0) {
+      console.log('🖼️ Gallery deep link detected:', galleryParam);
+      
+      // Find the photo with this promptKey in galleryPhotos
+      const photoIndex = galleryPhotos.findIndex(p => 
+        p.promptKey === galleryParam || p.selectedStyle === galleryParam
+      );
+      
+      if (photoIndex !== -1) {
+        console.log('🖼️ Found gallery photo at index:', photoIndex);
+        // Small delay to ensure everything is rendered
+        setTimeout(() => {
+          setSelectedPhotoIndex(photoIndex);
+          // Note: wantsFullscreen state is managed by PhotoGallery component
+          // We just need to navigate to the photo
+        }, 300);
+      } else {
+        console.warn('🖼️ Gallery prompt not found:', galleryParam);
+      }
+    }
+  }, [currentPage, galleryPhotos]);
+
 
 
 
@@ -1856,9 +1885,9 @@ const App = () => {
     // Update URL FIRST before changing state
     // Use replaceState (not pushState) to avoid creating redundant history entries
     if (!fromPopState) {
-      // Clear both page and prompt parameters
-      updateUrlParams({ page: null, prompt: null }, { usePushState: false });
-      console.log('📸 URL updated, removed page and prompt params. New URL:', window.location.href);
+      // Clear page, prompt, and gallery parameters
+      updateUrlParams({ page: null, prompt: null, gallery: null }, { usePushState: false });
+      console.log('📸 URL updated, removed page, prompt, and gallery params. New URL:', window.location.href);
     }
 
     // Clear selected photo state when leaving Sample Gallery mode
@@ -1903,10 +1932,10 @@ const App = () => {
     // Set page back to camera (this exits Sample Gallery mode)
     setCurrentPage('camera');
 
-    // Update URL to reflect camera page
+    // Update URL to reflect camera page and clear gallery param
     // Use replaceState (not pushState) to avoid creating redundant history entries
     if (!fromPopState) {
-      updateUrlParams({ page: null }, { usePushState: false });
+      updateUrlParams({ page: null, gallery: null }, { usePushState: false });
     }
 
     // Show photo grid to display user's photos
@@ -1923,7 +1952,7 @@ const App = () => {
   };
 
   // Prompt selection handlers for the new page
-  const handlePromptSelectFromPage = (promptKey, gallerySeed = undefined) => {
+  const handlePromptSelectFromPage = (promptKey, gallerySeed = undefined, galleryMetadata = undefined) => {
     // Check if we're in extension mode
     if (window.extensionMode && window.parent !== window) {
       console.log('🚀 Extension mode: posting styleSelected message to parent window');
@@ -1960,6 +1989,12 @@ const App = () => {
     if (gallerySeed !== undefined) {
       console.log('🎲 Using gallery variation seed:', gallerySeed);
       updateSetting('seed', String(gallerySeed));
+    }
+    
+    // If gallery metadata is provided with a model, switch to that model
+    if (galleryMetadata?.model) {
+      console.log('🤖 [App] Switching to gallery entry model:', galleryMetadata.model);
+      switchToModel(galleryMetadata.model);
     }
     
     // Update current hashtag for sharing

@@ -5,7 +5,7 @@ import '../../styles/components/GalleryCarousel.css';
 /**
  * Memoized carousel item to prevent unnecessary re-renders
  */
-const GalleryCarouselItem = memo(({ entry, index, isSelected, onClick }) => {
+const GalleryCarouselItem = memo(({ entry, index, isSelected, onClick, onModelClick }) => {
   const tooltipRef = useRef(null);
 
   const handleMouseEnter = (e) => {
@@ -16,6 +16,58 @@ const GalleryCarouselItem = memo(({ entry, index, isSelected, onClick }) => {
     tooltip.style.left = `${rect.left + rect.width / 2}px`;
     tooltip.style.bottom = `${window.innerHeight - rect.top + 8}px`;
     tooltip.style.transform = 'translateX(-50%)';
+  };
+
+  const handleModelClick = (e) => {
+    e.stopPropagation(); // Prevent triggering the image click
+    console.log('🤖 [GalleryCarouselItem] Model clicked:', entry.metadata?.model);
+    if (onModelClick && entry.metadata?.model) {
+      console.log('🤖 [GalleryCarouselItem] Calling onModelClick with:', entry.metadata.model);
+      onModelClick(entry.metadata.model);
+    } else {
+      console.warn('🤖 [GalleryCarouselItem] Cannot switch model:', {
+        hasCallback: !!onModelClick,
+        hasModel: !!entry.metadata?.model,
+        model: entry.metadata?.model
+      });
+    }
+  };
+
+  // Get model display name
+  const getModelDisplayName = (modelId) => {
+    if (!modelId) return null;
+    
+    // Map model IDs to clean display names
+    const modelMap = {
+      'coreml-sogniXLturbo_alpha1_ad': 'SOGNI.XLT',
+      'coreml-dreamshaperXL_v21TurboDPMSDE': 'DreamShaper',
+      'coreml-juggernautXL_v9Rdphoto2Lightning': 'JuggernautXL',
+      'coreml-wildcardxXLLIGHTNING_wildcardxXL': 'WildcardX',
+      'coreml-realvisxlV40_v40LightningBakedvae': 'RealVisXL',
+      'coreml-realDream_sdxlLightning1': 'RealDream',
+      'coreml-fenrisxl_SDXLLightning': 'FenrisXL',
+      'coreml-epicrealismXL_VXIAbeast4SLightning': 'epiCRealism XL',
+      'flux1-dev-kontext_fp8_scaled': 'Flux Kontext'
+    };
+    
+    // Return mapped name or fallback to shortened version
+    if (modelMap[modelId]) {
+      return modelMap[modelId];
+    }
+    
+    // Fallback: try to extract a readable name from the ID
+    if (modelId.includes('flux')) return 'Flux Kontext';
+    if (modelId.includes('sogni')) return 'SOGNI.XLT';
+    if (modelId.includes('dreamshaper')) return 'DreamShaper';
+    if (modelId.includes('juggernaut')) return 'JuggernautXL';
+    if (modelId.includes('wildcard')) return 'WildcardX';
+    if (modelId.includes('realvis')) return 'RealVisXL';
+    if (modelId.includes('realdream')) return 'RealDream';
+    if (modelId.includes('fenris')) return 'FenrisXL';
+    if (modelId.includes('epicrealism')) return 'epiCRealism XL';
+    
+    // Last resort: return the ID as-is
+    return modelId;
   };
 
   return (
@@ -39,6 +91,15 @@ const GalleryCarouselItem = memo(({ entry, index, isSelected, onClick }) => {
         {!entry.isOriginal && entry.metadata?.seed !== undefined && entry.metadata?.seed !== null && (
           <div>Seed: {entry.metadata.seed}</div>
         )}
+        {!entry.isOriginal && entry.metadata?.model && (
+          <div 
+            className="model-info clickable"
+            onClick={handleModelClick}
+            title="Click to switch to this model"
+          >
+            🤖 {getModelDisplayName(entry.metadata.model)}
+          </div>
+        )}
         <div className="username">
           {entry.isOriginal ? 'Style' : `@${entry.username || 'Anonymous'}`}
         </div>
@@ -53,7 +114,8 @@ GalleryCarouselItem.propTypes = {
   entry: PropTypes.object.isRequired,
   index: PropTypes.number.isRequired,
   isSelected: PropTypes.bool.isRequired,
-  onClick: PropTypes.func.isRequired
+  onClick: PropTypes.func.isRequired,
+  onModelClick: PropTypes.func
 };
 
 /**
@@ -66,7 +128,8 @@ const GalleryCarousel = ({
   onImageSelect,
   onEntriesLoaded,
   selectedEntryId = null,
-  showKeyboardHint = true
+  showKeyboardHint = true,
+  onModelSelect = null
 }) => {
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -221,6 +284,17 @@ const GalleryCarousel = ({
     });
   }, [allImages]);
 
+  // Handle model click - switch to the selected model
+  const handleModelClick = useCallback((modelId) => {
+    console.log(`🤖 [GalleryCarousel] Switching to model: ${modelId}`);
+    if (onModelSelect) {
+      console.log(`🤖 [GalleryCarousel] Calling onModelSelect`);
+      onModelSelect(modelId);
+    } else {
+      console.warn('🤖 [GalleryCarousel] onModelSelect callback not provided!');
+    }
+  }, [onModelSelect]);
+
   // Handle click on an entry - keep callback stable to prevent re-renders
   const handleEntryClick = useCallback((entry, index, e) => {
     e?.stopPropagation();
@@ -266,6 +340,7 @@ const GalleryCarousel = ({
             index={index}
             isSelected={index === selectedIndex}
             onClick={(e) => handleEntryClick(entry, index, e)}
+            onModelClick={handleModelClick}
           />
         ))}
       </div>
@@ -279,7 +354,8 @@ GalleryCarousel.propTypes = {
   onImageSelect: PropTypes.func,
   onEntriesLoaded: PropTypes.func,
   selectedEntryId: PropTypes.string,
-  showKeyboardHint: PropTypes.bool
+  showKeyboardHint: PropTypes.bool,
+  onModelSelect: PropTypes.func
 };
 
 // Custom comparison function to prevent unnecessary re-renders
