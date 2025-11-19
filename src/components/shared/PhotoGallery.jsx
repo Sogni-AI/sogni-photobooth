@@ -2715,6 +2715,15 @@ const PhotoGallery = ({
                       const metadataToUse = selectedPhoto.galleryMetadata || undefined;
                       console.log('🎯 Using this style with metadata:', metadataToUse);
                       onPromptSelect(selectedPhoto.promptKey, seedToUse, metadataToUse);
+                      
+                      // Navigate back to start menu (unless in extension mode)
+                      // Use setTimeout to allow state updates to complete before navigation
+                      if (!isExtensionMode && handleBackToCamera) {
+                        console.log('🔙 Navigating back to start menu after style selection');
+                        setTimeout(() => {
+                          handleBackToCamera();
+                        }, 50);
+                      }
                     } else if (onUseGalleryPrompt && selectedPhoto.promptKey) {
                       const seedToUse = selectedPhoto.gallerySeed !== undefined ? selectedPhoto.gallerySeed : undefined;
                       onUseGalleryPrompt(selectedPhoto.promptKey, seedToUse);

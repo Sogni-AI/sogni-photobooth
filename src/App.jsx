@@ -1974,7 +1974,17 @@ const App = () => {
       return;
     }
     
-    // Update style and URL for deep linking
+    console.log('🎨 [handlePromptSelectFromPage] Selecting style:', promptKey);
+    console.log('🎨 [handlePromptSelectFromPage] Current selectedStyle before update:', selectedStyle);
+    
+    // IMPORTANT: If switching models, do it FIRST before updating the style
+    // This prevents switchToModel from overwriting the style with the old value
+    if (galleryMetadata?.model) {
+      console.log('🤖 [App] Switching to gallery entry model FIRST:', galleryMetadata.model);
+      switchToModel(galleryMetadata.model);
+    }
+    
+    // Now update style and URL for deep linking
     updateSetting('selectedStyle', promptKey);
     if (promptKey === 'custom') {
       updateSetting('positivePrompt', ''); 
@@ -1991,12 +2001,6 @@ const App = () => {
       updateSetting('seed', String(gallerySeed));
     }
     
-    // If gallery metadata is provided with a model, switch to that model
-    if (galleryMetadata?.model) {
-      console.log('🤖 [App] Switching to gallery entry model:', galleryMetadata.model);
-      switchToModel(galleryMetadata.model);
-    }
-    
     // Update current hashtag for sharing
     setCurrentHashtag(getHashtagForStyle(promptKey));
     // Update URL with selected prompt for deep linking
@@ -2008,6 +2012,8 @@ const App = () => {
     
     // Close the photo popup to provide visual feedback that the style was selected
     setSelectedPhotoIndex(null);
+    
+    console.log('🎨 [handlePromptSelectFromPage] Style selection complete, promptKey:', promptKey);
   };
 
   const handleRandomMixFromPage = () => {
