@@ -91,15 +91,13 @@ const generateGalleryFilename = (promptKey) => {
 /**
  * Loads all gallery images and converts them to photo objects
  * @param {Object} stylePrompts - The available style prompts
- * @param {string} portraitType - The type of portrait: 'headshot', 'medium', or 'fullbody'
+ * @param {string} portraitType - The type of portrait: 'headshot', 'headshot2', 'medium', or 'fullbody'
+ * @param {Object} promptsDataRaw - Optional raw prompts data for fallback logic
  * @returns {Promise<Array>} Array of photo objects for the gallery
  */
-export const loadGalleryImages = async (stylePrompts, portraitType = 'medium') => {
+export const loadGalleryImages = async (stylePrompts, portraitType = 'medium', promptsDataRaw = null) => {
   try {
     const galleryPhotos = [];
-
-    // Map portrait type to subdirectory
-    const subdirectory = portraitType;
 
     // Create gallery photos for all prompts
     let photoIndex = 0;
@@ -112,7 +110,10 @@ export const loadGalleryImages = async (stylePrompts, portraitType = 'medium') =
 
       // Generate the expected filename using strict naming convention
       const expectedFilename = generateGalleryFilename(promptKey);
-      const imagePath = `${urls.assetUrl}/gallery/prompts/${subdirectory}/${expectedFilename}`;
+      
+      // Use fallback logic to determine the correct folder
+      const folder = getPortraitFolderWithFallback(portraitType, promptKey, promptsDataRaw);
+      const imagePath = `${urls.assetUrl}/gallery/prompts/${folder}/${expectedFilename}`;
 
       // Create photo object - will show placeholder if file doesn't exist
       const galleryPhoto = {
@@ -141,7 +142,7 @@ export const loadGalleryImages = async (stylePrompts, portraitType = 'medium') =
       photoIndex++;
     });
 
-    console.log(`Created ${galleryPhotos.length} gallery photo objects using strict naming convention for ${subdirectory} portraits`);
+    console.log(`Created ${galleryPhotos.length} gallery photo objects using strict naming convention for ${portraitType} portraits (with fallback logic)`);
     return galleryPhotos;
 
   } catch (error) {
@@ -165,6 +166,32 @@ export const checkImageExists = (imagePath) => {
     img.onerror = () => resolve(false);
     img.src = imagePath;
   });
+};
+
+/**
+ * Gets the appropriate portrait folder with fallback logic
+ * @param {string} portraitType - The requested portrait type ('headshot', 'headshot2', 'medium', or 'fullbody')
+ * @param {string} promptKey - Optional prompt key to check if it's a winter style
+ * @param {Object} promptsDataRaw - Optional raw prompts data to check winter category
+ * @returns {string} The folder name to use (with fallback to 'headshot' if 'headshot2' and not a winter style)
+ * 
+ * Fallback logic:
+ * - If portraitType is 'headshot2' and promptKey is NOT a Christmas/Winter style, fallback to 'headshot'
+ * - Otherwise, use portraitType as-is (or 'medium' as default)
+ */
+export const getPortraitFolderWithFallback = (portraitType = 'medium', promptKey = null, promptsDataRaw = null) => {
+  // If headshot2 is requested, check if this is a winter style
+  if (portraitType === 'headshot2' && promptKey && promptsDataRaw) {
+    const winterPrompts = promptsDataRaw['christmas-winter']?.prompts || {};
+    const isWinterStyle = promptKey in winterPrompts;
+    
+    // Only use headshot2 for winter styles, otherwise fallback to headshot
+    if (!isWinterStyle) {
+      return 'headshot';
+    }
+  }
+  
+  return portraitType || 'medium';
 };
 
 // Export the utility functions for use in renaming scripts

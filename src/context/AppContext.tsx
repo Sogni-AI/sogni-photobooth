@@ -47,7 +47,7 @@ interface AppContextType {
   // Settings
   settings: Settings;
   updateSetting: <K extends keyof Settings>(key: K, value: Settings[K], isAuthenticated?: boolean) => void;
-  switchToModel: (modelId: string) => void;
+  switchToModel: (modelId: string, pendingSettings?: Partial<Settings>) => void;
   resetSettings: () => void;
   
   // Style Dropdown
@@ -91,10 +91,35 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     let selectedModel = getSettingFromCookie('selectedModel', DEFAULT_SETTINGS.selectedModel);
     let selectedStyle = getSettingFromCookie('selectedStyle', DEFAULT_SETTINGS.selectedStyle);
     let positivePrompt = getSettingFromCookie('positivePrompt', DEFAULT_SETTINGS.positivePrompt);
+    const winterContext = getSettingFromCookie('winterContext', false);
+    const portraitType = getSettingFromCookie('portraitType', 'medium');
     
-    // Always reset to default model on page reload
+    console.log('🔍 [AppContext INIT] Read from storage:', {
+      selectedStyle,
+      selectedModel,
+      winterContext,
+      portraitType,
+      positivePrompt: positivePrompt?.substring(0, 50) + '...'
+    });
+    
+    // Check if this is a genuine page reload or just a navigation within the app
+    const isInitialPageLoad = !sessionStorage.getItem('sogni_app_initialized');
+    if (isInitialPageLoad) {
+      sessionStorage.setItem('sogni_app_initialized', 'true');
+      console.log('🔄 [INIT] Initial page load detected');
+    } else {
+      console.log('🔄 [INIT] Navigation within app detected (not a fresh page load)');
+    }
+    
+    // Check if we're coming from the winter event (winterContext flag)
+    // If so, preserve the DreamShaper model selection
+    const isWinterEventSelection = winterContext && selectedModel === 'coreml-dreamshaperXL_v21TurboDPMSDE';
+    
+    // Always reset to default model on INITIAL page reload
     // Users must explicitly select a different model in each session
-    if (selectedModel !== DEFAULT_MODEL_ID) {
+    // EXCEPT when coming from winter event with DreamShaper selected
+    // Do NOT reset on navigation within the app (component remounting)
+    if (selectedModel !== DEFAULT_MODEL_ID && !isWinterEventSelection && isInitialPageLoad) {
       console.log(`🔄 [INIT] Resetting model from ${selectedModel} to default (${DEFAULT_MODEL_ID})`);
       selectedModel = DEFAULT_MODEL_ID;
       
@@ -119,6 +144,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         selectedStyle = 'randomMix';
         saveSettingsToCookies({ selectedStyle });
       }
+    } else if (isWinterEventSelection) {
+      console.log('❄️ [INIT] Preserving DreamShaper model for winter event selection');
+    } else if (!isInitialPageLoad && selectedModel !== DEFAULT_MODEL_ID) {
+      console.log(`❄️ [INIT] Preserving ${selectedModel} model during navigation (not a fresh page load)`);
     }
     
     // Reset custom prompt to blank on page load (but preserve if style is 'custom')
@@ -166,6 +195,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       sogniWatermarkSize: getSettingFromCookie('sogniWatermarkSize', DEFAULT_SETTINGS.sogniWatermarkSize),
       sogniWatermarkMargin: getSettingFromCookie('sogniWatermarkMargin', DEFAULT_SETTINGS.sogniWatermarkMargin),
       sogniWatermarkPosition: getSettingFromCookie('sogniWatermarkPosition', DEFAULT_SETTINGS.sogniWatermarkPosition),
+      portraitType, // Include portraitType in settings
       // Worker preferences
       requiredWorkers: getSettingFromCookie('requiredWorkers', DEFAULT_SETTINGS.requiredWorkers),
       preferWorkers: getSettingFromCookie('preferWorkers', DEFAULT_SETTINGS.preferWorkers),
@@ -174,7 +204,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       showSplashOnInactivity: getSettingFromCookie('showSplashOnInactivity', DEFAULT_SETTINGS.showSplashOnInactivity),
       inactivityTimeout: getSettingFromCookie('inactivityTimeout', DEFAULT_SETTINGS.inactivityTimeout),
       // Event context flags
-      halloweenContext: getSettingFromCookie('halloweenContext', DEFAULT_SETTINGS.halloweenContext)
+      halloweenContext: getSettingFromCookie('halloweenContext', DEFAULT_SETTINGS.halloweenContext),
+      winterContext // Include winterContext in settings
     };
   });
   
@@ -196,11 +227,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Cache clearing callbacks
   const cacheClearingCallbacks = useRef<(() => void)[]>([]);
   
+  // Pending settings that are being updated in the current batch
+  const pendingSettingsRef = useRef<Partial<Settings>>({});
+  
   const updateSetting = <K extends keyof Settings>(key: K, value: Settings[K], isAuthenticated: boolean = false) => {
+    // Track this setting in pending updates
+    pendingSettingsRef.current[key] = value;
+    
     // Special handling for model changes
     if (key === 'selectedModel') {
       console.log(`updateSetting: Model change detected, calling switchToModel with ${String(value)}`);
-      switchToModel(value as string);
+      // Pass pending settings to switchToModel so it can use the latest values
+      switchToModel(value as string, pendingSettingsRef.current);
+      // Clear pending settings after model switch
+      pendingSettingsRef.current = {};
       return;
     }
     
@@ -222,7 +262,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
   
   // Function to switch to a different model and load its settings
-  const switchToModel = (modelId: string) => {
+  const switchToModel = (modelId: string, pendingSettings: Partial<Settings> = {}) => {
     const currentModel = settings.selectedModel;
     const isCurrentFlux = isFluxKontextModel(currentModel);
     const isNewFlux = isFluxKontextModel(modelId);
@@ -241,8 +281,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       console.log(`Switching within same model type, loading saved settings for ${modelId}:`, modelSettings);
     }
     
+    // Merge current settings with pending updates and model-specific settings
     const newSettings = {
       ...settings,
+      ...pendingSettings, // Apply any pending updates from the current batch
       selectedModel: modelId,
       inferenceSteps: modelSettings.inferenceSteps ?? DEFAULT_SETTINGS.inferenceSteps,
       scheduler: modelSettings.scheduler ?? DEFAULT_SETTINGS.scheduler,
@@ -260,9 +302,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       guidance: newSettings.guidance,
       numImages: newSettings.numImages,
       selectedStyle: newSettings.selectedStyle, // LOG THIS
+      winterContext: newSettings.winterContext,
+      portraitType: newSettings.portraitType,
     });
     
-    console.log(`🔍 [switchToModel] selectedStyle before: ${settings.selectedStyle}, after: ${newSettings.selectedStyle}`);
+    console.log(`🔍 [switchToModel] selectedStyle: ${newSettings.selectedStyle}, winterContext: ${newSettings.winterContext}`);
     
     setSettings(newSettings);
     
@@ -318,12 +362,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       numImages: resetToDefaults.numImages,
     });
     
-    // Save non-model-specific settings to global storage
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { inferenceSteps, scheduler, timeStepSpacing, promptGuidance, guidance, numImages, ...nonModelSettings } = resetToDefaults;
-    saveSettingsToCookies(nonModelSettings);
+    // Save non-model-specific settings to regular storage
+    saveSettingsToCookies({
+      selectedStyle: resetToDefaults.selectedStyle,
+      positivePrompt: resetToDefaults.positivePrompt,
+      aspectRatio: resetToDefaults.aspectRatio,
+      // ... (only save non-model-specific settings here)
+    } as Partial<Settings>, false); // false = not authenticated, use sessionStorage by default
     
-    console.log(`Reset settings for model ${currentModel} to defaults:`, modelDefaults);
+    console.log('✅ Settings reset to defaults:', modelDefaults);
   };
   
   // Cache clearing functions

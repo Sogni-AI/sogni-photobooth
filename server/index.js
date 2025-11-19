@@ -222,6 +222,82 @@ const handleHalloweenRoute = (req, res) => {
   });
 };
 
+// Winter event route handler (for /event/winter)
+const handleWinterRoute = (req, res) => {
+  const indexPath = path.join(staticDir, 'index.html');
+  const requestPath = req.path;
+  console.log(`[Winter Route] Attempting to read: ${indexPath} for path: ${requestPath}`);
+
+  fs.readFile(indexPath, 'utf8', (err, html) => {
+    if (err) {
+      console.error('[Winter Route] Error reading index.html:', err);
+      console.error('[Winter Route] Static dir:', staticDir);
+      console.error('[Winter Route] Index path:', indexPath);
+      return res.status(500).send('Error loading page: ' + err.message);
+    }
+
+    console.log('[Winter Route] Successfully read index.html, injecting meta tags...');
+
+    // Replace meta tags with Winter-specific content
+    // Using simple global string replacement - same approach as Halloween
+    let modifiedHtml = html;
+
+    // Use the request's host to support both staging and production
+    const host = req.get('host') || 'photobooth.sogni.ai';
+    // Always use https since we're behind nginx with SSL termination
+    const protocol = 'https';
+    const baseUrl = `${protocol}://${host}`;
+
+    const winterTitle = '🍂 Sogni Winter Photobooth ❄️ | AI Christmas & Holiday Photo Generator';
+    const winterDesc = 'Create magical winter and Christmas AI portraits! Transform your photos with festive holiday styles, snowy scenes, and seasonal magic. Perfect for Christmas cards and holiday greetings.';
+    const winterUrl = `${baseUrl}/event/winter`;
+    const winterImage = `${baseUrl}/events/winter-preview.jpg`;
+
+    console.log(`[Winter Route] Using baseUrl: ${baseUrl}`);
+    console.log(`[Winter Route] Winter image URL: ${winterImage}`);
+
+    // Replace title - handle various formats
+    modifiedHtml = modifiedHtml.replace(
+      /<title>Sogni AI Photobooth \| Free AI Headshot Generator & Portrait Maker<\/title>/,
+      `<title>${winterTitle}</title>`
+    );
+    
+    // Replace og:title
+    modifiedHtml = modifiedHtml.replace(
+      /content="Sogni AI Photobooth \| Free AI Headshot Generator & Portrait Maker"/g,
+      `content="${winterTitle}"`
+    );
+    
+    // Replace og:description - match the exact multi-line format
+    modifiedHtml = modifiedHtml.replace(
+      /Create stunning AI headshots and portraits with Sogni Photobooth—your free AI portrait generator and anime PFP maker\. Transform your photos with 200\+ AI styles in seconds!/g,
+      winterDesc
+    );
+    
+    // Replace og:image - the GitHub repository image
+    modifiedHtml = modifiedHtml.replace(
+      /https:\/\/repository-images\.githubusercontent\.com\/945858402\/6ae0abb5-c7cc-42ba-9051-9d644e1f130a/g,
+      winterImage
+    );
+    
+    // Replace og:url and twitter:url
+    modifiedHtml = modifiedHtml.replace(
+      /content="https:\/\/photobooth\.sogni\.ai\/"/g,
+      `content="${winterUrl}"`
+    );
+
+    // Set cache headers to prevent stale metadata
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+
+    console.log('[Winter Route] Successfully injected meta tags and sent response');
+    res.send(modifiedHtml);
+  });
+};
+
 // Contest vote route handler with custom meta tags for social sharing
 const handleContestVoteRoute = (req, res) => {
   const indexPath = path.join(staticDir, 'index.html');
@@ -362,6 +438,7 @@ const handleGimiChallengeRoute = (req, res) => {
 if (!isLocalEnv) {
   app.get('/halloween', handleHalloweenRoute);
   app.get('/event/halloween', handleHalloweenRoute);
+  app.get('/event/winter', handleWinterRoute);
   app.get('/contest/vote', handleContestVoteRoute);
   app.get('/admin/moderate', handleAdminContestRoute);
   app.get('/challenge/gimi', handleGimiChallengeRoute);

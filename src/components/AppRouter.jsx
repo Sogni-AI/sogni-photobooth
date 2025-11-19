@@ -68,7 +68,7 @@ const AppRouter = () => {
   };
 
   useEffect(() => {
-    const handleHashChange = () => {
+    const handleRouteChange = () => {
       const hash = window.location.hash;
       const pathname = window.location.pathname;
       if (hash === '#analytics' || pathname === '/admin/analytics') {
@@ -88,14 +88,16 @@ const AppRouter = () => {
       }
     };
 
-    // Listen for hash changes
-    window.addEventListener('hashchange', handleHashChange);
+    // Listen for hash changes AND popstate (back button)
+    window.addEventListener('hashchange', handleRouteChange);
+    window.addEventListener('popstate', handleRouteChange);
     
-    // Check initial hash
-    handleHashChange();
+    // Check initial route
+    handleRouteChange();
 
     return () => {
-      window.removeEventListener('hashchange', handleHashChange);
+      window.removeEventListener('hashchange', handleRouteChange);
+      window.removeEventListener('popstate', handleRouteChange);
     };
   }, []);
 

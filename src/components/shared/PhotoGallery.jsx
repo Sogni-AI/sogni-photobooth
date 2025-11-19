@@ -29,7 +29,7 @@ import { useWallet } from '../../hooks/useWallet';
 import { useCostEstimation } from '../../hooks/useCostEstimation.ts';
 import { getTokenLabel } from '../../services/walletService';
 import { useToastContext } from '../../context/ToastContext';
-import { generateGalleryFilename } from '../../utils/galleryLoader';
+import { generateGalleryFilename, getPortraitFolderWithFallback } from '../../utils/galleryLoader';
 
 // Memoized placeholder image component to prevent blob reloading
 const PlaceholderImage = memo(({ placeholderUrl }) => {
@@ -2318,9 +2318,10 @@ const PhotoGallery = ({
         >
           <div className="photo-gallery-style-selector-content">
             {(() => {
-              // Generate the full gallery image path
+              // Generate the full gallery image path with fallback logic
+              const folder = getPortraitFolderWithFallback(portraitType, selectedStyle, promptsDataRaw);
               const stylePreviewImage = selectedStyle && selectedStyle !== 'custom'
-                ? `${urls.assetUrl}/gallery/prompts/${portraitType}/${generateGalleryFilename(selectedStyle)}`
+                ? `${urls.assetUrl}/gallery/prompts/${folder}/${generateGalleryFilename(selectedStyle)}`
                 : null;
               return stylePreviewImage ? (
                 <img

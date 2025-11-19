@@ -1,9 +1,10 @@
 import React, { useRef, useState, useMemo, useEffect } from 'react';
 import StyleDropdown from '../shared/StyleDropdown';
 import { styleIdToDisplay } from '../../utils';
-import { generateGalleryFilename } from '../../utils/galleryLoader';
+import { generateGalleryFilename, getPortraitFolderWithFallback } from '../../utils/galleryLoader';
 import { CUSTOM_PROMPT_IMAGE_KEY } from '../shared/CustomPromptPopup';
 import urls from '../../config/urls';
+import promptsDataRaw from '../../prompts.json';
 import './CameraStartMenu.css';
 
 const AUDIO_ENABLED_KEY = 'sogni_splash_audio_enabled';
@@ -220,7 +221,8 @@ const CameraStartMenu: React.FC<CameraStartMenuProps> = ({
     if (isSamplerMode && randomStyleForSamplers) {
       try {
         const expectedFilename = generateGalleryFilename(randomStyleForSamplers);
-        const imagePath = `${urls.assetUrl}/gallery/prompts/${portraitType}/${expectedFilename}`;
+        const folder = getPortraitFolderWithFallback(portraitType, randomStyleForSamplers, promptsDataRaw);
+        const imagePath = `${urls.assetUrl}/gallery/prompts/${folder}/${expectedFilename}`;
         console.log('✅ Generated sampler image path:', imagePath);
         return imagePath;
       } catch (error) {
@@ -236,7 +238,8 @@ const CameraStartMenu: React.FC<CameraStartMenuProps> = ({
     if (isIndividualStyle) {
       try {
         const expectedFilename = generateGalleryFilename(selectedStyle);
-        const imagePath = `${urls.assetUrl}/gallery/prompts/${portraitType}/${expectedFilename}`;
+        const folder = getPortraitFolderWithFallback(portraitType, selectedStyle, promptsDataRaw);
+        const imagePath = `${urls.assetUrl}/gallery/prompts/${folder}/${expectedFilename}`;
         console.log('✅ Generated individual style image path:', imagePath);
         return imagePath;
       } catch (error) {

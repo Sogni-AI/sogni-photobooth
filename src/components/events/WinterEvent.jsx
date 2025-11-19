@@ -17,7 +17,7 @@ const WinterEvent = () => {
   const [selectedStyleKey, setSelectedStyleKey] = useState(null); // Track selected style for mobile two-click
   const [snowflakeDismissed, setSnowflakeDismissed] = useState(false);
   const [showSnowflakeButton, setShowSnowflakeButton] = useState(false); // Delayed appearance
-  const [portraitType, setPortraitType] = useState('medium'); // 'headshot', 'medium', or 'fullbody'
+  const [portraitType, setPortraitType] = useState('headshot2'); // 'headshot2', 'medium', or 'fullbody'
   const { updateSetting, stylePrompts } = useApp();
   const { navigateToCamera } = useNavigation();
 
@@ -31,8 +31,8 @@ const WinterEvent = () => {
   // Update image paths based on selected portrait type
   const winterStyles = useMemo(() => {
     const winterPrompts = promptsDataRaw['christmas-winter']?.prompts || {};
-    // Portrait type is used directly as the subdirectory name
-    const folder = portraitType || 'medium';
+    // Portrait type mapping to folder name
+    const folder = portraitType === 'headshot2' ? 'headshot2' : (portraitType || 'medium');
 
     return Object.keys(winterPrompts)
       .sort((a, b) => {
@@ -116,22 +116,33 @@ const WinterEvent = () => {
     const prompt = winterPrompts[styleKey] || stylePrompts[styleKey] || '';
     
     console.log('❄️ Selected prompt:', prompt);
+    console.log('❄️ Selected style key:', styleKey);
     
-    // Set the style and prompt
+    // Use updateSetting to properly update AppContext's React state
+    // The order matters: set non-model settings first, then model last
+    updateSetting('winterContext', true);
+    updateSetting('portraitType', portraitType);
     updateSetting('selectedStyle', styleKey);
     updateSetting('positivePrompt', prompt);
-    updateSetting('winterContext', true); // Flag for winter event context
     
-    // Automatically switch to DreamShaper model for winter styles
-    console.log('❄️ Auto-switching to DreamShaper model for winter theme');
+    // Clear manual overrides when explicitly selecting a style
+    // This ensures fresh generation with the new style's defaults
+    updateSetting('seed', '');
+    updateSetting('negativePrompt', '');
+    updateSetting('stylePrompt', '');
+    
+    // Model must be set LAST because switchToModel reads current state
     updateSetting('selectedModel', 'coreml-dreamshaperXL_v21TurboDPMSDE');
     
     // Mark that user has explicitly selected a style (for checkmark in CameraStartMenu)
     localStorage.setItem('sogni_style_explicitly_selected', 'true');
-
-    // Navigate to main app (skip splash screen, go directly to start menu)
-    console.log('❄️ Navigating to camera start menu');
-    navigateToCamera();
+    
+    console.log('❄️ Settings updated, navigating to camera start menu');
+    
+    // Small delay to ensure React state updates have propagated
+    setTimeout(() => {
+      navigateToCamera();
+    }, 0);
   };
 
   return (
@@ -146,7 +157,7 @@ const WinterEvent = () => {
         {/* Open Graph / Facebook */}
         <meta property="og:title" content="🍂 Sogni Winter Photobooth ❄️ | AI Christmas & Holiday Photo Generator" />
         <meta property="og:description" content="Create magical winter and Christmas AI portraits! Transform your photos with festive holiday styles, snowy scenes, and seasonal magic. Perfect for Christmas cards and holiday greetings." />
-        <meta property="og:image" content="https://photobooth.sogni.ai/events/winter-preview.png" />
+        <meta property="og:image" content="https://photobooth.sogni.ai/events/winter-preview.jpg" />
         <meta property="og:url" content="https://photobooth.sogni.ai/event/winter" />
         <meta property="og:type" content="website" />
         <meta property="og:site_name" content="Sogni Photobooth" />
@@ -155,7 +166,7 @@ const WinterEvent = () => {
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content="🍂 Sogni Winter Photobooth ❄️ | AI Christmas & Holiday Photos" />
         <meta name="twitter:description" content="Create magical winter and Christmas AI portraits! Transform your photos with festive holiday styles, snowy scenes, and seasonal magic. Perfect for Christmas cards! 🎄✨" />
-        <meta name="twitter:image" content="https://photobooth.sogni.ai/events/winter-preview.png" />
+        <meta name="twitter:image" content="https://photobooth.sogni.ai/events/winter-preview.jpg" />
         <meta name="twitter:site" content="@sogni_protocol" />
         <meta property="twitter:url" content="https://photobooth.sogni.ai/event/winter" />
         
@@ -222,7 +233,7 @@ const WinterEvent = () => {
               style={{ position: 'relative' }} 
               className="portrait-type-button-container"
               onMouseEnter={(e) => {
-                if (portraitType !== 'headshot') {
+                if (portraitType !== 'headshot2') {
                   const label = e.currentTarget.querySelector('.portrait-type-label');
                   if (label) label.style.opacity = '1';
                 }
@@ -233,16 +244,16 @@ const WinterEvent = () => {
               }}
             >
               <button 
-                onClick={() => setPortraitType('headshot')}
+                onClick={() => setPortraitType('headshot2')}
                 className="winter-portrait-btn"
                 style={{
-                  border: portraitType === 'headshot' ? '3px solid #4a9eff' : '3px solid rgba(74, 158, 255, 0.3)',
-                  boxShadow: portraitType === 'headshot' ? '0 0 12px rgba(74, 158, 255, 0.6)' : '0 2px 8px rgba(0,0,0,0.2)'
+                  border: portraitType === 'headshot2' ? '3px solid #4a9eff' : '3px solid rgba(74, 158, 255, 0.3)',
+                  boxShadow: portraitType === 'headshot2' ? '0 0 12px rgba(74, 158, 255, 0.6)' : '0 2px 8px rgba(0,0,0,0.2)'
                 }}
                 title="Up Close"
               >
                 <img 
-                  src="/gallery/sample-gallery-headshot-einstein.jpg"
+                  src="/gallery/sample-gallery-headshot-kiki.jpg"
                   alt="Up Close"
                   style={{
                     width: '100%',
@@ -257,26 +268,44 @@ const WinterEvent = () => {
               </span>
             </div>
             
-            <button 
-              onClick={() => setPortraitType('medium')}
-              className="winter-portrait-btn"
-              style={{
-                border: portraitType === 'medium' ? '3px solid #4a9eff' : '3px solid rgba(74, 158, 255, 0.3)',
-                boxShadow: portraitType === 'medium' ? '0 0 12px rgba(74, 158, 255, 0.6)' : '0 2px 8px rgba(0,0,0,0.2)'
+            <div 
+              style={{ position: 'relative' }} 
+              className="portrait-type-button-container"
+              onMouseEnter={(e) => {
+                if (portraitType !== 'medium') {
+                  const label = e.currentTarget.querySelector('.portrait-type-label');
+                  if (label) label.style.opacity = '1';
+                }
               }}
-              title="Waist-Up"
+              onMouseLeave={(e) => {
+                const label = e.currentTarget.querySelector('.portrait-type-label');
+                if (label) label.style.opacity = '0';
+              }}
             >
-              <img 
-                src="/gallery/sample-gallery-medium-body-jen.jpg"
-                alt="Waist-Up"
+              <button 
+                onClick={() => setPortraitType('medium')}
+                className="winter-portrait-btn"
                 style={{
-                  width: '100%',
-                  height: '100%',
-                  objectFit: 'cover',
-                  display: 'block'
+                  border: portraitType === 'medium' ? '3px solid #4a9eff' : '3px solid rgba(74, 158, 255, 0.3)',
+                  boxShadow: portraitType === 'medium' ? '0 0 12px rgba(74, 158, 255, 0.6)' : '0 2px 8px rgba(0,0,0,0.2)'
                 }}
-              />
-            </button>
+                title="Waist-Up"
+              >
+                <img 
+                  src="/gallery/sample-gallery-medium-body-jen.jpg"
+                  alt="Waist-Up"
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                    display: 'block'
+                  }}
+                />
+              </button>
+              <span className="portrait-type-label winter-label">
+                MED
+              </span>
+            </div>
             
             <div 
               style={{ position: 'relative' }} 

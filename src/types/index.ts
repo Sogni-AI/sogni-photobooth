@@ -97,6 +97,7 @@ export interface Settings {
   sogniWatermarkPosition?: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
   qrCodeMarginStartsInsideFrame?: boolean;
   qrCodeUrl?: string;
+  portraitType?: string; // 'headshot', 'headshot2', 'medium', or 'fullbody'
   // Worker preferences
   requiredWorkers: string[];
   preferWorkers: string[];
@@ -106,4 +107,5 @@ export interface Settings {
   inactivityTimeout: number; // in seconds
   // Event context flags
   halloweenContext?: boolean; // Flag to indicate user started from Halloween event
+  winterContext?: boolean; // Flag to indicate user started from Winter event
 } 

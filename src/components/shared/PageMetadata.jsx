@@ -1,9 +1,31 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 const PageMetadata = () => {
+  const [pathname, setPathname] = useState(window.location.pathname);
+
+  // Listen for pathname changes
   useEffect(() => {
-    const pathname = window.location.pathname;
+    const updatePathname = () => {
+      setPathname(window.location.pathname);
+    };
+
+    // Listen for popstate (back/forward navigation)
+    window.addEventListener('popstate', updatePathname);
     
+    // Listen for custom pushState events (for SPA navigation)
+    const originalPushState = window.history.pushState;
+    window.history.pushState = function(...args) {
+      originalPushState.apply(window.history, args);
+      updatePathname();
+    };
+    
+    return () => {
+      window.removeEventListener('popstate', updatePathname);
+      window.history.pushState = originalPushState;
+    };
+  }, []);
+
+  useEffect(() => {
     // Define metadata for different routes
     const routeMetadata = {
       '/event/halloween': {
@@ -109,34 +131,7 @@ const PageMetadata = () => {
       }
       keywordsTag.setAttribute('content', metadata.keywords);
     }
-
-    // Set up listener for pathname changes (for SPAs)
-    const handleLocationChange = () => {
-      // Re-run the effect when location changes
-      const event = new Event('locationchange');
-      window.dispatchEvent(event);
-    };
-
-    // Listen for popstate (back/forward navigation)
-    window.addEventListener('popstate', handleLocationChange);
-    
-    return () => {
-      window.removeEventListener('popstate', handleLocationChange);
-    };
-  }, []);
-
-  // Re-run when pathname might have changed
-  useEffect(() => {
-    const handleChange = () => {
-      // Trigger re-render by just listening
-    };
-    
-    window.addEventListener('locationchange', handleChange);
-    
-    return () => {
-      window.removeEventListener('locationchange', handleChange);
-    };
-  });
+  }, [pathname]); // Re-run whenever pathname changes
 
   return null; // This component doesn't render anything
 };

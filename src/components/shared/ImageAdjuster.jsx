@@ -10,7 +10,8 @@ import { useWallet } from '../../hooks/useWallet';
 import { useCostEstimation } from '../../hooks/useCostEstimation.ts';
 import { getTokenLabel } from '../../services/walletService';
 import { styleIdToDisplay } from '../../utils';
-import { generateGalleryFilename } from '../../utils/galleryLoader';
+import { generateGalleryFilename, getPortraitFolderWithFallback } from '../../utils/galleryLoader';
+import promptsDataRaw from '../../prompts.json';
 import StyleDropdown from './StyleDropdown';
 import '../../styles/components/ImageAdjuster.css';
 
@@ -53,7 +54,8 @@ const ImageAdjuster = ({
     if (isIndividualStyle) {
       try {
         const expectedFilename = generateGalleryFilename(selectedStyle);
-        return `${urls.assetUrl}/gallery/prompts/${portraitType || 'medium'}/${expectedFilename}`;
+        const folder = getPortraitFolderWithFallback(portraitType, selectedStyle, promptsDataRaw);
+        return `${urls.assetUrl}/gallery/prompts/${folder}/${expectedFilename}`;
       } catch (error) {
         console.warn('Error generating style preview image:', error);
         return null;

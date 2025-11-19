@@ -4,9 +4,10 @@ import { styleIdToDisplay } from '../../utils';
 import { THEME_GROUPS, getDefaultThemeGroupState, getEnabledPrompts } from '../../constants/themeGroups';
 import { getThemeGroupPreferences, saveThemeGroupPreferences, getFavoriteImages } from '../../utils/cookies';
 import { isFluxKontextModel } from '../../constants/settings';
-import { generateGalleryFilename } from '../../utils/galleryLoader';
+import { generateGalleryFilename, getPortraitFolderWithFallback } from '../../utils/galleryLoader';
 import CustomPromptPopup, { CUSTOM_PROMPT_IMAGE_KEY } from './CustomPromptPopup';
 import urls from '../../config/urls';
+import promptsDataRaw from '../../prompts.json';
 import '../../styles/style-dropdown.css';
 import PropTypes from 'prop-types';
 import { getAttributionText } from '../../config/ugcAttributions';
@@ -744,7 +745,8 @@ const StyleDropdown = ({
             } else {
               try {
                 const expectedFilename = generateGalleryFilename(styleKey);
-                previewImagePath = `${urls.assetUrl}/gallery/prompts/${portraitType}/${expectedFilename}`;
+                const folder = getPortraitFolderWithFallback(portraitType, styleKey, promptsDataRaw);
+                previewImagePath = `${urls.assetUrl}/gallery/prompts/${folder}/${expectedFilename}`;
               } catch (error) {
                 // If filename generation fails, we'll just show no preview
                 previewImagePath = null;

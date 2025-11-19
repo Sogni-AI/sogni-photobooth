@@ -5,7 +5,7 @@ import { photoThoughts, randomThoughts } from './constants/thoughts';
 import { saveSettingsToCookies, shouldShowPromoPopup, markPromoPopupShown, hasDoneDemoRender, markDemoRenderDone, clearSessionSettings } from './utils/cookies';
 import { styleIdToDisplay } from './utils';
 import { getCustomDimensions } from './utils/imageProcessing';
-import { generateGalleryFilename } from './utils/galleryLoader';
+import { generateGalleryFilename, getPortraitFolderWithFallback } from './utils/galleryLoader';
 import { goToPreviousPhoto, goToNextPhoto } from './utils/photoNavigation';
 import { initializeStylePrompts, getRandomStyle, getRandomMixPrompts } from './services/prompts';
 import { getDefaultThemeGroupState, getEnabledPrompts, getOneOfEachPrompts } from './constants/themeGroups';
@@ -361,8 +361,10 @@ const App = () => {
   // State for tracking gallery prompt application
   const [pendingGalleryPrompt, setPendingGalleryPrompt] = useState(null);
 
-  // State for portrait type in Style Explorer
-  const [portraitType, setPortraitType] = useState('medium'); // 'headshot', 'medium', or 'fullbody'
+  // State for portrait type in Style Explorer - read from settings if available
+  const [portraitType, setPortraitType] = useState(() => {
+    return settings.portraitType || 'medium'; // Use saved portrait type or default to 'medium'
+  });
 
   // State for current page routing
   const [currentPage, setCurrentPage] = useState(() => {
@@ -405,11 +407,13 @@ const App = () => {
     
     console.log(`Changing portrait type from ${portraitType} to ${newPortraitType}`);
     setPortraitType(newPortraitType);
+    // Persist portrait type to settings so it's maintained across navigation
+    updateSetting('portraitType', newPortraitType);
     // Clear gallery photos to force reload with new portrait type
     setGalleryPhotos([]);
     // Reset gallery loaded flag to force reload with new portrait type
     galleryImagesLoadedThisSession.current = false;
-  }, [portraitType]);
+  }, [portraitType, updateSetting]);
   
   // PWA install prompt state - for manual testing only
   const [showPWAPromptManually, setShowPWAPromptManually] = useState(false);
@@ -1330,7 +1334,7 @@ const App = () => {
 
           // Import the loadGalleryImages function
           const { loadGalleryImages } = await import('./utils/galleryLoader');
-          const loadedGalleryPhotos = await loadGalleryImages(stylePrompts, portraitType);
+          const loadedGalleryPhotos = await loadGalleryImages(stylePrompts, portraitType, promptsDataRaw);
 
           if (loadedGalleryPhotos.length > 0) {
             console.log(`Loaded ${loadedGalleryPhotos.length} gallery images for prompt selector`);
@@ -1739,6 +1743,10 @@ const App = () => {
       setCurrentHashtag(null); // Clear hashtag
       updateSetting('halloweenContext', false); // Clear Halloween context
       updateSetting('winterContext', false); // Clear Winter context
+      // Clear manual overrides when explicitly selecting a style
+      updateSetting('seed', '');
+      updateSetting('negativePrompt', '');
+      updateSetting('stylePrompt', '');
       // Mark that user has explicitly selected a style
       localStorage.setItem('sogni_style_explicitly_selected', 'true');
       return;
@@ -1763,6 +1771,12 @@ const App = () => {
       // Clear Halloween context when switching away from custom style
       updateSetting('halloweenContext', false);
     }
+    
+    // Clear manual overrides when explicitly selecting a style
+    // This ensures fresh generation with the new style's defaults
+    updateSetting('seed', '');
+    updateSetting('negativePrompt', '');
+    updateSetting('stylePrompt', '');
     
     // Update the URL with the prompt parameter
     updateUrlWithPrompt(style);
@@ -2030,6 +2044,12 @@ const App = () => {
     if (gallerySeed !== undefined) {
       console.log('🎲 Using gallery variation seed:', gallerySeed);
       updateSetting('seed', String(gallerySeed));
+    } else {
+      // Clear manual overrides when explicitly selecting a fresh style
+      // (but not when selecting a gallery variation with a specific seed)
+      updateSetting('seed', '');
+      updateSetting('negativePrompt', '');
+      updateSetting('stylePrompt', '');
     }
     
     // Update current hashtag for sharing
@@ -8679,9 +8699,10 @@ const App = () => {
             >
               <div className="camera-view-style-selector-content">
                 {(() => {
-                  // Generate the full gallery image path
+                  // Generate the full gallery image path with fallback logic
+                  const folder = getPortraitFolderWithFallback(portraitType, selectedStyle, promptsDataRaw);
                   const stylePreviewImage = selectedStyle && selectedStyle !== 'custom'
-                    ? `${urls.assetUrl}/gallery/prompts/${portraitType}/${generateGalleryFilename(selectedStyle)}`
+                    ? `${urls.assetUrl}/gallery/prompts/${folder}/${generateGalleryFilename(selectedStyle)}`
                     : null;
                   return stylePreviewImage ? (
                     <img
