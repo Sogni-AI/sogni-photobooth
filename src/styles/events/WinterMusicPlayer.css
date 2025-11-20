@@ -1,7 +1,7 @@
 /* Global music player positioning */
 .winter-music-section {
   position: fixed;
-  bottom: 20px;
+  bottom: 70px;
   right: 20px;
   z-index: 100;
 }
@@ -497,7 +497,7 @@
 /* Responsive Design */
 @media (max-width: 768px) {
   .winter-music-section {
-    bottom: 15px;
+    bottom: 65px;
     right: 15px;
   }
 
@@ -609,7 +609,7 @@
 
 @media (max-width: 400px) {
   .winter-music-section {
-    bottom: 10px;
+    bottom: 60px;
     right: 10px;
   }
 
