@@ -1854,15 +1854,18 @@ const App = () => {
     if (shouldSwitchToWinterModel) {
       console.log('❄️ Christmas/Winter style detected, auto-switching to DreamShaper model');
       dreamShaperAutoSelectedRef.current = true; // Mark as auto-selected
+      const wasAlreadyDreamShaper = selectedModel === 'coreml-dreamshaperXL_v21TurboDPMSDE';
       updateSetting('selectedModel', 'coreml-dreamshaperXL_v21TurboDPMSDE');
       
-      // Show toast notification
-      showToast({
-        type: 'info',
-        title: 'Model Changed',
-        message: 'Switched to DreamShaper for winter theme',
-        timeout: 4000
-      });
+      // Show toast notification ONLY if model is actually changing
+      if (!wasAlreadyDreamShaper) {
+        showToast({
+          type: 'info',
+          title: 'Model Changed',
+          message: 'Switched to DreamShaper for winter theme',
+          timeout: 4000
+        });
+      }
     }
   };
 
@@ -2137,15 +2140,18 @@ const App = () => {
       } else if (isWinterStyle(promptKey)) {
         console.log('❄️ Christmas/Winter style detected from gallery, auto-switching to DreamShaper model');
         dreamShaperAutoSelectedRef.current = true; // Mark as auto-selected
+        const wasAlreadyDreamShaper = selectedModel === 'coreml-dreamshaperXL_v21TurboDPMSDE';
         updateSetting('selectedModel', 'coreml-dreamshaperXL_v21TurboDPMSDE');
         
-        // Show toast notification
-        showToast({
-          type: 'info',
-          title: 'Model Changed',
-          message: 'Switched to DreamShaper for winter theme',
-          timeout: 4000
-        });
+        // Show toast notification ONLY if model is actually changing
+        if (!wasAlreadyDreamShaper) {
+          showToast({
+            type: 'info',
+            title: 'Model Changed',
+            message: 'Switched to DreamShaper for winter theme',
+            timeout: 4000
+          });
+        }
       }
     }
     
