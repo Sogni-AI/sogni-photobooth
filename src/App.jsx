@@ -166,6 +166,12 @@ const App = () => {
   // const helloSoundReference = useRef(null);
   const slothicornReference = useRef(null);
   const soundPlayedForPhotos = useRef(new Set()); // Track which photo IDs have already played sound
+  const prevWinterContextRef = useRef(false); // Track previous winter context state (initialized to false)
+  const prevModelRef = useRef(null); // Track previous model to detect actual model changes
+  const prevStyleRef = useRef(null); // Track previous style to detect style changes
+  const dreamShaperAutoSelectedRef = useRef(false); // Track if DreamShaper was auto-selected (vs manually selected)
+  const isInitialRenderRef = useRef(true); // Track if this is the initial render
+  const userExplicitlySelectedModelRef = useRef(false); // Track if user explicitly chose a model (disables auto-switching)
 
   useEffect(() => {
     const unlockAudio = () => {
@@ -723,8 +729,19 @@ const App = () => {
 
   // Wrapper function to reset settings and lastPhotoData
   const resetSettings = useCallback(async () => {
+    console.log('🔄 Resetting all settings to defaults');
+    
+    // Mark this as a manual model change to prevent automatic switching
+    manualModelChangeRef.current = true;
+    
+    // Reset user explicit model selection flag - allow auto-switching after reset
+    userExplicitlySelectedModelRef.current = false;
+    
     // First reset the context settings
     contextResetSettings();
+    
+    // Explicitly clear winter context
+    updateSetting('winterContext', false);
 
     // Clear any saved photo data from localStorage to ensure clean reset
     localStorage.removeItem('sogni-lastAdjustedPhoto');
@@ -739,7 +756,12 @@ const App = () => {
     setLastPhotoData({ blob: null, dataUrl: null });
     setLastAdjustedPhotoState(null);
     setLastCameraPhotoState(null);
-  }, [contextResetSettings]);
+    
+    // Reset the manual change flag after effects run
+    setTimeout(() => {
+      manualModelChangeRef.current = false;
+    }, 100);
+  }, [contextResetSettings, updateSetting]);
 
 
 
@@ -1237,14 +1259,18 @@ const App = () => {
       setUrlSearchTerm(searchParam);
     }
     
-    // IMPORTANT: Don't process URL parameters if we're in copyImageStyle mode
-    // copyImageStyle should never be overridden by URL params
-    if (selectedStyle !== 'copyImageStyle') {
-      // Only process URL params if NOT in copyImageStyle mode
-      if (promptParam && stylePrompts && promptParam !== selectedStyle) {
+    // IMPORTANT: Only apply URL prompt parameter on initial load or when navigating via URL
+    // Don't override user's explicit style selections
+    const userHasExplicitlySelectedStyle = localStorage.getItem('sogni_style_explicitly_selected') === 'true';
+    
+    // Only process URL prompt parameter if:
+    // 1. User hasn't explicitly selected a style yet (first visit or fresh session)
+    // 2. There's a prompt parameter in the URL
+    // 3. We're not in copyImageStyle mode (which should never be overridden)
+    if (promptParam && stylePrompts && !userHasExplicitlySelectedStyle && selectedStyle !== 'copyImageStyle') {
         // If the prompt exists in our style prompts, select it
         if (stylePrompts[promptParam] || Object.keys(promptsData).includes(promptParam)) {
-          console.log(`Setting style from URL parameter: ${promptParam}`);
+        console.log(`Setting style from URL parameter (initial load): ${promptParam}`);
           updateSetting('selectedStyle', promptParam);
           // If we have the prompt value, set it too
           if (stylePrompts[promptParam]) {
@@ -1253,15 +1279,39 @@ const App = () => {
           // Update current hashtag
           setCurrentHashtag(promptParam);
         }
-      }
-    } else {
+    } else if (selectedStyle === 'copyImageStyle' && promptParam) {
       // We're in copyImageStyle mode - clear any URL prompt parameters
       console.log(`⚠️ selectedStyle is copyImageStyle - ensuring URL prompt parameter is cleared`);
-      if (promptParam) {
         updateUrlWithPrompt('copyImageStyle');
       }
-    }
-  }, [stylePrompts, selectedStyle, promptsData, currentPage]); // updateSetting is stable, doesn't need to be a dependency
+  }, [stylePrompts, promptsData, currentPage]); // Removed selectedStyle from dependencies to prevent circular loop
+  
+  // Handle browser navigation (back/forward) - allow URL prompt parameter to apply
+  useEffect(() => {
+    const handlePopState = () => {
+      const url = new URL(window.location.href);
+      const promptParam = url.searchParams.get('prompt');
+      
+      // When user navigates back/forward, clear the explicit selection flag
+      // so URL parameter can take effect
+      if (promptParam && stylePrompts) {
+        console.log(`📍 Navigation detected, allowing URL parameter to apply: ${promptParam}`);
+        localStorage.removeItem('sogni_style_explicitly_selected');
+        
+        // Apply the URL parameter
+        if (stylePrompts[promptParam] || Object.keys(promptsData).includes(promptParam)) {
+          updateSetting('selectedStyle', promptParam);
+          if (stylePrompts[promptParam]) {
+            updateSetting('positivePrompt', stylePrompts[promptParam]);
+          }
+          setCurrentHashtag(promptParam);
+        }
+      }
+    };
+    
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [stylePrompts, promptsData]);
   
   // Handle gallery URL parameter for deep linking to Community Gallery
   useEffect(() => {
@@ -1752,16 +1802,10 @@ const App = () => {
       return;
     }
     
-    // Auto-switch to DreamShaper for Christmas/Winter styles
-    if (isWinterStyle(style)) {
-      console.log('❄️ Christmas/Winter style detected, auto-switching to DreamShaper model');
-      updateSetting('selectedModel', 'coreml-dreamshaperXL_v21TurboDPMSDE');
-      updateSetting('winterContext', true);
-    } else {
-      // Clear winter context for non-winter styles
-      updateSetting('winterContext', false);
-    }
+    // Determine if this is a winter style (for model switching)
+    const shouldSwitchToWinterModel = isWinterStyle(style);
     
+    // Set non-model settings first
     updateSetting('selectedStyle', style); 
     if (style === 'custom') {
       updateSetting('positivePrompt', ''); 
@@ -1770,6 +1814,13 @@ const App = () => {
       updateSetting('positivePrompt', prompt); 
       // Clear Halloween context when switching away from custom style
       updateSetting('halloweenContext', false);
+    }
+    
+    // Set winter context
+    if (shouldSwitchToWinterModel) {
+      updateSetting('winterContext', true);
+    } else {
+      updateSetting('winterContext', false);
     }
     
     // Clear manual overrides when explicitly selecting a style
@@ -1786,6 +1837,21 @@ const App = () => {
     
     // Mark that user has explicitly selected a style
     localStorage.setItem('sogni_style_explicitly_selected', 'true');
+    
+    // Set model LAST so all pending settings are captured
+    if (shouldSwitchToWinterModel) {
+      console.log('❄️ Christmas/Winter style detected, auto-switching to DreamShaper model');
+      dreamShaperAutoSelectedRef.current = true; // Mark as auto-selected
+      updateSetting('selectedModel', 'coreml-dreamshaperXL_v21TurboDPMSDE');
+      
+      // Show toast notification
+      showToast({
+        type: 'info',
+        title: 'Model Changed',
+        message: 'Switched to DreamShaper for winter theme',
+        timeout: 4000
+      });
+    }
   };
 
 
@@ -2011,19 +2077,10 @@ const App = () => {
     console.log('🎨 [handlePromptSelectFromPage] Selecting style:', promptKey);
     console.log('🎨 [handlePromptSelectFromPage] Current selectedStyle before update:', selectedStyle);
     
-    // IMPORTANT: If switching models, do it FIRST before updating the style
-    // This prevents switchToModel from overwriting the style with the old value
-    if (galleryMetadata?.model) {
-      console.log('🤖 [App] Switching to gallery entry model FIRST:', galleryMetadata.model);
-      switchToModel(galleryMetadata.model);
-    } else if (isWinterStyle(promptKey)) {
-      // Auto-switch to DreamShaper for Christmas/Winter styles
-      console.log('❄️ Christmas/Winter style detected from gallery, auto-switching to DreamShaper model');
-      updateSetting('selectedModel', 'coreml-dreamshaperXL_v21TurboDPMSDE');
-      updateSetting('winterContext', true);
-    }
+    // Track if we need to switch models (do this LAST to capture all pending settings)
+    const shouldSwitchModel = galleryMetadata?.model || (isWinterStyle(promptKey) && 'coreml-dreamshaperXL_v21TurboDPMSDE');
     
-    // Now update style and URL for deep linking
+    // Update style and URL for deep linking
     updateSetting('selectedStyle', promptKey);
     if (promptKey === 'custom') {
       updateSetting('positivePrompt', ''); 
@@ -2056,10 +2113,29 @@ const App = () => {
     setCurrentHashtag(getHashtagForStyle(promptKey));
     // Update URL with selected prompt for deep linking
     updateUrlWithPrompt(promptKey);
-    // Don't automatically redirect - let user choose to navigate with camera/photos buttons
     
     // Mark that user has explicitly selected a style
     localStorage.setItem('sogni_style_explicitly_selected', 'true');
+    
+    // Switch model LAST so all pending settings are captured
+    if (shouldSwitchModel) {
+      if (galleryMetadata?.model) {
+        console.log('🤖 [App] Switching to gallery entry model:', galleryMetadata.model);
+        switchToModel(galleryMetadata.model);
+      } else if (isWinterStyle(promptKey)) {
+        console.log('❄️ Christmas/Winter style detected from gallery, auto-switching to DreamShaper model');
+        dreamShaperAutoSelectedRef.current = true; // Mark as auto-selected
+        updateSetting('selectedModel', 'coreml-dreamshaperXL_v21TurboDPMSDE');
+        
+        // Show toast notification
+        showToast({
+          type: 'info',
+          title: 'Model Changed',
+          message: 'Switched to DreamShaper for winter theme',
+          timeout: 4000
+        });
+      }
+    }
     
     // Close the photo popup to provide visual feedback that the style was selected
     setSelectedPhotoIndex(null);
@@ -2881,6 +2957,121 @@ const App = () => {
       return () => clearTimeout(timeoutId);
     }
   }, [photos, isGenerating]); // Include isGenerating to compare previous state
+
+  // -------------------------
+  //   Monitor winter context changes (backup/safety check only)
+  // -------------------------
+  useEffect(() => {
+    // Just track winter context state - the style-based effect handles model switching
+    const winterContextActive = settings.winterContext;
+    prevWinterContextRef.current = winterContextActive;
+  }, [settings.winterContext]);
+
+  // -------------------------
+  //   Auto-switch model based on style selection
+  // -------------------------
+  useEffect(() => {
+    const currentStyle = settings.selectedStyle;
+    const currentModel = settings.selectedModel;
+    
+    // Initialize refs on first run
+    if (prevModelRef.current === null) {
+      prevModelRef.current = currentModel;
+    }
+    if (prevStyleRef.current === null) {
+      prevStyleRef.current = currentStyle;
+      return; // Skip on first render
+    }
+    
+    // CRITICAL: Only auto-switch when STYLE changes, not when model changes manually
+    const styleChanged = prevStyleRef.current !== currentStyle;
+    
+    if (!styleChanged) {
+      console.log('⏭️ Style unchanged, skipping automatic model switch');
+      prevModelRef.current = currentModel;
+      return;
+    }
+    
+    console.log(`🎨 Style changed: ${prevStyleRef.current} → ${currentStyle}`);
+    
+    // If user explicitly selected a model, respect their choice and don't auto-switch
+    if (userExplicitlySelectedModelRef.current) {
+      console.log('🙋 User explicitly selected a model, respecting choice - no auto-switching');
+      prevStyleRef.current = currentStyle;
+      prevModelRef.current = currentModel;
+      return;
+    }
+    
+    // Check if previous and current styles are winter styles
+    const wasPreviousStyleWinter = isWinterStyle(prevStyleRef.current);
+    const isCurrentStyleWinter = isWinterStyle(currentStyle);
+    
+    prevStyleRef.current = currentStyle;
+    
+    // Skip special styles that don't need model switching
+    if (['random', 'randomMix', 'oneOfEach', 'browseGallery', 'copyImageStyle'].includes(currentStyle)) {
+      return;
+    }
+    
+    // If switching TO a winter style and NOT on DreamShaper, switch to it
+    if (isCurrentStyleWinter && currentModel !== 'coreml-dreamshaperXL_v21TurboDPMSDE') {
+      console.log('❄️ Winter style selected, auto-switching to DreamShaper model');
+      dreamShaperAutoSelectedRef.current = true; // Mark as auto-selected
+      updateSetting('winterContext', true);
+      switchToModel('coreml-dreamshaperXL_v21TurboDPMSDE');
+      
+      // Show toast notification ONLY if model is actually changing
+      if (prevModelRef.current !== 'coreml-dreamshaperXL_v21TurboDPMSDE') {
+        showToast({
+          type: 'info',
+          title: 'Model Changed',
+          message: 'Switched to DreamShaper for winter theme',
+          timeout: 4000
+        });
+      }
+      
+      prevModelRef.current = 'coreml-dreamshaperXL_v21TurboDPMSDE';
+      
+      // Reset the explicit selection flag since we auto-switched
+      // This allows future auto-switches to work
+      userExplicitlySelectedModelRef.current = false;
+    }
+    // ONLY switch away from DreamShaper if:
+    // 1. Transitioning FROM winter TO non-winter style
+    // 2. Currently on DreamShaper
+    // 3. DreamShaper was AUTO-selected (not manually selected by user)
+    else if (wasPreviousStyleWinter && !isCurrentStyleWinter && 
+             currentModel === 'coreml-dreamshaperXL_v21TurboDPMSDE' &&
+             dreamShaperAutoSelectedRef.current === true) {
+      console.log('❄️ Leaving winter style, auto-switching from DreamShaper to default model');
+      console.log('❄️ About to show toast and switch model');
+      dreamShaperAutoSelectedRef.current = false; // Reset flag
+      updateSetting('winterContext', false);
+      
+      // Show toast BEFORE switching model
+      showToast({
+        type: 'info',
+        title: 'Model Changed',
+        message: 'Switched back to Sogni Turbo (default model)',
+        timeout: 4000
+      });
+      console.log('❄️ Toast shown');
+      
+      switchToModel(DEFAULT_MODEL_ID);
+      prevModelRef.current = DEFAULT_MODEL_ID;
+      
+      // Reset the explicit selection flag since we auto-switched
+      // This allows future auto-switches to work
+      userExplicitlySelectedModelRef.current = false;
+    } else {
+      // Log why we're not switching
+      if (wasPreviousStyleWinter && !isCurrentStyleWinter && currentModel === 'coreml-dreamshaperXL_v21TurboDPMSDE') {
+        console.log(`❄️ Not switching away from DreamShaper: dreamShaperAutoSelected=${dreamShaperAutoSelectedRef.current}`);
+      }
+      // Update prevModelRef if we're not switching
+      prevModelRef.current = currentModel;
+    }
+  }, [settings.selectedStyle, settings.selectedModel, updateSetting, switchToModel, showToast]);
 
   // -------------------------
   //   Sogni initialization
@@ -6753,7 +6944,25 @@ const App = () => {
             modelOptions={getModelOptions()}
             selectedModel={selectedModel}
             onModelSelect={(value) => {
-              console.log(`Model selected: ${value}`);
+              console.log(`🔧 Manual model change: ${selectedModel} → ${value}`);
+              
+              // Mark that user explicitly selected a model - disable auto-switching
+              userExplicitlySelectedModelRef.current = true;
+              console.log('🙋 User explicitly selected a model - auto-switching disabled');
+              
+              // Track if user manually selected DreamShaper
+              if (value === 'coreml-dreamshaperXL_v21TurboDPMSDE') {
+                dreamShaperAutoSelectedRef.current = false; // User manually selected it
+                console.log('🔧 User manually selected DreamShaper - will not auto-switch away');
+              }
+              
+              // If switching away from DreamShaper, clear winter context
+              if (selectedModel === 'coreml-dreamshaperXL_v21TurboDPMSDE' && value !== 'coreml-dreamshaperXL_v21TurboDPMSDE') {
+                console.log('🔧 Clearing winter context (leaving DreamShaper)');
+                updateSetting('winterContext', false);
+                dreamShaperAutoSelectedRef.current = false; // Reset the flag
+              }
+              
               switchToModel(value);
             }}
             numImages={numImages}

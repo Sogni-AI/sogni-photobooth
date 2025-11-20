@@ -3,6 +3,16 @@ import React, { createContext, useContext, useState, useRef, useMemo } from 'rea
 import { Photo, ProjectState, Settings } from '../types/index';
 import { DEFAULT_SETTINGS, getModelDefaults, isFluxKontextModel, DEFAULT_MODEL_ID } from '../constants/settings';
 import { getSettingFromCookie, saveSettingsToCookies, getSettingsForModel, saveModelSpecificSettings } from '../utils/cookies';
+import promptsDataRaw from '../prompts.json';
+
+// Helper function to check if a style is from the Christmas/Winter category
+const isWinterStyle = (styleKey: string): boolean => {
+  if (!styleKey || styleKey === 'custom' || styleKey === 'random' || styleKey === 'randomMix' || styleKey === 'oneOfEach' || styleKey === 'browseGallery') {
+    return false;
+  }
+  const winterPrompts = promptsDataRaw['christmas-winter']?.prompts || {};
+  return styleKey in winterPrompts;
+};
 
 // Helper function to handle TezDev theme cookie migration
 const getTezDevThemeFromCookie = () => {
@@ -102,25 +112,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       positivePrompt: positivePrompt?.substring(0, 50) + '...'
     });
     
-    // Check if this is a genuine page reload or just a navigation within the app
-    const isInitialPageLoad = !sessionStorage.getItem('sogni_app_initialized');
-    if (isInitialPageLoad) {
-      sessionStorage.setItem('sogni_app_initialized', 'true');
-      console.log('🔄 [INIT] Initial page load detected');
-    } else {
-      console.log('🔄 [INIT] Navigation within app detected (not a fresh page load)');
-    }
+    // Check if the CURRENT selected style is actually a winter style
+    // Only preserve DreamShaper if the style is actually winter
+    const isCurrentStyleWinter = isWinterStyle(selectedStyle);
+    const shouldPreserveDreamShaper = selectedModel === 'coreml-dreamshaperXL_v21TurboDPMSDE' && isCurrentStyleWinter;
     
-    // Check if we're coming from the winter event (winterContext flag)
-    // If so, preserve the DreamShaper model selection
-    const isWinterEventSelection = winterContext && selectedModel === 'coreml-dreamshaperXL_v21TurboDPMSDE';
-    
-    // Always reset to default model on INITIAL page reload
-    // Users must explicitly select a different model in each session
-    // EXCEPT when coming from winter event with DreamShaper selected
-    // Do NOT reset on navigation within the app (component remounting)
-    if (selectedModel !== DEFAULT_MODEL_ID && !isWinterEventSelection && isInitialPageLoad) {
-      console.log(`🔄 [INIT] Resetting model from ${selectedModel} to default (${DEFAULT_MODEL_ID})`);
+    // Always reset non-default models on page load/initialization
+    // EXCEPT DreamShaper when the current style is actually a winter style
+    if (selectedModel !== DEFAULT_MODEL_ID && !shouldPreserveDreamShaper) {
+      console.log(`🔄 [INIT] Resetting model from ${selectedModel} to default (${DEFAULT_MODEL_ID}) - style: ${selectedStyle}, isWinter: ${isCurrentStyleWinter}`);
       selectedModel = DEFAULT_MODEL_ID;
       
       // Save to cookies and also ensure model-specific settings are loaded for default model
@@ -144,10 +144,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         selectedStyle = 'randomMix';
         saveSettingsToCookies({ selectedStyle });
       }
-    } else if (isWinterEventSelection) {
-      console.log('❄️ [INIT] Preserving DreamShaper model for winter event selection');
-    } else if (!isInitialPageLoad && selectedModel !== DEFAULT_MODEL_ID) {
-      console.log(`❄️ [INIT] Preserving ${selectedModel} model during navigation (not a fresh page load)`);
+    } else if (shouldPreserveDreamShaper) {
+      console.log('❄️ [INIT] Preserving DreamShaper model because current style is winter');
     }
     
     // Reset custom prompt to blank on page load (but preserve if style is 'custom')
@@ -231,8 +229,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const pendingSettingsRef = useRef<Partial<Settings>>({});
   
   const updateSetting = <K extends keyof Settings>(key: K, value: Settings[K], isAuthenticated: boolean = false) => {
-    // Track this setting in pending updates
-    pendingSettingsRef.current[key] = value;
+    // Skip if the value hasn't actually changed
+    const currentValue = settings[key];
+    if (currentValue === value) {
+      console.log(`updateSetting: ${String(key)} unchanged (${String(value)}), skipping`);
+      return;
+    }
     
     // Special handling for model changes
     if (key === 'selectedModel') {
@@ -243,6 +245,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       pendingSettingsRef.current = {};
       return;
     }
+    
+    // Track this setting in pending updates (but AFTER model check)
+    // This way if model is set first, later settings still accumulate for the next model change
+    pendingSettingsRef.current[key] = value;
     
     setSettings(prev => {
       const newSettings = { ...prev, [key]: value };
@@ -264,6 +270,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Function to switch to a different model and load its settings
   const switchToModel = (modelId: string, pendingSettings: Partial<Settings> = {}) => {
     const currentModel = settings.selectedModel;
+    
+    // Skip if we're already on this model
+    if (currentModel === modelId) {
+      console.log(`Already on model ${modelId}, skipping switch`);
+      // Still need to apply pending settings if there are any
+      if (Object.keys(pendingSettings).length > 0) {
+        console.log(`Applying pending settings without model switch:`, pendingSettings);
+        setSettings(prev => ({
+          ...prev,
+          ...pendingSettings
+        }));
+        // Save pending settings to cookies
+        saveSettingsToCookies(pendingSettings);
+      }
+      return;
+    }
+    
     const isCurrentFlux = isFluxKontextModel(currentModel);
     const isNewFlux = isFluxKontextModel(modelId);
     
