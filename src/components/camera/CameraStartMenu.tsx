@@ -3,6 +3,7 @@ import StyleDropdown from '../shared/StyleDropdown';
 import { styleIdToDisplay } from '../../utils';
 import { generateGalleryFilename, getPortraitFolderWithFallback } from '../../utils/galleryLoader';
 import { CUSTOM_PROMPT_IMAGE_KEY } from '../shared/CustomPromptPopup';
+import { getEnabledPrompts } from '../../constants/themeGroups';
 import urls from '../../config/urls';
 import promptsDataRaw from '../../prompts.json';
 import './CameraStartMenu.css';
@@ -70,6 +71,8 @@ interface CameraStartMenuProps {
   // Reset handlers
   onResetCameraPhoto?: () => void;
   onResetUploadedPhoto?: () => void;
+  // Theme state
+  currentThemes?: Record<string, boolean>;
 }
 
 const CameraStartMenu: React.FC<CameraStartMenuProps> = ({
@@ -96,7 +99,8 @@ const CameraStartMenu: React.FC<CameraStartMenuProps> = ({
   onShowExistingUpload,
   hasExistingUpload = false,
   onResetCameraPhoto,
-  onResetUploadedPhoto
+  onResetUploadedPhoto,
+  currentThemes = {}
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showStyleDropdown, setShowStyleDropdown] = useState(false);
@@ -122,21 +126,44 @@ const CameraStartMenu: React.FC<CameraStartMenuProps> = ({
 
   // Pick a random style for sampler modes - truly random on each page load
   // No sessionStorage - changes with every visit
+  // If themes are filtered, only pick from enabled themes
   const randomStyleForSamplers = useMemo(() => {
-    const availableStyles = Object.keys(stylePrompts).filter(
+    // Check if theme filtering is active:
+    // 1. currentThemes must exist and not be empty
+    // 2. At least one theme must be explicitly enabled (true)
+    // 3. At least one theme must be disabled (false) - otherwise all are enabled
+    const hasCurrentThemes = currentThemes && Object.keys(currentThemes).length > 0;
+    const hasAnyEnabled = hasCurrentThemes && Object.values(currentThemes).some(enabled => enabled);
+    const hasAnyDisabled = hasCurrentThemes && Object.values(currentThemes).some(enabled => !enabled);
+    const hasThemeFiltering = hasCurrentThemes && hasAnyEnabled && hasAnyDisabled;
+    
+    // If no themes provided, all themes empty, or all disabled -> use all prompts as fallback
+    // If theme filtering is active, use getEnabledPrompts to filter
+    const filteredPrompts = hasThemeFiltering
+      ? getEnabledPrompts(currentThemes, stylePrompts)
+      : stylePrompts;
+    
+    const availableStyles = Object.keys(filteredPrompts).filter(
       key => !['custom', 'random', 'randomMix', 'oneOfEach', 'browseGallery'].includes(key)
     );
     
     console.log('🎲 CameraStartMenu - randomStyleForSamplers recalculating:', {
       availableStylesCount: availableStyles.length,
+      hasThemeFiltering,
+      hasCurrentThemes,
+      hasAnyEnabled,
+      hasAnyDisabled,
       selectedStyle,
-      stylePromptsKeys: Object.keys(stylePrompts).slice(0, 5)
+      stylePromptsKeys: Object.keys(stylePrompts).slice(0, 5),
+      filteredPromptsKeys: Object.keys(filteredPrompts).slice(0, 5)
     });
     
     // Wait for full prompt set to load (> 100 styles) before generating random
     // This prevents picking from partial initial load that might not include all styles
-    if (availableStyles.length < 100) {
-      console.log('⏳ Waiting for full prompts to load (currently:', availableStyles.length, ')');
+    // If theme filtering is active, lower the threshold since fewer prompts are expected
+    const minPromptsThreshold = hasThemeFiltering ? 5 : 100;
+    if (availableStyles.length < minPromptsThreshold) {
+      console.log('⏳ Waiting for full prompts to load (currently:', availableStyles.length, 'threshold:', minPromptsThreshold, ')');
       return null;
     }
     
@@ -145,7 +172,7 @@ const CameraStartMenu: React.FC<CameraStartMenuProps> = ({
     const selectedRandomStyle = availableStyles[randomIndex];
     console.log('🎯 Generated new random style:', selectedRandomStyle, 'at index:', randomIndex, 'of', availableStyles.length);
     return selectedRandomStyle;
-  }, [stylePrompts]);
+  }, [stylePrompts, currentThemes]);
 
   // Track if user has ever explicitly selected a style
   const hasExplicitlySelectedStyle = useMemo(() => {

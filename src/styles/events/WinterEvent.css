@@ -11,6 +11,28 @@
   background: transparent !important;
 }
 
+/* Film strip content with relative positioning for sloth */
+.winter-film-strip .film-strip-content.prompt-selector-mode {
+  position: relative;
+}
+
+/* Winter Slothi background at bottom right - full size, overlapping content */
+.winter-film-strip .film-strip-content.prompt-selector-mode::after {
+  content: '';
+  position: absolute;
+  bottom: -40px;
+  right: -75px;
+  width: 650px;
+  height: 650px;
+  background-image: url('/events/winter-slothi.png');
+  background-size: contain;
+  background-position: bottom right;
+  background-repeat: no-repeat;
+  opacity: 0.85;
+  z-index: -1;
+  pointer-events: none;
+}
+
 /* Disable the container slide-in animation for Winter page */
 .winter-film-strip.film-strip-container.visible {
   animation: none !important;
@@ -34,6 +56,7 @@
 .winter-film-strip.film-strip-container {
   height: 100vh;
   overflow-y: auto;
+  overflow-x: hidden;
   position: relative;
   z-index: 10;
 }
@@ -362,12 +385,42 @@
   animation: snowflakeBounce 3s ease-in-out infinite;
 }
 
+.snowflake-face {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .snowflake-emoji {
   font-size: 4rem;
   display: block;
   filter: drop-shadow(0 4px 8px rgba(74, 158, 255, 0.4));
   transition: transform 0.2s ease;
   position: relative;
+}
+
+.snowflake-eyes {
+  position: absolute;
+  top: 35%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 1rem;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.snowflake-mouth {
+  position: absolute;
+  top: 62%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 1.2rem;
+  font-weight: bold;
+  pointer-events: none;
+  z-index: 1;
+  color: #1565c0;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 .winter-snowflake-button:hover .snowflake-emoji {
@@ -481,6 +534,16 @@
 
   .snowflake-emoji {
     font-size: 3rem;
+  }
+
+  .snowflake-eyes {
+    font-size: 0.8rem;
+    top: 35%;
+  }
+
+  .snowflake-mouth {
+    font-size: 1rem;
+    top: 62%;
   }
 
   .snowflake-dismiss-btn {
@@ -663,6 +726,106 @@
   .floating-icicle,
   .floating-sparkle {
     font-size: 1.1rem;
+  }
+}
+
+/* Random Style Button */
+.winter-random-button-container {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: center;
+  padding: 2rem 0 3rem 0;
+  position: relative;
+  z-index: 10;
+}
+
+.winter-random-style-btn {
+  background: linear-gradient(135deg, #4a9eff 0%, #2196f3 100%);
+  border: 3px solid #64b5f6;
+  border-radius: 30px;
+  padding: 1rem 2.5rem;
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: white;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow:
+    0 6px 20px rgba(33, 150, 243, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  font-family: 'Permanent Marker', cursive;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.winter-random-style-btn:hover {
+  transform: translateY(-3px) scale(1.05);
+  box-shadow:
+    0 8px 25px rgba(33, 150, 243, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
+}
+
+.winter-random-style-btn:active {
+  transform: translateY(-1px) scale(1.02);
+}
+
+.random-icon {
+  font-size: 1.8rem;
+  animation: diceRoll 2s ease-in-out infinite;
+}
+
+.random-sparkle {
+  font-size: 1.3rem;
+  animation: twinkleSparkle 1.5s ease-in-out infinite;
+}
+
+@keyframes diceRoll {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(-10deg);
+  }
+  75% {
+    transform: rotate(10deg);
+  }
+}
+
+/* Mobile styles for random button */
+@media (max-width: 768px) {
+  .winter-random-button-container {
+    padding: 1.5rem 0 2rem 0;
+  }
+
+  .winter-random-style-btn {
+    padding: 0.8rem 2rem;
+    font-size: 1.2rem;
+    gap: 0.6rem;
+  }
+
+  .random-icon {
+    font-size: 1.5rem;
+  }
+
+  .random-sparkle {
+    font-size: 1.1rem;
+  }
+}
+
+@media (max-width: 400px) {
+  .winter-random-style-btn {
+    padding: 0.7rem 1.5rem;
+    font-size: 1rem;
+  }
+
+  .random-icon {
+    font-size: 1.3rem;
+  }
+
+  .random-sparkle {
+    font-size: 1rem;
   }
 }
 

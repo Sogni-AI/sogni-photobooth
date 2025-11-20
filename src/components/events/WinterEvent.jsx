@@ -2,11 +2,13 @@ import React, { useState, useMemo } from 'react';
 import { Helmet } from 'react-helmet-async';
 import WinterPromptPopup from './WinterPromptPopup';
 import { AuthStatus } from '../auth/AuthStatus';
+import { useWinterMusicPlayer } from '../../context/WinterMusicPlayerContext';
 import { useApp } from '../../context/AppContext';
 import { useNavigation } from '../AppRouter';
 import { styleIdToDisplay } from '../../utils';
 import { getAttributionText, hasPromptAttribution } from '../../config/ugcAttributions';
 import { generateGalleryFilename } from '../../utils/galleryLoader';
+import { saveThemeGroupPreferences } from '../../utils/cookies';
 import urls from '../../config/urls';
 import promptsDataRaw from '../../prompts.json';
 import '../../styles/film-strip.css'; // Reuse existing film-strip styles
@@ -18,8 +20,49 @@ const WinterEvent = () => {
   const [snowflakeDismissed, setSnowflakeDismissed] = useState(false);
   const [showSnowflakeButton, setShowSnowflakeButton] = useState(false); // Delayed appearance
   const [portraitType, setPortraitType] = useState('headshot2'); // 'headshot2', 'medium', or 'fullbody'
+  const { isEnabled, enable: enableMusic } = useWinterMusicPlayer();
   const { updateSetting, stylePrompts } = useApp();
   const { navigateToCamera } = useNavigation();
+
+  const handleRandomStyle = () => {
+    console.log('❄️ Random Style button clicked - selecting Random: Mix for winter category');
+    
+    // Dynamically build theme state from promptsDataRaw to ensure all categories are covered
+    // Set ONLY christmas-winter to true, all others to false
+    const allThemeGroups = Object.keys(promptsDataRaw);
+    const winterOnlyThemes = {};
+    allThemeGroups.forEach(group => {
+      winterOnlyThemes[group] = (group === 'christmas-winter');
+    });
+    
+    console.log('❄️ Setting themes to winter-only:', winterOnlyThemes);
+    
+    // Save theme preferences to localStorage (this is how themes persist)
+    saveThemeGroupPreferences(winterOnlyThemes);
+    
+    // Set the style to 'randomMix' which will pick different random styles for each image
+    updateSetting('selectedStyle', 'randomMix');
+    updateSetting('winterContext', true);
+    updateSetting('portraitType', portraitType);
+    
+    // Clear manual overrides when explicitly selecting a style
+    updateSetting('seed', '');
+    updateSetting('negativePrompt', '');
+    updateSetting('stylePrompt', '');
+    
+    // Model must be set LAST because switchToModel reads current state
+    updateSetting('selectedModel', 'coreml-dreamshaperXL_v21TurboDPMSDE');
+    
+    // Mark that user has explicitly selected a style
+    localStorage.setItem('sogni_style_explicitly_selected', 'true');
+    
+    console.log('❄️ Random: Mix selected with christmas-winter category filter saved to localStorage, navigating to camera');
+    
+    // Small delay to ensure localStorage writes have completed
+    setTimeout(() => {
+      navigateToCamera();
+    }, 0);
+  };
 
   const handleDismissSnowflake = (e) => {
     e.stopPropagation(); // Prevent expanding
@@ -59,6 +102,13 @@ const WinterEvent = () => {
   React.useEffect(() => {
     sessionStorage.setItem('winter-event-visited', 'true');
   }, []);
+
+  // Enable music player when component mounts
+  React.useEffect(() => {
+    if (!isEnabled) {
+      enableMusic();
+    }
+  }, [isEnabled, enableMusic]);
 
   // Delay snowflake button appearance by 5 seconds
   React.useEffect(() => {
@@ -211,7 +261,11 @@ const WinterEvent = () => {
             >
               ✕
             </button>
-            <span className="snowflake-emoji">❄️</span>
+            <div className="snowflake-face">
+              <span className="snowflake-emoji">❄️</span>
+              <span className="snowflake-eyes">👀</span>
+              <span className="snowflake-mouth">◡</span>
+            </div>
             <span className="create-bubble">
               <span className="create-text">Create your own style?</span>
               <span className="create-emoji">✨</span>
@@ -423,6 +477,18 @@ const WinterEvent = () => {
               </div>
             </div>
           ))}
+          
+          {/* Random Style Button */}
+          <div className="winter-random-button-container">
+            <button 
+              className="winter-random-style-btn"
+              onClick={handleRandomStyle}
+            >
+              <span className="random-icon">🎲</span>
+              <span className="random-text">Random Style</span>
+              <span className="random-sparkle">✨</span>
+            </button>
+          </div>
         </div>
       </div>
 

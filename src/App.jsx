@@ -377,6 +377,18 @@ const App = () => {
     return immediatePageParam === 'prompts' ? 'prompts' : 'camera';
   });
 
+  // Re-read theme preferences when navigating between pages
+  // This ensures theme changes from WinterEvent are reflected
+  useEffect(() => {
+    const saved = getThemeGroupPreferences();
+    if (saved && Object.keys(saved).length > 0) {
+      const defaultState = getDefaultThemeGroupState();
+      const newThemeState = { ...defaultState, ...saved };
+      setCurrentThemeState(newThemeState);
+      console.log('🎨 Re-read theme preferences from localStorage:', newThemeState);
+    }
+  }, [currentPage]); // Re-read when navigating between pages
+
   // Callback to handle theme changes from PromptSelectorPage
   const handleThemeChange = useCallback((newThemeState) => {
     setCurrentThemeState(newThemeState);
@@ -6849,6 +6861,7 @@ const App = () => {
             onNavigateToGallery={handleNavigateToPromptSelector}
             onShowControlOverlay={() => setShowControlOverlay(true)}
             onThemeChange={handleThemeChange}
+            currentThemes={currentThemeState}
             onCustomPromptChange={(prompt, sceneName) => {
               updateSetting('positivePrompt', prompt);
               updateSetting('customSceneName', sceneName || '');

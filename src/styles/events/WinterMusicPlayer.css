@@ -1,0 +1,679 @@
+/* Global music player positioning */
+.winter-music-section {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 100;
+}
+
+.winter-music-player {
+  display: flex;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+/* Minimized container */
+.winter-music-player .minimized-container {
+  position: relative;
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Minimized state */
+.winter-music-player .music-player-minimized {
+  width: 45px;
+  height: 45px;
+  background: linear-gradient(135deg, #e3f2fd 0%, #90caf9 100%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow:
+    0 3px 12px rgba(33, 150, 243, 0.4),
+    0 0 0 2.5px #64b5f6,
+    inset 0 2px 8px rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.winter-music-player .music-player-minimized:hover {
+  transform: scale(1.1);
+  box-shadow:
+    0 6px 20px rgba(33, 150, 243, 0.6),
+    0 0 0 3px #42a5f5,
+    inset 0 2px 8px rgba(255, 255, 255, 0.5);
+}
+
+.winter-music-player .music-player-dismiss-btn {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #1976d2, #2196f3);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  font-size: 0.8rem;
+  cursor: pointer;
+  z-index: 10;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(33, 150, 243, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  padding: 0;
+  line-height: 1;
+  opacity: 0;
+}
+
+.winter-music-player .music-player-minimized:hover .music-player-dismiss-btn {
+  opacity: 1;
+}
+
+.winter-music-player .music-player-dismiss-btn:hover {
+  background: linear-gradient(135deg, #1565c0, #1e88e5);
+  transform: scale(1.15);
+  box-shadow: 0 2px 8px rgba(33, 150, 243, 0.6);
+}
+
+.winter-music-player .music-player-dismiss-btn:active {
+  transform: scale(0.95);
+}
+
+.winter-music-player .mini-icon {
+  font-size: 1.5rem;
+  animation: winterPulse 2s ease-in-out infinite;
+  filter: drop-shadow(0 1px 2px rgba(33, 150, 243, 0.3));
+}
+
+/* Click me prompt - speech bubble */
+.winter-music-player .click-me-prompt {
+  position: relative;
+  background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+  padding: 0.5rem 0.8rem;
+  border-radius: 15px;
+  box-shadow:
+    0 4px 12px rgba(33, 150, 243, 0.3),
+    0 0 0 2px #64b5f6;
+  animation: bouncePrompt 2s ease-in-out infinite;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+/* Speech bubble tail pointing down to snowflake */
+.winter-music-player .click-me-prompt::before {
+  content: '';
+  position: absolute;
+  bottom: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 10px 8px 0 8px;
+  border-color: #64b5f6 transparent transparent transparent;
+  z-index: 1;
+}
+
+.winter-music-player .click-me-prompt::after {
+  content: '';
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 9px 7px 0 7px;
+  border-color: #e3f2fd transparent transparent transparent;
+  z-index: 2;
+}
+
+.winter-music-player .click-me-prompt:hover {
+  transform: scale(1.05);
+  box-shadow:
+    0 6px 16px rgba(33, 150, 243, 0.4),
+    0 0 0 3px #42a5f5;
+}
+
+.winter-music-player .prompt-text {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #1565c0;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+}
+
+@keyframes bouncePrompt {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+.winter-music-player .music-player-card {
+  background: linear-gradient(135deg, rgba(225, 245, 254, 0.9) 0%, rgba(179, 229, 252, 0.9) 50%, rgba(129, 212, 250, 0.9) 100%);
+  border-radius: 12px;
+  padding: 0.7rem 0.85rem;
+  padding-bottom: 0.7rem;
+  box-shadow:
+    0 6px 20px rgba(33, 150, 243, 0.3),
+    0 0 0 2.5px #64b5f6,
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  width: 320px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Decorative snowflakes */
+.winter-music-player .music-player-card::before {
+  content: '❄️';
+  position: absolute;
+  top: 8px;
+  left: 12px;
+  font-size: 1.5rem;
+  opacity: 0.3;
+  z-index: 0;
+  pointer-events: none;
+  animation: rotateSnowflake 25s linear infinite;
+}
+
+.winter-music-player .music-player-card::after {
+  content: '❄️';
+  position: absolute;
+  bottom: 8px;
+  right: 12px;
+  font-size: 1.5rem;
+  opacity: 0.3;
+  z-index: 0;
+  pointer-events: none;
+  animation: rotateSnowflake 20s linear infinite reverse;
+}
+
+.winter-music-player .player-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.3rem;
+  margin-bottom: 0.6rem;
+  position: relative;
+  z-index: 1;
+}
+
+.winter-music-player .header-text-group {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex: 1;
+}
+
+.winter-music-player .player-header h3 {
+  font-size: 0.85rem;
+  color: #0d47a1;
+  margin: 0;
+  font-weight: 700;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.9);
+  letter-spacing: 0.5px;
+}
+
+.winter-music-player .music-icon {
+  font-size: 0.85rem;
+  animation: winterBounce 2s ease-in-out infinite;
+}
+
+.winter-music-player .minimize-btn {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.5));
+  border: 2px solid #64b5f6;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  font-size: 1.2rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  color: #0d47a1;
+  font-weight: bold;
+  line-height: 1;
+  padding: 0;
+  position: relative;
+  z-index: 1;
+  box-shadow: 0 2px 4px rgba(33, 150, 243, 0.3);
+}
+
+.winter-music-player .minimize-btn:hover {
+  background: linear-gradient(135deg, #64b5f6, #42a5f5);
+  color: #fff;
+  transform: scale(1.1);
+  box-shadow: 0 4px 8px rgba(33, 150, 243, 0.4);
+}
+
+.winter-music-player .play-prompt {
+  text-align: center;
+  font-size: 0.7rem;
+  color: #1976d2;
+  margin-bottom: 0.5rem;
+  padding: 0.4rem;
+  background: rgba(227, 242, 253, 0.8);
+  border-radius: 6px;
+  animation: winterPulse 2s ease-in-out infinite;
+}
+
+.winter-music-player .track-info {
+  text-align: left;
+  margin-bottom: 0.6rem;
+  position: relative;
+  z-index: 1;
+}
+
+.winter-music-player .track-number {
+  font-size: 0.65rem;
+  color: #0d47a1;
+  margin-bottom: 0.2rem;
+  text-shadow: 0 1px 1px rgba(255, 255, 255, 0.8);
+  font-weight: 600;
+}
+
+.winter-music-player .track-title {
+  font-size: 0.75rem;
+  font-weight: bold;
+  color: #0d47a1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.9);
+}
+
+.winter-music-player .progress-bar-container {
+  margin-bottom: 0.4rem;
+  cursor: pointer;
+  position: relative;
+  z-index: 1;
+}
+
+.winter-music-player .progress-bar {
+  width: 100%;
+  height: 5px;
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 0.3rem;
+  position: relative;
+  box-shadow:
+    0 2px 4px rgba(33, 150, 243, 0.2),
+    inset 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.winter-music-player .progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #1976d2, #42a5f5, #64b5f6);
+  border-radius: 8px;
+  transition: width 0.1s linear;
+  position: relative;
+  box-shadow: 0 0 8px rgba(33, 150, 243, 0.5);
+}
+
+.winter-music-player .progress-fill::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 10px;
+  height: 10px;
+  background: white;
+  border: 2px solid #1976d2;
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(33, 150, 243, 0.4);
+}
+
+.winter-music-player .time-display {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.65rem;
+  color: #0d47a1;
+  text-shadow: 0 1px 1px rgba(255, 255, 255, 0.8);
+  font-weight: 600;
+}
+
+.winter-music-player .player-controls {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 0.4rem;
+  position: relative;
+  z-index: 1;
+}
+
+.winter-music-player .control-btn {
+  background: transparent;
+  border: none;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  font-size: 1.2rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  position: relative;
+  isolation: isolate;
+  color: #0d47a1;
+}
+
+.winter-music-player .control-btn::before {
+  content: '❄️';
+  position: absolute;
+  font-size: 2.4rem;
+  z-index: -1;
+  opacity: 0.9 !important;
+  pointer-events: none;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: block;
+  filter: drop-shadow(0 2px 4px rgba(33, 150, 243, 0.3));
+}
+
+.winter-music-player .control-btn:hover {
+  transform: scale(1.15);
+}
+
+.winter-music-player .control-btn:hover::before {
+  filter: drop-shadow(0 2px 8px rgba(33, 150, 243, 0.5));
+  animation: winterSpin 1s ease-in-out;
+}
+
+.winter-music-player .control-btn:active {
+  transform: scale(0.95);
+}
+
+.winter-music-player .play-pause-btn {
+  width: 44px;
+  height: 44px;
+  font-size: 1.3rem;
+}
+
+.winter-music-player .play-pause-btn::before {
+  font-size: 2.8rem;
+}
+
+.winter-music-player .previous-btn,
+.winter-music-player .next-btn {
+  width: 38px;
+  height: 38px;
+  font-size: 1.1rem;
+}
+
+.winter-music-player .previous-btn::before,
+.winter-music-player .next-btn::before {
+  font-size: 2.2rem;
+}
+
+.download-section {
+  position: absolute;
+  bottom: 0.3rem;
+  right: 0.3rem;
+  z-index: 100;
+}
+
+.winter-music-player .download-btn {
+  background: transparent;
+  border: none;
+  padding: 0.15rem;
+  font-size: 0.75rem;
+  color: #1565c0;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  opacity: 0.7;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: auto;
+  position: relative;
+  z-index: 1000;
+  filter: drop-shadow(0 1px 2px rgba(255, 255, 255, 0.5));
+}
+
+.winter-music-player .download-btn:hover {
+  transform: scale(1.15);
+  opacity: 1;
+  filter: drop-shadow(0 2px 3px rgba(255, 255, 255, 0.8));
+}
+
+.winter-music-player .download-btn:active {
+  transform: scale(1);
+}
+
+/* Animations */
+@keyframes winterBounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+@keyframes winterPulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.85;
+    transform: scale(1.02);
+  }
+}
+
+@keyframes rotateSnowflake {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes winterSpin {
+  0% {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+  100% {
+    transform: translate(-50%, -50%) rotate(120deg);
+  }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .winter-music-section {
+    bottom: 15px;
+    right: 15px;
+  }
+
+  .winter-music-player .minimized-container {
+    gap: 0.4rem;
+  }
+
+  .winter-music-player .music-player-minimized {
+    width: 45px;
+    height: 45px;
+  }
+
+  .winter-music-player .music-player-dismiss-btn {
+    width: 16px;
+    height: 16px;
+    font-size: 0.7rem;
+    top: -2px;
+    right: -2px;
+    opacity: 1;
+  }
+
+  .winter-music-player .mini-icon {
+    font-size: 1.3rem;
+  }
+
+  .winter-music-player .click-me-prompt {
+    padding: 0.4rem 0.6rem;
+  }
+
+  .winter-music-player .click-me-prompt::before {
+    border-width: 9px 7px 0 7px;
+  }
+
+  .winter-music-player .click-me-prompt::after {
+    border-width: 8px 6px 0 6px;
+  }
+
+  .winter-music-player .prompt-text {
+    font-size: 0.75rem;
+  }
+
+  .winter-music-player .music-player-card {
+    width: 336px;
+    padding: 0.7rem 0.9rem;
+  }
+
+  .winter-music-player .player-header h3 {
+    font-size: 0.8rem;
+  }
+
+  .winter-music-player .music-icon {
+    font-size: 0.8rem;
+  }
+
+  .winter-music-player .minimize-btn {
+    width: 22px;
+    height: 22px;
+    font-size: 1.1rem;
+  }
+
+  .winter-music-player .track-number {
+    font-size: 0.65rem;
+  }
+
+  .winter-music-player .track-title {
+    font-size: 0.75rem;
+  }
+
+  .winter-music-player .progress-bar {
+    height: 4px;
+  }
+
+  .winter-music-player .time-display {
+    font-size: 0.65rem;
+  }
+
+  .winter-music-player .control-btn {
+    width: 30px;
+    height: 30px;
+    font-size: 0.85rem;
+  }
+
+  .winter-music-player .control-btn::before {
+    font-size: 2.3rem;
+  }
+
+  .winter-music-player .play-pause-btn {
+    width: 36px;
+    height: 36px;
+    font-size: 1.05rem;
+  }
+
+  .winter-music-player .play-pause-btn::before {
+    font-size: 2.6rem;
+  }
+
+  .winter-music-player .previous-btn,
+  .winter-music-player .next-btn {
+    width: 26px;
+    height: 26px;
+    font-size: 0.75rem;
+  }
+
+  .winter-music-player .previous-btn::before,
+  .winter-music-player .next-btn::before {
+    font-size: 2rem;
+  }
+}
+
+@media (max-width: 400px) {
+  .winter-music-section {
+    bottom: 10px;
+    right: 10px;
+  }
+
+  .winter-music-player .music-player-minimized {
+    width: 42px;
+    height: 42px;
+  }
+
+  .winter-music-player .music-player-dismiss-btn {
+    width: 15px;
+    height: 15px;
+    font-size: 0.65rem;
+    top: -2px;
+    right: -2px;
+    opacity: 1;
+  }
+
+  .winter-music-player .mini-icon {
+    font-size: 1.2rem;
+  }
+
+  .winter-music-player .music-player-card {
+    width: 312px;
+    padding: 0.6rem 0.8rem;
+  }
+
+  .winter-music-player .player-header h3 {
+    font-size: 0.75rem;
+  }
+
+  .winter-music-player .track-title {
+    font-size: 0.7rem;
+  }
+
+  .winter-music-player .control-btn {
+    width: 28px;
+    height: 28px;
+    font-size: 0.8rem;
+  }
+
+  .winter-music-player .control-btn::before {
+    font-size: 2.1rem;
+  }
+
+  .winter-music-player .play-pause-btn {
+    width: 34px;
+    height: 34px;
+    font-size: 1rem;
+  }
+
+  .winter-music-player .play-pause-btn::before {
+    font-size: 2.4rem;
+  }
+
+  .winter-music-player .previous-btn,
+  .winter-music-player .next-btn {
+    width: 24px;
+    height: 24px;
+    font-size: 0.7rem;
+  }
+
+  .winter-music-player .previous-btn::before,
+  .winter-music-player .next-btn::before {
+    font-size: 1.9rem;
+  }
+}
+

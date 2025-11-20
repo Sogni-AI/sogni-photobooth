@@ -7,7 +7,9 @@ import HalloweenEvent from './events/HalloweenEvent';
 import WinterEvent from './events/WinterEvent';
 import GimiChallenge from './challenge/GimiChallenge';
 import { MusicPlayerProvider } from '../context/MusicPlayerContext';
+import { WinterMusicPlayerProvider } from '../context/WinterMusicPlayerContext';
 import GlobalMusicPlayer from './shared/GlobalMusicPlayer';
+import GlobalWinterMusicPlayer from './shared/GlobalWinterMusicPlayer';
 import PageMetadata from './shared/PageMetadata';
 import GimiChallengeNotification from './shared/GimiChallengeNotification';
 
@@ -107,11 +109,13 @@ const AppRouter = () => {
   return (
     <NavigationContext.Provider value={{ navigateToCamera, navigateToContestVote, navigateToGimiChallenge, navigateToWinter }}>
       <MusicPlayerProvider>
+        <WinterMusicPlayerProvider>
         {/* Dynamic page metadata for SEO and social sharing */}
         <PageMetadata />
 
         {/* Global music player - shows on all pages when enabled */}
         <GlobalMusicPlayer />
+          <GlobalWinterMusicPlayer />
 
         {/* Gimi Challenge notification - shows on public pages after 5 seconds */}
         {shouldShowNotification && <GimiChallengeNotification />}
@@ -131,6 +135,7 @@ const AppRouter = () => {
         ) : (
           <App />
         )}
+        </WinterMusicPlayerProvider>
       </MusicPlayerProvider>
     </NavigationContext.Provider>
   );

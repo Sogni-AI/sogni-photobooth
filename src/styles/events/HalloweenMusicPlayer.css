@@ -155,7 +155,7 @@
   }
 }
 
-.music-player-card {
+.halloween-music-player .music-player-card {
   background: #fc984a;
   border-radius: 12px;
   padding: 0.8rem 1rem;
@@ -168,7 +168,7 @@
   overflow: hidden;
 }
 
-.music-player-card::after {
+.halloween-music-player .music-player-card::after {
   content: '';
   position: absolute;
   top: 0;
@@ -184,7 +184,7 @@
   pointer-events: none;
 }
 
-.player-header {
+.halloween-music-player .player-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -194,14 +194,14 @@
   z-index: 1;
 }
 
-.header-text-group {
+.halloween-music-player .header-text-group {
   display: flex;
   align-items: center;
   gap: 0.4rem;
   flex: 1;
 }
 
-.player-header h3 {
+.halloween-music-player .player-header h3 {
   font-size: 0.85rem;
   color: #2d1810;
   margin: 0;
@@ -209,12 +209,12 @@
   text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
 }
 
-.music-icon {
+.halloween-music-player .music-icon {
   font-size: 0.85rem;
   animation: bounce 2s ease-in-out infinite;
 }
 
-.minimize-btn {
+.halloween-music-player .minimize-btn {
   background: rgba(45, 24, 16, 0.6);
   border: 1px solid rgba(45, 24, 16, 0.8);
   border-radius: 50%;
@@ -234,13 +234,13 @@
   z-index: 1;
 }
 
-.minimize-btn:hover {
+.halloween-music-player .minimize-btn:hover {
   background: rgba(45, 24, 16, 0.8);
   color: #fff;
   transform: scale(1.1);
 }
 
-.play-prompt {
+.halloween-music-player .play-prompt {
   text-align: center;
   font-size: 0.7rem;
   color: #ff6b00;
@@ -251,21 +251,21 @@
   animation: pulse 2s ease-in-out infinite;
 }
 
-.track-info {
+.halloween-music-player .track-info {
   text-align: left;
   margin-bottom: 0.6rem;
   position: relative;
   z-index: 1;
 }
 
-.track-number {
+.halloween-music-player .track-number {
   font-size: 0.65rem;
   color: #2d1810;
   margin-bottom: 0.2rem;
   text-shadow: 0 1px 1px rgba(255, 255, 255, 0.6);
 }
 
-.track-title {
+.halloween-music-player .track-title {
   font-size: 0.75rem;
   font-weight: bold;
   color: #2d1810;
@@ -275,14 +275,14 @@
   text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
 }
 
-.progress-bar-container {
+.halloween-music-player .progress-bar-container {
   margin-bottom: 0.4rem;
   cursor: pointer;
   position: relative;
   z-index: 1;
 }
 
-.progress-bar {
+.halloween-music-player .progress-bar {
   width: 100%;
   height: 4px;
   background: rgba(255, 255, 255, 0.4);
@@ -293,7 +293,7 @@
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
-.progress-fill {
+.halloween-music-player .progress-fill {
   height: 100%;
   background: linear-gradient(90deg, #ff6b00, #ff8c00);
   border-radius: 4px;
@@ -301,7 +301,7 @@
   position: relative;
 }
 
-.progress-fill::after {
+.halloween-music-player .progress-fill::after {
   content: '';
   position: absolute;
   right: 0;
@@ -315,7 +315,7 @@
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
-.time-display {
+.halloween-music-player .time-display {
   display: flex;
   justify-content: space-between;
   font-size: 0.65rem;
@@ -323,7 +323,7 @@
   text-shadow: 0 1px 1px rgba(255, 255, 255, 0.6);
 }
 
-.player-controls {
+.halloween-music-player .player-controls {
   display: flex;
   justify-content: flex-start;
   align-items: center;
@@ -332,7 +332,7 @@
   z-index: 1;
 }
 
-.control-btn {
+.halloween-music-player .control-btn {
   background: transparent;
   border: none;
   border-radius: 50%;
@@ -348,7 +348,7 @@
   isolation: isolate;
 }
 
-.control-btn::before {
+.halloween-music-player .control-btn::before {
   content: '🎃';
   position: absolute;
   font-size: 2.4rem;
@@ -361,37 +361,37 @@
   display: block;
 }
 
-.control-btn:hover {
+.halloween-music-player .control-btn:hover {
   transform: scale(1.1);
 }
 
-.control-btn:active {
+.halloween-music-player .control-btn:active {
   transform: scale(0.95);
 }
 
-.play-pause-btn {
+.halloween-music-player .play-pause-btn {
   width: 44px;
   height: 44px;
   font-size: 1.3rem;
 }
 
-.play-pause-btn::before {
+.halloween-music-player .play-pause-btn::before {
   font-size: 2.8rem;
 }
 
-.previous-btn,
-.next-btn {
+.halloween-music-player .previous-btn,
+.halloween-music-player .next-btn {
   width: 38px;
   height: 38px;
   font-size: 1.1rem;
 }
 
-.previous-btn::before,
-.next-btn::before {
+.halloween-music-player .previous-btn::before,
+.halloween-music-player .next-btn::before {
   font-size: 2.2rem;
 }
 
-.download-section {
+.halloween-music-player .download-section {
   position: absolute;
   bottom: 0.3rem;
   right: 0.3rem;
