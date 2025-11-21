@@ -3,6 +3,7 @@ import useForm, { ErrorData } from '../../../hooks/useForm';
 import FormField from '../../shared/FormField';
 import { useSogniAuth } from '../../../services/sogniAuth';
 import { trackEvent } from '../../../utils/analytics';
+import { trackLogin } from '../../../utils/analytics';
 import { getCampaignSource } from '../../../utils/campaignAttribution';
 import {
   ErrorMessage,
@@ -93,6 +94,10 @@ function LoginForm({ onSignup, onClose }: Props) {
       // Track login conversion with campaign attribution
       const campaignSource = getCampaignSource();
       trackEvent('User', 'login_complete', campaignSource || 'organic');
+      
+      // Track GA4 standard login event
+      trackLogin('email');
+      
       if (campaignSource) {
         trackEvent('Gimi Challenge', 'conversion_login', `Source: ${campaignSource}`);
         console.log(`[Campaign] Login attributed to: ${campaignSource}`);

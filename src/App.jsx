@@ -20,7 +20,7 @@ import { refreshPhoto } from './services/PhotoRefresher';
 import { shareToTwitter } from './services/TwitterShare';
 import { shareViaWebShare, isWebShareSupported } from './services/WebShare';
 import { themeConfigService } from './services/themeConfig';
-import { trackPageView, initializeGA, trackEvent } from './utils/analytics';
+import { trackPageView, initializeGA, trackEvent, trackBatchGeneration } from './utils/analytics';
 import { getCampaignSource } from './utils/campaignAttribution';
 import { shouldShowGimiReferralPopup, clearGimiVisitCookie, markGimiPopupDismissed, setReferralSource, getReferralSource } from './utils/referralTracking';
 import { ensurePermanentUrl } from './utils/imageUpload.js';
@@ -4884,6 +4884,20 @@ const App = () => {
       activeProjectReference.current = project.id;
       activeProjectObjectReference.current = project;
       console.log('Project created:', project.id, 'with jobs:', project.jobs);;
+      
+      // Track batch generation in Google Analytics
+      try {
+        trackBatchGeneration({
+          batch_size: numImages,
+          style_id: selectedStyle || 'unknown',
+          model: selectedModel,
+          source: sourceType,
+          is_regeneration: isMoreOperation
+        });
+      } catch (analyticsError) {
+        console.warn('Analytics tracking failed:', analyticsError);
+        // Don't block generation if analytics fails
+      }
       
       // Start project timeout management
       clearAllTimeouts(); // Clear any existing timeouts

@@ -4,6 +4,7 @@ import { FormContent, FormFooter, FormPanel } from '../common';
 import useForm from '../../../../hooks/useForm';
 import { useSogniAuth } from '../../../../services/sogniAuth';
 import { trackEvent } from '../../../../utils/analytics';
+import { trackSignUp } from '../../../../utils/analytics';
 import { getCampaignSource } from '../../../../utils/campaignAttribution';
 import { getReferralSource } from '../../../../utils/referralTracking';
 import Turnstile, { useTurnstile } from 'react-turnstile';
@@ -59,6 +60,10 @@ function Step3({ step1, step2, onReturn, onContinue }: Props) {
     // Track signup conversion with campaign attribution
     const campaignSource = getCampaignSource();
     trackEvent('User', 'signup_complete', campaignSource || 'organic');
+    
+    // Track GA4 standard sign_up event
+    trackSignUp('email');
+    
     if (campaignSource) {
       trackEvent('Gimi Challenge', 'conversion_signup', `Source: ${campaignSource}`);
       console.log(`[Campaign] Signup attributed to: ${campaignSource}`);

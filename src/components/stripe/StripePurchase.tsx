@@ -3,6 +3,7 @@ import '../../styles/stripe/StripePurchase.css';
 import ProductList from './ProductList.tsx';
 import PurchaseProgress from './PurchaseProgress.tsx';
 import useSparkPurchase from '../../hooks/useSparkPurchase.ts';
+import { trackViewItem } from '../../utils/analytics.js';
 
 const BACKGROUND_IMAGES = [
   'https://images.unsplash.com/photo-1557683316-973673baf926?w=800',
@@ -43,6 +44,23 @@ function StripePurchase({ onClose, currentBalance, showAlert }: Props) {
       return;
     }
     console.log('Products loaded:', products.length);
+
+    // Track view_item event for GA4 ecommerce
+    const items = products.map(product => ({
+      item_id: product.id,
+      item_name: product.nickname,
+      price: product.unit_amount / 100, // Convert cents to currency unit
+      currency: product.currency.toUpperCase(),
+      quantity: 1,
+      item_category: 'Spark Points',
+      item_brand: 'Sogni',
+      // Include spark value in custom dimension if available
+      ...(product.metadata?.sparkValue && {
+        spark_value: product.metadata.sparkValue
+      })
+    }));
+
+    trackViewItem(items);
   }, [products]);
 
   // If new purchase URL available, open it in new window

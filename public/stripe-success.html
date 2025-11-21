@@ -125,12 +125,36 @@
       const channel = new BroadcastChannel('sogni-purchase-status');
       const url = new URL(window.location.href);
       const sessionId = url.searchParams.get('session_id');
-      
+
       // Send purchase complete message with session ID
-      channel.postMessage({ 
+      channel.postMessage({
         type: 'spark-purchase-complete',
         sessionId: sessionId
       });
+
+      // Track purchase in Google Analytics if available
+      try {
+        // Check if gtag is available (from parent window's GA initialization)
+        if (window.gtag) {
+          // We'll need to fetch purchase details from the server to get proper transaction data
+          // For now, track a basic purchase event
+          // The parent window (StripePurchase component) should ideally handle the full tracking
+          // once it receives the purchase-complete broadcast message
+
+          // Basic purchase tracking (will be enhanced by parent window)
+          console.log('📊 Purchase complete page loaded, session_id:', sessionId);
+
+          // Note: Full ecommerce tracking will be done after purchase status is fetched
+          // This is just a placeholder to indicate the success page was reached
+          if (sessionId) {
+            window.gtag('event', 'purchase_initiated', {
+              session_id: sessionId
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Error tracking purchase in GA:', error);
+      }
 
       // If this window was opened by another window, try to communicate with it
       if (window.opener && !window.opener.closed) {

@@ -1,5 +1,6 @@
 import { Product } from '../../services/stripe.ts';
 import '../../styles/stripe/ProductList.css';
+import { trackBeginCheckout } from '../../utils/analytics.js';
 
 interface Props {
   loading: boolean;
@@ -14,6 +15,42 @@ function ProductList({ loading, products, onPurchase, currentBalance }: Props) {
       style: 'currency',
       currency: 'USD'
     }).format(amount);
+  };
+
+  const handlePurchaseClick = (product: Product) => {
+    // Store product info in sessionStorage for GA4 tracking
+    // This allows us to track the correct currency and product details when purchase completes
+    try {
+      sessionStorage.setItem('sogni_pending_purchase', JSON.stringify({
+        productId: product.product,
+        priceId: product.id,
+        name: product.nickname,
+        price: product.unit_amount / 100,
+        currency: product.currency.toUpperCase(),
+        sparkValue: product.metadata?.sparkValue || '0',
+        timestamp: Date.now()
+      }));
+    } catch (error) {
+      console.error('Error storing product info for tracking:', error);
+    }
+
+    // Track begin_checkout event for GA4 ecommerce
+    trackBeginCheckout({
+      item_id: product.id,
+      item_name: product.nickname,
+      price: product.unit_amount / 100, // Convert cents to currency unit
+      currency: product.currency.toUpperCase(),
+      quantity: 1,
+      item_category: 'Spark Points',
+      item_brand: 'Sogni',
+      // Include spark value in custom dimension if available
+      ...(product.metadata?.sparkValue && {
+        spark_value: product.metadata.sparkValue
+      })
+    });
+
+    // Proceed with purchase
+    onPurchase(product.product);
   };
 
   let content;
@@ -31,7 +68,7 @@ function ProductList({ loading, products, onPurchase, currentBalance }: Props) {
                 <div className="stripe-product-price">{formatUSD(product.unit_amount / 100)}</div>
                 <button
                   className="stripe-buy-button"
-                  onClick={() => onPurchase(product.product)}
+                  onClick={() => handlePurchaseClick(product)}
                   disabled={loading}
                 >
                   Buy

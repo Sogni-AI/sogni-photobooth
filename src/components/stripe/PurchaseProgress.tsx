@@ -1,7 +1,7 @@
 import { PurchaseStatus } from '../../services/stripe.ts';
 import '../../styles/stripe/PurchaseProgress.css';
 import { useEffect } from 'react';
-import { trackEvent } from '../../utils/analytics';
+import { trackEvent, trackPurchase } from '../../utils/analytics';
 import { getCampaignSource } from '../../utils/campaignAttribution';
 import { getReferralSource } from '../../utils/referralTracking';
 
@@ -21,7 +21,46 @@ function PurchaseProgress({ purchase, loading, onReset, onRefresh, onClose, curr
   useEffect(() => {
     if (isCompleted && productId) {
       console.log('Purchase completed:', productId);
-      
+
+      // Retrieve stored product info for accurate currency tracking
+      let productInfo: any = null;
+      try {
+        const stored = sessionStorage.getItem('sogni_pending_purchase');
+        if (stored) {
+          productInfo = JSON.parse(stored);
+          // Clear it after use
+          sessionStorage.removeItem('sogni_pending_purchase');
+        }
+      } catch (error) {
+        console.error('Error retrieving product info for tracking:', error);
+      }
+
+      // Track GA4 ecommerce purchase event
+      if (purchase) {
+        const currency = productInfo?.currency || 'USD';
+        const price = productInfo?.price || purchase.amountInDollars;
+        const itemName = productInfo?.name || `${purchase.amountInTokens} Spark Points`;
+        const priceId = productInfo?.priceId || purchase.productId;
+
+        trackPurchase({
+          transaction_id: purchase.transactionId,
+          value: price,
+          currency: currency,
+          items: [
+            {
+              item_id: priceId,
+              item_name: itemName,
+              price: price,
+              quantity: 1,
+              item_category: 'Spark Points',
+              item_brand: 'Sogni',
+              spark_value: purchase.amountInTokens.toString()
+            }
+          ],
+          affiliation: 'Sogni Photobooth'
+        });
+      }
+
       // Track purchase conversion with campaign attribution
       const campaignSource = getCampaignSource();
       trackEvent('User', 'purchase_complete', `${campaignSource || 'organic'}: ${productId}`);
@@ -29,7 +68,7 @@ function PurchaseProgress({ purchase, loading, onReset, onRefresh, onClose, curr
         trackEvent('Gimi Challenge', 'conversion_purchase', `Source: ${campaignSource}, Product: ${productId}`);
         console.log(`[Campaign] Purchase attributed to: ${campaignSource}`);
       }
-      
+
       // Track referral conversion
       const referralSource = getReferralSource();
       if (referralSource) {
@@ -38,7 +77,7 @@ function PurchaseProgress({ purchase, loading, onReset, onRefresh, onClose, curr
         // Note: The referral cookie persists for 30 days, so multiple conversions can be tracked
       }
     }
-  }, [isCompleted, productId]);
+  }, [isCompleted, productId, purchase]);
 
   let status;
   let heading;
