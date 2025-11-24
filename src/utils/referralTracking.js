@@ -15,7 +15,6 @@ const ATTRIBUTION_EXPIRY_DAYS = 30; // 30-day attribution window
 export function markGimiChallengeVisit() {
   try {
     localStorage.setItem(GIMI_VISIT_COOKIE, Date.now().toString());
-    console.log('[Referral] Gimi Challenge visit tracked');
   } catch (error) {
     console.error('[Referral] Failed to mark Gimi visit:', error);
   }
@@ -40,7 +39,6 @@ export function hasVisitedGimiChallenge() {
 export function markGimiPopupDismissed() {
   try {
     localStorage.setItem(GIMI_DISMISS_COOKIE, Date.now().toString());
-    console.log('[Referral] Gimi popup dismissal tracked');
   } catch (error) {
     console.error('[Referral] Failed to mark popup dismissed:', error);
   }
@@ -65,7 +63,6 @@ export function hasGimiPopupBeenDismissed() {
 export function clearGimiVisitCookie() {
   try {
     localStorage.removeItem(GIMI_VISIT_COOKIE);
-    console.log('[Referral] Gimi visit cookie cleared');
   } catch (error) {
     console.error('[Referral] Failed to clear Gimi visit cookie:', error);
   }
@@ -79,7 +76,6 @@ export function setReferralSource(referralUsername) {
   try {
     localStorage.setItem(REFERRAL_SOURCE_COOKIE, referralUsername);
     localStorage.setItem(REFERRAL_TIMESTAMP_COOKIE, Date.now().toString());
-    console.log(`[Referral] Referral source set: ${referralUsername}`);
   } catch (error) {
     console.error('[Referral] Failed to set referral source:', error);
   }
@@ -122,7 +118,6 @@ export function clearReferralSource() {
   try {
     localStorage.removeItem(REFERRAL_SOURCE_COOKIE);
     localStorage.removeItem(REFERRAL_TIMESTAMP_COOKIE);
-    console.log('[Referral] Referral source cleared');
   } catch (error) {
     console.error('[Referral] Failed to clear referral source:', error);
   }

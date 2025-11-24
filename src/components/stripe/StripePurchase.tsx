@@ -36,14 +36,9 @@ function StripePurchase({ onClose, currentBalance, showAlert }: Props) {
   // No polling needed - the SDK's DataEntity emits 'updated' events when balance changes
 
   useEffect(() => {
-    console.log('Stripe purchase modal opened');
-  }, []);
-
-  useEffect(() => {
     if (!products) {
       return;
     }
-    console.log('Products loaded:', products.length);
 
     // Track view_item event for GA4 ecommerce
     const items = products.map(product => ({
@@ -67,7 +62,6 @@ function StripePurchase({ onClose, currentBalance, showAlert }: Props) {
   useEffect(() => {
     if (purchaseIntent) {
       window.open(purchaseIntent.url, '_blank');
-      console.log('Opening Stripe checkout:', purchaseIntent.productId);
       refreshStatus();
     }
   }, [purchaseIntent, refreshStatus]);

@@ -36,8 +36,7 @@ export async function trackFrontendGeneration(params: {
       throw new Error(`Analytics tracking failed: ${response.statusText}`);
     }
 
-    const result = await response.json();
-    console.log('[Frontend Analytics] ✅ Generation tracked:', result.tracked);
+    await response.json();
   } catch (error) {
     // Don't throw - analytics failures shouldn't break the user experience
     console.error('[Frontend Analytics] ❌ Failed to track generation:', error);
@@ -66,7 +65,6 @@ export async function trackFrontendMetric(metricType: string, amount: number = 1
     }
 
     await response.json(); // Consume the response
-    console.log(`[Frontend Analytics] ✅ Metric tracked: ${metricType} (+${amount})`);
   } catch (error) {
     // Don't throw - analytics failures shouldn't break the user experience
     console.error(`[Frontend Analytics] ❌ Failed to track metric ${metricType}:`, error);

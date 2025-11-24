@@ -20,8 +20,6 @@ function PurchaseProgress({ purchase, loading, onReset, onRefresh, onClose, curr
 
   useEffect(() => {
     if (isCompleted && productId) {
-      console.log('Purchase completed:', productId);
-
       // Retrieve stored product info for accurate currency tracking
       let productInfo: any = null;
       try {
@@ -66,14 +64,12 @@ function PurchaseProgress({ purchase, loading, onReset, onRefresh, onClose, curr
       trackEvent('User', 'purchase_complete', `${campaignSource || 'organic'}: ${productId}`);
       if (campaignSource) {
         trackEvent('Gimi Challenge', 'conversion_purchase', `Source: ${campaignSource}, Product: ${productId}`);
-        console.log(`[Campaign] Purchase attributed to: ${campaignSource}`);
       }
 
       // Track referral conversion
       const referralSource = getReferralSource();
       if (referralSource) {
         trackEvent('Referral', 'conversion_purchase', `Referred by: ${referralSource}, Product: ${productId}`);
-        console.log(`[Referral] Purchase attributed to referrer: ${referralSource}`);
         // Note: The referral cookie persists for 30 days, so multiple conversions can be tracked
       }
     }

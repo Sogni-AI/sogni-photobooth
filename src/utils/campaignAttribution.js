@@ -15,7 +15,6 @@ export function setCampaignSource(source) {
   try {
     localStorage.setItem(CAMPAIGN_SOURCE_KEY, source);
     localStorage.setItem(CAMPAIGN_TIMESTAMP_KEY, Date.now().toString());
-    console.log(`[Campaign] Source set: ${source}`);
   } catch (error) {
     console.error('[Campaign] Failed to set source:', error);
   }

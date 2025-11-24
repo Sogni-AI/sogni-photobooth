@@ -51,7 +51,7 @@ export const initializeGA = () => {
       anonymize_ip: true,
     };
     
-    // Capture UTM parameters if present (GA4 does this automatically, but we log for debugging)
+    // Capture UTM parameters if present
     const utmParams = {
       utm_source: urlParams.get('utm_source'),
       utm_medium: urlParams.get('utm_medium'),
@@ -60,12 +60,9 @@ export const initializeGA = () => {
       utm_content: urlParams.get('utm_content'),
     };
     
-    // Log UTM parameters if any are present
+    // Send custom event with UTM parameters for additional tracking
     const hasUTM = Object.values(utmParams).some(val => val !== null);
     if (hasUTM) {
-      console.log('📊 GA4: UTM parameters detected', utmParams);
-      
-      // Send custom event with UTM parameters for additional tracking
       window.gtag('event', 'campaign_visit', {
         campaign_source: utmParams.utm_source || 'direct',
         campaign_medium: utmParams.utm_medium || 'none',
@@ -105,20 +102,12 @@ export const initializeGA = () => {
                            referrerUrl.searchParams.get('p') || // Yahoo
                            '(not provided)';
           
-          console.log('📊 GA4: Organic search detected', { 
-            engine: searchEngine, 
-            query: searchQuery 
-          });
-          
           // Track organic search visit
           window.gtag('event', 'organic_search_visit', {
             search_engine: searchEngine,
             search_query: searchQuery,
             referrer: document.referrer
           });
-        } else {
-          // Track general referrer
-          console.log('📊 GA4: Referrer detected', referrerHost);
         }
       } catch (error) {
         console.warn('Could not parse referrer URL:', error);
@@ -133,8 +122,6 @@ export const initializeGA = () => {
     script.async = true;
     script.src = `https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`;
     document.head.appendChild(script);
-    
-    console.log('✅ GA4 initialized with traffic source tracking');
   } catch (error) {
     console.error('Error initializing Google Analytics:', error);
   }
@@ -154,7 +141,6 @@ export const trackPageView = (path) => {
       page_path: path,
       app_version: APP_VERSION, // Include version in page view
     });
-    console.log(`📊 Page view tracked: ${path}`);
   } catch (error) {
     console.error('Error tracking page view:', error);
   }
@@ -226,7 +212,6 @@ export const trackViewItem = (items) => {
       value: value,
       items: items
     });
-    console.log('📊 GA4 Ecommerce: view_item tracked', { currency, value, items });
   } catch (error) {
     console.error('Error tracking view_item:', error);
   }
@@ -257,7 +242,6 @@ export const trackBeginCheckout = (item) => {
       value: value,
       items: [item]
     });
-    console.log('📊 GA4 Ecommerce: begin_checkout tracked', { currency, value, item });
   } catch (error) {
     console.error('Error tracking begin_checkout:', error);
   }
@@ -286,7 +270,6 @@ export const trackPurchase = (purchaseData) => {
       affiliation: purchaseData.affiliation || 'Sogni Photobooth',
       items: purchaseData.items
     });
-    console.log('📊 GA4 Ecommerce: purchase tracked', purchaseData);
   } catch (error) {
     console.error('Error tracking purchase:', error);
   }
@@ -309,7 +292,6 @@ export const trackSignUp = (method = 'email') => {
     window.gtag('event', 'sign_up', {
       method: method
     });
-    console.log('📊 GA4: sign_up tracked', { method });
   } catch (error) {
     console.error('Error tracking sign_up:', error);
   }
@@ -328,7 +310,6 @@ export const trackLogin = (method = 'email') => {
     window.gtag('event', 'login', {
       method: method
     });
-    console.log('📊 GA4: login tracked', { method });
   } catch (error) {
     console.error('Error tracking login:', error);
   }
@@ -358,7 +339,6 @@ export const trackGenerateContent = (params) => {
       method: params.method || 'unknown',
       value: params.value || 1
     });
-    console.log('📊 GA4: generate_content tracked', params);
   } catch (error) {
     console.error('Error tracking generate_content:', error);
   }
@@ -386,7 +366,6 @@ export const trackShare = (method, contentType = 'ai_image', itemId = null) => {
     }
 
     window.gtag('event', 'share', params);
-    console.log('📊 GA4: share tracked', params);
   } catch (error) {
     console.error('Error tracking share:', error);
   }
@@ -407,7 +386,6 @@ export const trackSelectContent = (contentType, itemId) => {
       content_type: contentType,
       item_id: itemId
     });
-    console.log('📊 GA4: select_content tracked', { contentType, itemId });
   } catch (error) {
     console.error('Error tracking select_content:', error);
   }
@@ -434,7 +412,6 @@ export const trackOutOfCredits = (trigger = 'unknown') => {
       lead_source: 'out_of_credits',
       trigger: trigger
     });
-    console.log('📊 GA4: generate_lead (out_of_credits) tracked', { trigger });
   } catch (error) {
     console.error('Error tracking generate_lead:', error);
   }
@@ -453,7 +430,6 @@ export const trackViewGallery = () => {
       item_list_id: 'photo_gallery',
       item_list_name: 'Photo Gallery'
     });
-    console.log('📊 GA4: view_item_list (gallery) tracked');
   } catch (error) {
     console.error('Error tracking view_item_list:', error);
   }
@@ -477,7 +453,6 @@ export const trackDownload = (count = 1, includesFrame = false, format = 'jpg') 
       includes_frame: includesFrame,
       file_format: format
     });
-    console.log('📊 GA4: download tracked', { count, includesFrame, format });
   } catch (error) {
     console.error('Error tracking download:', error);
   }
@@ -498,7 +473,6 @@ export const trackEngagement = (durationSeconds, engagementType = 'general') => 
       engagement_time_msec: durationSeconds * 1000,
       engagement_type: engagementType
     });
-    console.log('📊 GA4: user_engagement tracked', { durationSeconds, engagementType });
   } catch (error) {
     console.error('Error tracking user_engagement:', error);
   }
@@ -606,12 +580,6 @@ export const trackBatchGeneration = (params) => {
       value: params.batch_size || 1
     });
 
-    console.log('📊 GA4: generate_batch tracked', {
-      ...params,
-      sessionBatchCount,
-      sessionImageTotal
-    });
-
     // Track milestone events for high-value users
     if (sessionBatchCount === 3) {
       window.gtag('event', 'power_user_3_batches', { batch_count: 3 });
@@ -658,8 +626,6 @@ export const trackBatchComplete = (params) => {
       session_batch_count: sessionBatchCount,
       session_image_total: sessionImageTotal
     });
-
-    console.log('📊 GA4: batch_complete tracked', params);
   } catch (error) {
     console.error('Error tracking batch completion:', error);
   }
