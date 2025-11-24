@@ -4,6 +4,7 @@ import '../../styles/WinterEventNotification.css';
 
 const WinterEventNotification = ({ onNavigate }) => {
   const [isVisible, setIsVisible] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   useEffect(() => {
     // Check if user has visited the winter page this session
@@ -26,18 +27,34 @@ const WinterEventNotification = ({ onNavigate }) => {
       }
     }
 
-    // Show notification after 10 seconds
-    const timer = setTimeout(() => {
+    // Show snowflake after 10 seconds
+    const showTimer = setTimeout(() => {
       setIsVisible(true);
     }, 10000);
 
-    return () => clearTimeout(timer);
+    return () => clearTimeout(showTimer);
   }, []);
+
+  // Auto-expand after 3 seconds of showing snowflake
+  useEffect(() => {
+    if (!isVisible || isExpanded) return;
+
+    const expandTimer = setTimeout(() => {
+      setIsExpanded(true);
+    }, 3000);
+
+    return () => clearTimeout(expandTimer);
+  }, [isVisible, isExpanded]);
 
   const handleDismiss = (e) => {
     e.stopPropagation();
     localStorage.setItem('winter-event-dismissed', Date.now().toString());
     setIsVisible(false);
+  };
+
+  const handleExpand = (e) => {
+    e.stopPropagation();
+    setIsExpanded(true);
   };
 
   const handleClick = () => {
@@ -51,6 +68,35 @@ const WinterEventNotification = ({ onNavigate }) => {
     return null;
   }
 
+  // Snowflake stage
+  if (!isExpanded) {
+    return (
+      <button 
+        className="winter-snowflake-notification"
+        onClick={handleExpand}
+        aria-label="View Winter event information"
+      >
+        <button
+          className="snowflake-notification-dismiss-btn"
+          onClick={handleDismiss}
+          aria-label="Dismiss snowflake notification"
+        >
+          ✕
+        </button>
+        <div className="snowflake-notification-face">
+          <span className="snowflake-notification-emoji">❄️</span>
+          <span className="snowflake-notification-eyes">👀</span>
+          <span className="snowflake-notification-mouth">◡</span>
+        </div>
+        <span className="winter-bubble">
+          <span className="winter-bubble-text">Feeling festive?</span>
+          <span className="winter-bubble-emoji">🎄</span>
+        </span>
+      </button>
+    );
+  }
+
+  // Expanded banner stage
   return (
     <div className="winter-event-notification" onClick={handleClick}>
       <button

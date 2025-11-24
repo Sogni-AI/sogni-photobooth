@@ -1,4 +1,158 @@
-/* Winter Event Notification */
+/* Snowflake stage - appears first */
+.winter-snowflake-notification {
+  position: fixed;
+  top: 30px;
+  right: 30px;
+  z-index: 9999;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  flex-direction: row-reverse;
+  align-items: center;
+  gap: 15px;
+  animation: snowflakeBounce 3s ease-in-out infinite;
+}
+
+.snowflake-notification-face {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.snowflake-notification-emoji {
+  font-size: 4rem;
+  display: block;
+  filter: drop-shadow(0 4px 8px rgba(74, 158, 255, 0.4));
+  transition: transform 0.2s ease;
+  position: relative;
+}
+
+.snowflake-notification-eyes {
+  position: absolute;
+  top: 35%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 1rem;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.snowflake-notification-mouth {
+  position: absolute;
+  top: 62%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 1.2rem;
+  font-weight: bold;
+  pointer-events: none;
+  z-index: 1;
+  color: #1565c0;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.winter-snowflake-notification:hover .snowflake-notification-emoji {
+  transform: scale(1.1) rotate(15deg);
+}
+
+.snowflake-notification-dismiss-btn {
+  position: absolute;
+  top: 8px;
+  right: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgba(26, 77, 122, 0.8);
+  color: #fff;
+  border: 1px solid rgba(74, 158, 255, 0.8);
+  font-size: 0.85rem;
+  cursor: pointer;
+  z-index: 100;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  padding: 0;
+  opacity: 0.7;
+}
+
+.winter-snowflake-notification:hover .snowflake-notification-dismiss-btn {
+  opacity: 1;
+}
+
+.snowflake-notification-dismiss-btn:hover {
+  background: rgba(74, 158, 255, 0.95);
+  transform: scale(1.1);
+  box-shadow: 0 2px 6px rgba(74, 158, 255, 0.5);
+}
+
+.snowflake-notification-dismiss-btn:active {
+  transform: scale(0.95);
+}
+
+.winter-bubble {
+  position: relative;
+  background: white;
+  color: #1a4d7a;
+  padding: 6px 12px;
+  border-radius: 15px;
+  font-weight: bold;
+  font-size: 0.75rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  border: 2px solid #4a9eff;
+  white-space: nowrap;
+}
+
+.winter-bubble::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 100%;
+  transform: translateY(-50%);
+  width: 0;
+  height: 0;
+  border-top: 8px solid transparent;
+  border-bottom: 8px solid transparent;
+  border-left: 10px solid #4a9eff;
+}
+
+.winter-bubble::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 100%;
+  transform: translateY(-50%);
+  width: 0;
+  height: 0;
+  border-top: 6px solid transparent;
+  border-bottom: 6px solid transparent;
+  border-left: 8px solid white;
+  margin-left: -2px;
+}
+
+.winter-bubble-text {
+  display: inline;
+}
+
+.winter-bubble-emoji {
+  display: none;
+  margin-left: 4px;
+}
+
+@keyframes snowflakeBounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+/* Expanded banner stage */
 .winter-event-notification {
   position: fixed;
   top: 20px;
@@ -8,7 +162,7 @@
   border-radius: 12px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3),
               0 0 0 3px rgba(135, 206, 235, 0.3);
-  animation: winterPopIn 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55),
+  animation: winterBannerExpand 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55),
              winterGlow 3s ease-in-out 0.6s infinite;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
   max-width: 460px;
@@ -21,7 +175,7 @@
               0 0 40px rgba(135, 206, 235, 0.3);
 }
 
-/* Hide notification when any modal is open */
+/* Hide notifications when any modal is open */
 body:has(.login-modal-overlay) .winter-event-notification,
 body:has(.out-of-credits-modal-overlay) .winter-event-notification,
 body:has(.stripe-modal-overlay) .winter-event-notification,
@@ -32,7 +186,18 @@ body:has(.twitter-modal-overlay) .winter-event-notification,
 body:has(.pwa-install-overlay) .winter-event-notification,
 body:has(.notes-modal-overlay) .winter-event-notification,
 body:has(.info-modal-overlay) .winter-event-notification,
-body:has(.promo-modal-overlay) .winter-event-notification {
+body:has(.promo-modal-overlay) .winter-event-notification,
+body:has(.login-modal-overlay) .winter-snowflake-notification,
+body:has(.out-of-credits-modal-overlay) .winter-snowflake-notification,
+body:has(.stripe-modal-overlay) .winter-snowflake-notification,
+body:has(.password-modal-overlay) .winter-snowflake-notification,
+body:has(.winter-prompt-overlay) .winter-snowflake-notification,
+body:has(.custom-prompt-overlay) .winter-snowflake-notification,
+body:has(.twitter-modal-overlay) .winter-snowflake-notification,
+body:has(.pwa-install-overlay) .winter-snowflake-notification,
+body:has(.notes-modal-overlay) .winter-snowflake-notification,
+body:has(.info-modal-overlay) .winter-snowflake-notification,
+body:has(.promo-modal-overlay) .winter-snowflake-notification {
   display: none;
 }
 
@@ -84,7 +249,7 @@ body:has(.promo-modal-overlay) .winter-event-notification {
   display: block;
 }
 
-@keyframes winterPopIn {
+@keyframes winterBannerExpand {
   0% {
     transform: scale(0.3) translateY(-50px) rotate(-10deg);
     opacity: 0;
@@ -112,6 +277,77 @@ body:has(.promo-modal-overlay) .winter-event-notification {
 
 /* Mobile Responsive */
 @media (max-width: 768px) {
+  /* Snowflake stage on mobile */
+  .winter-snowflake-notification {
+    top: 20px;
+    right: 20px;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .snowflake-notification-emoji {
+    font-size: 3rem;
+  }
+
+  .snowflake-notification-eyes {
+    font-size: 0.8rem;
+    top: 35%;
+  }
+
+  .snowflake-notification-mouth {
+    font-size: 1rem;
+    top: 62%;
+  }
+
+  .snowflake-notification-dismiss-btn {
+    width: 18px;
+    height: 18px;
+    font-size: 0.75rem;
+    top: 6px;
+    right: 2px;
+    opacity: 1;
+  }
+
+  /* Mobile: hide text, show emoji */
+  .winter-bubble {
+    font-size: 0.9rem;
+    padding: 4px 8px;
+  }
+
+  .winter-bubble-text {
+    display: none;
+  }
+
+  .winter-bubble-emoji {
+    display: inline !important;
+  }
+
+  /* Reposition speech bubble arrow to point upward */
+  .winter-bubble::before {
+    top: auto;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border-left: 8px solid transparent;
+    border-right: 8px solid transparent;
+    border-bottom: 10px solid #4a9eff;
+    border-top: none;
+  }
+
+  .winter-bubble::after {
+    top: auto;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-bottom: 8px solid white;
+    border-top: none;
+    margin-left: 0;
+    margin-bottom: -2px;
+  }
+
+  /* Expanded banner stage on mobile */
   .winter-event-notification {
     top: 15px;
     right: 15px;
@@ -120,16 +356,21 @@ body:has(.promo-modal-overlay) .winter-event-notification {
   }
 
   .winter-notification-dismiss {
-    width: 32px;
-    height: 32px;
-    font-size: 20px;
-    top: -8px;
-    right: -8px;
+    width: 28px;
+    height: 28px;
+    font-size: 18px;
+    top: -6px;
+    right: -6px;
   }
 }
 
 /* Extra small mobile screens */
 @media (max-width: 480px) {
+  .winter-snowflake-notification {
+    top: 15px;
+    right: 15px;
+  }
+
   .winter-event-notification {
     top: 10px;
     right: 10px;
@@ -137,11 +378,11 @@ body:has(.promo-modal-overlay) .winter-event-notification {
   }
 
   .winter-notification-dismiss {
-    width: 30px;
-    height: 30px;
-    font-size: 18px;
-    top: -7px;
-    right: -7px;
+    width: 26px;
+    height: 26px;
+    font-size: 16px;
+    top: -5px;
+    right: -5px;
   }
 }
 
