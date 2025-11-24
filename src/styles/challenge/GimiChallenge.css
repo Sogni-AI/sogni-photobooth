@@ -8,6 +8,57 @@
   overflow-x: hidden;
 }
 
+/* Campaign Ended Banner */
+.gimi-campaign-ended-banner {
+  width: 100%;
+  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+  padding: 20px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  margin-bottom: 20px;
+}
+
+.gimi-campaign-ended-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.gimi-campaign-ended-title {
+  font-size: 28px;
+  font-weight: 700;
+  margin: 0 0 12px 0;
+  color: #ffffff;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.gimi-campaign-ended-text {
+  font-size: 18px;
+  margin: 0;
+  color: #ffffff;
+  line-height: 1.6;
+}
+
+.gimi-campaign-ended-text a {
+  color: #ffffff;
+  font-weight: 700;
+  text-decoration: underline;
+  transition: opacity 0.2s;
+}
+
+.gimi-campaign-ended-text a:hover {
+  opacity: 0.8;
+}
+
+@media (max-width: 768px) {
+  .gimi-campaign-ended-title {
+    font-size: 22px;
+  }
+
+  .gimi-campaign-ended-text {
+    font-size: 16px;
+  }
+}
+
 /* Banner Section */
 .gimi-banner {
   width: 100%;

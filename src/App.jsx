@@ -22,7 +22,7 @@ import { shareViaWebShare, isWebShareSupported } from './services/WebShare';
 import { themeConfigService } from './services/themeConfig';
 import { trackPageView, initializeGA, trackEvent, trackBatchGeneration } from './utils/analytics';
 import { getCampaignSource } from './utils/campaignAttribution';
-import { shouldShowGimiReferralPopup, clearGimiVisitCookie, markGimiPopupDismissed, setReferralSource, getReferralSource } from './utils/referralTracking';
+import { setReferralSource, getReferralSource } from './utils/referralTracking';
 import { ensurePermanentUrl } from './utils/imageUpload.js';
 import { createPolaroidImage } from './utils/imageProcessing.js';
 import { getPhotoHashtag } from './services/TwitterShare.js';
@@ -76,7 +76,6 @@ import OutOfCreditsPopup from './components/shared/OutOfCreditsPopup';
 import LoginUpsellPopup from './components/shared/LoginUpsellPopup';
 import NetworkStatus from './components/shared/NetworkStatus';
 import ConfettiCelebration from './components/shared/ConfettiCelebration';
-import GimiReferralPopup from './components/shared/GimiReferralPopup';
 // import AnalyticsDashboard from './components/admin/AnalyticsDashboard';
 import { subscribeToConnectionState, getCurrentConnectionState } from './services/api';
 import StripePurchase from './components/stripe/StripePurchase.tsx';
@@ -865,10 +864,7 @@ const App = () => {
 
   // Add state for login upsell popup (for non-authenticated users who've used their demo render)
   const [showLoginUpsellPopup, setShowLoginUpsellPopup] = useState(false);
-  
-  // Add state for Gimi referral popup (shown after login/signup if user visited Gimi Challenge page)
-  const [showGimiReferralPopup, setShowGimiReferralPopup] = useState(false);
-  
+
   // Connection state management
   const [connectionState, setConnectionState] = useState(getCurrentConnectionState());
   const [isGenerating, setIsGenerating] = useState(false);
@@ -924,17 +920,6 @@ const App = () => {
       setTimeout(() => {
         setShowConfetti(true);
       }, 600);
-    }
-
-    // Check if we should show the Gimi referral popup after batch completion
-    if (authState.isAuthenticated && authState.user?.username) {
-      if (shouldShowGimiReferralPopup()) {
-        console.log('[Referral] Batch completed - showing referral popup for Gimi Challenge visitor');
-        // Delay to let confetti and batch completion animations settle
-        setTimeout(() => {
-          setShowGimiReferralPopup(true);
-        }, 2000);
-      }
     }
   };
 
@@ -997,18 +982,6 @@ const App = () => {
 
   const handleOutOfCreditsPopupClose = () => {
     setShowOutOfCreditsPopup(false);
-  };
-
-  // Handle Gimi referral popup close
-  const handleGimiReferralPopupClose = (dontRemindMe) => {
-    setShowGimiReferralPopup(false);
-    // Clear the visit cookie since we've shown the popup
-    clearGimiVisitCookie();
-    // If user checked "don't remind me", set the dismissal cookie
-    if (dontRemindMe) {
-      markGimiPopupDismissed();
-      console.log('[Referral] User opted not to be reminded about Gimi referral');
-    }
   };
 
   // Photos array - this will hold either regular photos or gallery photos depending on mode
@@ -9282,14 +9255,6 @@ const App = () => {
         isOpen={showLoginUpsellPopup && currentPage !== 'prompts'}
         onClose={() => setShowLoginUpsellPopup(false)}
       />
-
-      {/* Gimi Referral Popup - shown after login/signup if user visited Gimi Challenge */}
-      {showGimiReferralPopup && authState.user?.username && (
-        <GimiReferralPopup
-          username={authState.user.username}
-          onClose={handleGimiReferralPopupClose}
-        />
-      )}
 
       {/* Network Status Notification */}
       <NetworkStatus 

@@ -11,7 +11,6 @@ import { WinterMusicPlayerProvider } from '../context/WinterMusicPlayerContext';
 import GlobalMusicPlayer from './shared/GlobalMusicPlayer';
 import GlobalWinterMusicPlayer from './shared/GlobalWinterMusicPlayer';
 import PageMetadata from './shared/PageMetadata';
-import GimiChallengeNotification from './shared/GimiChallengeNotification';
 
 // Create navigation context
 const NavigationContext = createContext();
@@ -103,9 +102,6 @@ const AppRouter = () => {
     };
   }, []);
 
-  // Determine if we should show the Gimi Challenge notification
-  const shouldShowNotification = currentRoute === 'main' || currentRoute === 'halloween' || currentRoute === 'winter';
-
   return (
     <NavigationContext.Provider value={{ navigateToCamera, navigateToContestVote, navigateToGimiChallenge, navigateToWinter }}>
       <MusicPlayerProvider>
@@ -116,9 +112,6 @@ const AppRouter = () => {
         {/* Global music player - shows on all pages when enabled */}
         <GlobalMusicPlayer />
           <GlobalWinterMusicPlayer />
-
-        {/* Gimi Challenge notification - shows on public pages after 5 seconds */}
-        {shouldShowNotification && <GimiChallengeNotification />}
 
         {currentRoute === 'analytics' ? (
           <AnalyticsDashboard />

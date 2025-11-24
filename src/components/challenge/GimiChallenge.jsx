@@ -215,6 +215,17 @@ const GimiChallenge = () => {
         <link rel="canonical" href="https://photobooth.sogni.ai/challenge/gimi" />
       </Helmet>
 
+      {/* Campaign Ended Banner */}
+      <div className="gimi-campaign-ended-banner">
+        <div className="gimi-campaign-ended-content">
+          <h2 className="gimi-campaign-ended-title">🎉 Campaign Has Ended 🎉</h2>
+          <p className="gimi-campaign-ended-text">
+            The Gimi Challenge campaign has concluded. Thank you to all who participated!
+            Keep up with our <a href="https://discord.com/invite/2JjzA2zrrc" target="_blank" rel="noopener noreferrer" onClick={() => trackEvent('Gimi Challenge', 'link_click', 'Campaign Ended Discord')}>Discord</a> for updates and future challenges.
+          </p>
+        </div>
+      </div>
+
       {/* Banner Section */}
       <section className="gimi-banner">
         {/* Wide banner for desktop */}
