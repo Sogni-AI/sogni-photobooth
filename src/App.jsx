@@ -3103,6 +3103,14 @@ const App = () => {
       return;
     }
     
+    // CRITICAL FIX: If we already have a working client, don't reinitialize
+    // This prevents the backend client from overwriting the frontend client
+    // that was set by the auth state change effect
+    if (sogniClient && isSogniReady) {
+      console.log('✅ Sogni client already initialized and ready, skipping reinitialization');
+      return;
+    }
+    
     setIsInitializingSogni(true);
     
     try {
