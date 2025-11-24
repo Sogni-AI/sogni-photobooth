@@ -92,6 +92,9 @@ const ImageAdjuster = ({
   // Track image position and scale - initialize directly with props
   const [position, setPosition] = useState(initialPosition);
   const [scale, setScale] = useState(defaultScale);
+  
+  // Track processing state to prevent unmounting during async operations
+  const [isProcessing, setIsProcessing] = useState(false);
 
   // Update position and scale when props change (for restoration)
   useEffect(() => {
@@ -545,6 +548,16 @@ const ImageAdjuster = ({
   const handleConfirm = () => {
     if (!containerRef.current || !imageRef.current) return;
     
+    // Prevent multiple clicks while processing
+    if (isProcessing) {
+      console.log('⏳ Already processing, ignoring additional click');
+      return;
+    }
+    
+    // Set processing state to prevent unmounting
+    setIsProcessing(true);
+    console.log('🎬 Starting image processing...');
+    
     const container = containerRef.current;
     const image = imageRef.current;
     
@@ -644,6 +657,10 @@ const ImageAdjuster = ({
       const finalSizeMB = (finalBlob.size / 1024 / 1024).toFixed(2);
       console.log(`📤 ImageAdjuster transmission size: ${finalSizeMB}MB`);
 
+      // ALWAYS call onConfirm with the blob - let the parent handle it
+      // The parent (App.jsx) expects this callback and will handle cleanup
+      // Don't check mounted state here - we want the operation to complete even if component unmounts
+      console.log('✅ Processing complete, calling onConfirm');
       onConfirm(finalBlob, { position, scale, batchCount: selectedBatchCount });
     }, 'image/png', 1.0);
   };
@@ -828,17 +845,27 @@ const ImageAdjuster = ({
             <button 
               className="confirm-button confirm-button-main" 
               onClick={handleConfirm}
-              style={headerText === 'Adjust Your Style Reference' ? { borderRadius: '12px' } : {}}
+              disabled={isProcessing}
+              style={{
+                ...(headerText === 'Adjust Your Style Reference' ? { borderRadius: '12px' } : {}),
+                ...(isProcessing ? { opacity: 0.6, cursor: 'not-allowed' } : {})
+              }}
             >
               {headerText === 'Adjust Your Style Reference' ? (
                 'Continue'
               ) : (
                 <div className="confirm-button-content">
-                  <div className="confirm-button-label">Imagine</div>
+                  <div className="confirm-button-label">
+                    {isProcessing ? '⏳ Processing...' : 'Imagine'}
+                  </div>
                   <div className="confirm-button-details">
-                    {selectedBatchCount}x
-                    {isAuthenticated && !costLoading && formattedCost && formattedCost !== '—' && (
-                      <> • {formattedCost} {tokenLabel}</>
+                    {!isProcessing && (
+                      <>
+                        {selectedBatchCount}x
+                        {isAuthenticated && !costLoading && formattedCost && formattedCost !== '—' && (
+                          <> • {formattedCost} {tokenLabel}</>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>
@@ -848,10 +875,12 @@ const ImageAdjuster = ({
               <button
                 className="confirm-button confirm-button-dropdown"
                 onClick={() => setIsBatchDropdownOpen(!isBatchDropdownOpen)}
-              aria-label="Select batch count"
-            >
-              <span className="dropdown-caret">▼</span>
-            </button>
+                disabled={isProcessing}
+                aria-label="Select batch count"
+                style={isProcessing ? { opacity: 0.6, cursor: 'not-allowed' } : {}}
+              >
+                <span className="dropdown-caret">▼</span>
+              </button>
             )}
             {isBatchDropdownOpen && (
               <div className="batch-dropdown-menu">

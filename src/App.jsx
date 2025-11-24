@@ -8462,10 +8462,23 @@ const App = () => {
         
         const blob = await response.blob();
         
-        // Wait for blob to be fully ready before creating URL
-        // This prevents race conditions on mobile
-        await new Promise(resolve => setTimeout(resolve, 10));
+        // Pre-load the image into browser cache before showing adjuster
+        // This prevents race conditions on mobile Safari where canvas.toBlob() 
+        // is called before the image fully decodes
+        await new Promise((resolve, reject) => {
+          const img = new Image();
+          img.onload = () => {
+            console.log('✅ Einstein image pre-loaded successfully');
+            resolve();
+          };
+          img.onerror = (error) => {
+            console.error('❌ Einstein image pre-load failed:', error);
+            reject(error);
+          };
+          img.src = URL.createObjectURL(blob);
+        });
         
+        // Create fresh blob URL for the adjuster (the pre-load one is garbage collected)
         const tempUrl = URL.createObjectURL(blob);
         
         // Einstein is just a fallback - don't save it to state
@@ -8527,10 +8540,23 @@ const App = () => {
         
         const blob = await response.blob();
         
-        // Wait for blob to be fully ready before creating URL
-        // This prevents race conditions on mobile
-        await new Promise(resolve => setTimeout(resolve, 10));
+        // Pre-load the image into browser cache before showing adjuster
+        // This prevents race conditions on mobile Safari where canvas.toBlob() 
+        // is called before the image fully decodes
+        await new Promise((resolve, reject) => {
+          const img = new Image();
+          img.onload = () => {
+            console.log('✅ Einstein image pre-loaded successfully');
+            resolve();
+          };
+          img.onerror = (error) => {
+            console.error('❌ Einstein image pre-load failed:', error);
+            reject(error);
+          };
+          img.src = URL.createObjectURL(blob);
+        });
         
+        // Create fresh blob URL for the adjuster (the pre-load one is garbage collected)
         const tempUrl = URL.createObjectURL(blob);
         
         // Einstein is just a fallback - don't save it to state
