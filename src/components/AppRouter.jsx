@@ -11,6 +11,7 @@ import { WinterMusicPlayerProvider } from '../context/WinterMusicPlayerContext';
 import GlobalMusicPlayer from './shared/GlobalMusicPlayer';
 import GlobalWinterMusicPlayer from './shared/GlobalWinterMusicPlayer';
 import PageMetadata from './shared/PageMetadata';
+import WinterEventNotification from './notifications/WinterEventNotification';
 
 // Create navigation context
 const NavigationContext = createContext();
@@ -34,6 +35,7 @@ const AppRouter = () => {
       return 'halloween';
     }
     if (hash === '#winter' || pathname === '/winter' || pathname === '/event/winter') {
+      sessionStorage.setItem('winter-page-visited', 'true'); // Mark winter page as visited
       return 'winter';
     }
     if (pathname === '/challenge/gimi') {
@@ -54,6 +56,7 @@ const AppRouter = () => {
   };
 
   const navigateToWinter = () => {
+    sessionStorage.setItem('winter-page-visited', 'true'); // Mark winter page as visited
     setCurrentRoute('winter');
     window.history.pushState({}, '', '/event/winter');
   };
@@ -81,6 +84,7 @@ const AppRouter = () => {
       } else if (hash === '#halloween' || pathname === '/halloween' || pathname === '/event/halloween') {
         setCurrentRoute('halloween');
       } else if (hash === '#winter' || pathname === '/winter' || pathname === '/event/winter') {
+        sessionStorage.setItem('winter-page-visited', 'true'); // Mark winter page as visited
         setCurrentRoute('winter');
       } else if (pathname === '/challenge/gimi') {
         setCurrentRoute('gimi-challenge');
@@ -92,7 +96,7 @@ const AppRouter = () => {
     // Listen for hash changes AND popstate (back button)
     window.addEventListener('hashchange', handleRouteChange);
     window.addEventListener('popstate', handleRouteChange);
-    
+
     // Check initial route
     handleRouteChange();
 
@@ -112,6 +116,11 @@ const AppRouter = () => {
         {/* Global music player - shows on all pages when enabled */}
         <GlobalMusicPlayer />
           <GlobalWinterMusicPlayer />
+
+        {/* Winter event notification - only show on main page */}
+        {currentRoute === 'main' && (
+          <WinterEventNotification onNavigate={navigateToWinter} />
+        )}
 
         {currentRoute === 'analytics' ? (
           <AnalyticsDashboard />

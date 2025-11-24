@@ -206,7 +206,7 @@ export const AuthStatus: React.FC<AuthStatusProps> = ({ onPurchaseClick, onSignu
           backgroundColor: '#2d3748',
           borderRadius: '8px',
           boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-          zIndex: 100,
+          zIndex: 1001,
           padding: '8px',
           minWidth: '200px'
         }}>
@@ -507,7 +507,7 @@ export const AuthStatus: React.FC<AuthStatusProps> = ({ onPurchaseClick, onSignu
           style={{
             position: 'fixed',
             inset: '0',
-            zIndex: 40
+            zIndex: 1000
           }}
           onClick={() => setShowUserMenu(false)}
         />

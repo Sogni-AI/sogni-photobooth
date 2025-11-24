@@ -1,0 +1,147 @@
+/* Winter Event Notification */
+.winter-event-notification {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 9999;
+  cursor: pointer;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3),
+              0 0 0 3px rgba(135, 206, 235, 0.3);
+  animation: winterPopIn 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55),
+             winterGlow 3s ease-in-out 0.6s infinite;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  max-width: 460px;
+}
+
+.winter-event-notification:hover {
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4),
+              0 0 0 3px rgba(135, 206, 235, 0.5),
+              0 0 40px rgba(135, 206, 235, 0.3);
+}
+
+/* Hide notification when any modal is open */
+body:has(.login-modal-overlay) .winter-event-notification,
+body:has(.out-of-credits-modal-overlay) .winter-event-notification,
+body:has(.stripe-modal-overlay) .winter-event-notification,
+body:has(.password-modal-overlay) .winter-event-notification,
+body:has(.winter-prompt-overlay) .winter-event-notification,
+body:has(.custom-prompt-overlay) .winter-event-notification,
+body:has(.twitter-modal-overlay) .winter-event-notification,
+body:has(.pwa-install-overlay) .winter-event-notification,
+body:has(.notes-modal-overlay) .winter-event-notification,
+body:has(.info-modal-overlay) .winter-event-notification,
+body:has(.promo-modal-overlay) .winter-event-notification {
+  display: none;
+}
+
+.winter-notification-dismiss {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(4px);
+  border: 2px solid rgba(255, 255, 255, 0.9);
+  color: white;
+  font-size: 20px;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  padding: 0;
+  z-index: 10;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.winter-notification-dismiss:hover {
+  background: rgba(0, 0, 0, 0.9);
+  transform: scale(1.15);
+  border-color: rgba(135, 206, 235, 1);
+  box-shadow: 0 4px 12px rgba(135, 206, 235, 0.5);
+}
+
+.winter-notification-dismiss:active {
+  transform: scale(0.95);
+}
+
+.winter-notification-image-container {
+  position: relative;
+  width: 100%;
+  display: block;
+  overflow: hidden;
+  border-radius: 12px;
+}
+
+.winter-notification-image {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+@keyframes winterPopIn {
+  0% {
+    transform: scale(0.3) translateY(-50px) rotate(-10deg);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.08) translateY(5px) rotate(2deg);
+  }
+  100% {
+    transform: scale(1) translateY(0) rotate(0deg);
+    opacity: 1;
+  }
+}
+
+@keyframes winterGlow {
+  0%, 100% {
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3),
+                0 0 0 3px rgba(135, 206, 235, 0.3);
+  }
+  50% {
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3),
+                0 0 0 3px rgba(135, 206, 235, 0.6),
+                0 0 30px rgba(135, 206, 235, 0.4);
+  }
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .winter-event-notification {
+    top: 15px;
+    right: 15px;
+    left: 15px;
+    max-width: none;
+  }
+
+  .winter-notification-dismiss {
+    width: 32px;
+    height: 32px;
+    font-size: 20px;
+    top: -8px;
+    right: -8px;
+  }
+}
+
+/* Extra small mobile screens */
+@media (max-width: 480px) {
+  .winter-event-notification {
+    top: 10px;
+    right: 10px;
+    left: 10px;
+  }
+
+  .winter-notification-dismiss {
+    width: 30px;
+    height: 30px;
+    font-size: 18px;
+    top: -7px;
+    right: -7px;
+  }
+}
+
