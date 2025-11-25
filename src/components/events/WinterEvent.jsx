@@ -20,6 +20,7 @@ const WinterEvent = () => {
   const [snowflakeDismissed, setSnowflakeDismissed] = useState(false);
   const [showSnowflakeButton, setShowSnowflakeButton] = useState(false); // Delayed appearance
   const [portraitType, setPortraitType] = useState('headshot2'); // 'headshot2', 'medium', or 'fullbody'
+  const [activeVideoStyleKeys, setActiveVideoStyleKeys] = useState([]); // Track which videos are playing (array for multiple)
   const { isEnabled, enable: enableMusic } = useWinterMusicPlayer();
   const { updateSetting, stylePrompts } = useApp();
   const { navigateToCamera } = useNavigation();
@@ -62,6 +63,24 @@ const WinterEvent = () => {
     setTimeout(() => {
       navigateToCamera();
     }, 0);
+  };
+
+  // Helper function to check if a style has a video (only for headshot2/NEAR portrait type)
+  const hasVideoForStyle = (styleKey) => {
+    if (portraitType !== 'headshot2') return false;
+    const stylesWithVideos = [
+      'babyBlueWrap',
+      'blackOpulentFur',
+      'christmasWrap',
+      'IHateChristmas',
+      'myBabyBear',
+      'myBabyDeer',
+      'myBabyPenguin',
+      'myBabyWolf',
+      'myPantherBaby',
+      'polarHat'
+    ];
+    return stylesWithVideos.includes(styleKey);
   };
 
   const handleDismissSnowflake = (e) => {
@@ -443,6 +462,78 @@ const WinterEvent = () => {
                   <div className="winter-community-badge" title="Community Created">
                     <span className="community-icon">🏅</span>
                   </div>
+                )}
+
+                {/* Video Button - Show for styles with videos */}
+                {hasVideoForStyle(style.key) && (
+                  <div
+                    className="photo-video-btn"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      // Toggle video in array - allow multiple videos to play
+                      setActiveVideoStyleKeys(prev => 
+                        prev.includes(style.key) 
+                          ? prev.filter(key => key !== style.key) 
+                          : [...prev, style.key]
+                      );
+                    }}
+                    onMouseDown={(e) => {
+                      e.stopPropagation();
+                    }}
+                    title="Play video"
+                  >
+                    <div>
+                      <svg fill="currentColor" width="16" height="16" viewBox="0 0 24 24">
+                        {activeVideoStyleKeys.includes(style.key) ? (
+                          <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+                        ) : (
+                          <path d="M8 5v14l11-7z"/>
+                        )}
+                      </svg>
+                    </div>
+                  </div>
+                )}
+
+                {/* Video Overlay - Show when video is active */}
+                {activeVideoStyleKeys.includes(style.key) && hasVideoForStyle(style.key) && (
+                  <video
+                    src={(() => {
+                      if (style.key === 'babyBlueWrap') {
+                        return `${urls.assetUrl}/videos/kiki-sogni-photobooth-baby-blue-wrap-raw.mp4`;
+                      } else if (style.key === 'blackOpulentFur') {
+                        return `${urls.assetUrl}/videos/kiki-ssogni-photobooth-black-opulent-fur-raw.mp4`;
+                      } else if (style.key === 'christmasWrap') {
+                        return `${urls.assetUrl}/videos/kiki-ssogni-photobooth-christmas-wrap-raw.mp4`;
+                      } else if (style.key === 'IHateChristmas') {
+                        return `${urls.assetUrl}/videos/kiki-ssogni-photobooth-i-hate-christmas-raw.mp4`;
+                      } else if (style.key === 'myBabyBear') {
+                        return `${urls.assetUrl}/videos/kiki-ssogni-photobooth-my-baby-bear-raw.mp4`;
+                      } else if (style.key === 'myBabyDeer') {
+                        return `${urls.assetUrl}/videos/kiki-ssogni-photobooth-my-baby-deer-raw.mp4`;
+                      } else if (style.key === 'myBabyPenguin') {
+                        return `${urls.assetUrl}/videos/kiki-ssogni-photobooth-my-baby-penguin-raw.mp4`;
+                      } else if (style.key === 'myBabyWolf') {
+                        return `${urls.assetUrl}/videos/kiki-ssogni-photobooth-my-baby-wolf-raw.mp4`;
+                      } else if (style.key === 'myPantherBaby') {
+                        return `${urls.assetUrl}/videos/kiki-ssogni-photobooth-my-panther-baby-raw.mp4`;
+                      } else if (style.key === 'polarHat') {
+                        return `${urls.assetUrl}/videos/kiki-ssogni-photobooth-polar-hat-raw.mp4`;
+                      }
+                      return "";
+                    })()}
+                    autoPlay
+                    loop
+                    playsInline
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover',
+                      zIndex: 5
+                    }}
+                  />
                 )}
 
                 {/* Hover overlay with "Use this style" */}

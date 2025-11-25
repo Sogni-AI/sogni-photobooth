@@ -148,6 +148,55 @@
   transition: all 0.2s ease;
 }
 
+/* Video button for winter styles */
+.winter-style-frame .photo-video-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justifyContent: center;
+  cursor: pointer;
+  z-index: 6;
+  opacity: 0;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.winter-style-frame:hover .photo-video-btn {
+  opacity: 1;
+}
+
+.winter-style-frame .photo-video-btn > div {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.winter-style-frame .photo-video-btn:hover > div {
+  background: rgba(52, 152, 219, 0.9);
+  transform: scale(1.1);
+}
+
+.winter-style-frame .photo-video-btn svg {
+  fill: white;
+  width: 16px;
+  height: 16px;
+}
+
+/* On mobile, always show video button if available */
+@media (max-width: 768px) {
+  .winter-style-frame .photo-video-btn {
+    opacity: 1;
+  }
+}
+
 .winter-style-frame:hover .winter-community-badge {
   transform: scale(1.2);
 }
