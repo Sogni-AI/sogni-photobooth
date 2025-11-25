@@ -5039,6 +5039,14 @@ const PhotoGallery = ({
                         return `${urls.assetUrl}/videos/sogni-photobooth-clown-pastel-raw.mp4`;
                       } else if (photo.promptKey === 'jojoStandAura') {
                         return `${urls.assetUrl}/videos/sogni-photobooth-jojo-stand-aura-raw.mp4`;
+                      } else if (photo.promptKey === 'babyBlueWrap') {
+                        return `${urls.assetUrl}/videos/jen-sogni-photobooth-baby-blue-wrap-raw.mp4`;
+                      } else if (photo.promptKey === 'myPolarBearBaby') {
+                        return `${urls.assetUrl}/videos/jen-sogni-photobooth-my-polar-bear-baby-raw.mp4`;
+                      } else if (photo.promptKey === 'pinkWrap') {
+                        return `${urls.assetUrl}/videos/jen-sogni-photobooth-pink-wrap-raw.mp4`;
+                      } else if (photo.promptKey === 'redWrap') {
+                        return `${urls.assetUrl}/videos/jen-sogni-photobooth-red-wrap-raw.mp4`;
                       }
                       return "";
                     })()}
