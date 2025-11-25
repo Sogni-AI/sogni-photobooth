@@ -72,24 +72,39 @@ const WinterEvent = () => {
 
   // Helper function to check if a style has a video (only for headshot2/NEAR portrait type)
   const hasVideoForStyle = (styleKey) => {
-    if (portraitType !== 'headshot2') return false;
-    const stylesWithVideos = [
-      'babyBlueWrap',
-      'blackOpulentFur',
-      'christmasWrap',
-      'IHateChristmas',
-      'myBabyBear',
-      'myBabyDeer',
-      'myBabyPenguin',
-      'myBabyWolf',
-      'myPantherBaby',
-      'polarHat',
-      'forestElf',
-      'alone4Christmas',
-      'defrostMode',
-      'icedUp'
-    ];
-    return stylesWithVideos.includes(styleKey);
+    // NEAR (headshot2) portrait type - kiki videos
+    if (portraitType === 'headshot2') {
+      const nearStylesWithVideos = [
+        'babyBlueWrap',
+        'blackOpulentFur',
+        'christmasWrap',
+        'IHateChristmas',
+        'myBabyBear',
+        'myBabyDeer',
+        'myBabyPenguin',
+        'myBabyWolf',
+        'myPantherBaby',
+        'polarHat',
+        'forestElf',
+        'alone4Christmas',
+        'defrostMode',
+        'icedUp'
+      ];
+      return nearStylesWithVideos.includes(styleKey);
+    }
+    
+    // MED (medium) portrait type - jen videos
+    if (portraitType === 'medium') {
+      const mediumStylesWithVideos = [
+        'babyBlueWrap',
+        'myPolarBearBaby',
+        'pinkWrap',
+        'redWrap'
+      ];
+      return mediumStylesWithVideos.includes(styleKey);
+    }
+    
+    return false;
   };
 
   // Get random visible video style that isn't currently playing
@@ -178,16 +193,29 @@ const WinterEvent = () => {
     };
   }, [portraitType]); // Re-run when portrait type changes
 
-  // Auto-play first video after 5 seconds
+  // Reset video states when portrait type changes
   useEffect(() => {
+    // Clear existing videos and states
+    setActiveVideoStyleKeys([]);
+    setUserInitiatedVideos(new Set());
+    setAutoPlayEnabled(true);
+    if (autoPlayTimeoutRef.current) {
+      clearTimeout(autoPlayTimeoutRef.current);
+      autoPlayTimeoutRef.current = null;
+    }
+    
+    // Wait for intersection observer to populate visible styles, then trigger auto-play
     const timer = setTimeout(() => {
-      if (autoPlayEnabled && activeVideoStyleKeys.length === 0) {
+      const hasVisibleVideos = Array.from(visibleStylesRef.current).some(styleKey => hasVideoForStyle(styleKey));
+      console.log(`Portrait type: ${portraitType}, Visible styles:`, Array.from(visibleStylesRef.current), 'Has videos:', hasVisibleVideos);
+      
+      if (hasVisibleVideos) {
         autoPlayRandomVideo();
       }
-    }, 5000);
+    }, 5500); // 5.5 seconds to ensure DOM and intersection observer are ready
 
     return () => clearTimeout(timer);
-  }, []); // Only run once on mount
+  }, [portraitType]);
 
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -644,35 +672,52 @@ const WinterEvent = () => {
                       }
                     }}
                     src={(() => {
-                      if (style.key === 'babyBlueWrap') {
-                        return `${urls.assetUrl}/videos/kiki-sogni-photobooth-baby-blue-wrap-raw.mp4`;
-                      } else if (style.key === 'blackOpulentFur') {
-                        return `${urls.assetUrl}/videos/kiki-ssogni-photobooth-black-opulent-fur-raw.mp4`;
-                      } else if (style.key === 'christmasWrap') {
-                        return `${urls.assetUrl}/videos/kiki-ssogni-photobooth-christmas-wrap-raw.mp4`;
-                      } else if (style.key === 'IHateChristmas') {
-                        return `${urls.assetUrl}/videos/kiki-ssogni-photobooth-i-hate-christmas-raw.mp4`;
-                      } else if (style.key === 'myBabyBear') {
-                        return `${urls.assetUrl}/videos/kiki-ssogni-photobooth-my-baby-bear-raw.mp4`;
-                      } else if (style.key === 'myBabyDeer') {
-                        return `${urls.assetUrl}/videos/kiki-ssogni-photobooth-my-baby-deer-raw.mp4`;
-                      } else if (style.key === 'myBabyPenguin') {
-                        return `${urls.assetUrl}/videos/kiki-ssogni-photobooth-my-baby-penguin-raw.mp4`;
-                      } else if (style.key === 'myBabyWolf') {
-                        return `${urls.assetUrl}/videos/kiki-ssogni-photobooth-my-baby-wolf-raw.mp4`;
-                      } else if (style.key === 'myPantherBaby') {
-                        return `${urls.assetUrl}/videos/kiki-ssogni-photobooth-my-panther-baby-raw.mp4`;
-                      } else if (style.key === 'polarHat') {
-                        return `${urls.assetUrl}/videos/kiki-ssogni-photobooth-polar-hat-raw.mp4`;
-                      } else if (style.key === 'forestElf') {
-                        return `${urls.assetUrl}/videos/kiki-sogni-photobooth-forest-elf-raw.mp4`;
-                      } else if (style.key === 'alone4Christmas') {
-                        return `${urls.assetUrl}/videos/kiki-sogni-photobooth-alone-4-christmas-raw.mp4`;
-                      } else if (style.key === 'defrostMode') {
-                        return `${urls.assetUrl}/videos/kiki-sogni-photobooth-defrost-mode-raw.mp4`;
-                      } else if (style.key === 'icedUp') {
-                        return `${urls.assetUrl}/videos/kiki-sogni-photobooth-iced-up-raw.mp4`;
+                      // MED (medium) portrait type - jen videos
+                      if (portraitType === 'medium') {
+                        if (style.key === 'babyBlueWrap') {
+                          return `${urls.assetUrl}/videos/jen-sogni-photobooth-baby-blue-wrap-raw.mp4`;
+                        } else if (style.key === 'myPolarBearBaby') {
+                          return `${urls.assetUrl}/videos/jen-sogni-photobooth-my-polar-bear-baby-raw.mp4`;
+                        } else if (style.key === 'pinkWrap') {
+                          return `${urls.assetUrl}/videos/jen-sogni-photobooth-pink-wrap-raw.mp4`;
+                        } else if (style.key === 'redWrap') {
+                          return `${urls.assetUrl}/videos/jen-sogni-photobooth-red-wrap-raw.mp4`;
+                        }
                       }
+                      
+                      // NEAR (headshot2) portrait type - kiki videos
+                      if (portraitType === 'headshot2') {
+                        if (style.key === 'babyBlueWrap') {
+                          return `${urls.assetUrl}/videos/kiki-sogni-photobooth-baby-blue-wrap-raw.mp4`;
+                        } else if (style.key === 'blackOpulentFur') {
+                          return `${urls.assetUrl}/videos/kiki-ssogni-photobooth-black-opulent-fur-raw.mp4`;
+                        } else if (style.key === 'christmasWrap') {
+                          return `${urls.assetUrl}/videos/kiki-ssogni-photobooth-christmas-wrap-raw.mp4`;
+                        } else if (style.key === 'IHateChristmas') {
+                          return `${urls.assetUrl}/videos/kiki-ssogni-photobooth-i-hate-christmas-raw.mp4`;
+                        } else if (style.key === 'myBabyBear') {
+                          return `${urls.assetUrl}/videos/kiki-ssogni-photobooth-my-baby-bear-raw.mp4`;
+                        } else if (style.key === 'myBabyDeer') {
+                          return `${urls.assetUrl}/videos/kiki-ssogni-photobooth-my-baby-deer-raw.mp4`;
+                        } else if (style.key === 'myBabyPenguin') {
+                          return `${urls.assetUrl}/videos/kiki-ssogni-photobooth-my-baby-penguin-raw.mp4`;
+                        } else if (style.key === 'myBabyWolf') {
+                          return `${urls.assetUrl}/videos/kiki-ssogni-photobooth-my-baby-wolf-raw.mp4`;
+                        } else if (style.key === 'myPantherBaby') {
+                          return `${urls.assetUrl}/videos/kiki-ssogni-photobooth-my-panther-baby-raw.mp4`;
+                        } else if (style.key === 'polarHat') {
+                          return `${urls.assetUrl}/videos/kiki-ssogni-photobooth-polar-hat-raw.mp4`;
+                        } else if (style.key === 'forestElf') {
+                          return `${urls.assetUrl}/videos/kiki-sogni-photobooth-forest-elf-raw.mp4`;
+                        } else if (style.key === 'alone4Christmas') {
+                          return `${urls.assetUrl}/videos/kiki-sogni-photobooth-alone-4-christmas-raw.mp4`;
+                        } else if (style.key === 'defrostMode') {
+                          return `${urls.assetUrl}/videos/kiki-sogni-photobooth-defrost-mode-raw.mp4`;
+                        } else if (style.key === 'icedUp') {
+                          return `${urls.assetUrl}/videos/kiki-sogni-photobooth-iced-up-raw.mp4`;
+                        }
+                      }
+                      
                       return "";
                     })()}
                     autoPlay
