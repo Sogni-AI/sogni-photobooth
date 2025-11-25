@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Helmet } from 'react-helmet-async';
 import WinterPromptPopup from './WinterPromptPopup';
 import { AuthStatus } from '../auth/AuthStatus';
@@ -21,9 +21,14 @@ const WinterEvent = () => {
   const [showSnowflakeButton, setShowSnowflakeButton] = useState(false); // Delayed appearance
   const [portraitType, setPortraitType] = useState('headshot2'); // 'headshot2', 'medium', or 'fullbody'
   const [activeVideoStyleKeys, setActiveVideoStyleKeys] = useState([]); // Track which videos are playing (array for multiple)
+  const [autoPlayEnabled, setAutoPlayEnabled] = useState(true); // Track if auto-play is active
+  const [userInitiatedVideos, setUserInitiatedVideos] = useState(new Set()); // Track which videos were started by user
   const { isEnabled, enable: enableMusic } = useWinterMusicPlayer();
   const { updateSetting, stylePrompts } = useApp();
   const { navigateToCamera } = useNavigation();
+  const videoRefs = useRef({}); // Store refs to video elements
+  const visibleStylesRef = useRef(new Set()); // Track which styles are visible in viewport
+  const autoPlayTimeoutRef = useRef(null); // Track auto-play timeout
 
   const handleRandomStyle = () => {
     console.log('❄️ Random Style button clicked - selecting Random: Mix for winter category');
@@ -86,6 +91,112 @@ const WinterEvent = () => {
     ];
     return stylesWithVideos.includes(styleKey);
   };
+
+  // Get random visible video style that isn't currently playing
+  const getRandomVisibleVideoStyle = () => {
+    const visibleWithVideos = Array.from(visibleStylesRef.current).filter(
+      styleKey => hasVideoForStyle(styleKey) && !activeVideoStyleKeys.includes(styleKey)
+    );
+    if (visibleWithVideos.length === 0) return null;
+    return visibleWithVideos[Math.floor(Math.random() * visibleWithVideos.length)];
+  };
+
+  // Auto-play a random video
+  const autoPlayRandomVideo = () => {
+    if (!autoPlayEnabled) return;
+    
+    const randomStyle = getRandomVisibleVideoStyle();
+    if (randomStyle) {
+      console.log('Auto-playing video:', randomStyle);
+      setActiveVideoStyleKeys(prev => [...prev, randomStyle]);
+      // Do NOT add to userInitiatedVideos - this is auto-play
+    }
+  };
+
+  // Handle video end - auto-play next if enabled and no videos playing
+  const handleVideoEnd = (styleKey) => {
+    const wasUserInitiated = userInitiatedVideos.has(styleKey);
+    
+    // Remove ended video from active list
+    setActiveVideoStyleKeys(prev => prev.filter(key => key !== styleKey));
+    
+    // Remove from user-initiated set if it was there
+    if (wasUserInitiated) {
+      setUserInitiatedVideos(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(styleKey);
+        return newSet;
+      });
+    }
+    
+    // If this was an auto-play video (not user-initiated), play another
+    if (!wasUserInitiated && autoPlayEnabled) {
+      autoPlayTimeoutRef.current = setTimeout(() => {
+        // Check again if no videos are playing (user might have started one)
+        setActiveVideoStyleKeys(current => {
+          if (current.length === 0) {
+            const randomStyle = getRandomVisibleVideoStyle();
+            if (randomStyle) {
+              console.log('Auto-playing next video:', randomStyle);
+              return [randomStyle];
+            }
+          }
+          return current;
+        });
+      }, 1000); // 1 second delay between videos
+    }
+  };
+
+  // Intersection Observer to track visible styles
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          const styleKey = entry.target.getAttribute('data-style-key');
+          if (entry.isIntersecting) {
+            visibleStylesRef.current.add(styleKey);
+          } else {
+            visibleStylesRef.current.delete(styleKey);
+          }
+        });
+      },
+      {
+        threshold: 0.5, // At least 50% visible
+        rootMargin: '0px'
+      }
+    );
+
+    // Observe all film frames after a short delay to ensure DOM is ready
+    const timeoutId = setTimeout(() => {
+      const frames = document.querySelectorAll('.winter-style-frame');
+      frames.forEach(frame => observer.observe(frame));
+    }, 100);
+
+    return () => {
+      clearTimeout(timeoutId);
+      observer.disconnect();
+    };
+  }, [portraitType]); // Re-run when portrait type changes
+
+  // Auto-play first video after 5 seconds
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (autoPlayEnabled && activeVideoStyleKeys.length === 0) {
+        autoPlayRandomVideo();
+      }
+    }, 5000);
+
+    return () => clearTimeout(timer);
+  }, []); // Only run once on mount
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (autoPlayTimeoutRef.current) {
+        clearTimeout(autoPlayTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const handleDismissSnowflake = (e) => {
     e.stopPropagation(); // Prevent expanding
@@ -277,13 +388,20 @@ const WinterEvent = () => {
             onClick={() => setShowPromptPopup(true)}
             aria-label="Create your own winter style"
           >
-            <button
+            <div
               className="snowflake-dismiss-btn"
               onClick={handleDismissSnowflake}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  handleDismissSnowflake(e);
+                }
+              }}
               aria-label="Dismiss snowflake notification"
             >
               ✕
-            </button>
+            </div>
             <div className="snowflake-face">
               <span className="snowflake-emoji">❄️</span>
               <span className="snowflake-eyes">👀</span>
@@ -431,6 +549,7 @@ const WinterEvent = () => {
             <div
               key={style.key}
               className={`film-frame loaded winter-style-frame ${selectedStyleKey === style.key ? 'mobile-selected' : ''}`}
+              data-style-key={style.key}
               onClick={() => handleStyleSelect(style.key)}
               style={{
                 width: '100%',
@@ -474,12 +593,30 @@ const WinterEvent = () => {
                     className="photo-video-btn"
                     onClick={(e) => {
                       e.stopPropagation();
+                      // Disable auto-play when user manually interacts
+                      setAutoPlayEnabled(false);
+                      // Clear any pending auto-play timeout
+                      if (autoPlayTimeoutRef.current) {
+                        clearTimeout(autoPlayTimeoutRef.current);
+                        autoPlayTimeoutRef.current = null;
+                      }
                       // Toggle video in array - allow multiple videos to play
-                      setActiveVideoStyleKeys(prev => 
-                        prev.includes(style.key) 
-                          ? prev.filter(key => key !== style.key) 
-                          : [...prev, style.key]
-                      );
+                      setActiveVideoStyleKeys(prev => {
+                        const isCurrentlyPlaying = prev.includes(style.key);
+                        if (isCurrentlyPlaying) {
+                          // Stopping video - remove from user-initiated set
+                          setUserInitiatedVideos(prevSet => {
+                            const newSet = new Set(prevSet);
+                            newSet.delete(style.key);
+                            return newSet;
+                          });
+                          return prev.filter(key => key !== style.key);
+                        } else {
+                          // Starting video - add to user-initiated set
+                          setUserInitiatedVideos(prevSet => new Set([...prevSet, style.key]));
+                          return [...prev, style.key];
+                        }
+                      });
                     }}
                     onMouseDown={(e) => {
                       e.stopPropagation();
@@ -501,6 +638,11 @@ const WinterEvent = () => {
                 {/* Video Overlay - Show when video is active */}
                 {activeVideoStyleKeys.includes(style.key) && hasVideoForStyle(style.key) && (
                   <video
+                    ref={(el) => {
+                      if (el) {
+                        videoRefs.current[style.key] = el;
+                      }
+                    }}
                     src={(() => {
                       if (style.key === 'babyBlueWrap') {
                         return `${urls.assetUrl}/videos/kiki-sogni-photobooth-baby-blue-wrap-raw.mp4`;
@@ -534,8 +676,10 @@ const WinterEvent = () => {
                       return "";
                     })()}
                     autoPlay
-                    loop
+                    loop={userInitiatedVideos.has(style.key)}
+                    muted
                     playsInline
+                    onEnded={() => handleVideoEnd(style.key)}
                     style={{
                       position: 'absolute',
                       top: 0,
