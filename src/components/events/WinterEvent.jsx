@@ -88,7 +88,8 @@ const WinterEvent = () => {
         'forestElf',
         'alone4Christmas',
         'defrostMode',
-        'icedUp'
+        'icedUp',
+        'whiteSorcerer'
       ];
       return nearStylesWithVideos.includes(styleKey);
     }
@@ -99,7 +100,8 @@ const WinterEvent = () => {
         'babyBlueWrap',
         'myPolarBearBaby',
         'pinkWrap',
-        'redWrap'
+        'redWrap',
+        'silverWrap'
       ];
       return mediumStylesWithVideos.includes(styleKey);
     }
@@ -682,6 +684,8 @@ const WinterEvent = () => {
                           return `${urls.assetUrl}/videos/jen-sogni-photobooth-pink-wrap-raw.mp4`;
                         } else if (style.key === 'redWrap') {
                           return `${urls.assetUrl}/videos/jen-sogni-photobooth-red-wrap-raw.mp4`;
+                        } else if (style.key === 'silverWrap') {
+                          return `${urls.assetUrl}/videos/sogni-photobooth-silver-wrap-raw.mp4`;
                         }
                       }
                       
@@ -715,6 +719,8 @@ const WinterEvent = () => {
                           return `${urls.assetUrl}/videos/kiki-sogni-photobooth-defrost-mode-raw.mp4`;
                         } else if (style.key === 'icedUp') {
                           return `${urls.assetUrl}/videos/kiki-sogni-photobooth-iced-up-raw.mp4`;
+                        } else if (style.key === 'whiteSorcerer') {
+                          return `${urls.assetUrl}/videos/kiki-sogni-photobooth-white-sorcerer-raw.mp4`;
                         }
                       }
                       
