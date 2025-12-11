@@ -451,7 +451,7 @@ export class BackendSogniClient {
     
     // Create placeholder jobs initially - but these will be replaced by real job IDs from the server
     // This matches the SDK behavior where jobs are created dynamically as they are initialized
-    const numImages = typeof params.numberOfImages === 'number' ? params.numberOfImages : 0;
+    const numImages = typeof params.numberOfMedia === 'number' ? params.numberOfMedia : 0;
     const placeholderJobs = new Map<number, string>();
     for (let i = 0; i < numImages; i++) {
       // Create a temporary placeholder - these will be updated with real jobIds 

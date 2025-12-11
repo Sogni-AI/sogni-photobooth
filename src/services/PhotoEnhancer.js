@@ -182,6 +182,7 @@ export const enhancePhoto = async (options) => {
     if (useKontext) {
       // Use Flux.1 Kontext for custom modifications
       projectConfig = {
+        type: 'image', // Required in SDK v4.x.x
         testnet: false,
         tokenType: 'spark',
         modelId: "flux1-dev-kontext_fp8_scaled",
@@ -191,7 +192,7 @@ export const enhancePhoto = async (options) => {
         height,
         steps: 24,
         guidance: 5.5,
-        numberOfImages: 1,
+        numberOfMedia: 1,
         outputFormat: outputFormat || 'jpg',
         sensitiveContentFilter: false, // HARDCODED: Kontext model is not NSFW-aware, always disable filter
         contextImages: [new Uint8Array(arrayBuffer)], // Kontext uses contextImages array
@@ -200,6 +201,7 @@ export const enhancePhoto = async (options) => {
     } else {
       // Use Flux.1 Krea for standard enhancement
       projectConfig = {
+        type: 'image', // Required in SDK v4.x.x
         testnet: false,
         tokenType: 'spark',
         modelId: "flux1-krea-dev_fp8_scaled",

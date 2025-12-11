@@ -4713,6 +4713,7 @@ const App = () => {
       const isFluxKontext = isFluxKontextModel(selectedModel);
       
       const projectConfig = { 
+        type: 'image', // Required in SDK v4.x.x
         testnet: false,
         tokenType: walletTokenType, // Use selected payment method from wallet
         isPremiumSpark: hasPremiumSpark, // Pass premium status to backend
@@ -4725,7 +4726,7 @@ const App = () => {
         height: getCustomDimensions(aspectRatio).height, // Use aspectRatio here
         steps: inferenceSteps,
         guidance: isFluxKontext ? guidance : promptGuidance, // Use guidance for Flux.1 Kontext, promptGuidance for others
-        numberOfImages: numImages, // Use context state
+        numberOfMedia: numImages, // Use context state
         numberOfPreviews: authState.authMode === 'frontend' && isFluxKontext ? 5 : 10, // Frontend Flux gets 5 previews, backend gets 10
         scheduler: scheduler,
         timeStepSpacing: timeStepSpacing,

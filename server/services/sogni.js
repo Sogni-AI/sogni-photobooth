@@ -413,6 +413,7 @@ export async function generateImage(client, params, progressCallback, localProje
     const isNsfwUnawareModel = isKreaUpscaling || isKontextEnhancement;
     
     const projectOptions = {
+      type: 'image', // Required in SDK v4.x.x
       modelId: params.selectedModel,
       positivePrompt: params.positivePrompt || '',
       negativePrompt: params.negativePrompt || '',
@@ -422,7 +423,7 @@ export async function generateImage(client, params, progressCallback, localProje
       height: params.height,
       steps: params.inferenceSteps || (isEnhancement ? 4 : 7),
       guidance: params.promptGuidance || (isEnhancement ? 1 : 2),
-      numberOfImages: params.numberImages || 1,
+      numberOfMedia: params.numberImages || 1,
       numberOfPreviews: isKreaUpscaling ? 0 : 10, // Disable previews for Krea upscaling
       scheduler: params.scheduler || 'DPM++ SDE',
       timeStepSpacing: params.timeStepSpacing || 'Karras',

@@ -30,7 +30,7 @@
     "precommit": "npm run validate:useeffect"
   },
   "dependencies": {
-    "@sogni-ai/sogni-client": "^4.0.0-alpha.3",
+    "@sogni-ai/sogni-client": "^4.0.0-alpha.25",
     "@types/qrcode": "^1.5.5",
     "@types/uuid": "^10.0.0",
     "canvas": "^2.11.2",

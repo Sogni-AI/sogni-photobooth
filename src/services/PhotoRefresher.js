@@ -216,6 +216,7 @@ export const refreshPhoto = async (options) => {
 
     // Create project configuration for a single image refresh
     const projectConfig = {
+      type: 'image', // Required in SDK v4.x.x
       testnet: false,
       tokenType, // Use selected payment method from wallet (for frontend auth)
       isPremiumSpark, // Pass premium status (for frontend auth)
@@ -228,7 +229,7 @@ export const refreshPhoto = async (options) => {
       height,
       steps: inferenceSteps,
       guidance: isFluxKontext ? guidance : promptGuidance,
-      numberOfImages: 1, // Single image refresh
+      numberOfMedia: 1, // Single image refresh
       scheduler,
       timeStepSpacing,
       outputFormat: outputFormat || 'png',

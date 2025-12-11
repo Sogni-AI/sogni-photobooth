@@ -83,7 +83,7 @@ export class FrontendProjectAdapter extends BrowserEventEmitter implements Sogni
     this.realProject = realProject;
     this.realClient = realClient;
     // Initialize completion tracker with expected job count
-    this.completionTracker.expectedJobs = realProject.params?.numberOfImages || 1;
+    this.completionTracker.expectedJobs = realProject.params?.numberOfMedia || 1;
     this.setupEventMapping();
   }
 
@@ -560,6 +560,12 @@ export class FrontendSogniClientAdapter {
         // Convert sensitiveContentFilter to disableNSFWFilter for SDK compatibility
         // This matches the backend's conversion logic in server/services/sogni.js
         const sdkParams = { ...params };
+        
+        // Ensure type parameter is included (required in v4.x.x)
+        if (!sdkParams.type) {
+          sdkParams.type = 'image'; // Default to image type
+        }
+        
         if ('sensitiveContentFilter' in params) {
           sdkParams.disableNSFWFilter = params.sensitiveContentFilter ? false : true;
           delete sdkParams.sensitiveContentFilter; // Remove to avoid passing both
@@ -578,7 +584,7 @@ export class FrontendSogniClientAdapter {
         // Track analytics for frontend SDK generation (critical for logged-in users)
         // This ensures we capture metrics even when bypassing the backend /generate endpoint
         trackFrontendGeneration({
-          numberImages: params.numberOfImages || 1,
+          numberImages: params.numberOfMedia || 1,
           sourceType: params.sourceType,
           selectedModel: params.modelId,
         }).catch(err => {
