@@ -5615,32 +5615,13 @@ const PhotoGallery = ({
                       textAlign: 'center'
                     }}
                   >
-                    {/* Floating sparkles around the card */}
-                    {[...Array(6)].map((_, i) => (
-                      <span
-                        key={i}
-                        style={{
-                          position: 'absolute',
-                          fontSize: ['✨', '⭐', '💫', '🌟', '✨', '⭐'][i],
-                          animation: `float-sparkle-${i % 3} ${2 + i * 0.3}s ease-in-out infinite`,
-                          animationDelay: `${i * 0.2}s`,
-                          opacity: 0.8,
-                          top: `${-20 + (i % 2) * 10}px`,
-                          left: `${-30 + i * 25}px`,
-                          filter: 'drop-shadow(0 0 4px rgba(255, 200, 100, 0.8))'
-                        }}
-                      >
-                        {['✨', '⭐', '💫', '🌟', '✨', '⭐'][i]}
-                      </span>
-                    ))}
-                    
                     {/* Glowing animated border card */}
                     <div style={{
                       position: 'relative',
                       background: 'linear-gradient(135deg, rgba(26, 26, 46, 0.95), rgba(40, 20, 60, 0.95))',
                       backdropFilter: 'blur(12px)',
                       borderRadius: '20px',
-                      padding: '16px 24px',
+                      padding: '12px 18px',
                       boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)',
                       border: '2px solid transparent',
                       backgroundClip: 'padding-box'
@@ -5660,23 +5641,23 @@ const PhotoGallery = ({
                         opacity: 0.8
                       }} />
                       
-                      {/* Header with bouncing camera icon */}
+                      {/* Header with camera icon */}
                       <div style={{
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        gap: '10px',
-                        marginBottom: '10px'
+                        gap: '6px',
+                        marginBottom: '6px'
                       }}>
                         <span style={{ 
-                          fontSize: '32px',
-                          filter: 'sepia(1) saturate(5) hue-rotate(-10deg) drop-shadow(0 0 8px rgba(255, 165, 2, 0.8))',
+                          fontSize: '20px',
+                          filter: 'sepia(1) saturate(5) hue-rotate(-10deg) drop-shadow(0 0 6px rgba(255, 165, 2, 0.8))',
                           animation: 'pulse 1.5s ease-in-out infinite'
                         }}>
                           🎥
                         </span>
                         <span style={{ 
-                          fontSize: '16px', 
+                          fontSize: '14px', 
                           fontWeight: 'bold',
                           background: 'linear-gradient(135deg, #ff6b6b, #ffa502, #ffeb3b, #ff6b6b)',
                           backgroundSize: '300% auto',

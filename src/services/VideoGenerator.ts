@@ -207,9 +207,8 @@ export async function generateVideo(options: GenerateVideoOptions): Promise<void
       width: scaled.width,
       height: scaled.height,
       referenceImage: imageBuffer,
-      // Calculate frames for 5-second video based on fps
-      // 16 fps = 81 frames, 32 fps = 161 frames
-      frames: fps === 32 ? 161 : 81,
+      // Frame count stays constant - fps only affects playback smoothness
+      frames: 81,
       fps: fps,
       tokenType: 'spark'
     };
