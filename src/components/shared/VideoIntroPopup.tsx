@@ -124,20 +124,22 @@ export const VideoIntroPopup: React.FC<VideoIntroPopupProps> = ({
           flexDirection: isDesktop ? 'row' : 'column',
           gap: isDesktop ? '24px' : '10px'
         }}>
-          {/* Video Section - Left on desktop, TOP on mobile (small portrait) */}
+          {/* Video Section - Left on desktop, TOP on mobile */}
           <div style={{
-            flex: isDesktop ? '0 0 320px' : 'none',
+            flex: isDesktop ? '0 0 320px' : '1 1 auto',
             order: 0,
             display: 'flex',
-            justifyContent: 'center'
+            justifyContent: 'center',
+            minHeight: isDesktop ? 'auto' : '280px'
           }}>
-            {/* Video Carousel - portrait aspect ratio, smaller on mobile */}
+            {/* Video Carousel - portrait aspect ratio */}
             <div style={{
               position: 'relative',
               borderRadius: '12px',
               overflow: 'hidden',
               aspectRatio: '9 / 16',
-              height: isDesktop ? '480px' : '160px',
+              height: isDesktop ? '480px' : '100%',
+              maxHeight: isDesktop ? '480px' : '280px',
               backgroundColor: '#000'
             }}>
               {VIDEO_INTRO_EXAMPLES.map((example, index) => (
