@@ -236,8 +236,8 @@ const createDefaultSettings = (): Settings => {
     qrCodeUrl: 'https://qr.sogni.ai', // Default QR code URL
     // Worker preferences
     requiredWorkers: [],
-    preferWorkers: ['SPICE.MUST.FLOW'],
-    skipWorkers: ['freeman123'],
+    preferWorkers: [],
+    skipWorkers: [],
     // Inactivity splash screen settings
     showSplashOnInactivity: false, // Default to disabled
     inactivityTimeout: 60 * 5, // Default to 5 minutes
