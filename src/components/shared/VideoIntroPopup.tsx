@@ -137,7 +137,7 @@ export const VideoIntroPopup: React.FC<VideoIntroPopupProps> = ({
               borderRadius: '12px',
               overflow: 'hidden',
               aspectRatio: '9 / 16',
-              height: isDesktop ? '480px' : '240px',
+              height: isDesktop ? '480px' : '280px',
               backgroundColor: '#000'
             }}>
               {VIDEO_INTRO_EXAMPLES.map((example, index) => (
@@ -273,33 +273,35 @@ export const VideoIntroPopup: React.FC<VideoIntroPopupProps> = ({
               ))}
             </div>
 
-            {/* Pricing info */}
-            <div style={{
-              background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.2), rgba(118, 75, 162, 0.2))',
-              borderRadius: isDesktop ? '12px' : '8px',
-              padding: isDesktop ? '16px' : '10px',
-              marginBottom: isDesktop ? '24px' : '10px',
-              border: '1px solid rgba(102, 126, 234, 0.3)'
-            }}>
+            {/* Pricing info - desktop only */}
+            {isDesktop && (
               <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                marginBottom: isDesktop ? '6px' : '4px'
+                background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.2), rgba(118, 75, 162, 0.2))',
+                borderRadius: '12px',
+                padding: '16px',
+                marginBottom: '24px',
+                border: '1px solid rgba(102, 126, 234, 0.3)'
               }}>
-                <span style={{ fontSize: isDesktop ? '18px' : '12px' }}>💎</span>
-                <span style={{ color: 'white', fontWeight: '600', fontSize: isDesktop ? '15px' : '11px' }}>
-                  Affordable Pricing
-                </span>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  marginBottom: '6px'
+                }}>
+                  <span style={{ fontSize: '18px' }}>💎</span>
+                  <span style={{ color: 'white', fontWeight: '600', fontSize: '15px' }}>
+                    Affordable Pricing
+                  </span>
+                </div>
+                <div style={{
+                  color: 'rgba(255, 255, 255, 0.7)',
+                  fontSize: '13px',
+                  lineHeight: 1.4
+                }}>
+                  <div>Fast (512p): ~<strong style={{ color: '#4CAF50' }}>12¢</strong> • High Quality (720p): ~<strong style={{ color: '#4CAF50' }}>30¢</strong></div>
+                </div>
               </div>
-              <div style={{
-                color: 'rgba(255, 255, 255, 0.7)',
-                fontSize: isDesktop ? '13px' : '10px',
-                lineHeight: 1.4
-              }}>
-                <div>Fast (512p): ~<strong style={{ color: '#4CAF50' }}>12¢</strong> • High Quality (720p): ~<strong style={{ color: '#4CAF50' }}>30¢</strong></div>
-              </div>
-            </div>
+            )}
 
             {/* Action buttons */}
             <div style={{
