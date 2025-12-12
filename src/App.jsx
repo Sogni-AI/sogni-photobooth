@@ -3095,24 +3095,35 @@ const App = () => {
       if (authState.isAuthenticated && authState.authMode === 'frontend') {
         // Use the frontend Sogni client with adapter for personal account credits
         console.log('Using frontend authentication mode - direct SDK connection for personal credits');
-        const realClient = authState.getSogniClient();
-        
+
+        // Use ensureClient() to recreate the SDK client if it's temporarily unavailable
+        // This is important for recovery after WebSocket errors (4015)
+        let realClient = authState.getSogniClient();
+
         if (!realClient) {
-          // Frontend client not available (e.g., during logout transition)
-          // Fall back to backend mode instead of throwing error
-          console.warn('⚠️ Frontend client not available, falling back to backend mode');
-          client = await initializeSogniClient();
-          setSogniClient(client);
-          setIsSogniReady(true);
-          console.log('✅ Backend Sogni client initialized successfully (fallback from frontend)');
-        } else {
+          // Try to recreate the client instead of falling back to backend
+          console.warn('⚠️ Frontend client temporarily unavailable, attempting to recreate...');
+          try {
+            realClient = await authState.ensureClient();
+            console.log('✅ Frontend client recreated successfully');
+          } catch (ensureError) {
+            console.error('❌ Failed to recreate frontend client:', ensureError);
+            // Only fall back to backend if we truly can't get a frontend client
+            console.warn('⚠️ Falling back to backend mode after frontend client recreation failed');
+            client = await initializeSogniClient();
+            setSogniClient(client);
+            setIsSogniReady(true);
+            console.log('✅ Backend Sogni client initialized successfully (fallback from frontend)');
+          }
+        }
+
+        if (realClient) {
           // Wrap the real client with our adapter to ensure compatibility with photobooth UI
           client = createFrontendClientAdapter(realClient);
-          
-          
+
           setSogniClient(client);
           setIsSogniReady(true);
-          
+
           console.log('✅ Frontend Sogni client initialized successfully with adapter - using personal account credits');
         }
         
@@ -6159,8 +6170,10 @@ const App = () => {
           
           // After a small delay, start the upward animation
           setTimeout(() => {
-            slothicornReference.current.style.transition = 'bottom 0.8s cubic-bezier(0.34, 1.2, 0.64, 1)';
-            slothicornReference.current.style.setProperty('bottom', '0px', 'important');
+            if (slothicornReference.current) {
+              slothicornReference.current.style.transition = 'bottom 0.8s cubic-bezier(0.34, 1.2, 0.64, 1)';
+              slothicornReference.current.style.setProperty('bottom', '0px', 'important');
+            }
           }, 50);
         }
         
@@ -6180,10 +6193,13 @@ const App = () => {
           
           // Wait for animation to complete, then clean up
           setTimeout(() => {
-            slothicornReference.current.style.transition = 'none';
-            slothicornReference.current.classList.remove('animating');
-            // Reset z-index after animation completes
-            slothicornReference.current.style.zIndex = '5000';
+            // Re-check ref since this is a delayed callback
+            if (slothicornReference.current) {
+              slothicornReference.current.style.transition = 'none';
+              slothicornReference.current.classList.remove('animating');
+              // Reset z-index after animation completes
+              slothicornReference.current.style.zIndex = '5000';
+            }
           }, 1500);
         }
       }, 1200);

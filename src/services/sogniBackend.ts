@@ -207,6 +207,9 @@ export class BackendSogniClient {
   public appId: string;
   public network: string;
   public account: BackendAccount;
+
+  // Video generation requires the frontend SDK - backend API doesn't support it
+  public readonly supportsVideo: boolean = false;
   public projects: {
     create: (params: Record<string, unknown>) => Promise<BackendProject>;
     estimateCost: (params: Record<string, unknown>) => Promise<{ token: number } | null>;

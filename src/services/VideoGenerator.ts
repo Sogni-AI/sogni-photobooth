@@ -27,6 +27,8 @@ type SogniClient = {
     on: (event: string, handler: (event: any) => void) => void;
     off?: (event: string, handler: (event: any) => void) => void;
   };
+  // supportsVideo is true for FrontendSogniClientAdapter (direct SDK), false for BackendSogniClient
+  supportsVideo?: boolean;
 };
 
 type SogniProject = {
@@ -130,6 +132,18 @@ export async function generateVideo(options: GenerateVideoOptions): Promise<void
     return;
   }
 
+  // Log client type for debugging video generation issues
+  const clientType = sogniClient?.supportsVideo === true ? 'FrontendSogniClientAdapter' : 
+                     sogniClient?.supportsVideo === false ? 'BackendSogniClient' : 'Unknown';
+  console.log(`[VIDEO] Starting video generation with client type: ${clientType}`);
+  console.log(`[VIDEO] Client details:`, {
+    supportsVideo: sogniClient?.supportsVideo,
+    hasProjects: !!sogniClient?.projects,
+    hasCreate: !!sogniClient?.projects?.create,
+    hasOn: !!sogniClient?.projects?.on,
+    hasOff: !!sogniClient?.projects?.off
+  });
+
   // Validate and scale dimensions
   let WIDTH = imageWidth;
   let HEIGHT = imageHeight;
@@ -200,7 +214,7 @@ export async function generateVideo(options: GenerateVideoOptions): Promise<void
       tokenType: 'spark'
     };
     
-    const project = await sogniClient.projects.create(createParams) as SogniProject;
+    const project = await sogniClient.projects.create(createParams);
 
     // Update state with project ID
     setPhotos(prev => {

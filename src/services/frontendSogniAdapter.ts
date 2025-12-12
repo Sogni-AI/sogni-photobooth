@@ -550,6 +550,9 @@ export class FrontendProjectAdapter extends BrowserEventEmitter implements Sogni
 export class FrontendSogniClientAdapter {
   private realClient: SogniClient;
 
+  // Video generation is supported when using the frontend SDK directly
+  public readonly supportsVideo: boolean = true;
+
   constructor(realClient: SogniClient) {
     this.realClient = realClient;
   }
@@ -557,6 +560,15 @@ export class FrontendSogniClientAdapter {
   get projects() {
     return {
       create: async (params: any) => {
+        // Log project type for debugging (especially video generation issues)
+        const projectType = params.type || 'image';
+        console.log(`[FrontendAdapter] Creating ${projectType} project`, {
+          type: params.type,
+          modelId: params.modelId,
+          hasReferenceImage: !!params.referenceImage,
+          sourceType: params.sourceType
+        });
+
         // Convert sensitiveContentFilter to disableNSFWFilter for SDK compatibility
         // This matches the backend's conversion logic in server/services/sogni.js
         const sdkParams = { ...params };
@@ -593,7 +605,9 @@ export class FrontendSogniClientAdapter {
         });
         
         // Create the real project with converted parameters
+        console.log(`[FrontendAdapter] Calling realClient.projects.create for ${projectType} project`);
         const realProject = await this.realClient.projects.create(sdkParams);
+        console.log(`[FrontendAdapter] ${projectType} project created with ID: ${realProject.id}`);
         
         // Wrap it in our adapter, passing both project and client for global events
         const adaptedProject = new FrontendProjectAdapter(realProject, this.realClient);
@@ -611,6 +625,12 @@ export class FrontendSogniClientAdapter {
         // Forward to the real client's projects if it has an 'on' method
         if (this.realClient.projects && typeof (this.realClient.projects as any).on === 'function') {
           (this.realClient.projects as any).on(event, callback);
+        }
+      },
+      off: (event: string, callback: (...args: any[]) => void) => {
+        // Forward to the real client's projects if it has an 'off' method
+        if (this.realClient.projects && typeof (this.realClient.projects as any).off === 'function') {
+          (this.realClient.projects as any).off(event, callback);
         }
       }
     };
