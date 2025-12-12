@@ -150,9 +150,9 @@ export function formatVideoDuration(seconds: number): string {
  */
 export const VIDEO_INTRO_EXAMPLES = [
   {
-    id: 'jazz',
-    filename: 'sogni-photobooth-video-demo_832x1216.mp4',
-    label: 'Jazz Saxophonist'
+    id: 'penguin',
+    filename: 'kiki-ssogni-photobooth-my-baby-penguin-raw.mp4',
+    label: 'My Baby Penguin'
   },
   {
     id: 'kitty',
@@ -160,9 +160,19 @@ export const VIDEO_INTRO_EXAMPLES = [
     label: 'Kitty Swarm'
   },
   {
+    id: 'iced',
+    filename: 'kiki-sogni-photobooth-iced-up-raw.mp4',
+    label: 'Iced Up'
+  },
+  {
     id: 'victorian',
     filename: 'sogni-photobooth-dappervictorian-raw.mp4',
     label: 'Dapper Victorian'
+  },
+  {
+    id: 'bear',
+    filename: 'kiki-ssogni-photobooth-my-baby-bear-raw.mp4',
+    label: 'My Baby Bear'
   }
 ];
 
