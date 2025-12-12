@@ -521,16 +521,54 @@ export function getActiveVideoProjectId(photo: Photo): string | undefined {
   return photo.videoProjectId;
 }
 
+/**
+ * Check if we're on a mobile device
+ */
+function isMobile(): boolean {
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+}
+
 export async function downloadVideo(videoUrl: string, filename?: string): Promise<void> {
+  const finalFilename = filename || `sogni-video-${Date.now()}.mp4`;
+
   const response = await fetch(videoUrl);
   if (!response.ok) throw new Error(`Download failed: ${response.statusText}`);
 
   const blob = await response.blob();
+
+  // On mobile, try to use the native Share API for better UX (allows saving to camera roll)
+  if (isMobile() && navigator.share && navigator.canShare) {
+    try {
+      const file = new File([blob], finalFilename, { type: 'video/mp4' });
+
+      if (navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: 'Save Video',
+          text: 'Your AI-generated video from Sogni Photobooth'
+        });
+        return; // Success - user can save via share sheet
+      }
+    } catch (shareError: unknown) {
+      // If user cancelled, don't fall back to download
+      if (shareError instanceof Error &&
+          (shareError.name === 'AbortError' ||
+           shareError.message.includes('abort') ||
+           shareError.message.includes('cancel') ||
+           shareError.message.includes('dismissed'))) {
+        return; // User cancelled - that's fine
+      }
+      // For other errors, fall through to standard download
+      console.log('Share API not available, using standard download');
+    }
+  }
+
+  // Standard download for desktop or if share failed
   const url = URL.createObjectURL(blob);
 
   const a = document.createElement('a');
   a.href = url;
-  a.download = filename || `sogni-video-${Date.now()}.mp4`;
+  a.download = finalFilename;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);

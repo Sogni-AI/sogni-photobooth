@@ -136,8 +136,8 @@ export const VideoIntroPopup: React.FC<VideoIntroPopupProps> = ({
               position: 'relative',
               borderRadius: '12px',
               overflow: 'hidden',
-              aspectRatio: '9 / 16',
-              height: isDesktop ? '480px' : '380px',
+              aspectRatio: '2 / 3',
+              height: isDesktop ? '500px' : '55vh',
               backgroundColor: '#000'
             }}>
               {VIDEO_INTRO_EXAMPLES.map((example, index) => (
