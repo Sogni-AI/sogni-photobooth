@@ -1582,24 +1582,28 @@ html body .photo-action-buttons .action-button,
   }
 }
 
-/* Video settings highlight animation */
-@keyframes video-settings-pulse {
-  0%, 100% {
-    box-shadow: 0 0 0 0 rgba(255, 165, 2, 0);
-    background-color: transparent;
-  }
-  10%, 30%, 50% {
-    box-shadow: 0 0 20px 5px rgba(255, 165, 2, 0.4);
-    background-color: rgba(255, 165, 2, 0.1);
+/* Video settings highlight animation - brief white border flash */
+@keyframes video-settings-flash {
+  0% {
+    outline: 2px solid transparent;
+    outline-offset: 2px;
   }
   20%, 40%, 60% {
-    box-shadow: 0 0 10px 2px rgba(255, 165, 2, 0.2);
-    background-color: rgba(255, 165, 2, 0.05);
+    outline: 2px solid rgba(255, 255, 255, 0.8);
+    outline-offset: 2px;
+  }
+  30%, 50%, 70% {
+    outline: 2px solid transparent;
+    outline-offset: 2px;
+  }
+  100% {
+    outline: 2px solid transparent;
+    outline-offset: 2px;
   }
 }
 
 .video-settings-highlight {
-  animation: video-settings-pulse 2s ease-out;
+  animation: video-settings-flash 1.2s ease-out;
   border-radius: 12px;
 }
 
