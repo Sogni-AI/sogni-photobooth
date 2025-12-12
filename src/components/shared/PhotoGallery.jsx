@@ -2621,8 +2621,11 @@ const PhotoGallery = ({
           <div className="photo-gallery-style-selector-content">
             {(() => {
               // Generate the full gallery image path with fallback logic
-              const folder = getPortraitFolderWithFallback(portraitType, selectedStyle, promptsDataRaw);
-              const stylePreviewImage = selectedStyle && selectedStyle !== 'custom'
+              // Skip special styles that don't have preview images
+              const isIndividualStyle = selectedStyle && 
+                !['custom', 'random', 'randomMix', 'oneOfEach', 'browseGallery', 'copyImageStyle'].includes(selectedStyle);
+              const folder = isIndividualStyle ? getPortraitFolderWithFallback(portraitType, selectedStyle, promptsDataRaw) : null;
+              const stylePreviewImage = isIndividualStyle && folder
                 ? `${urls.assetUrl}/gallery/prompts/${folder}/${generateGalleryFilename(selectedStyle)}`
                 : null;
               return stylePreviewImage ? (
