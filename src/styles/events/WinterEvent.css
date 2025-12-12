@@ -157,7 +157,7 @@
   height: 32px;
   display: flex;
   align-items: center;
-  justifyContent: center;
+  justify-content: center;
   cursor: pointer;
   z-index: 6;
   opacity: 0;
