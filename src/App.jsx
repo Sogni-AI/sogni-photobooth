@@ -8463,30 +8463,43 @@ const App = () => {
         
         const blob = await response.blob();
         
+        // Create the blob URL first - we'll reuse it for both pre-load and adjuster
+        const tempUrl = URL.createObjectURL(blob);
+        
         // Pre-load the image into browser cache before showing adjuster
         // This prevents race conditions on mobile Safari where canvas.toBlob() 
         // is called before the image fully decodes
+        // IMPORTANT: We reuse the same blob URL to avoid memory leaks and ensure
+        // the image data stays alive on mobile browsers
         await new Promise((resolve, reject) => {
           const img = new Image();
           img.onload = () => {
             console.log('✅ Einstein image pre-loaded successfully');
+            // Keep the image reference alive until adjuster is shown
+            // by attaching it to window temporarily (mobile Safari workaround)
+            window.__einsteinPreloadImg = img;
             resolve();
           };
           img.onerror = (error) => {
             console.error('❌ Einstein image pre-load failed:', error);
+            URL.revokeObjectURL(tempUrl); // Clean up on error
             reject(error);
           };
-          img.src = URL.createObjectURL(blob);
+          img.src = tempUrl;
         });
-        
-        // Create fresh blob URL for the adjuster (the pre-load one is garbage collected)
-        const tempUrl = URL.createObjectURL(blob);
         
         // Einstein is just a fallback - don't save it to state
         // Only the adjusted version will be saved when user confirms
         setCurrentUploadedImageUrl(tempUrl);
         setCurrentUploadedSource('camera'); // Treat as camera source for UI
         setShowImageAdjuster(true);
+        
+        // Clean up the preload reference after a short delay
+        // (enough time for ImageAdjuster to load the image)
+        setTimeout(() => {
+          delete window.__einsteinPreloadImg;
+        }, 2000);
+        
         return;
       } catch (error) {
         console.error('Failed to load Einstein fallback:', error);
@@ -8541,30 +8554,43 @@ const App = () => {
         
         const blob = await response.blob();
         
+        // Create the blob URL first - we'll reuse it for both pre-load and adjuster
+        const tempUrl = URL.createObjectURL(blob);
+        
         // Pre-load the image into browser cache before showing adjuster
         // This prevents race conditions on mobile Safari where canvas.toBlob() 
         // is called before the image fully decodes
+        // IMPORTANT: We reuse the same blob URL to avoid memory leaks and ensure
+        // the image data stays alive on mobile browsers
         await new Promise((resolve, reject) => {
           const img = new Image();
           img.onload = () => {
             console.log('✅ Einstein image pre-loaded successfully');
+            // Keep the image reference alive until adjuster is shown
+            // by attaching it to window temporarily (mobile Safari workaround)
+            window.__einsteinPreloadImg = img;
             resolve();
           };
           img.onerror = (error) => {
             console.error('❌ Einstein image pre-load failed:', error);
+            URL.revokeObjectURL(tempUrl); // Clean up on error
             reject(error);
           };
-          img.src = URL.createObjectURL(blob);
+          img.src = tempUrl;
         });
-        
-        // Create fresh blob URL for the adjuster (the pre-load one is garbage collected)
-        const tempUrl = URL.createObjectURL(blob);
         
         // Einstein is just a fallback - don't save it to state
         // Only the adjusted version will be saved when user confirms
         setCurrentUploadedImageUrl(tempUrl);
         setCurrentUploadedSource('camera'); // Treat as camera source for UI
         setShowImageAdjuster(true);
+        
+        // Clean up the preload reference after a short delay
+        // (enough time for ImageAdjuster to load the image)
+        setTimeout(() => {
+          delete window.__einsteinPreloadImg;
+        }, 2000);
+        
         return;
       } catch (error) {
         console.error('Failed to load Einstein fallback:', error);
