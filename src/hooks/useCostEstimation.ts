@@ -1,3 +1,10 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-unsafe-return */
+
 import { useState, useEffect, useRef } from 'react';
 import { useSogniAuth } from '../services/sogniAuth';
 import { useWallet } from './useWallet';
@@ -19,6 +26,7 @@ interface CostEstimationParams {
 interface CostEstimationResult {
   loading: boolean;
   cost: number | null;
+  costInUSD: number | null;
   error: Error | null;
   formattedCost: string;
 }
@@ -30,6 +38,7 @@ interface CostEstimationResult {
 export function useCostEstimation(params: CostEstimationParams): CostEstimationResult {
   const [loading, setLoading] = useState(false);
   const [cost, setCost] = useState<number | null>(null);
+  const [costInUSD, setCostInUSD] = useState<number | null>(null);
   const [error, setError] = useState<Error | null>(null);
   const { getSogniClient } = useSogniAuth();
   const { tokenType } = useWallet();
@@ -99,11 +108,25 @@ export function useCostEstimation(params: CostEstimationParams): CostEstimationR
         } else {
           setCost(null);
         }
+
+        // Extract USD cost if available
+        if (result && result.usd !== undefined && result.usd !== null) {
+          const usdCost = typeof result.usd === 'string' ? parseFloat(result.usd) : result.usd;
+          if (!isNaN(usdCost)) {
+            setCostInUSD(usdCost);
+          } else {
+            setCostInUSD(null);
+          }
+        } else {
+          setCostInUSD(null);
+        }
+
         setLoading(false);
       } catch (err) {
         console.warn('[CostEstimation] Cost estimation failed:', err);
         setError(err as Error);
         setCost(null);
+        setCostInUSD(null);
         setLoading(false);
       }
     };
@@ -111,12 +134,20 @@ export function useCostEstimation(params: CostEstimationParams): CostEstimationR
     void estimateCost();
   }, [params.model, params.imageCount, params.stepCount, params.previewCount, params.scheduler, params.guidance, params.contextImages, params.cnEnabled, params.guideImage, params.denoiseStrength, params.network, tokenType]);
 
-  // Format the cost for display
-  const formattedCost = cost !== null ? cost.toFixed(2) : '—';
+  // Format the cost for display - includes USD in parentheses if available
+  let formattedCost = '—';
+  if (cost !== null) {
+    formattedCost = cost.toFixed(2);
+    if (costInUSD !== null) {
+      const roundedUSD = Math.round(costInUSD * 100) / 100;
+      formattedCost += ` (~$${roundedUSD.toFixed(2)})`;
+    }
+  }
 
   return {
     loading,
     cost,
+    costInUSD,
     error,
     formattedCost
   };

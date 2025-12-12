@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useApp } from '../../context/AppContext';
 import { AspectRatioOption, TezDevTheme, OutputFormat, Settings } from '../../types/index';
 import { isFluxKontextModel, getModelRanges, getModelDefaults } from '../../constants/settings';
+import { VIDEO_RESOLUTIONS, VideoQualityPreset, VideoResolution } from '../../constants/videoSettings';
 import { themeConfigService } from '../../services/themeConfig';
 import { sanitizeUrl, getUrlValidationError } from '../../utils/urlValidation';
 import { useSogniAuth } from '../../services/sogniAuth';
@@ -358,6 +359,17 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
   // State for collapsible Advanced Model Settings section
   const [showAdvancedModelSettings, setShowAdvancedModelSettings] = React.useState(false);
 
+  // State for collapsible Video Generation section
+  const [showVideoSettings, setShowVideoSettings] = React.useState(false);
+
+  // Video settings from context - ensure valid defaults
+  const validVideoQualityOptions = ['fast', 'balanced', 'quality', 'pro'] as const;
+  const currentVideoResolution = settings.videoResolution || '480p';
+  const rawVideoQuality = settings.videoQuality;
+  const currentVideoQuality = rawVideoQuality && validVideoQualityOptions.includes(rawVideoQuality as typeof validVideoQualityOptions[number])
+    ? rawVideoQuality
+    : 'fast';
+
   const handleAspectRatioChange = (newAspectRatio: AspectRatioOption) => {
     // Use the provided handler or fallback to context
     if (onAspectRatioChange) {
@@ -487,7 +499,7 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
 
         {/* Aspect Ratio selector */}
         <div className="control-option">
-          <label className="control-label">Aspect Ratio:</label>
+          <label className="control-label">Aspect Ratio</label>
           <div className="aspect-ratio-controls">
             <button 
               className={`aspect-ratio-button ${currentAspectRatio === 'ultranarrow' ? 'active' : ''}`}
@@ -582,7 +594,7 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
           <div className="model-group">
             {/* Main Image Model selector */}
             <div className="control-option model-main">
-              <label className="control-label">Image Model:</label>
+              <label className="control-label">Image Model</label>
               <select
                 className="model-select"
                 onChange={(e) => {
@@ -752,7 +764,7 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
 
         {/* Number of images slider */}
         <div className="control-option">
-          <label className="control-label">Number of Images:</label>
+          <label className="control-label">Number of Images</label>
           <input
             type="range"
             min={modelRanges.numImages?.min || 1}
@@ -788,7 +800,7 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
                   color: autoFocusPositivePrompt ? '#3b82f6' : undefined,
                   fontWeight: autoFocusPositivePrompt ? '600' : undefined
                 }}>
-                  Positive Prompt: {autoFocusPositivePrompt && <span style={{ color: '#3b82f6', fontSize: '12px' }}>✨ Ready to edit</span>}
+                  Positive Prompt {autoFocusPositivePrompt && <span style={{ color: '#3b82f6', fontSize: '12px' }}>✨ Ready to edit</span>}
                 </label>
                 <textarea
                   ref={positivePromptRef}
@@ -810,7 +822,7 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
 
               {/* Style Prompt */}
               <div className="control-option">
-                <label className="control-label">Style Prompt:</label>
+                <label className="control-label">Style Prompt</label>
                 <textarea
                   className="custom-style-input"
                   placeholder="Additional style modifier (optional, appended to positive prompt)"
@@ -825,7 +837,7 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
 
               {/* Negative Prompt */}
               <div className="control-option">
-                <label className="control-label">Negative Prompt:</label>
+                <label className="control-label">Negative Prompt</label>
                 <textarea
                   className="custom-style-input"
                   placeholder="lowres, worst quality, low quality"
@@ -840,7 +852,7 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
 
               {/* Seed */}
               <div className="control-option">
-                <label className="control-label">Seed (leave blank for random):</label>
+                <label className="control-label">Seed (leave blank for random)</label>
                 <input
                   type="number"
                   min={0}
@@ -898,7 +910,7 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
               {/* QR Code Size - only show when watermark is enabled */}
               {settings.sogniWatermark && (
                 <div className="control-option">
-                  <label htmlFor="qr-size-slider" className="control-label">QR Code Size: {localQRSize}px</label>
+                  <label htmlFor="qr-size-slider" className="control-label">QR Code Size {localQRSize}px</label>
                   <input
                     type="range"
                     id="qr-size-slider"
@@ -1086,6 +1098,161 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
           )}
         </div>
         
+        {/* Video Generation Section - Collapsible (only show for authenticated users) */}
+        {authState.isAuthenticated && (
+          <div className="settings-section-group" id="video-settings-section">
+            <div className="advanced-toggle-wrapper">
+              <button
+                className="advanced-toggle-subtle"
+                onClick={() => setShowVideoSettings(!showVideoSettings)}
+                type="button"
+              >
+                <span className="toggle-text" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                  🎥 Video Generation
+                  <span style={{
+                    background: 'linear-gradient(135deg, #ff6b6b, #ffa502)',
+                    color: 'white',
+                    fontSize: '10px',
+                    fontWeight: 'bold',
+                    padding: '2px 6px',
+                    borderRadius: '8px',
+                    animation: 'pulse 2s ease-in-out infinite'
+                  }}>NEW</span>
+                </span>
+                <span className={`toggle-chevron ${showVideoSettings ? 'expanded' : ''}`}>
+                  ›
+                </span>
+              </button>
+            </div>
+
+            {showVideoSettings && (
+              <div className="advanced-subsection">
+                <div className="control-description" style={{ marginBottom: '12px', opacity: 0.8 }}>
+                  Transform your photos into 5-second motion videos using AI.
+                </div>
+
+                {/* Video Resolution selector */}
+                <div className="control-option">
+                  <label className="control-label">Resolution:</label>
+                  <select
+                    className="model-select"
+                    onChange={(e) => updateSetting('videoResolution', e.target.value as VideoResolution)}
+                    value={currentVideoResolution}
+                  >
+                    {Object.entries(VIDEO_RESOLUTIONS).map(([key, config]) => (
+                      <option key={key} value={key}>
+                        {config.label} - {config.description}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Video Quality selector */}
+                <div className="control-option">
+                  <label className="control-label">Quality:</label>
+                  <select
+                    className="model-select"
+                    onChange={(e) => updateSetting('videoQuality', e.target.value as VideoQualityPreset)}
+                    value={currentVideoQuality}
+                  >
+                    <option value="fast">Fast - Quick generation (~12-20s)</option>
+                    <option value="balanced">Balanced - Good balance (~25-40s)</option>
+                    <option value="quality">High Quality - Slower (~1-2 min)</option>
+                    <option value="pro">Pro - Maximum quality (~2-4 min)</option>
+                  </select>
+                </div>
+                <div className="control-description" style={{ marginTop: '-8px', marginBottom: '12px', marginLeft: '8px' }}>
+                  Higher quality = longer generation time and higher cost
+                </div>
+
+                {/* Video Framerate selector */}
+                <div className="control-option">
+                  <label className="control-label">Framerate:</label>
+                  <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', color: 'white' }}>
+                      <input
+                        type="radio"
+                        name="videoFramerate"
+                        value="16"
+                        checked={(settings.videoFramerate || 16) === 16}
+                        onChange={() => updateSetting('videoFramerate', 16)}
+                        style={{ cursor: 'pointer' }}
+                      />
+                      16 fps
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', color: 'white' }}>
+                      <input
+                        type="radio"
+                        name="videoFramerate"
+                        value="32"
+                        checked={(settings.videoFramerate || 16) === 32}
+                        onChange={() => updateSetting('videoFramerate', 32)}
+                        style={{ cursor: 'pointer' }}
+                      />
+                      32 fps
+                    </label>
+                  </div>
+                </div>
+                <div className="control-description" style={{ marginTop: '-8px', marginBottom: '12px', marginLeft: '8px' }}>
+                  32 fps is smoother but costs more
+                </div>
+
+                {/* Video Positive Motion Prompt */}
+                <div className="control-option" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '8px' }}>
+                  <label className="control-label">Positive Motion Prompt:</label>
+                  <textarea
+                    value={settings.videoPositivePrompt || ''}
+                    onChange={(e) => updateSetting('videoPositivePrompt', e.target.value)}
+                    placeholder="e.g., smooth camera pan, cinematic motion"
+                    rows={2}
+                    style={{
+                      width: '100%',
+                      padding: '8px 12px',
+                      borderRadius: '6px',
+                      border: '1px solid rgba(255, 255, 255, 0.2)',
+                      background: 'rgba(0, 0, 0, 0.3)',
+                      color: 'white',
+                      fontSize: '13px',
+                      resize: 'vertical',
+                      minHeight: '50px',
+                      fontFamily: 'inherit'
+                    }}
+                  />
+                </div>
+                <div className="control-description" style={{ marginTop: '-8px', marginBottom: '12px', marginLeft: '8px' }}>
+                  Optional guidance for motion style
+                </div>
+
+                {/* Video Negative Motion Prompt */}
+                <div className="control-option" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '8px' }}>
+                  <label className="control-label">Negative Motion Prompt:</label>
+                  <textarea
+                    value={settings.videoNegativePrompt || ''}
+                    onChange={(e) => updateSetting('videoNegativePrompt', e.target.value)}
+                    placeholder="e.g., static, frozen, blurry, distorted"
+                    rows={2}
+                    style={{
+                      width: '100%',
+                      padding: '8px 12px',
+                      borderRadius: '6px',
+                      border: '1px solid rgba(255, 255, 255, 0.2)',
+                      background: 'rgba(0, 0, 0, 0.3)',
+                      color: 'white',
+                      fontSize: '13px',
+                      resize: 'vertical',
+                      minHeight: '50px',
+                      fontFamily: 'inherit'
+                    }}
+                  />
+                </div>
+                <div className="control-description" style={{ marginTop: '-8px', marginBottom: '12px', marginLeft: '8px' }}>
+                  Optional - things to avoid in the video
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Advanced Features Section - Collapsible */}
         <div className="settings-section-group">
           <div className="advanced-toggle-wrapper">

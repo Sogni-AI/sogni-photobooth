@@ -241,6 +241,75 @@ router.post('/track/generation', async (req, res) => {
 });
 
 /**
+ * Track video generation event
+ * POST /api/analytics/track/video-generation
+ * Body: { 
+ *   resolution: string,
+ *   quality: string,
+ *   modelId?: string,
+ *   width?: number,
+ *   height?: number,
+ *   success: boolean,
+ *   errorMessage?: string
+ * }
+ */
+router.post('/track/video-generation', async (req, res) => {
+  try {
+    const { 
+      resolution, 
+      quality, 
+      modelId, 
+      width, 
+      height, 
+      success = true, 
+      errorMessage 
+    } = req.body;
+    
+    // Track video generation attempt
+    await trackMetric('videos_generated_attempts', 1);
+    
+    if (success) {
+      // Track successful video generation
+      await trackMetric('videos_generated_success', 1);
+      
+      // Track by resolution
+      if (resolution === '480p') {
+        await trackMetric('videos_generated_480p', 1);
+      } else if (resolution === '720p') {
+        await trackMetric('videos_generated_720p', 1);
+      }
+      
+      // Track by quality
+      if (quality) {
+        await trackMetric(`videos_generated_${quality}`, 1);
+      }
+    } else {
+      // Track failed video generation
+      await trackMetric('videos_generated_failed', 1);
+    }
+    
+    console.log(`[Analytics API] ✅ Video generation tracked: ${resolution}, ${quality}, success: ${success}${errorMessage ? `, error: ${errorMessage}` : ''}`);
+    
+    res.json({ 
+      success: true, 
+      message: 'Video generation tracked successfully',
+      tracked: {
+        resolution,
+        quality,
+        success,
+        dimensions: width && height ? `${width}x${height}` : null
+      }
+    });
+  } catch (error) {
+    console.error('[Analytics API] ❌ Error tracking video generation:', error);
+    res.status(500).json({ 
+      error: 'Failed to track video generation',
+      details: error.message
+    });
+  }
+});
+
+/**
  * Admin endpoint: Clear all analytics data
  * DELETE /api/analytics/clear-all?confirm=true
  */

@@ -203,7 +203,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       inactivityTimeout: getSettingFromCookie('inactivityTimeout', DEFAULT_SETTINGS.inactivityTimeout),
       // Event context flags
       halloweenContext: getSettingFromCookie('halloweenContext', DEFAULT_SETTINGS.halloweenContext),
-      winterContext // Include winterContext in settings
+      winterContext, // Include winterContext in settings
+      // Video generation settings
+      videoResolution: getSettingFromCookie('videoResolution', DEFAULT_SETTINGS.videoResolution),
+      videoQuality: getSettingFromCookie('videoQuality', DEFAULT_SETTINGS.videoQuality),
+      videoFramerate: getSettingFromCookie('videoFramerate', DEFAULT_SETTINGS.videoFramerate),
+      videoPositivePrompt: getSettingFromCookie('videoPositivePrompt', DEFAULT_SETTINGS.videoPositivePrompt),
+      videoNegativePrompt: getSettingFromCookie('videoNegativePrompt', DEFAULT_SETTINGS.videoNegativePrompt)
     };
   });
   

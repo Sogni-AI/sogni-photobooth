@@ -27,9 +27,29 @@ import StyleDropdown from './StyleDropdown';
 import { useSogniAuth } from '../../services/sogniAuth';
 import { useWallet } from '../../hooks/useWallet';
 import { useCostEstimation } from '../../hooks/useCostEstimation.ts';
+import { useVideoCostEstimation } from '../../hooks/useVideoCostEstimation.ts';
 import { getTokenLabel } from '../../services/walletService';
 import { useToastContext } from '../../context/ToastContext';
 import { generateGalleryFilename, getPortraitFolderWithFallback } from '../../utils/galleryLoader';
+import { generateVideo, cancelVideoGeneration, downloadVideo } from '../../services/VideoGenerator.ts';
+import { hasSeenVideoIntro, hasGeneratedVideo, formatVideoDuration } from '../../constants/videoSettings.ts';
+import VideoIntroPopup from './VideoIntroPopup.tsx';
+
+// Random video completion messages
+const VIDEO_READY_MESSAGES = [
+  { title: '🎬 Action!', message: 'Your masterpiece is ready for its premiere!' },
+  { title: '✨ Magic Complete!', message: 'AI wizardry has transformed your photo!' },
+  { title: '🚀 Liftoff!', message: 'Your video has landed. Time to share!' },
+  { title: '🎉 Nailed It!', message: 'Looking good! Your video is ready to roll.' },
+  { title: '🔥 Fresh & Hot!', message: 'Straight from the AI oven. Enjoy!' },
+  { title: '💫 Showtime!', message: 'Lights, camera, your video is ready!' },
+  { title: '🎯 Bullseye!', message: 'Perfect timing. Your video awaits!' },
+  { title: '⚡ Zap!', message: 'Lightning fast! Your video is done.' }
+];
+
+const getRandomVideoMessage = () => {
+  return VIDEO_READY_MESSAGES[Math.floor(Math.random() * VIDEO_READY_MESSAGES.length)];
+};
 
 // Memoized placeholder image component to prevent blob reloading
 const PlaceholderImage = memo(({ placeholderUrl }) => {
@@ -153,9 +173,29 @@ const PhotoGallery = ({
   const { tokenType } = useWallet();
   const tokenLabel = getTokenLabel(tokenType);
 
+  // Helper function to format cost - shows token cost with USD in parentheses
+  const formatCost = (tokenCost, usdCost) => {
+    // Handle null, undefined, or dash placeholder
+    if (tokenCost === null || tokenCost === undefined || tokenCost === '—' || tokenCost === '') return null;
+    
+    // Parse if it's a string number
+    const costValue = typeof tokenCost === 'string' ? parseFloat(tokenCost) : tokenCost;
+    if (isNaN(costValue)) return null;
+    
+    let result = `${costValue.toFixed(2)} ${tokenLabel}`;
+    
+    // Add USD in parentheses if available
+    if (usdCost !== null && usdCost !== undefined && !isNaN(usdCost)) {
+      const roundedUSD = Math.round(usdCost * 100) / 100;
+      result += ` (~$${roundedUSD.toFixed(2)})`;
+    }
+    
+    return result;
+  };
+
   // Cost estimation for Krea enhancement (one-click image enhance)
   // Krea uses the image as a guide/starting image for enhancement
-  const { loading: kreaLoading, formattedCost: kreaCost } = useCostEstimation({
+  const { loading: kreaLoading, formattedCost: kreaCost, costInUSD: kreaUSD } = useCostEstimation({
     model: 'flux1-krea-dev_fp8_scaled',
     imageCount: 1,
     stepCount: 24, // Krea uses 24 steps (from PhotoEnhancer)
@@ -171,7 +211,7 @@ const PhotoGallery = ({
 
   // Cost estimation for Kontext enhancement (AI-guided enhancement)
   // Kontext uses the image as a context/reference image
-  const { loading: kontextLoading, formattedCost: kontextCost } = useCostEstimation({
+  const { loading: kontextLoading, formattedCost: kontextCost, costInUSD: kontextUSD } = useCostEstimation({
     model: 'flux1-dev-kontext_fp8_scaled',
     imageCount: 1,
     stepCount: 24, // Kontext uses 24 steps (from PhotoEnhancer)
@@ -182,6 +222,26 @@ const PhotoGallery = ({
     contextImages: 1, // Using 1 Flux Kontext reference image
     cnEnabled: false, // Not using ControlNet
     guideImage: false // Not using guide image (uses contextImages instead)
+  });
+
+  // Video generation state
+  const [showVideoDropdown, setShowVideoDropdown] = useState(false);
+  const [showVideoIntroPopup, setShowVideoIntroPopup] = useState(false);
+  const [showVideoNewBadge, setShowVideoNewBadge] = useState(() => !hasGeneratedVideo());
+
+  // Get selected photo dimensions for video cost estimation
+  const selectedPhoto = selectedPhotoIndex !== null ? photos[selectedPhotoIndex] : null;
+
+  // Video cost estimation - include selectedPhotoIndex to bust cache when switching photos
+  const { loading: videoLoading, cost: videoCostRaw, costInUSD: videoUSD, refetch: refetchVideoCost } = useVideoCostEstimation({
+    imageWidth: desiredWidth || 768,
+    imageHeight: desiredHeight || 1024,
+    resolution: settings.videoResolution || '480p',
+    quality: settings.videoQuality || 'fast',
+    fps: settings.videoFramerate || 16,
+    enabled: isAuthenticated && selectedPhoto !== null,
+    // Include photo index to bust cache when switching between photos
+    photoId: selectedPhotoIndex
   });
   
   // State for custom prompt popup in Sample Gallery mode
@@ -251,9 +311,12 @@ const PhotoGallery = ({
   // State for vibe selector widget (only show when NOT in prompt selector mode and widget props are provided)
   const [showStyleDropdown, setShowStyleDropdown] = useState(false);
 
-  // State for video overlay - track which photo's video is playing by photo ID
+  // State for video overlay - track which photo's video is playing by photo ID (for easter egg videos)
   const [activeVideoPhotoId, setActiveVideoPhotoId] = useState(null);
   const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
+  
+  // State for AI-generated video playback (separate from easter egg videos)
+  const [playingGeneratedVideoId, setPlayingGeneratedVideoId] = useState(null);
   
   // State to track if user wants fullscreen mode in Style Explorer
   const [wantsFullscreen, setWantsFullscreen] = useState(false);
@@ -822,6 +885,227 @@ const PhotoGallery = ({
     setCustomPrompt('');
   }, []);
 
+  // ============================================
+  // Video Generation Handlers
+  // ============================================
+
+  // Handle Video button click
+  const handleVideoButtonClick = useCallback(() => {
+    // Check if user has seen the intro popup
+    if (!hasSeenVideoIntro()) {
+      setShowVideoIntroPopup(true);
+      return;
+    }
+    // Otherwise show the video dropdown
+    setShowVideoDropdown(prev => !prev);
+  }, []);
+
+  // Handle video intro popup dismiss
+  const handleVideoIntroDismiss = useCallback(() => {
+    setShowVideoIntroPopup(false);
+  }, []);
+
+  // Handle video intro popup proceed (user wants to generate)
+  const handleVideoIntroProceed = useCallback(() => {
+    setShowVideoIntroPopup(false);
+    setShowVideoDropdown(true);
+  }, []);
+
+  // Handle opening video settings
+  const handleOpenVideoSettings = useCallback(() => {
+    setShowVideoDropdown(false);
+    handleShowControlOverlay();
+    // Expand video section and scroll to it after a short delay
+    setTimeout(() => {
+      const videoSection = document.getElementById('video-settings-section');
+      if (videoSection) {
+        // Click on the toggle to expand if not already expanded
+        const toggle = videoSection.querySelector('.advanced-toggle-subtle');
+        if (toggle) {
+          const isExpanded = toggle.getAttribute('aria-expanded') === 'true';
+          if (!isExpanded) {
+            toggle.click();
+          }
+        }
+        // Give a bit more time for expansion animation, then scroll
+        setTimeout(() => {
+          videoSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          // Add highlight animation
+          videoSection.classList.add('video-settings-highlight');
+          // Remove highlight after animation completes
+          setTimeout(() => {
+            videoSection.classList.remove('video-settings-highlight');
+          }, 2000);
+        }, 150);
+      }
+    }, 200);
+  }, [handleShowControlOverlay]);
+
+  // Handle video generation
+  const handleGenerateVideo = useCallback(async () => {
+    setShowVideoDropdown(false);
+
+    if (selectedPhotoIndex === null) return;
+
+    const photo = photos[selectedPhotoIndex];
+    if (!photo || photo.generatingVideo) {
+      return;
+    }
+
+    // Hide the NEW badge after first video generation attempt
+    setShowVideoNewBadge(false);
+
+    // Get the actual image dimensions by loading the image
+    const imageUrl = photo.enhancedImageUrl || photo.images?.[selectedSubIndex || 0] || photo.originalDataUrl;
+    if (!imageUrl) {
+      showToast({
+        title: 'Video Failed',
+        message: 'No image available for video generation.',
+        type: 'error'
+      });
+      return;
+    }
+
+    // Load image to get actual dimensions
+    const img = new Image();
+    
+    img.onload = () => {
+      const actualWidth = img.naturalWidth || img.width;
+      const actualHeight = img.naturalHeight || img.height;
+      
+      generateVideo({
+        photo,
+        photoIndex: selectedPhotoIndex,
+        subIndex: selectedSubIndex || 0,
+        imageWidth: actualWidth,
+        imageHeight: actualHeight,
+        sogniClient,
+        setPhotos,
+        resolution: settings.videoResolution || '480p',
+        quality: settings.videoQuality || 'fast',
+        fps: settings.videoFramerate || 16,
+        positivePrompt: settings.videoPositivePrompt || '',
+        negativePrompt: settings.videoNegativePrompt || '',
+        onComplete: (videoUrl) => {
+          // Auto-play the generated video when completed
+          setPlayingGeneratedVideoId(photo.id);
+          const videoMessage = getRandomVideoMessage();
+          showToast({
+            title: videoMessage.title,
+            message: videoMessage.message,
+            type: 'success'
+          });
+        },
+        onError: (error) => {
+          showToast({
+            title: 'Video Failed',
+            message: error.message || 'Video generation failed. Please try again.',
+            type: 'error'
+          });
+        },
+        onCancel: () => {
+          showToast({
+            title: 'Video Cancelled',
+            message: 'Video generation was cancelled.',
+            type: 'info'
+          });
+        }
+      });
+    };
+    
+    img.onerror = () => {
+      // Fallback to generation target dimensions
+      const fallbackWidth = desiredWidth || 768;
+      const fallbackHeight = desiredHeight || 1024;
+      
+      generateVideo({
+        photo,
+        photoIndex: selectedPhotoIndex,
+        subIndex: selectedSubIndex || 0,
+        imageWidth: fallbackWidth,
+        imageHeight: fallbackHeight,
+        sogniClient,
+        setPhotos,
+        resolution: settings.videoResolution || '480p',
+        quality: settings.videoQuality || 'fast',
+        fps: settings.videoFramerate || 16,
+        positivePrompt: settings.videoPositivePrompt || '',
+        negativePrompt: settings.videoNegativePrompt || '',
+        onComplete: (videoUrl) => {
+          // Auto-play the generated video when completed
+          setPlayingGeneratedVideoId(photo.id);
+          const videoMessage = getRandomVideoMessage();
+          showToast({
+            title: videoMessage.title,
+            message: videoMessage.message,
+            type: 'success'
+          });
+        },
+        onError: (error) => {
+          showToast({
+            title: 'Video Failed',
+            message: error.message || 'Video generation failed. Please try again.',
+            type: 'error'
+          });
+        },
+        onCancel: () => {
+          showToast({
+            title: 'Video Cancelled',
+            message: 'Video generation was cancelled.',
+            type: 'info'
+          });
+        }
+      });
+    };
+    
+    img.src = imageUrl;
+  }, [selectedPhotoIndex, selectedSubIndex, desiredWidth, desiredHeight, sogniClient, setPhotos, settings.videoResolution, settings.videoQuality, photos, showToast]);
+
+  // Handle video cancellation
+  const handleCancelVideo = useCallback(() => {
+    if (selectedPhotoIndex === null) return;
+
+    const photo = photos[selectedPhotoIndex];
+    if (!photo?.videoProjectId) return;
+
+    cancelVideoGeneration(
+      photo.videoProjectId,
+      sogniClient,
+      setPhotos,
+      () => {
+        showToast({
+          title: 'Video Cancelled',
+          message: 'Video generation was cancelled.',
+          type: 'info'
+        });
+      }
+    );
+  }, [selectedPhotoIndex, photos, sogniClient, setPhotos, showToast]);
+
+  // Handle video download
+  const handleDownloadVideo = useCallback(() => {
+    if (selectedPhotoIndex === null) return;
+
+    const photo = photos[selectedPhotoIndex];
+    if (!photo?.videoUrl) return;
+
+    downloadVideo(photo.videoUrl, `sogni-video-${Date.now()}.mp4`)
+      .then(() => {
+        showToast({
+          title: 'Download Started',
+          message: 'Your video is being downloaded.',
+          type: 'success'
+        });
+      })
+      .catch(() => {
+        showToast({
+          title: 'Download Failed',
+          message: 'Failed to download video. Please try again.',
+          type: 'error'
+        });
+      });
+  }, [selectedPhotoIndex, photos, showToast]);
+
   // Handle theme group toggle for prompt selector mode
   const handleThemeGroupToggle = useCallback((groupId) => {
     if (!isPromptSelectorMode) return;
@@ -1355,6 +1639,24 @@ const PhotoGallery = ({
       document.removeEventListener('click', handleClickOutside);
     };
   }, [showEnhanceDropdown]);
+
+  // Close video dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (!showVideoDropdown) return;
+      const target = event.target;
+      const inVideoContainer = !!target.closest('.video-button-container');
+      const inVideoDropdown = !!target.closest('.video-dropdown');
+      if (!inVideoContainer && !inVideoDropdown) {
+        setShowVideoDropdown(false);
+      }
+    };
+
+    document.addEventListener('click', handleClickOutside);
+    return () => {
+      document.removeEventListener('click', handleClickOutside);
+    };
+  }, [showVideoDropdown]);
 
   // Close search input when clicking outside
   useEffect(() => {
@@ -3041,9 +3343,9 @@ const PhotoGallery = ({
                     }}
                   >
                     ✨ One-click image enhance
-                    {isAuthenticated && !kreaLoading && kreaCost && kreaCost !== '—' && (
+                    {isAuthenticated && !kreaLoading && formatCost(kreaCost, kreaUSD) && (
                       <div style={{ fontSize: '13px', opacity: 0.9, marginTop: '4px' }}>
-                        {kreaCost} {tokenLabel}
+                        {formatCost(kreaCost, kreaUSD)}
                       </div>
                     )}
                   </button>
@@ -3095,9 +3397,9 @@ const PhotoGallery = ({
                     }}
                   >
                     🎨 Transform image with words
-                    {isAuthenticated && !kontextLoading && kontextCost && kontextCost !== '—' && (
+                    {isAuthenticated && !kontextLoading && formatCost(kontextCost, kontextUSD) && (
                       <div style={{ fontSize: '13px', opacity: 0.9, marginTop: '4px' }}>
-                        {kontextCost} {tokenLabel}
+                        {formatCost(kontextCost, kontextUSD)}
                       </div>
                     )}
                   </button>
@@ -3146,6 +3448,338 @@ const PhotoGallery = ({
               </div>
             )}
           </div>
+
+          {/* Video Generation Button - Only for authenticated users */}
+          {isAuthenticated && !isPromptSelectorMode && !selectedPhoto.isOriginal && (
+            <div className="video-button-container" style={{ position: 'relative' }}>
+              {/* Video button - always same appearance */}
+              <button
+                className="action-button video-generate-btn"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (selectedPhoto.generatingVideo) {
+                    // Show cancel option when generating
+                    setShowVideoDropdown(prev => !prev);
+                  } else {
+                    handleVideoButtonClick();
+                  }
+                }}
+                disabled={selectedPhoto.loading || selectedPhoto.enhancing}
+                style={{
+                  background: 'linear-gradient(135deg, #667eea, #764ba2)',
+                  border: 'none',
+                  color: 'white',
+                  position: 'relative',
+                  overflow: 'visible'
+                }}
+              >
+                <span>🎥 Video</span>
+                
+                {/* NEW Badge */}
+                {showVideoNewBadge && !selectedPhoto.videoUrl && !selectedPhoto.generatingVideo && (
+                  <span
+                    className="video-new-badge"
+                    style={{
+                      position: 'absolute',
+                      top: '-8px',
+                      right: '-8px',
+                      background: 'linear-gradient(135deg, #ff6b6b, #ffa502)',
+                      color: 'white',
+                      fontSize: '9px',
+                      fontWeight: 'bold',
+                      padding: '2px 6px',
+                      borderRadius: '10px',
+                      boxShadow: '0 2px 8px rgba(255, 107, 107, 0.4)',
+                      animation: 'pulse 2s ease-in-out infinite',
+                      zIndex: 1
+                    }}
+                  >
+                    NEW
+                  </span>
+                )}
+              </button>
+
+              {/* Video Error message */}
+              {selectedPhoto.videoError && (
+                <div 
+                  className="video-error" 
+                  style={{
+                    position: 'absolute',
+                    bottom: '100%',
+                    left: '0',
+                    right: '0',
+                    marginBottom: '4px',
+                    background: 'rgba(255, 0, 0, 0.9)',
+                    color: 'white',
+                    padding: '4px 8px',
+                    borderRadius: '4px',
+                    fontSize: '11px',
+                    textAlign: 'center',
+                    zIndex: 10,
+                    maxWidth: '200px',
+                    wordWrap: 'break-word',
+                    cursor: 'pointer'
+                  }}
+                  onClick={() => {
+                    setPhotos(prev => {
+                      const updated = [...prev];
+                      if (updated[selectedPhotoIndex]) {
+                        updated[selectedPhotoIndex] = {
+                          ...updated[selectedPhotoIndex],
+                          videoError: null
+                        };
+                      }
+                      return updated;
+                    });
+                  }}
+                  title="Click to dismiss"
+                >
+                  {selectedPhoto.videoError}
+                </div>
+              )}
+
+              {/* Video Dropdown Portal */}
+              {showVideoDropdown && createPortal(
+                (
+                  <div 
+                    className="video-dropdown"
+                    style={{
+                      position: 'fixed',
+                      bottom: (() => {
+                        const videoButton = document.querySelector('.video-button-container');
+                        if (videoButton) {
+                          const rect = videoButton.getBoundingClientRect();
+                          return window.innerHeight - rect.top + 10;
+                        }
+                        return 88;
+                      })(),
+                      left: (() => {
+                        const videoButton = document.querySelector('.video-button-container');
+                        if (videoButton) {
+                          const rect = videoButton.getBoundingClientRect();
+                          const dropdownWidth = 280;
+                          let leftPos = rect.left + (rect.width / 2) - (dropdownWidth / 2);
+                          if (leftPos < 10) leftPos = 10;
+                          if (leftPos + dropdownWidth > window.innerWidth - 10) {
+                            leftPos = window.innerWidth - dropdownWidth - 10;
+                          }
+                          return leftPos;
+                        }
+                        return '50%';
+                      })(),
+                      transform: (() => {
+                        const videoButton = document.querySelector('.video-button-container');
+                        return videoButton ? 'none' : 'translateX(-50%)';
+                      })(),
+                      background: 'rgba(26, 26, 46, 0.95)',
+                      backdropFilter: 'blur(10px)',
+                      borderRadius: '16px',
+                      padding: '8px',
+                      minWidth: '260px',
+                      boxShadow: '0 10px 40px rgba(0, 0, 0, 0.5)',
+                      zIndex: 9999999,
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      animation: 'slideUp 0.2s ease-out'
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {/* Settings cog icon - top right corner */}
+                    <div style={{ position: 'relative' }}>
+                      <button
+                        onClick={handleOpenVideoSettings}
+                        title="Video Settings"
+                        style={{
+                          position: 'absolute',
+                          top: '0px',
+                          right: '0px',
+                          width: '24px',
+                          height: '24px',
+                          borderRadius: '50%',
+                          border: 'none',
+                          background: 'rgba(255, 255, 255, 0.1)',
+                          color: 'rgba(255, 255, 255, 0.6)',
+                          fontSize: '12px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          transition: 'all 0.2s ease',
+                          zIndex: 1
+                        }}
+                        onMouseOver={e => {
+                          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
+                          e.currentTarget.style.color = 'white';
+                        }}
+                        onMouseOut={e => {
+                          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                          e.currentTarget.style.color = 'rgba(255, 255, 255, 0.6)';
+                        }}
+                      >
+                        ⚙️
+                      </button>
+                    </div>
+                    
+                    {/* Generating state - simple message with cancel option (progress shown on image overlay) */}
+                    {selectedPhoto.generatingVideo ? (
+                      <>
+                        <div style={{
+                          padding: '12px 16px',
+                          fontSize: '13px',
+                          color: 'rgba(255, 255, 255, 0.7)',
+                          borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+                          textAlign: 'center'
+                        }}>
+                          Video generating...
+                        </div>
+                        {/* Cost info */}
+                        <div style={{
+                          padding: '8px 16px',
+                          fontSize: '12px',
+                          color: 'rgba(255, 255, 255, 0.6)',
+                          borderBottom: '1px solid rgba(255, 255, 255, 0.1)'
+                        }}>
+                          Cost: {videoLoading ? 'Calculating...' : formatCost(videoCostRaw, videoUSD) || 'N/A'}
+                        </div>
+                        <button
+                          onClick={handleCancelVideo}
+                          style={{
+                            width: '100%',
+                            padding: '12px 16px',
+                            background: 'transparent',
+                            border: 'none',
+                            color: '#ff6b6b',
+                            fontSize: '14px',
+                            cursor: 'pointer',
+                            textAlign: 'left',
+                            borderRadius: '8px',
+                            transition: 'background 0.2s ease'
+                          }}
+                          onMouseOver={e => e.currentTarget.style.background = 'rgba(255, 107, 107, 0.1)'}
+                          onMouseOut={e => e.currentTarget.style.background = 'transparent'}
+                        >
+                          ❌ Cancel Generation
+                        </button>
+                      </>
+                    ) : selectedPhoto.videoUrl ? (
+                      /* Completed state - video plays inline, show controls here */
+                      <>
+                        <div style={{
+                          padding: '12px 16px',
+                          color: 'white',
+                          fontSize: '13px',
+                          opacity: 0.8,
+                          borderBottom: '1px solid rgba(255, 255, 255, 0.1)'
+                        }}>
+                          ✨ Your Motion Clip is ready! 😎
+                        </div>
+                        <button
+                          onClick={handleDownloadVideo}
+                          style={{
+                            width: '100%',
+                            padding: '12px 16px',
+                            background: 'linear-gradient(135deg, #4CAF50, #45a049)',
+                            border: 'none',
+                            color: 'white',
+                            fontSize: '14px',
+                            fontWeight: '600',
+                            cursor: 'pointer',
+                            borderRadius: '8px',
+                            margin: '8px 0 6px 0',
+                            transition: 'all 0.2s ease'
+                          }}
+                          onMouseOver={e => {
+                            e.currentTarget.style.transform = 'translateY(-2px)';
+                            e.currentTarget.style.boxShadow = '0 6px 20px rgba(76, 175, 80, 0.4)';
+                          }}
+                          onMouseOut={e => {
+                            e.currentTarget.style.transform = 'translateY(0)';
+                            e.currentTarget.style.boxShadow = 'none';
+                          }}
+                        >
+                          💾 Download Video
+                        </button>
+                        <button
+                          onClick={handleGenerateVideo}
+                          style={{
+                            width: '100%',
+                            padding: '12px 16px',
+                            background: 'linear-gradient(135deg, #667eea, #764ba2)',
+                            border: 'none',
+                            color: 'white',
+                            fontSize: '14px',
+                            fontWeight: '600',
+                            cursor: 'pointer',
+                            borderRadius: '8px',
+                            textAlign: 'center',
+                            transition: 'all 0.2s ease'
+                          }}
+                          onMouseOver={e => {
+                            e.currentTarget.style.transform = 'translateY(-2px)';
+                            e.currentTarget.style.boxShadow = '0 6px 20px rgba(102, 126, 234, 0.4)';
+                          }}
+                          onMouseOut={e => {
+                            e.currentTarget.style.transform = 'translateY(0)';
+                            e.currentTarget.style.boxShadow = 'none';
+                          }}
+                        >
+                          <div>🔄 Generate New Video (5s)</div>
+                          {!videoLoading && formatCost(videoCostRaw, videoUSD) && (
+                            <div style={{ fontSize: '12px', opacity: 0.9, marginTop: '4px' }}>
+                              {formatCost(videoCostRaw, videoUSD)}
+                            </div>
+                          )}
+                          {videoLoading && (
+                            <div style={{ fontSize: '12px', opacity: 0.7, marginTop: '4px' }}>
+                              Calculating cost...
+                            </div>
+                          )}
+                        </button>
+                      </>
+                    ) : (
+                      /* Initial state - show generate option with cost */
+                      <button
+                        onClick={handleGenerateVideo}
+                        style={{
+                          width: '100%',
+                          padding: '16px',
+                          background: 'linear-gradient(135deg, #667eea, #764ba2)',
+                          border: 'none',
+                          color: 'white',
+                          fontSize: '15px',
+                          fontWeight: '600',
+                          cursor: 'pointer',
+                          borderRadius: '12px',
+                          textAlign: 'left',
+                          transition: 'all 0.2s ease'
+                        }}
+                        onMouseOver={e => {
+                          e.currentTarget.style.transform = 'translateY(-2px)';
+                          e.currentTarget.style.boxShadow = '0 6px 20px rgba(102, 126, 234, 0.4)';
+                        }}
+                        onMouseOut={e => {
+                          e.currentTarget.style.transform = 'translateY(0)';
+                          e.currentTarget.style.boxShadow = 'none';
+                        }}
+                      >
+                        <div>🎬 One-click motion video (5s)</div>
+                        {!videoLoading && formatCost(videoCostRaw, videoUSD) && (
+                          <div style={{ fontSize: '13px', opacity: 0.9, marginTop: '4px' }}>
+                            {formatCost(videoCostRaw, videoUSD)}
+                          </div>
+                        )}
+                        {videoLoading && (
+                          <div style={{ fontSize: '13px', opacity: 0.7, marginTop: '4px' }}>
+                            Calculating cost...
+                          </div>
+                        )}
+                      </button>
+                    )}
+                  </div>
+                ),
+                document.body
+              )}
+            </div>
+          )}
         </div>
         );
       })()}
@@ -4905,6 +5539,202 @@ const PhotoGallery = ({
                   })()}
                 />
 
+                {/* Video Play Button - Shows for photos with AI-generated video */}
+                {photo.videoUrl && !photo.generatingVideo && (
+                  <div
+                    className="photo-video-btn"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      // Toggle generated video playback (separate from easter egg videos)
+                      setPlayingGeneratedVideoId(prev => prev === photo.id ? null : photo.id);
+                    }}
+                    style={{
+                      position: 'absolute',
+                      bottom: '8px',
+                      right: '8px',
+                      width: '32px',
+                      height: '32px',
+                      borderRadius: '50%',
+                      background: 'rgba(0, 0, 0, 0.6)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      zIndex: 10,
+                      transition: 'all 0.2s ease',
+                      color: 'white'
+                    }}
+                    title={playingGeneratedVideoId === photo.id ? 'Stop video' : 'Play video'}
+                  >
+                    <svg fill="currentColor" width="16" height="16" viewBox="0 0 24 24">
+                      {playingGeneratedVideoId === photo.id ? (
+                        <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+                      ) : (
+                        <path d="M8 5v14l11-7z"/>
+                      )}
+                    </svg>
+                  </div>
+                )}
+
+                {/* AI-Generated Video Overlay - Show when generated video is playing */}
+                {photo.videoUrl && !photo.generatingVideo && playingGeneratedVideoId === photo.id && (
+                  <video
+                    src={photo.videoUrl}
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover',
+                      zIndex: 5
+                    }}
+                  />
+                )}
+
+                {/* Video generation progress overlay - displays worker, ETA and elapsed time */}
+                {photo.generatingVideo && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      bottom: '16px',
+                      left: '50%',
+                      transform: 'translateX(-50%)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      zIndex: 5,
+                      color: 'white',
+                      textAlign: 'center'
+                    }}
+                  >
+                    {/* Floating sparkles around the card */}
+                    {[...Array(6)].map((_, i) => (
+                      <span
+                        key={i}
+                        style={{
+                          position: 'absolute',
+                          fontSize: ['✨', '⭐', '💫', '🌟', '✨', '⭐'][i],
+                          animation: `float-sparkle-${i % 3} ${2 + i * 0.3}s ease-in-out infinite`,
+                          animationDelay: `${i * 0.2}s`,
+                          opacity: 0.8,
+                          top: `${-20 + (i % 2) * 10}px`,
+                          left: `${-30 + i * 25}px`,
+                          filter: 'drop-shadow(0 0 4px rgba(255, 200, 100, 0.8))'
+                        }}
+                      >
+                        {['✨', '⭐', '💫', '🌟', '✨', '⭐'][i]}
+                      </span>
+                    ))}
+                    
+                    {/* Glowing animated border card */}
+                    <div style={{
+                      position: 'relative',
+                      background: 'linear-gradient(135deg, rgba(26, 26, 46, 0.95), rgba(40, 20, 60, 0.95))',
+                      backdropFilter: 'blur(12px)',
+                      borderRadius: '20px',
+                      padding: '16px 24px',
+                      boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)',
+                      border: '2px solid transparent',
+                      backgroundClip: 'padding-box'
+                    }}>
+                      {/* Animated gradient border overlay */}
+                      <div style={{
+                        position: 'absolute',
+                        top: -2,
+                        left: -2,
+                        right: -2,
+                        bottom: -2,
+                        borderRadius: '22px',
+                        background: 'linear-gradient(45deg, #ff6b6b, #ffa502, #ff6b6b, #ffa502)',
+                        backgroundSize: '400% 400%',
+                        animation: 'gradient-rotate 3s ease infinite',
+                        zIndex: -1,
+                        opacity: 0.8
+                      }} />
+                      
+                      {/* Header with bouncing camera icon */}
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '10px',
+                        marginBottom: '10px'
+                      }}>
+                        <span style={{ 
+                          fontSize: '32px',
+                          filter: 'sepia(1) saturate(5) hue-rotate(-10deg) drop-shadow(0 0 8px rgba(255, 165, 2, 0.8))',
+                          animation: 'pulse 1.5s ease-in-out infinite'
+                        }}>
+                          🎥
+                        </span>
+                        <span style={{ 
+                          fontSize: '16px', 
+                          fontWeight: 'bold',
+                          background: 'linear-gradient(135deg, #ff6b6b, #ffa502, #ffeb3b, #ff6b6b)',
+                          backgroundSize: '300% auto',
+                          backgroundClip: 'text',
+                          WebkitBackgroundClip: 'text',
+                          WebkitTextFillColor: 'transparent',
+                          animation: 'shimmer 2s linear infinite',
+                          textShadow: '0 0 20px rgba(255, 165, 2, 0.5)'
+                        }}>
+                          Generating Video
+                        </span>
+                      </div>
+                      
+                      {/* Worker name with glow */}
+                      <div style={{ 
+                        fontSize: '12px', 
+                        color: 'rgba(255, 255, 255, 0.9)', 
+                        marginBottom: '8px'
+                      }}>
+                        {photo.videoWorkerName ? (
+                          <>
+                            <span style={{ animation: 'pulse 0.5s ease-in-out infinite' }}>⚡</span>
+                            {' '}
+                            <span style={{ 
+                              color: '#4fc3f7', 
+                              fontWeight: '600',
+                              textShadow: '0 0 10px rgba(79, 195, 247, 0.6)'
+                            }}>
+                              {photo.videoWorkerName}
+                            </span>
+                          </>
+                        ) : (
+                          <span style={{ animation: 'pulse 1s ease-in-out infinite' }}>⏳ Finding worker...</span>
+                        )}
+                      </div>
+                      
+                      {/* ETA with animated background */}
+                      <div style={{ 
+                        fontSize: '18px', 
+                        fontWeight: '700',
+                        padding: '6px 12px',
+                        borderRadius: '10px',
+                        background: 'rgba(255, 255, 255, 0.1)',
+                        marginBottom: '4px'
+                      }}>
+                        {photo.videoETA !== undefined && photo.videoETA > 0 ? (
+                          <>
+                            <span style={{ animation: 'pulse 1s ease-in-out infinite' }}>⏱️</span>
+                            {' '}{formatVideoDuration(photo.videoETA)}
+                          </>
+                        ) : (
+                          <span style={{ animation: 'twinkle 0.8s ease-in-out infinite' }}>✨ Starting...</span>
+                        )}
+                      </div>
+                      <div style={{ fontSize: '10px', color: 'rgba(255, 255, 255, 0.6)' }}>
+                        {formatVideoDuration(photo.videoElapsed || 0)} elapsed
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* "Use this vibe" button overlay - shows on hover (desktop) or when selected (touch) */}
                 {isPromptSelectorMode && photo.isGalleryImage && !wantsFullscreen && (activeVideoPhotoId !== (photo.id || photo.promptKey)) && (
                   <div 
@@ -5982,6 +6812,13 @@ const PhotoGallery = ({
         </div>
       </div>
       )}
+
+      {/* Video Intro Popup - Shows on first Video button click */}
+      <VideoIntroPopup
+        visible={showVideoIntroPopup}
+        onDismiss={handleVideoIntroDismiss}
+        onProceed={handleVideoIntroProceed}
+      />
 
       {/* Custom Prompt Popup for Sample Gallery mode */}
       <CustomPromptPopup

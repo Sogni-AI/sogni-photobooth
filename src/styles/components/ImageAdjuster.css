@@ -98,7 +98,7 @@
   height: 44px;
   background: linear-gradient(135deg, #ff7eb3, #7868e6);
   border: none;
-  border-radius: 8px 0 8px 0;
+  border-radius: 8px 0 8px 0 !important;
   padding: 0 12px;
   cursor: pointer;
   transition: all 0.3s ease;

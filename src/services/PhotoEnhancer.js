@@ -211,7 +211,7 @@ export const enhancePhoto = async (options) => {
         height,
         steps: 24,
         guidance: 5.5,
-        numberOfImages: 1,
+        numberOfMedia: 1,
         outputFormat: outputFormat || 'jpg',
         sensitiveContentFilter: false, // HARDCODED: Krea model is not NSFW-aware, always disable filter
         startingImage: new Uint8Array(arrayBuffer),

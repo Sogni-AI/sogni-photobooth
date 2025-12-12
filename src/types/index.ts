@@ -30,6 +30,18 @@ export interface Photo {
 
   // Hide functionality for NSFW content during batch generation
   hidden?: boolean;
+
+  // Video generation fields
+  videoUrl?: string;
+  generatingVideo?: boolean;
+  videoProgress?: number;
+  videoETA?: number; // Remaining time in seconds from jobETA event
+  videoElapsed?: number; // Elapsed time in seconds since job started
+  videoStartTime?: number;
+  videoProjectId?: string;
+  videoError?: string;
+  videoWorkerName?: string; // Worker processing the video job
+  videoStatus?: string; // Current status text (e.g., "Queued", "Processing")
 }
 
 export interface ProjectState {
@@ -108,4 +120,11 @@ export interface Settings {
   // Event context flags
   halloweenContext?: boolean; // Flag to indicate user started from Halloween event
   winterContext?: boolean; // Flag to indicate user started from Winter event
+
+  // Video generation settings
+  videoResolution?: '480p' | '720p';
+  videoQuality?: 'fast' | 'balanced' | 'quality' | 'pro';
+  videoFramerate?: 16 | 32;
+  videoPositivePrompt?: string;
+  videoNegativePrompt?: string;
 } 

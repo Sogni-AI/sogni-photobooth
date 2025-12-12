@@ -33,6 +33,7 @@ export const AuthStatus: React.FC<AuthStatusProps> = ({ onPurchaseClick, onSignu
   // Use useRef to preserve the initial value across renders
   const authButtonTextRef = useRef<string>(getAuthButtonText());
   const authButtonText = authButtonTextRef.current;
+  const menuContainerRef = useRef<HTMLDivElement>(null);
   
   const { isAuthenticated, authMode, user, logout, isLoading } = useSogniAuth();
   const { balances, tokenType, switchPaymentMethod } = useWallet();
@@ -42,6 +43,26 @@ export const AuthStatus: React.FC<AuthStatusProps> = ({ onPurchaseClick, onSignu
   useEffect(() => {
     markAsVisited();
   }, [authButtonText]);
+
+  // Close user menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (showUserMenu && menuContainerRef.current && !menuContainerRef.current.contains(event.target as Node)) {
+        setShowUserMenu(false);
+      }
+    };
+
+    if (showUserMenu) {
+      // Use setTimeout to avoid closing immediately when opening
+      setTimeout(() => {
+        document.addEventListener('mousedown', handleClickOutside);
+      }, 0);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showUserMenu]);
 
   const handleLogout = async () => {
     await logout();
@@ -148,7 +169,7 @@ export const AuthStatus: React.FC<AuthStatusProps> = ({ onPurchaseClick, onSignu
       </button>
     ) : (
     // Show username with balance inline
-    <div className="relative auth-status-container">
+    <div className="relative auth-status-container" ref={menuContainerRef}>
       <div
         onClick={() => setShowUserMenu(!showUserMenu)}
         className="auth-status-content"

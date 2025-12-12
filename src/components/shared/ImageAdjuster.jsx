@@ -72,7 +72,7 @@ const ImageAdjuster = ({
 
   // Estimate cost for this generation
   // ImageAdjuster uses InstantID ControlNet, not Flux Kontext
-  const { loading: costLoading, formattedCost } = useCostEstimation({
+  const { loading: costLoading, cost, costInUSD } = useCostEstimation({
     model: selectedModel,
     imageCount: selectedBatchCount,
     stepCount: inferenceSteps,
@@ -856,14 +856,14 @@ const ImageAdjuster = ({
               ) : (
                 <div className="confirm-button-content">
                   <div className="confirm-button-label">
-                    {isProcessing ? '⏳ Processing...' : 'Imagine'}
+                    {isProcessing ? '⏳ Processing...' : `Imagine ${selectedBatchCount}x`}
                   </div>
                   <div className="confirm-button-details">
-                    {!isProcessing && (
+                    {!isProcessing && isAuthenticated && !costLoading && cost !== null && (
                       <>
-                        {selectedBatchCount}x
-                        {isAuthenticated && !costLoading && formattedCost && formattedCost !== '—' && (
-                          <> • {formattedCost} {tokenLabel}</>
+                        {cost.toFixed(2)} {tokenLabel.split(' ')[0]}
+                        {costInUSD !== null && (
+                          <> (~${(Math.round(costInUSD * 100) / 100).toFixed(2)})</>
                         )}
                       </>
                     )}
