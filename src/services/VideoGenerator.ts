@@ -282,6 +282,21 @@ export async function generateVideo(options: GenerateVideoOptions): Promise<void
             });
           }
           break;
+
+        case 'queued':
+          // Job is queued - show queue position if greater than 1
+          if (event.queuePosition !== undefined && event.queuePosition > 1) {
+            setPhotos(prev => {
+              const updated = [...prev];
+              if (!updated[photoIndex]) return prev;
+              updated[photoIndex] = {
+                ...updated[photoIndex],
+                videoStatus: `Queue #${event.queuePosition}`
+              };
+              return updated;
+            });
+          }
+          break;
           
         case 'started':
           if (!activeProject.startTime) {

@@ -5708,6 +5708,8 @@ const PhotoGallery = ({
                               {photo.videoWorkerName}
                             </span>
                           </>
+                        ) : photo.videoStatus?.startsWith('Queue') ? (
+                          <span style={{ animation: 'pulse 1s ease-in-out infinite' }}>📋 {photo.videoStatus}</span>
                         ) : (
                           <span style={{ animation: 'pulse 1s ease-in-out infinite' }}>⏳ Finding worker...</span>
                         )}
