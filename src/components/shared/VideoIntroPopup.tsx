@@ -122,7 +122,7 @@ export const VideoIntroPopup: React.FC<VideoIntroPopupProps> = ({
         <div style={{
           display: 'flex',
           flexDirection: isDesktop ? 'row' : 'column',
-          gap: isDesktop ? '24px' : '10px'
+          gap: isDesktop ? '24px' : '8px'
         }}>
           {/* Video Section - Left on desktop, TOP on mobile */}
           <div style={{
@@ -137,7 +137,7 @@ export const VideoIntroPopup: React.FC<VideoIntroPopupProps> = ({
               borderRadius: '12px',
               overflow: 'hidden',
               aspectRatio: '9 / 16',
-              height: isDesktop ? '480px' : '280px',
+              height: isDesktop ? '480px' : '380px',
               backgroundColor: '#000'
             }}>
               {VIDEO_INTRO_EXAMPLES.map((example, index) => (
