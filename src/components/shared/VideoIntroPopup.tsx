@@ -108,9 +108,9 @@ export const VideoIntroPopup: React.FC<VideoIntroPopupProps> = ({
           borderRadius: isDesktop ? '20px' : '16px',
           maxWidth: isDesktop ? '900px' : '100%',
           width: '100%',
-          maxHeight: isDesktop ? '90vh' : '85vh',
-          overflow: 'auto',
-          padding: isDesktop ? '24px' : '16px',
+          maxHeight: isDesktop ? '90vh' : 'calc(100vh - 60px)',
+          overflow: isDesktop ? 'auto' : 'hidden',
+          padding: isDesktop ? '24px' : '14px',
           boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)',
           animation: 'slideUp 0.3s ease-out',
           border: '1px solid rgba(255, 255, 255, 0.1)',
@@ -122,7 +122,7 @@ export const VideoIntroPopup: React.FC<VideoIntroPopupProps> = ({
         <div style={{
           display: 'flex',
           flexDirection: isDesktop ? 'row' : 'column',
-          gap: isDesktop ? '24px' : '12px'
+          gap: isDesktop ? '24px' : '10px'
         }}>
           {/* Video Section - Left on desktop, TOP on mobile (small portrait) */}
           <div style={{
@@ -137,7 +137,7 @@ export const VideoIntroPopup: React.FC<VideoIntroPopupProps> = ({
               borderRadius: '12px',
               overflow: 'hidden',
               aspectRatio: '9 / 16',
-              height: isDesktop ? '480px' : '200px',
+              height: isDesktop ? '480px' : '160px',
               backgroundColor: '#000'
             }}>
               {VIDEO_INTRO_EXAMPLES.map((example, index) => (
@@ -221,10 +221,10 @@ export const VideoIntroPopup: React.FC<VideoIntroPopupProps> = ({
             {/* Header */}
             <div style={{
               textAlign: isDesktop ? 'left' : 'center',
-              marginBottom: isDesktop ? '20px' : '12px'
+              marginBottom: isDesktop ? '20px' : '8px'
             }}>
               <h2 style={{
-                fontSize: isDesktop ? '32px' : '22px',
+                fontSize: isDesktop ? '32px' : '20px',
                 fontWeight: 'bold',
                 background: 'linear-gradient(135deg, #ff6b6b, #ffa502, #ff6b6b)',
                 backgroundSize: '200% auto',
@@ -232,17 +232,17 @@ export const VideoIntroPopup: React.FC<VideoIntroPopupProps> = ({
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
                 animation: 'shimmer 3s linear infinite',
-                margin: '0 0 8px 0'
+                margin: '0 0 6px 0'
               }}>
                 🎥 Introducing AI Video!
               </h2>
               <p style={{
                 color: 'rgba(255, 255, 255, 0.7)',
-                fontSize: isDesktop ? '16px' : '13px',
+                fontSize: isDesktop ? '16px' : '12px',
                 margin: 0,
-                lineHeight: 1.4
+                lineHeight: 1.3
               }}>
-                Transform your photos into captivating 5-second motion videos with AI.
+                Transform your photos into 5-second motion videos with AI.
               </p>
             </div>
 
@@ -250,23 +250,23 @@ export const VideoIntroPopup: React.FC<VideoIntroPopupProps> = ({
             <div style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(2, 1fr)',
-              gap: isDesktop ? '12px' : '8px',
-              marginBottom: isDesktop ? '24px' : '12px'
+              gap: isDesktop ? '12px' : '6px',
+              marginBottom: isDesktop ? '24px' : '8px'
             }}>
               {features.map((feature, index) => (
                 <div
                   key={index}
                   style={{
                     background: 'rgba(255, 255, 255, 0.05)',
-                    borderRadius: isDesktop ? '10px' : '8px',
-                    padding: isDesktop ? '14px' : '10px',
+                    borderRadius: isDesktop ? '10px' : '6px',
+                    padding: isDesktop ? '14px' : '8px',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: isDesktop ? '10px' : '6px'
+                    gap: isDesktop ? '10px' : '5px'
                   }}
                 >
-                  <span style={{ fontSize: isDesktop ? '22px' : '16px' }}>{feature.icon}</span>
-                  <span style={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: isDesktop ? '14px' : '11px' }}>
+                  <span style={{ fontSize: isDesktop ? '22px' : '14px' }}>{feature.icon}</span>
+                  <span style={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: isDesktop ? '14px' : '10px' }}>
                     {feature.text}
                   </span>
                 </div>
@@ -276,26 +276,26 @@ export const VideoIntroPopup: React.FC<VideoIntroPopupProps> = ({
             {/* Pricing info */}
             <div style={{
               background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.2), rgba(118, 75, 162, 0.2))',
-              borderRadius: isDesktop ? '12px' : '10px',
-              padding: isDesktop ? '16px' : '12px',
-              marginBottom: isDesktop ? '24px' : '12px',
+              borderRadius: isDesktop ? '12px' : '8px',
+              padding: isDesktop ? '16px' : '10px',
+              marginBottom: isDesktop ? '24px' : '10px',
               border: '1px solid rgba(102, 126, 234, 0.3)'
             }}>
               <div style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '8px',
-                marginBottom: '6px'
+                gap: '6px',
+                marginBottom: isDesktop ? '6px' : '4px'
               }}>
-                <span style={{ fontSize: isDesktop ? '18px' : '14px' }}>💎</span>
-                <span style={{ color: 'white', fontWeight: '600', fontSize: isDesktop ? '15px' : '13px' }}>
+                <span style={{ fontSize: isDesktop ? '18px' : '12px' }}>💎</span>
+                <span style={{ color: 'white', fontWeight: '600', fontSize: isDesktop ? '15px' : '11px' }}>
                   Affordable Pricing
                 </span>
               </div>
               <div style={{
                 color: 'rgba(255, 255, 255, 0.7)',
-                fontSize: isDesktop ? '13px' : '12px',
-                lineHeight: 1.5
+                fontSize: isDesktop ? '13px' : '10px',
+                lineHeight: 1.4
               }}>
                 <div>Fast (512p): ~<strong style={{ color: '#4CAF50' }}>12¢</strong> • High Quality (720p): ~<strong style={{ color: '#4CAF50' }}>30¢</strong></div>
               </div>
@@ -304,19 +304,19 @@ export const VideoIntroPopup: React.FC<VideoIntroPopupProps> = ({
             {/* Action buttons */}
             <div style={{
               display: 'flex',
-              gap: isDesktop ? '12px' : '8px',
+              gap: isDesktop ? '12px' : '6px',
               flexDirection: 'row'
             }}>
               <button
                 onClick={handleDismiss}
                 style={{
                   flex: 1,
-                  padding: isDesktop ? '14px 24px' : '12px 16px',
-                  borderRadius: isDesktop ? '12px' : '10px',
+                  padding: isDesktop ? '14px 24px' : '10px 12px',
+                  borderRadius: isDesktop ? '12px' : '8px',
                   border: '1px solid rgba(255, 255, 255, 0.2)',
                   background: 'transparent',
                   color: 'rgba(255, 255, 255, 0.7)',
-                  fontSize: isDesktop ? '15px' : '13px',
+                  fontSize: isDesktop ? '15px' : '12px',
                   fontWeight: '600',
                   cursor: 'pointer',
                   transition: 'all 0.2s ease'
@@ -334,12 +334,12 @@ export const VideoIntroPopup: React.FC<VideoIntroPopupProps> = ({
                 onClick={handleProceed}
                 style={{
                   flex: isDesktop ? 1.5 : 1.5,
-                  padding: isDesktop ? '14px 24px' : '12px 16px',
-                  borderRadius: isDesktop ? '12px' : '10px',
+                  padding: isDesktop ? '14px 24px' : '10px 12px',
+                  borderRadius: isDesktop ? '12px' : '8px',
                   border: 'none',
                   background: 'linear-gradient(135deg, #ff6b6b, #ffa502)',
                   color: 'white',
-                  fontSize: isDesktop ? '15px' : '13px',
+                  fontSize: isDesktop ? '15px' : '12px',
                   fontWeight: '600',
                   cursor: 'pointer',
                   transition: 'all 0.2s ease',
@@ -354,7 +354,7 @@ export const VideoIntroPopup: React.FC<VideoIntroPopupProps> = ({
                   e.currentTarget.style.boxShadow = '0 4px 15px rgba(255, 107, 107, 0.3)';
                 }}
               >
-                🎥 Create My First Video!
+                🎥 Create Video!
               </button>
             </div>
           </div>
