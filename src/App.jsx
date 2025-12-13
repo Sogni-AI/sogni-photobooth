@@ -3632,18 +3632,17 @@ const App = () => {
         await new Promise(resolve => setTimeout(resolve, 500));
       }
       
-      // CRITICAL FIX: Wait for auth state to finish loading before initializing Sogni
+      // CRITICAL FIX: ALWAYS wait for auth state initialization to complete before initializing Sogni
       // This prevents race condition where initializeSogni() runs before checkExistingSession() completes,
       // causing it to incorrectly initialize backend client instead of frontend client
-      if (authState.isLoading) {
-        console.log('⏳ Waiting for auth state to settle before initializing Sogni...');
-        // Wait for auth initialization to complete
-        await authState.waitForInitialization?.();
-        console.log('✅ Auth state settled:', {
-          isAuthenticated: authState.isAuthenticated,
-          authMode: authState.authMode
-        });
-      }
+      console.log('⏳ Waiting for auth state initialization to complete before initializing Sogni...');
+      // Always wait - don't check isLoading flag as it may have already completed
+      await authState.waitForInitialization?.();
+      console.log('✅ Auth state initialization complete:', {
+        isAuthenticated: authState.isAuthenticated,
+        authMode: authState.authMode,
+        isLoading: authState.isLoading
+      });
       
       // Initialize Sogni (restored original behavior)
       try {
