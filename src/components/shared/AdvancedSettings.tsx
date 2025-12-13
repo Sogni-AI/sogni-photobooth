@@ -418,15 +418,14 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
     // Handle null or missing costs
     if (tokenCost === null || tokenCost === undefined) return '';
 
-    let result = ` (${tokenCost.toFixed(2)} ${tokenLabel}`;
+    let result = ` ${tokenCost.toFixed(2)} ${tokenLabel}`;
 
     // Add USD in parentheses if available
     if (costInUSD !== null && costInUSD !== undefined && !isNaN(costInUSD)) {
       const roundedUSD = Math.round(costInUSD * 100) / 100;
-      result += ` ~$${roundedUSD.toFixed(2)}`;
+      result += `(~$${roundedUSD.toFixed(2)})`;
     }
 
-    result += ')';
     return result;
   };
 
@@ -1234,13 +1233,13 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
                     value={currentVideoResolution}
                   >
                     <option key="480p" value="480p">
-                      480p - Standard{formatVideoCost(videoCost480p.cost, videoCost480p.costInUSD)}
+                      480p - {formatVideoCost(videoCost480p.cost, videoCost480p.costInUSD)}
                     </option>
                     <option key="580p" value="580p">
-                      580p - Balanced quality and speed{formatVideoCost(videoCost580p.cost, videoCost580p.costInUSD)}
+                      580p - {formatVideoCost(videoCost580p.cost, videoCost580p.costInUSD)}
                     </option>
                     <option key="720p" value="720p">
-                      720p - HD{formatVideoCost(videoCost720p.cost, videoCost720p.costInUSD)}
+                      720p - {formatVideoCost(videoCost720p.cost, videoCost720p.costInUSD)}
                     </option>
                   </select>
                 </div>

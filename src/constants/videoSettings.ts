@@ -51,17 +51,17 @@ export const VIDEO_RESOLUTIONS = {
   '480p': {
     maxDimension: 480,
     label: '480p',
-    description: 'Standard (faster, lower cost)'
+    description: ''
   },
   '580p': {
     maxDimension: 580,
     label: '580p',
-    description: 'Balanced quality and speed'
+    description: ''
   },
   '720p': {
     maxDimension: 720,
     label: '720p',
-    description: 'HD (slower, higher cost)'
+    description: ''
   }
 } as const;
 
