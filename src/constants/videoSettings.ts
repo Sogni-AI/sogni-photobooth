@@ -21,28 +21,28 @@ export const VIDEO_QUALITY_PRESETS = {
     model: VIDEO_MODELS.speed,
     steps: 4,
     label: 'Fast',
-    description: 'Quick generation (~12-20s)',
+    description: 'Quick generation (~1-2 min)',
     costMultiplier: 1
   },
   balanced: {
     model: VIDEO_MODELS.speed,
     steps: 8,
     label: 'Balanced',
-    description: 'Good balance of speed and quality (~25-40s)',
+    description: 'Good balance of speed and quality (~2-4 min)',
     costMultiplier: 1.5
   },
   quality: {
     model: VIDEO_MODELS.quality,
     steps: 20,
     label: 'High Quality',
-    description: 'Higher quality, slower (~1-2 min)',
+    description: 'Higher quality, slower (~5-8 min)',
     costMultiplier: 2.5
   },
   pro: {
     model: VIDEO_MODELS.quality,
     steps: 40,
     label: 'Pro',
-    description: 'Maximum quality (~2-4 min)',
+    description: 'Maximum quality (~10-16 min)',
     costMultiplier: 4
   }
 } as const;
@@ -50,12 +50,17 @@ export const VIDEO_QUALITY_PRESETS = {
 export type VideoQualityPreset = keyof typeof VIDEO_QUALITY_PRESETS;
 
 // Resolution presets
-// Note: SDK requires minimum 512px dimension
+// Dimensions will be rounded to nearest 16 for video encoding compatibility
 export const VIDEO_RESOLUTIONS = {
   '480p': {
-    maxDimension: 512,
-    label: '512p',
+    maxDimension: 480,
+    label: '480p',
     description: 'Standard (faster, lower cost)'
+  },
+  '580p': {
+    maxDimension: 580,
+    label: '580p',
+    description: 'Balanced quality and speed'
   },
   '720p': {
     maxDimension: 720,
@@ -90,11 +95,11 @@ export const VIDEO_CONFIG = {
 
 /**
  * Calculate video dimensions that are divisible by 16 while maintaining aspect ratio.
- * The dimensions will be scaled down to fit within the resolution's max dimension.
+ * The shortest dimension will be set to the target resolution, and the longest will scale proportionally.
  *
  * @param imageWidth - Original image width
  * @param imageHeight - Original image height
- * @param resolution - Target resolution preset ('480p' or '720p')
+ * @param resolution - Target resolution preset ('480p', '580p', or '720p')
  * @returns Object with width and height divisible by 16
  */
 export function calculateVideoDimensions(
@@ -105,20 +110,23 @@ export function calculateVideoDimensions(
   const targetShortSide = VIDEO_RESOLUTIONS[resolution].maxDimension;
   const divisor = VIDEO_CONFIG.dimensionDivisor;
 
-  const smallestDim = Math.min(imageWidth, imageHeight);
+  // Round target to nearest 16 to ensure valid dimensions
+  const roundedTarget = Math.round(targetShortSide / divisor) * divisor;
+
+  // Determine which dimension is shortest
+  const isWidthShorter = imageWidth <= imageHeight;
   
-  // Scale so the shortest dimension equals the target
-  const scaleFactor = targetShortSide / smallestDim;
-
-  // Scale and round down to nearest 16
-  let width = Math.floor((imageWidth * scaleFactor) / divisor) * divisor;
-  let height = Math.floor((imageHeight * scaleFactor) / divisor) * divisor;
-
-  // Ensure minimum 512 after rounding (SDK requirement)
-  width = Math.max(width, 512);
-  height = Math.max(height, 512);
-
+  if (isWidthShorter) {
+    // Width is shorter - set it to target, scale height proportionally
+    const width = roundedTarget;
+    const height = Math.round((imageHeight * roundedTarget / imageWidth) / divisor) * divisor;
+    return { width, height };
+  } else {
+    // Height is shorter - set it to target, scale width proportionally
+    const height = roundedTarget;
+    const width = Math.round((imageWidth * roundedTarget / imageHeight) / divisor) * divisor;
   return { width, height };
+  }
 }
 
 /**

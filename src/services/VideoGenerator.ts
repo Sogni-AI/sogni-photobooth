@@ -34,6 +34,8 @@ type SogniClient = {
 type SogniProject = {
   id: string;
   cancel?: () => Promise<void>;
+  on?: (event: string, listener: (...args: any[]) => void) => void;
+  off?: (event: string, listener: (...args: any[]) => void) => void;
 };
 
 interface GenerateVideoOptions {
@@ -60,11 +62,13 @@ interface ActiveVideoProject {
   project: SogniProject;
   progressInterval?: ReturnType<typeof setInterval>;
   timeoutId?: ReturnType<typeof setTimeout>;
+  activityCheckInterval?: ReturnType<typeof setInterval>;
   jobEventHandler?: (event: any) => void;
   sogniClient?: SogniClient;
   cleanup?: () => void;
   startTime?: number;
   lastETA?: number;
+  lastActivityTime?: number; // Track last time we received a jobETA update
   isCompleted?: boolean; // Prevent duplicate completion/error handling
 }
 
@@ -72,11 +76,12 @@ const activeVideoProjects = new Map<string, ActiveVideoProject>();
 
 /**
  * Scale dimensions for video generation:
- * - Minimum dimension must be 512 (SDK requirement)
- * - Scale so shortest side = target resolution (512 or 720)
- * - Round down to nearest 16 (video encoding requirement)
+ * - Scale so shortest side = target resolution (480, 576, or 720)
+ * - Round to nearest 16 (video encoding requirement)
+ * - Ensure shortest dimension is at least the target after rounding
  * 
- * For 512p: shortest side = 512, longest scales proportionally
+ * For 480p: shortest side = 480, longest scales proportionally
+ * For 580p: shortest side = 576 (rounded to 16), longest scales proportionally
  * For 720p: shortest side = 720, longest scales proportionally
  */
 function scaleToResolution(
@@ -86,20 +91,23 @@ function scaleToResolution(
 ): { width: number; height: number } {
   const targetShortSide = VIDEO_RESOLUTIONS[resolution].maxDimension;
   
-  const smallestDim = Math.min(width, height);
+  // Round target to nearest 16 to ensure valid dimensions
+  const roundedTarget = Math.round(targetShortSide / 16) * 16;
   
-  // Scale so the shortest dimension equals the target
-  const scale = targetShortSide / smallestDim;
+  // Determine which dimension is shortest
+  const isWidthShorter = width <= height;
   
-  // Scale and round down to nearest 16
-  let scaledWidth = Math.floor((width * scale) / 16) * 16;
-  let scaledHeight = Math.floor((height * scale) / 16) * 16;
-  
-  // Ensure minimum 512 after rounding (SDK requirement)
-  scaledWidth = Math.max(scaledWidth, 512);
-  scaledHeight = Math.max(scaledHeight, 512);
-  
-  return { width: scaledWidth, height: scaledHeight };
+  if (isWidthShorter) {
+    // Width is shorter - set it to target, scale height proportionally
+    const scaledWidth = roundedTarget;
+    const scaledHeight = Math.round((height * roundedTarget / width) / 16) * 16;
+    return { width: scaledWidth, height: scaledHeight };
+  } else {
+    // Height is shorter - set it to target, scale width proportionally
+    const scaledHeight = roundedTarget;
+    const scaledWidth = Math.round((width * roundedTarget / height) / 16) * 16;
+    return { width: scaledWidth, height: scaledHeight };
+  }
 }
 
 /**
@@ -194,6 +202,8 @@ export async function generateVideo(options: GenerateVideoOptions): Promise<void
     });
 
     // Create project - pass SCALED dimensions with sizePreset: 'custom' like image generation
+    const seed = Math.floor(Math.random() * 2147483647);
+    
     const createParams = {
       type: 'video',
       modelId: qualityConfig.model,
@@ -202,7 +212,7 @@ export async function generateVideo(options: GenerateVideoOptions): Promise<void
       stylePrompt: '',
       numberOfMedia: 1,
       steps: qualityConfig.steps,
-      seed: Math.floor(Math.random() * 2147483647),
+      seed: seed,
       sizePreset: 'custom',
       width: scaled.width,
       height: scaled.height,
@@ -212,8 +222,79 @@ export async function generateVideo(options: GenerateVideoOptions): Promise<void
       fps: fps,
       tokenType: 'spark'
     };
+
+    // Log video job submission for debugging
+    console.group('🎬 VIDEO JOB SUBMITTED');
+    console.log('📐 DIMENSIONS BEING SENT TO SDK:');
+    console.log(`   WIDTH: ${scaled.width}px`);
+    console.log(`   HEIGHT: ${scaled.height}px`);
+    console.log('');
+    console.log('📋 Job Settings:');
+    console.log(`   Resolution Setting: ${resolution} (${VIDEO_RESOLUTIONS[resolution].label})`);
+    console.log(`   Quality: ${quality} (${qualityConfig.label})`);
+    console.log(`   Model: ${qualityConfig.model}`);
+    console.log(`   Steps: ${qualityConfig.steps}`);
+    console.log(`   Original Image Dimensions: ${WIDTH}x${HEIGHT}px`);
+    console.log(`   Frames: 81`);
+    console.log(`   FPS: ${fps}`);
+    console.log(`   Seed: ${seed}`);
+    console.log('');
+    console.log('📝 Prompts:');
+    console.log(`   Positive: ${positivePrompt || '(none)'}`);
+    console.log(`   Negative: ${negativePrompt || '(none)'}`);
+    console.groupEnd();
     
-    const project = await sogniClient.projects.create(createParams);
+    // Create project with proper error handling
+    let project;
+    try {
+      project = await sogniClient.projects.create(createParams);
+      console.log(`[VIDEO] Project created successfully: ${project.id}`);
+    } catch (createError) {
+      console.error(`[VIDEO] Project creation failed:`, createError);
+      
+      // Extract error message from various error formats
+      let errorMessage = 'Failed to create video project';
+      if (createError instanceof Error) {
+        errorMessage = createError.message;
+      } else if (typeof createError === 'object' && createError !== null) {
+        if ('message' in createError && typeof createError.message === 'string') {
+          errorMessage = createError.message;
+        } else if ('error' in createError && typeof createError.error === 'string') {
+          errorMessage = createError.error;
+        } else if ('payload' in createError && createError.payload) {
+          const payload = createError.payload as any;
+          if (payload.message) {
+            errorMessage = payload.message;
+          } else if (payload.error) {
+            errorMessage = payload.error;
+          }
+        }
+      }
+      
+      // Log the full error for debugging
+      console.error(`[VIDEO] Full error details:`, {
+        error: createError,
+        message: errorMessage,
+        type: typeof createError,
+        keys: createError && typeof createError === 'object' ? Object.keys(createError) : []
+      });
+      
+      // Update UI to show error
+      setPhotos(prev => {
+        const updated = [...prev];
+        if (!updated[photoIndex]) return prev;
+        updated[photoIndex] = {
+          ...updated[photoIndex],
+          generatingVideo: false,
+          videoETA: undefined,
+          videoError: errorMessage
+        };
+        return updated;
+      });
+      
+      onError?.(createError instanceof Error ? createError : new Error(errorMessage));
+      return; // Exit early - don't continue with the rest of the function
+    }
 
     // Update state with project ID
     setPhotos(prev => {
@@ -247,6 +328,10 @@ export async function generateVideo(options: GenerateVideoOptions): Promise<void
         clearTimeout(activeProject.timeoutId);
         activeProject.timeoutId = undefined;
       }
+      if (activeProject.activityCheckInterval) {
+        clearInterval(activeProject.activityCheckInterval);
+        activeProject.activityCheckInterval = undefined;
+      }
       // Safely remove event handler if off method exists
       if (activeProject.jobEventHandler && activeProject.sogniClient?.projects?.off) {
         try {
@@ -259,21 +344,133 @@ export async function generateVideo(options: GenerateVideoOptions): Promise<void
     };
     activeProject.cleanup = cleanup;
 
-    // Timeout (10 min)
-    activeProject.timeoutId = setTimeout(() => {
+    // Centralized error handler to avoid duplicate error messages
+    const handleProjectError = (error: any, source: string) => {
+      // Prevent duplicate handling
+      if (activeProject.isCompleted) {
+        console.log(`[VIDEO] Ignoring duplicate ${source} event for already completed project ${project.id}`);
+        return;
+      }
+      activeProject.isCompleted = true;
+      
+      // Log detailed timing information for timeout debugging
+      if (source === 'timeout' || source === 'inactivity timeout') {
+        const now = Date.now();
+        const totalElapsed = Math.floor((now - (photo.videoStartTime || now)) / 1000);
+        const timeSinceLastETA = activeProject.lastActivityTime 
+          ? Math.floor((now - activeProject.lastActivityTime) / 1000)
+          : 0;
+        const lastETAValue = activeProject.lastETA || 'unknown';
+        
+        console.group(`[VIDEO] ⏱️  TIMEOUT DIAGNOSTICS - Project ${project.id}`);
+        console.log(`Timeout Source: ${source}`);
+        console.log(`Quality Setting: ${quality}`);
+        console.log(`Total Elapsed Time: ${totalElapsed}s (${Math.floor(totalElapsed / 60)}m ${totalElapsed % 60}s)`);
+        console.log(`Last jobETA Event: ${timeSinceLastETA}s ago`);
+        console.log(`Last ETA Value: ${lastETAValue}s`);
+        console.log(`Timestamp: ${new Date().toISOString()}`);
+        console.groupEnd();
+      }
+      
+      // Extract error message
+      let errorMessage = 'Video generation failed';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      } else if (error && typeof error === 'object') {
+        if (error.message) {
+          errorMessage = error.message;
+        } else if (error.error) {
+          errorMessage = error.error;
+        } else if (error.payload?.message) {
+          errorMessage = error.payload.message;
+        }
+      }
+      
+      console.error(`[VIDEO] Project ${project.id} ${source}: ${errorMessage}`);
+      
       cleanup();
+      
       setPhotos(prev => {
         const updated = [...prev];
         if (!updated[photoIndex]) return prev;
         updated[photoIndex] = {
           ...updated[photoIndex],
           generatingVideo: false,
-          videoError: 'Video generation timed out'
+          videoETA: undefined,
+          videoError: errorMessage
         };
         return updated;
       });
-      onError?.(new Error('Video generation timed out'));
-    }, 10 * 60 * 1000);
+      
+      onError?.(new Error(errorMessage));
+    };
+
+    // Listen for project-level 'failed' event (if project supports event emitter)
+    project.on?.('failed', (error: any) => {
+      handleProjectError(error, 'failed');
+    });
+
+    // Listen for project-level 'error' event (if project supports event emitter)
+    project.on?.('error', (error: any) => {
+      handleProjectError(error, 'error');
+    });
+
+    // Activity-aware timeout system:
+    // - Use quality-based timeout as the initial baseline
+    // - If job is still sending jobETA updates, extend timeout
+    // - Only timeout if 120 seconds pass without any jobETA update
+    const timeoutMinutes: Record<VideoQualityPreset, number> = {
+      fast: 5,      // ~1-2 min generation + buffer
+      balanced: 8,  // ~2-4 min generation + buffer
+      quality: 12,  // ~5-8 min generation + buffer
+      pro: 20       // ~10-16 min generation + buffer
+    };
+    const baseTimeoutMs = timeoutMinutes[quality] * 60 * 1000;
+    const inactivityTimeoutMs = 120 * 1000; // 120 seconds of no activity
+    
+    console.log(`[VIDEO] Setting ${timeoutMinutes[quality]}-minute base timeout for ${quality} quality video`);
+    console.log(`[VIDEO] Will also timeout after 120s of inactivity (no jobETA updates)`);
+
+    // Initialize last activity time
+    activeProject.lastActivityTime = Date.now();
+
+    // Base timeout - triggers if job exceeds the quality-based timeout
+    activeProject.timeoutId = setTimeout(() => {
+      if (activeProject.isCompleted) {
+        console.log(`[VIDEO] Base timeout reached but project ${project.id} already completed, ignoring`);
+        return;
+      }
+      
+      // Check if we've received recent activity
+      const timeSinceLastActivity = Date.now() - (activeProject.lastActivityTime || 0);
+      const minutesSinceActivity = Math.floor(timeSinceLastActivity / 60000);
+      
+      if (timeSinceLastActivity < inactivityTimeoutMs) {
+        console.log(`[VIDEO] Base timeout reached but job is still active (last update ${minutesSinceActivity}m ago), not timing out`);
+        return;
+      }
+      
+      console.log(`[VIDEO] Base timeout reached and no activity for ${minutesSinceActivity} minutes, timing out`);
+      handleProjectError(new Error('Video generation timed out'), 'timeout');
+    }, baseTimeoutMs);
+
+    // Activity check interval - runs every 30 seconds to check for inactivity
+    activeProject.activityCheckInterval = setInterval(() => {
+      if (activeProject.isCompleted) {
+        return;
+      }
+      
+      const timeSinceLastActivity = Date.now() - (activeProject.lastActivityTime || Date.now());
+      
+      // If no activity for 120 seconds and we're past the base timeout, trigger timeout
+      if (timeSinceLastActivity > inactivityTimeoutMs && Date.now() - (activeProject.startTime || Date.now()) > baseTimeoutMs) {
+        const minutesSinceActivity = Math.floor(timeSinceLastActivity / 60000);
+        console.log(`[VIDEO] No jobETA updates for ${minutesSinceActivity} minutes, timing out project ${project.id}`);
+        handleProjectError(new Error('Video generation timed out - no activity'), 'inactivity timeout');
+      }
+    }, 30000); // Check every 30 seconds
 
     // Job event handler
     const jobEventHandler = (event: any) => {
@@ -351,7 +548,30 @@ export async function generateVideo(options: GenerateVideoOptions): Promise<void
           break;
 
         case 'jobETA':
+          // Update last activity time to prevent inactivity timeout
+          const now = Date.now();
+          
+          // Calculate elapsed time from when job actually started processing (not when request was made)
+          let totalElapsed = 0;
+          let elapsedDisplay = 'waiting';
+          if (activeProject.startTime) {
+            totalElapsed = Math.floor((now - activeProject.startTime) / 1000);
+            const minutes = Math.floor(totalElapsed / 60);
+            const seconds = totalElapsed % 60;
+            elapsedDisplay = `${minutes}m ${seconds}s`;
+          }
+          
+          const timeSinceLastETA = activeProject.lastActivityTime 
+            ? Math.floor((now - activeProject.lastActivityTime) / 1000)
+            : 0;
+          
+          activeProject.lastActivityTime = now;
           activeProject.lastETA = event.etaSeconds;
+          
+          // Log with timestamp, elapsed time since processing started, and time since last ETA
+          const timestamp = new Date().toISOString();
+          console.log(`[VIDEO][${timestamp}] ETA: ${event.etaSeconds}s | Elapsed: ${elapsedDisplay} | Gap: ${timeSinceLastETA}s | Project: ${project.id}`);
+          
           setPhotos(prev => {
             const updated = [...prev];
             if (!updated[photoIndex]) return prev;
@@ -398,7 +618,37 @@ export async function generateVideo(options: GenerateVideoOptions): Promise<void
       // Prevent duplicate handling
       if (activeProject.isCompleted) return;
       activeProject.isCompleted = true;
-      
+
+      // Calculate total generation time
+      const endTime = Date.now();
+      const startTime = photo.videoStartTime || activeProject.startTime || endTime;
+      const totalDurationMs = endTime - startTime;
+      const totalDurationSec = (totalDurationMs / 1000).toFixed(2);
+
+      // Log comprehensive performance analytics
+      console.group('🎬 VIDEO GENERATION COMPLETE');
+      console.log('⏱️  Performance Metrics:');
+      console.log(`   Total Duration: ${totalDurationSec}s (${totalDurationMs}ms)`);
+      console.log(`   Start Time: ${new Date(startTime).toISOString()}`);
+      console.log(`   End Time: ${new Date(endTime).toISOString()}`);
+      console.log('');
+      console.log('⚙️  Generation Settings:');
+      console.log(`   Resolution: ${resolution} (${VIDEO_RESOLUTIONS[resolution].label})`);
+      console.log(`   Quality Preset: ${quality} (${VIDEO_QUALITY_PRESETS[quality].label})`);
+      console.log(`   Model: ${qualityConfig.model}`);
+      console.log(`   Steps: ${qualityConfig.steps}`);
+      console.log(`   Dimensions: ${scaled.width}x${scaled.height}px`);
+      console.log(`   Frames: 81 (5 seconds)`);
+      console.log(`   FPS: ${fps}`);
+      console.log('');
+      console.log('📊 Additional Info:');
+      console.log(`   Project ID: ${project.id}`);
+      console.log(`   Photo Index: ${photoIndex}`);
+      console.log(`   Video URL: ${videoUrl}`);
+      console.log(`   Positive Prompt: ${positivePrompt || '(none)'}`);
+      console.log(`   Negative Prompt: ${negativePrompt || '(none)'}`);
+      console.groupEnd();
+
       cleanup();
       markVideoGenerated();
 
