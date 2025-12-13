@@ -477,6 +477,7 @@ export function useSogniAuth() {
     checkExistingSession: sogniAuth.checkExistingSession.bind(sogniAuth),
     getSogniClient: sogniAuth.getSogniClient.bind(sogniAuth),
     ensureClient: sogniAuth.ensureClient.bind(sogniAuth),
-    setAuthenticatedState: sogniAuth.setAuthenticatedState.bind(sogniAuth)
+    setAuthenticatedState: sogniAuth.setAuthenticatedState.bind(sogniAuth),
+    waitForInitialization: sogniAuth.waitForInitialization.bind(sogniAuth)
   };
 }
