@@ -21,29 +21,25 @@ export const VIDEO_QUALITY_PRESETS = {
     model: VIDEO_MODELS.speed,
     steps: 4,
     label: 'Fast',
-    description: 'Quick generation (~12-20s)',
-    costMultiplier: 1
+    description: 'Quick generation (~12-20s)'
   },
   balanced: {
     model: VIDEO_MODELS.speed,
     steps: 8,
     label: 'Balanced',
-    description: 'Good balance of speed and quality (~25-40s)',
-    costMultiplier: 1.5
+    description: 'Good balance of speed and quality (~25-40s)'
   },
   quality: {
     model: VIDEO_MODELS.quality,
     steps: 20,
     label: 'High Quality',
-    description: 'Higher quality, slower (~3-4 min)',
-    costMultiplier: 2.5
+    description: 'Higher quality, slower (~3-4 min)'
   },
   pro: {
     model: VIDEO_MODELS.quality,
-    steps: 40,
+    steps: 30,
     label: 'Pro',
-    description: 'Maximum quality (~6-9 min)',
-    costMultiplier: 4
+    description: 'Maximum quality (~6-9 min)'
   }
 } as const;
 

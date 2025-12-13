@@ -2,12 +2,16 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useApp } from '../../context/AppContext';
 import { AspectRatioOption, TezDevTheme, OutputFormat, Settings } from '../../types/index';
 import { isFluxKontextModel, getModelRanges, getModelDefaults } from '../../constants/settings';
-import { VIDEO_RESOLUTIONS, VideoQualityPreset, VideoResolution } from '../../constants/videoSettings';
+import { VideoQualityPreset, VideoResolution } from '../../constants/videoSettings';
 import { themeConfigService } from '../../services/themeConfig';
 import { sanitizeUrl, getUrlValidationError } from '../../utils/urlValidation';
 import { useSogniAuth } from '../../services/sogniAuth';
 import { isMobile } from '../../utils/index';
+import { getCustomDimensions } from '../../utils/imageProcessing';
+import { useWallet } from '../../hooks/useWallet';
+import { getTokenLabel } from '../../services/walletService';
 import TagInput from './TagInput';
+import useVideoCostEstimation from '../../hooks/useVideoCostEstimation';
 
 interface AdvancedSettingsProps {
   /** Whether the settings overlay is visible */
@@ -123,9 +127,13 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
   // Get current settings from context if not provided via props
   const appContext = useApp();
   const { settings, updateSetting: baseUpdateSetting, clearImageCaches } = appContext;
-  
+
   // Get authentication state to check if user is logged in with frontend auth
   const authState = useSogniAuth();
+
+  // Get wallet info for token type display
+  const { tokenType } = useWallet();
+  const tokenLabel = getTokenLabel(tokenType);
   
   // Wrap updateSetting to pass auth state
   const updateSetting = React.useCallback((key: keyof Settings, value: any) => {
@@ -369,6 +377,58 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
   const currentVideoQuality = rawVideoQuality && validVideoQualityOptions.includes(rawVideoQuality as typeof validVideoQualityOptions[number])
     ? rawVideoQuality
     : 'fast';
+
+  // Get dimensions based on current aspect ratio for video cost estimation
+  // Memoize to prevent unnecessary re-renders and hook recreations
+  const videoDimensions = React.useMemo(() => {
+    return getCustomDimensions(currentAspectRatio);
+  }, [currentAspectRatio]);
+
+  // Video cost estimation for each resolution at current quality
+  // These will be cached and only refetch when quality changes
+  const videoCost480p = useVideoCostEstimation({
+    imageWidth: videoDimensions.width,
+    imageHeight: videoDimensions.height,
+    resolution: '480p',
+    quality: currentVideoQuality,
+    fps: settings.videoFramerate || 16,
+    enabled: authState.isAuthenticated
+  });
+
+  const videoCost580p = useVideoCostEstimation({
+    imageWidth: videoDimensions.width,
+    imageHeight: videoDimensions.height,
+    resolution: '580p',
+    quality: currentVideoQuality,
+    fps: settings.videoFramerate || 16,
+    enabled: authState.isAuthenticated
+  });
+
+  const videoCost720p = useVideoCostEstimation({
+    imageWidth: videoDimensions.width,
+    imageHeight: videoDimensions.height,
+    resolution: '720p',
+    quality: currentVideoQuality,
+    fps: settings.videoFramerate || 16,
+    enabled: authState.isAuthenticated
+  });
+
+  // Helper to format cost with both token and USD
+  const formatVideoCost = (tokenCost: number | null, costInUSD: number | null): string => {
+    // Handle null or missing costs
+    if (tokenCost === null || tokenCost === undefined) return '';
+
+    let result = ` (${tokenCost.toFixed(2)} ${tokenLabel}`;
+
+    // Add USD in parentheses if available
+    if (costInUSD !== null && costInUSD !== undefined && !isNaN(costInUSD)) {
+      const roundedUSD = Math.round(costInUSD * 100) / 100;
+      result += ` ~$${roundedUSD.toFixed(2)}`;
+    }
+
+    result += ')';
+    return result;
+  };
 
   // Helper function to calculate time estimates based on resolution
   // Base times are for 480p, increase by 25% for 580p, and 25% more for 720p
@@ -1173,11 +1233,15 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
                     onChange={(e) => updateSetting('videoResolution', e.target.value as VideoResolution)}
                     value={currentVideoResolution}
                   >
-                    {Object.entries(VIDEO_RESOLUTIONS).map(([key, config]) => (
-                      <option key={key} value={key}>
-                        {config.label} - {config.description}
-                      </option>
-                    ))}
+                    <option key="480p" value="480p">
+                      480p - Standard{formatVideoCost(videoCost480p.cost, videoCost480p.costInUSD)}
+                    </option>
+                    <option key="580p" value="580p">
+                      580p - Balanced quality and speed{formatVideoCost(videoCost580p.cost, videoCost580p.costInUSD)}
+                    </option>
+                    <option key="720p" value="720p">
+                      720p - HD{formatVideoCost(videoCost720p.cost, videoCost720p.costInUSD)}
+                    </option>
                   </select>
                 </div>
 
