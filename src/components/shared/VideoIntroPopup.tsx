@@ -79,7 +79,7 @@ export const VideoIntroPopup: React.FC<VideoIntroPopupProps> = ({
     { icon: '⚡', text: 'Fast: ~16 seconds' },
     { icon: '🎨', text: 'AI Motion Magic' },
     { icon: '✨', text: 'No Watermarks' },
-    { icon: '💰', text: 'From $0.12 USD' }
+    { icon: '💰', text: 'From $0.09 USD' }
   ];
 
   const content = (
