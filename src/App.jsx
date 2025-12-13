@@ -13,7 +13,7 @@ import { getThemeGroupPreferences, saveThemeGroupPreferences } from './utils/coo
 import { initializeSogniClient } from './services/sogni';
 import { isNetworkError } from './services/api';
 import { AuthStatus } from './components/auth/AuthStatus';
-import { useSogniAuth } from './services/sogniAuth';
+import { useSogniAuth, sogniAuth } from './services/sogniAuth';
 import { createFrontendClientAdapter } from './services/frontendSogniAdapter';
 import { enhancePhoto, undoEnhancement, redoEnhancement } from './services/PhotoEnhancer';
 import { refreshPhoto } from './services/PhotoRefresher';
@@ -3643,24 +3643,39 @@ const App = () => {
         await new Promise(resolve => setTimeout(resolve, 500));
       }
       
-      // CRITICAL FIX: ALWAYS wait for auth state initialization to complete before initializing Sogni
-      // This prevents race condition where initializeSogni() runs before checkExistingSession() completes,
-      // causing it to incorrectly initialize backend client instead of frontend client
-      console.log('⏳ Waiting for auth state initialization to complete before initializing Sogni...');
-      // Always wait - don't check isLoading flag as it may have already completed
+      // CRITICAL FIX: Wait for auth state initialization, then DON'T call initializeSogni
+      // The issue is that initializeSogni() uses authState from its closure, which is STALE.
+      // Even after waitForInitialization(), the captured React state authState is still the OLD value.
+      // 
+      // Instead, we let the auth state change effect (below) handle client initialization.
+      // That effect has authState in its dependency array, so it sees the CORRECT values.
+      // 
+      // We only initialize backend client here if there's no auth (demo mode).
+      console.log('⏳ Waiting for auth state initialization to complete...');
       await authState.waitForInitialization?.();
-      console.log('✅ Auth state initialization complete:', {
-        isAuthenticated: authState.isAuthenticated,
-        authMode: authState.authMode,
-        isLoading: authState.isLoading
+      
+      // IMPORTANT: Get FRESH state from the singleton, not the stale closure value
+      const currentAuthState = sogniAuth.getAuthState();
+      console.log('✅ Auth state initialization complete (from singleton):', {
+        isAuthenticated: currentAuthState.isAuthenticated,
+        authMode: currentAuthState.authMode,
+        isLoading: currentAuthState.isLoading
       });
       
-      // Initialize Sogni (restored original behavior)
-      try {
-        await initializeSogni();
-        console.log('✅ App initialization completed');
-      } catch (error) {
-        console.warn('🔗 Sogni initialization failed:', error);
+      // Only initialize here if NOT authenticated (demo mode)
+      // If authenticated, the auth state change effect will handle it with correct state
+      if (!currentAuthState.isAuthenticated) {
+        console.log('🔵 Not authenticated, initializing backend client for demo mode');
+        try {
+          await initializeSogni();
+          console.log('✅ Backend client initialized for demo mode');
+        } catch (error) {
+          console.warn('🔗 Sogni initialization failed:', error);
+        }
+      } else {
+        console.log('🟢 Already authenticated, letting auth state change effect initialize frontend client');
+        // Force a re-render to trigger the auth state change effect with correct values
+        // The auth change effect should run because authState dependency changed
       }
     };
     
@@ -3688,17 +3703,31 @@ const App = () => {
     // Update the ref for next time
     prevAuthRef.current = { isAuthenticated: authState.isAuthenticated, authMode: authState.authMode };
     
-    if (isNowAuthenticated && authState.authMode === 'frontend' && authState.getSogniClient()) {
-      console.log(`🔐 User logged in with frontend auth, switching to direct SDK connection for personal credits`);
+    if (isNowAuthenticated && authState.authMode === 'frontend') {
       const realClient = authState.getSogniClient();
+      console.log(`🔐 Auth state shows frontend auth, getSogniClient returned:`, realClient ? 'client exists' : 'NULL');
       
-      // CRITICAL FIX: Use the adapter instead of raw client
-      const adapterClient = createFrontendClientAdapter(realClient);
-      
-      setSogniClient(adapterClient);
-      setIsSogniReady(true);
-      
-      console.log('✅ Switched to frontend client with adapter - now using personal account credits');
+      if (realClient) {
+        console.log(`🟢 Setting up frontend client adapter for video support`);
+        // CRITICAL FIX: Use the adapter instead of raw client
+        const adapterClient = createFrontendClientAdapter(realClient);
+        
+        setSogniClient(adapterClient);
+        setIsSogniReady(true);
+        
+        console.log('✅✅✅ Frontend client with adapter SET - supportsVideo:', adapterClient.supportsVideo);
+      } else {
+        console.error('❌❌❌ CRITICAL: authState.getSogniClient() returned null despite being authenticated!');
+        // Try to get client from singleton directly as fallback
+        const singletonClient = sogniAuth.getSogniClient();
+        console.log('Trying singleton fallback, got:', singletonClient ? 'client exists' : 'NULL');
+        if (singletonClient) {
+          const adapterClient = createFrontendClientAdapter(singletonClient);
+          setSogniClient(adapterClient);
+          setIsSogniReady(true);
+          console.log('✅ Frontend client set via singleton fallback - supportsVideo:', adapterClient.supportsVideo);
+        }
+      }
       
       // Note: We do NOT clear demo render status on login
       // The free demo render is a one-time offer that should persist across login/logout
