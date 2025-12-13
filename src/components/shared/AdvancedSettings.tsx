@@ -370,6 +370,40 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
     ? rawVideoQuality
     : 'fast';
 
+  // Helper function to calculate time estimates based on resolution
+  // Base times are for 480p, increase by 25% for 580p, and 25% more for 720p
+  const getVideoTimeEstimate = (quality: VideoQualityPreset, resolution: VideoResolution): string => {
+    const baseEstimates: Record<VideoQualityPreset, { min: number; max: number; label: string }> = {
+      fast: { min: 12, max: 20, label: 's' },
+      balanced: { min: 25, max: 40, label: 's' },
+      quality: { min: 60, max: 120, label: 'min' },
+      pro: { min: 120, max: 240, label: 'min' }
+    };
+
+    const base = baseEstimates[quality];
+    let multiplier = 1;
+
+    // Apply resolution multiplier
+    if (resolution === '580p') {
+      multiplier = 1.25;
+    } else if (resolution === '720p') {
+      multiplier = 1.5625; // 1.25 * 1.25
+    }
+
+    const minTime = Math.round(base.min * multiplier);
+    const maxTime = Math.round(base.max * multiplier);
+
+    // Format the output
+    if (base.label === 's') {
+      return `~${minTime}-${maxTime}s`;
+    } else {
+      // Convert seconds to minutes
+      const minMinutes = Math.floor(minTime / 60);
+      const maxMinutes = Math.ceil(maxTime / 60);
+      return `~${minMinutes}-${maxMinutes} min`;
+    }
+  };
+
   const handleAspectRatioChange = (newAspectRatio: AspectRatioOption) => {
     // Use the provided handler or fallback to context
     if (onAspectRatioChange) {
@@ -1155,10 +1189,10 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
                     onChange={(e) => updateSetting('videoQuality', e.target.value as VideoQualityPreset)}
                     value={currentVideoQuality}
                   >
-                    <option value="fast">Fast - Quick generation (~12-20s)</option>
-                    <option value="balanced">Balanced - Good balance (~25-40s)</option>
-                    <option value="quality">High Quality - Slower (~1-2 min)</option>
-                    <option value="pro">Pro - Maximum quality (~2-4 min)</option>
+                    <option value="fast">Fast - Quick generation ({getVideoTimeEstimate('fast', currentVideoResolution)})</option>
+                    <option value="balanced">Balanced - Good balance ({getVideoTimeEstimate('balanced', currentVideoResolution)})</option>
+                    <option value="quality">High Quality - Slower ({getVideoTimeEstimate('quality', currentVideoResolution)})</option>
+                    <option value="pro">Pro - Maximum quality ({getVideoTimeEstimate('pro', currentVideoResolution)})</option>
                   </select>
                 </div>
                 <div className="control-description" style={{ marginTop: '-8px', marginBottom: '12px', marginLeft: '8px' }}>

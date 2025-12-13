@@ -252,9 +252,59 @@ export const refreshPhoto = async (options) => {
       };
     }
     
-    const project = await sogniClient.projects.create(projectConfig);
-    
+    let project;
+    try {
+      project = await sogniClient.projects.create(projectConfig);
     console.log(`[REFRESH] Refresh project created with ID: ${project.id}`);
+    } catch (createError) {
+      console.error(`[REFRESH] Project creation failed:`, createError);
+      
+      // Extract error message from various error formats
+      let errorMessage = 'Failed to create refresh project';
+      if (createError instanceof Error) {
+        errorMessage = createError.message;
+      } else if (typeof createError === 'object' && createError !== null) {
+        if (createError.message) {
+          errorMessage = createError.message;
+        } else if (createError.error) {
+          errorMessage = createError.error;
+        } else if (createError.payload?.message) {
+          errorMessage = createError.payload.message;
+        } else if (createError.payload?.error) {
+          errorMessage = createError.payload.error;
+        }
+      }
+      
+      // Log the full error for debugging
+      console.error(`[REFRESH] Full error details:`, {
+        error: createError,
+        message: errorMessage,
+        type: typeof createError,
+        keys: createError && typeof createError === 'object' ? Object.keys(createError) : []
+      });
+      
+      // Clear timeout
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      
+      // Update UI to show error
+      setPhotos(prev => {
+        const updated = [...prev];
+        if (!updated[photoIndex]) return prev;
+        updated[photoIndex] = {
+          ...updated[photoIndex],
+          generating: false,
+          loading: false,
+          error: errorMessage,
+          refreshError: errorMessage,
+          refreshTimeoutId: null
+        };
+        return updated;
+      });
+      
+      return; // Exit early - don't continue with the rest of the function
+    }
     
     // Update with project ID
     setPhotos(prev => {

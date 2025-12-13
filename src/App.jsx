@@ -4872,11 +4872,63 @@ const App = () => {
         }
       }
       
-      const project = await sogniClient.projects.create(projectConfig);
+      let project;
+      try {
+        project = await sogniClient.projects.create(projectConfig);
+        console.log('Project created:', project.id, 'with jobs:', project.jobs);
+      } catch (createError) {
+        console.error(`[GENERATE] Project creation failed:`, createError);
+        
+        // Extract error message from various error formats
+        let errorMessage = 'Failed to create project';
+        if (createError instanceof Error) {
+          errorMessage = createError.message;
+        } else if (typeof createError === 'object' && createError !== null) {
+          if (createError.message) {
+            errorMessage = createError.message;
+          } else if (createError.error) {
+            errorMessage = createError.error;
+          } else if (createError.payload?.message) {
+            errorMessage = createError.payload.message;
+          } else if (createError.payload?.error) {
+            errorMessage = createError.payload.error;
+          }
+        }
+        
+        // Log the full error for debugging
+        console.error(`[GENERATE] Full error details:`, {
+          error: createError,
+          message: errorMessage,
+          type: typeof createError,
+          keys: createError && typeof createError === 'object' ? Object.keys(createError) : []
+        });
+        
+        // Clear all timeouts when project creation fails
+        clearAllTimeouts();
+        activeProjectReference.current = null;
+        
+        // Mark all generating photos as failed
+        setRegularPhotos(prevPhotos => {
+          return prevPhotos.map(photo => {
+            if (photo.generating) {
+              return {
+                ...photo,
+                generating: false,
+                loading: false,
+                error: errorMessage,
+                permanentError: true,
+                statusText: 'Creation Failed'
+              };
+            }
+            return photo;
+          });
+        });
+        
+        return; // Exit early - don't continue with event setup
+      }
 
       activeProjectReference.current = project.id;
       activeProjectObjectReference.current = project;
-      console.log('Project created:', project.id, 'with jobs:', project.jobs);;
       
       // Track batch generation in Google Analytics
       try {

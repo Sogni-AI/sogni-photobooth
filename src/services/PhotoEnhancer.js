@@ -221,11 +221,62 @@ export const enhancePhoto = async (options) => {
     }
     
     // Use the same API path as regular generation to get proper upload handling
-    const project = await sogniClient.projects.create(projectConfig);
+    let project;
+    try {
+      project = await sogniClient.projects.create(projectConfig);
+      console.log(`[ENHANCE] Enhancement project created with ID: ${project.id} (not setting as active to avoid interference)`);
+    } catch (createError) {
+      console.error(`[ENHANCE] Project creation failed:`, createError);
+      
+      // Extract error message from various error formats
+      let errorMessage = 'Failed to create enhancement project';
+      if (createError instanceof Error) {
+        errorMessage = createError.message;
+      } else if (typeof createError === 'object' && createError !== null) {
+        if (createError.message) {
+          errorMessage = createError.message;
+        } else if (createError.error) {
+          errorMessage = createError.error;
+        } else if (createError.payload?.message) {
+          errorMessage = createError.payload.message;
+        } else if (createError.payload?.error) {
+          errorMessage = createError.payload.error;
+        }
+      }
+      
+      // Log the full error for debugging
+      console.error(`[ENHANCE] Full error details:`, {
+        error: createError,
+        message: errorMessage,
+        type: typeof createError,
+        keys: createError && typeof createError === 'object' ? Object.keys(createError) : []
+      });
+      
+      // Clear timeout
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      
+      // Update UI to show error
+      setPhotos(prev => {
+        const updated = [...prev];
+        if (!updated[photoIndex]) return prev;
+        updated[photoIndex] = {
+          ...updated[photoIndex],
+          enhancing: false,
+          loading: false,
+          enhancementError: errorMessage,
+          error: 'ENHANCEMENT FAILED',
+          enhanceTimeoutId: null
+        };
+        return updated;
+      });
+      
+      return; // Exit early - don't continue with the rest of the function
+    }
       
       // Don't set activeProjectReference for enhancement to avoid interfering with main generation
       // onSetActiveProject(project.id); // Commented out to prevent interference
-      console.log(`[ENHANCE] Enhancement project created with ID: ${project.id} (not setting as active to avoid interference)`);
       
       // Now update with project ID after creation
       setPhotos(prev => {
