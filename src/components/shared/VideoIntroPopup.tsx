@@ -298,8 +298,8 @@ export const VideoIntroPopup: React.FC<VideoIntroPopupProps> = ({
                   fontSize: '13px',
                   lineHeight: 1.4
                 }}>
-                  <div>• High Quality (480p): ~<strong style={{ color: '#4CAF50' }}>9¢</strong></div>
-                  <div>• High Quality (720p): ~<strong style={{ color: '#4CAF50' }}>19¢</strong></div>
+                  <div>• High Quality (480p): ~<strong style={{ color: '#4CAF50' }}>9¢</strong> (18 Spark Points)</div>
+                  <div>• High Quality (720p): ~<strong style={{ color: '#4CAF50' }}>19¢</strong> (38 Spark Points)</div>
                 </div>
               </div>
             )}
