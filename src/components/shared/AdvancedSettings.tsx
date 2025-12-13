@@ -423,7 +423,7 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
     // Add USD in parentheses if available
     if (costInUSD !== null && costInUSD !== undefined && !isNaN(costInUSD)) {
       const roundedUSD = Math.round(costInUSD * 100) / 100;
-      result += `(~$${roundedUSD.toFixed(2)})`;
+      result += ` (~$${roundedUSD.toFixed(2)})`;
     }
 
     return result;
