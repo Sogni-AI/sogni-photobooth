@@ -79,7 +79,7 @@ export const VideoIntroPopup: React.FC<VideoIntroPopupProps> = ({
     { icon: '⚡', text: 'Fast: ~16 seconds' },
     { icon: '🎨', text: 'AI Motion Magic' },
     { icon: '✨', text: 'No Watermarks' },
-    { icon: '💰', text: 'From $0.09 USD' }
+    { icon: '💰', text: 'From $0.10 USD' }
   ];
 
   const content = (
@@ -298,8 +298,8 @@ export const VideoIntroPopup: React.FC<VideoIntroPopupProps> = ({
                   fontSize: '13px',
                   lineHeight: 1.4
                 }}>
-                  <div>• High Quality (480p): ~<strong style={{ color: '#4CAF50' }}>9¢</strong> (18 Spark Points)</div>
-                  <div>• High Quality (720p): ~<strong style={{ color: '#4CAF50' }}>19¢</strong> (38 Spark Points)</div>
+                  <div>• High Quality 480p: ~<strong style={{ color: '#4CAF50' }}>10¢</strong> (20 Spark Points)</div>
+                  <div>• High Quality 720p: ~<strong style={{ color: '#4CAF50' }}>19¢</strong> (38 Spark Points)</div>
                 </div>
               </div>
             )}
