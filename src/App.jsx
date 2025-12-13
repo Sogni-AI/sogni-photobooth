@@ -3086,6 +3086,14 @@ const App = () => {
     
     setIsInitializingSogni(true);
     
+    console.log('🔵🔵🔵 INITIALIZING SOGNI CLIENT - START');
+    console.log('Current auth state:', {
+      isAuthenticated: authState.isAuthenticated,
+      authMode: authState.authMode,
+      isLoading: authState.isLoading,
+      hasGetSogniClient: typeof authState.getSogniClient === 'function'
+    });
+    
     try {
       // Reset any previous errors
       setBackendError(null);
@@ -3094,7 +3102,7 @@ const App = () => {
       
       if (authState.isAuthenticated && authState.authMode === 'frontend') {
         // Use the frontend Sogni client with adapter for personal account credits
-        console.log('Using frontend authentication mode - direct SDK connection for personal credits');
+        console.log('🟢 Using frontend authentication mode - direct SDK connection for personal credits');
 
         // Use ensureClient() to recreate the SDK client if it's temporarily unavailable
         // This is important for recovery after WebSocket errors (4015)
@@ -3124,17 +3132,20 @@ const App = () => {
           setSogniClient(client);
           setIsSogniReady(true);
 
-          console.log('✅ Frontend Sogni client initialized successfully with adapter - using personal account credits');
+          console.log('✅✅✅ Frontend Sogni client initialized successfully with adapter - using personal account credits');
+          console.log('Client supportsVideo:', client.supportsVideo);
         }
         
       } else {
         // Use the backend client (demo mode - shared demo account credits)
-        console.log('Using backend authentication (demo mode - shared demo credits)');
+        console.log('🔴 Using backend authentication (demo mode - shared demo credits)');
+        console.log('Why backend? isAuthenticated:', authState.isAuthenticated, 'authMode:', authState.authMode);
         client = await initializeSogniClient();
         setSogniClient(client);
         setIsSogniReady(true);
         
         console.log('✅ Backend Sogni client initialized successfully - using demo credits');
+        console.log('Client supportsVideo:', client.supportsVideo);
       }
 
       // Set up event listeners if we have a client
