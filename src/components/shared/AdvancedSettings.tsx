@@ -374,8 +374,8 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
   // Base times are for 480p, increase by 25% for 580p, and 25% more for 720p
   const getVideoTimeEstimate = (quality: VideoQualityPreset, resolution: VideoResolution): string => {
     const baseEstimates: Record<VideoQualityPreset, { min: number; max: number; label: string }> = {
-      fast: { min: 60, max: 120, label: 'min' },      // ~1-2 min
-      balanced: { min: 120, max: 240, label: 'min' }, // ~2-4 min
+      fast: { min: 12, max: 20, label: 's' },
+      balanced: { min: 25, max: 40, label: 's' },
       quality: { min: 300, max: 480, label: 'min' },  // ~5-8 min
       pro: { min: 600, max: 960, label: 'min' }       // ~10-16 min
     };
@@ -393,10 +393,15 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
     const minTime = Math.round(base.min * multiplier);
     const maxTime = Math.round(base.max * multiplier);
 
-    // Format the output - all in minutes now
-    const minMinutes = Math.floor(minTime / 60);
-    const maxMinutes = Math.ceil(maxTime / 60);
-    return `~${minMinutes}-${maxMinutes} min`;
+    // Format the output
+    if (base.label === 's') {
+      return `~${minTime}-${maxTime}s`;
+    } else {
+      // Convert seconds to minutes
+      const minMinutes = Math.floor(minTime / 60);
+      const maxMinutes = Math.ceil(maxTime / 60);
+      return `~${minMinutes}-${maxMinutes} min`;
+    }
   };
 
   const handleAspectRatioChange = (newAspectRatio: AspectRatioOption) => {

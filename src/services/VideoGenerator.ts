@@ -422,8 +422,8 @@ export async function generateVideo(options: GenerateVideoOptions): Promise<void
     // - If job is still sending jobETA updates, extend timeout
     // - Only timeout if 120 seconds pass without any jobETA update
     const timeoutMinutes: Record<VideoQualityPreset, number> = {
-      fast: 5,      // ~1-2 min generation + buffer
-      balanced: 8,  // ~2-4 min generation + buffer
+      fast: 3,      // ~12-20s generation + buffer
+      balanced: 5,  // ~25-40s generation + buffer
       quality: 12,  // ~5-8 min generation + buffer
       pro: 20       // ~10-16 min generation + buffer
     };

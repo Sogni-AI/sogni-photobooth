@@ -21,14 +21,14 @@ export const VIDEO_QUALITY_PRESETS = {
     model: VIDEO_MODELS.speed,
     steps: 4,
     label: 'Fast',
-    description: 'Quick generation (~1-2 min)',
+    description: 'Quick generation (~12-20s)',
     costMultiplier: 1
   },
   balanced: {
     model: VIDEO_MODELS.speed,
     steps: 8,
     label: 'Balanced',
-    description: 'Good balance of speed and quality (~2-4 min)',
+    description: 'Good balance of speed and quality (~25-40s)',
     costMultiplier: 1.5
   },
   quality: {
