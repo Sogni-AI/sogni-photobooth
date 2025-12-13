@@ -167,13 +167,13 @@ function useForm<F, R>(
         const result = await formAction(payload);
         isSubmittingRef.current = false;
         dispatch({ type: 'submit/success', payload: result });
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('Failed to submit form', error);
         isSubmittingRef.current = false;
         if (error instanceof ApiError) {
           dispatch({
             type: 'submit/error',
-            payload: { code: error.payload.errorCode, message: error.message }
+            payload: { code: (error as any).payload?.errorCode, message: (error as Error).message }
           });
           return;
         }

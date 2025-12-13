@@ -41,7 +41,7 @@ function StripePurchase({ onClose, currentBalance, showAlert }: Props) {
     }
 
     // Track view_item event for GA4 ecommerce
-    const items = products.map(product => ({
+    const items = products.map((product: any) => ({
       item_id: product.id,
       item_name: product.nickname,
       price: product.unit_amount / 100, // Convert cents to currency unit

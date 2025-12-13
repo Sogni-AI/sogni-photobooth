@@ -30,7 +30,7 @@ function useEntity<E, V>(entity: E, getter: (entity: E) => V): V {
     
     // Subscribe to 'updated' events from the DataEntity
     // This is emitted by the SDK when data changes (e.g., balance updates)
-    const unsubscribe = entity.on('updated', () => {
+    const unsubscribe = (entity as any).on('updated', () => {
       setValue(getter(entity));
     });
     

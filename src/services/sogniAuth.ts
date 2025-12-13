@@ -171,7 +171,7 @@ class SogniAuthManager implements SogniAuthService {
 
       // Check for existing authentication using checkAuth
       console.log('🔐 Calling checkAuth to resume session...');
-      const isAuthenticated = await this.sogniClient.checkAuth().catch((error) => {
+      const isAuthenticated = await this.sogniClient?.checkAuth().catch((error: any) => {
         console.log('🔐 checkAuth failed:', error);
 
         // Check for email verification error during auth check
@@ -206,15 +206,15 @@ class SogniAuthManager implements SogniAuthService {
         isStaging,
         sogniUrls,
         isAuthenticated,
-        currentAccount: this.sogniClient.account.currentAccount,
-        hasToken: !!(this.sogniClient.account.currentAccount as any)?.token,
-        hasRefreshToken: !!(this.sogniClient.account.currentAccount as any)?.refreshToken
+        currentAccount: this.sogniClient?.account?.currentAccount,
+        hasToken: !!(this.sogniClient?.account?.currentAccount as any)?.token,
+        hasRefreshToken: !!(this.sogniClient?.account?.currentAccount as any)?.refreshToken
       });
 
 
       if (isAuthenticated) {
         // We have a valid session, set up error handling
-        if (this.sogniClient.apiClient) {
+        if (this.sogniClient?.apiClient) {
           (this.sogniClient.apiClient as any).on('error', (error: any) => {
             console.error('Frontend client socket error:', error);
 
@@ -238,8 +238,8 @@ class SogniAuthManager implements SogniAuthService {
           isAuthenticated: true,
           authMode: 'frontend',
           user: {
-            username: this.sogniClient.account.currentAccount?.username,
-            email: this.sogniClient.account.currentAccount?.email
+            username: this.sogniClient?.account?.currentAccount?.username,
+            email: this.sogniClient?.account?.currentAccount?.email
           },
           isLoading: false,
           error: null,
@@ -400,6 +400,10 @@ class SogniAuthManager implements SogniAuthService {
       testnet: isLocalDev || isStaging,
       authType: 'cookies'
     });
+
+    if (!this.sogniClient) {
+      throw new Error('Failed to create Sogni client');
+    }
 
     return this.sogniClient;
   }

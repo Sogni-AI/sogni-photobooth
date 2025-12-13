@@ -205,7 +205,7 @@ export const RewardsProvider: React.FC<RewardsProviderProps> = ({ children }) =>
           // Refresh rewards list
           return fetchRewards();
         })
-        .catch((err) => {
+        .catch((err: any) => {
           console.error('Failed to claim reward:', err);
           
           let errorTitle = 'Claim Failed';
