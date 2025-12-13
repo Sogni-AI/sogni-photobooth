@@ -376,8 +376,8 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
     const baseEstimates: Record<VideoQualityPreset, { min: number; max: number; label: string }> = {
       fast: { min: 12, max: 20, label: 's' },
       balanced: { min: 25, max: 40, label: 's' },
-      quality: { min: 300, max: 480, label: 'min' },  // ~5-8 min
-      pro: { min: 600, max: 960, label: 'min' }       // ~10-16 min
+      quality: { min: 180, max: 240, label: 'min' },  // 3-4 min at 480p
+      pro: { min: 360, max: 540, label: 'min' }       // 6-9 min at 480p
     };
 
     const base = baseEstimates[quality];

@@ -35,14 +35,14 @@ export const VIDEO_QUALITY_PRESETS = {
     model: VIDEO_MODELS.quality,
     steps: 20,
     label: 'High Quality',
-    description: 'Higher quality, slower (~5-8 min)',
+    description: 'Higher quality, slower (~3-4 min)',
     costMultiplier: 2.5
   },
   pro: {
     model: VIDEO_MODELS.quality,
     steps: 40,
     label: 'Pro',
-    description: 'Maximum quality (~10-16 min)',
+    description: 'Maximum quality (~6-9 min)',
     costMultiplier: 4
   }
 } as const;
