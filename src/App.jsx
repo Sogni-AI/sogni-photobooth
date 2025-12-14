@@ -171,6 +171,7 @@ const App = () => {
   const dreamShaperAutoSelectedRef = useRef(false); // Track if DreamShaper was auto-selected (vs manually selected)
   const isInitialRenderRef = useRef(true); // Track if this is the initial render
   const userExplicitlySelectedModelRef = useRef(false); // Track if user explicitly chose a model (disables auto-switching)
+  const manualModelChangeRef = useRef(false); // Track if a manual model change is in progress (prevents auto-switching during reset)
 
   useEffect(() => {
     const unlockAudio = () => {
