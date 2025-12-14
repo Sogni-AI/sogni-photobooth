@@ -54,6 +54,7 @@ interface GenerateVideoOptions {
   onComplete?: (videoUrl: string) => void;
   onError?: (error: Error) => void;
   onCancel?: () => void;
+  onOutOfCredits?: () => void;
 }
 
 interface ActiveVideoProject {
@@ -128,7 +129,8 @@ export async function generateVideo(options: GenerateVideoOptions): Promise<void
     positivePrompt = '',
     negativePrompt = '',
     onComplete,
-    onError
+    onError,
+    onOutOfCredits
   } = options;
 
   if (typeof photoIndex !== 'number' || photoIndex < 0 || !photo) {
@@ -270,6 +272,39 @@ export async function generateVideo(options: GenerateVideoOptions): Promise<void
     } catch (createError) {
       console.error(`[VIDEO] Project creation failed:`, createError);
       
+      // Check for insufficient funds error
+      const isInsufficientFunds = createError && typeof createError === 'object' && (
+        (createError as any).code === 4024 ||
+        ((createError as any).message && (
+          (createError as any).message.toLowerCase().includes('insufficient funds') ||
+          ((createError as any).message.toLowerCase().includes('insufficient') && (createError as any).message.toLowerCase().includes('credits'))
+        ))
+      );
+      
+      if (isInsufficientFunds) {
+        console.error('[VIDEO] ❌ Insufficient funds - triggering out of credits popup');
+        
+        // Update photo state with out of credits error
+        setPhotos(prev => {
+          const updated = [...prev];
+          if (!updated[photoIndex]) return prev;
+          
+          updated[photoIndex] = {
+            ...updated[photoIndex],
+            generatingVideo: false,
+            videoETA: undefined,
+            videoError: 'Insufficient credits. Please replenish your account.'
+          };
+          return updated;
+        });
+        
+        // Trigger out of credits popup
+        if (onOutOfCredits) {
+          onOutOfCredits();
+        }
+        return;
+      }
+      
       // Extract error message from various error formats
       let errorMessage = 'Failed to create video project';
       if (createError instanceof Error) {
@@ -370,6 +405,41 @@ export async function generateVideo(options: GenerateVideoOptions): Promise<void
         return;
       }
       activeProject.isCompleted = true;
+      
+      // Check for insufficient funds error
+      const isInsufficientFunds = error && typeof error === 'object' && (
+        error.code === 4024 ||
+        (error.message && (
+          error.message.toLowerCase().includes('insufficient funds') ||
+          (error.message.toLowerCase().includes('insufficient') && error.message.toLowerCase().includes('credits'))
+        ))
+      );
+      
+      if (isInsufficientFunds) {
+        console.error('[VIDEO] ❌ Insufficient funds - triggering out of credits popup');
+        
+        cleanup();
+        
+        // Update photo state with out of credits error
+        setPhotos(prev => {
+          const updated = [...prev];
+          if (!updated[photoIndex]) return prev;
+          
+          updated[photoIndex] = {
+            ...updated[photoIndex],
+            generatingVideo: false,
+            videoETA: undefined,
+            videoError: 'Insufficient credits. Please replenish your account.'
+          };
+          return updated;
+        });
+        
+        // Trigger out of credits popup
+        if (onOutOfCredits) {
+          onOutOfCredits();
+        }
+        return;
+      }
       
       // Log detailed timing information for timeout debugging
       if (source === 'timeout' || source === 'inactivity timeout') {
@@ -627,7 +697,7 @@ export async function generateVideo(options: GenerateVideoOptions): Promise<void
           } else if (event.message) {
             errorMsg = typeof event.message === 'string' ? event.message : 'Video generation failed';
           }
-          handleError(errorMsg);
+          handleError(errorMsg, event.error);
           break;
       }
     };
@@ -696,10 +766,50 @@ export async function generateVideo(options: GenerateVideoOptions): Promise<void
       onComplete?.(videoUrl);
     };
 
-    const handleError = (errorMsg: string) => {
+    const handleError = (errorMsg: string, errorObject?: any) => {
       // Prevent duplicate handling
       if (activeProject.isCompleted) return;
       activeProject.isCompleted = true;
+      
+      // Check for insufficient funds error
+      const isInsufficientFunds = errorObject && typeof errorObject === 'object' && (
+        errorObject.code === 4024 ||
+        (errorObject.message && (
+          errorObject.message.toLowerCase().includes('insufficient funds') ||
+          (errorObject.message.toLowerCase().includes('insufficient') && errorObject.message.toLowerCase().includes('credits'))
+        ))
+      ) || (
+        errorMsg && (
+          errorMsg.toLowerCase().includes('insufficient funds') ||
+          (errorMsg.toLowerCase().includes('insufficient') && errorMsg.toLowerCase().includes('credits'))
+        )
+      );
+      
+      if (isInsufficientFunds) {
+        console.error('[VIDEO] ❌ Insufficient funds - triggering out of credits popup');
+        
+        cleanup();
+        
+        // Update photo state with out of credits error
+        setPhotos(prev => {
+          const updated = [...prev];
+          if (!updated[photoIndex]) return prev;
+          
+          updated[photoIndex] = {
+            ...updated[photoIndex],
+            generatingVideo: false,
+            videoETA: undefined,
+            videoError: 'Insufficient credits. Please replenish your account.'
+          };
+          return updated;
+        });
+        
+        // Trigger out of credits popup
+        if (onOutOfCredits) {
+          onOutOfCredits();
+        }
+        return;
+      }
       
       cleanup();
       console.error(`[VIDEO] Error: ${errorMsg}`);

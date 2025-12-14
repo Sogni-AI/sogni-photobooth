@@ -1009,6 +1009,12 @@ const PhotoGallery = ({
             message: 'Video generation was cancelled.',
             type: 'info'
           });
+        },
+        onOutOfCredits: () => {
+          console.log('[VIDEO] Triggering out of credits popup from video generation');
+          if (onOutOfCredits) {
+            onOutOfCredits();
+          }
         }
       });
     };
@@ -1054,6 +1060,12 @@ const PhotoGallery = ({
             message: 'Video generation was cancelled.',
             type: 'info'
           });
+        },
+        onOutOfCredits: () => {
+          console.log('[VIDEO] Triggering out of credits popup from video generation (fallback)');
+          if (onOutOfCredits) {
+            onOutOfCredits();
+          }
         }
       });
     };
