@@ -861,9 +861,9 @@ const ImageAdjuster = ({
                   <div className="confirm-button-details">
                     {!isProcessing && isAuthenticated && !costLoading && cost !== null && (
                       <>
-                        {cost.toFixed(2)} {tokenLabel.split(' ')[0]}
+                        <span className="price-token">{cost.toFixed(2)} {tokenLabel.split(' ')[0]}</span>
                         {costInUSD !== null && (
-                          <> (~${(Math.round(costInUSD * 100) / 100).toFixed(2)})</>
+                          <span className="price-usd">≈ ${(Math.round(costInUSD * 100) / 100).toFixed(2)}</span>
                         )}
                       </>
                     )}

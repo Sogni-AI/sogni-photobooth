@@ -3755,16 +3755,21 @@ const PhotoGallery = ({
                         onClick={handleGenerateVideo}
                         style={{
                           width: '100%',
-                          padding: '16px',
-                          background: 'linear-gradient(135deg, #667eea, #764ba2)',
-                          border: 'none',
+                          padding: '14px 16px',
+                          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                          border: '2px solid rgba(255, 255, 255, 0.15)',
                           color: 'white',
                           fontSize: '15px',
                           fontWeight: '600',
                           cursor: 'pointer',
                           borderRadius: '12px',
-                          textAlign: 'left',
-                          transition: 'all 0.2s ease'
+                          textAlign: 'center',
+                          transition: 'all 0.2s ease',
+                          boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          gap: '4px'
                         }}
                         onMouseOver={e => {
                           e.currentTarget.style.transform = 'translateY(-2px)';
@@ -3772,20 +3777,68 @@ const PhotoGallery = ({
                         }}
                         onMouseOut={e => {
                           e.currentTarget.style.transform = 'translateY(0)';
-                          e.currentTarget.style.boxShadow = 'none';
+                          e.currentTarget.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.3)';
                         }}
                       >
-                        <div>🎬 One-click motion video (5s)</div>
-                        {!videoLoading && formatCost(videoCostRaw, videoUSD) && (
-                          <div style={{ fontSize: '13px', opacity: 0.9, marginTop: '4px' }}>
-                            {formatCost(videoCostRaw, videoUSD)}
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          fontSize: '15px',
+                          fontWeight: '600'
+                        }}>
+                          <span style={{
+                            fontSize: '20px',
+                            animation: 'videoPulse 2s ease-in-out infinite',
+                            display: 'inline-block'
+                          }}>🎬</span>
+                          <span>One-click motion video (5s)</span>
+                        </div>
+                        {!videoLoading && formatCost(videoCostRaw, videoUSD) ? (
+                          <div style={{
+                            fontSize: '11px',
+                            fontWeight: '400',
+                            opacity: 0.85,
+                            letterSpacing: '0.2px',
+                            display: 'flex',
+                            gap: '4px',
+                            alignItems: 'center'
+                          }}>
+                            <span style={{ fontWeight: '600', opacity: 1 }}>
+                              {(() => {
+                                const formatted = formatCost(videoCostRaw, videoUSD);
+                                const parts = formatted.split('(');
+                                return parts[0].trim();
+                              })()}
+                            </span>
+                            {(() => {
+                              const formatted = formatCost(videoCostRaw, videoUSD);
+                              const usdMatch = formatted.match(/\((.*?)\)/);
+                              if (usdMatch) {
+                                return (
+                                  <span style={{ fontWeight: '400', opacity: 0.75, fontSize: '10px' }}>
+                                    ≈ {usdMatch[1]}
+                                  </span>
+                                );
+                              }
+                              return null;
+                            })()}
                           </div>
-                        )}
-                        {videoLoading && (
-                          <div style={{ fontSize: '13px', opacity: 0.7, marginTop: '4px' }}>
+                        ) : videoLoading ? (
+                          <div style={{
+                            fontSize: '11px',
+                            opacity: 0.75,
+                            fontWeight: '400'
+                          }}>
                             Calculating cost...
                           </div>
-                        )}
+                        ) : null}
+                        <style>{`
+                          @keyframes videoPulse {
+                            0%, 100% { transform: scale(1); }
+                            50% { transform: scale(1.15); }
+                          }
+                        `}</style>
                       </button>
                     )}
                   </div>
