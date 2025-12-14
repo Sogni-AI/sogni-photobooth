@@ -1618,6 +1618,15 @@ html body .photo-action-buttons .action-button,
   }
 }
 
+@keyframes blink {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+
 .video-new-badge {
   animation: pulse 2s ease-in-out infinite;
 }

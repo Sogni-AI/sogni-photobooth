@@ -5707,7 +5707,11 @@ const PhotoGallery = ({
                         {photo.videoETA !== undefined && photo.videoETA > 0 ? (
                           <>
                             <span style={{ animation: 'pulse 1s ease-in-out infinite' }}>⏱️</span>
-                            {' '}{formatVideoDuration(photo.videoETA)}
+                            <span style={{ 
+                              animation: photo.videoETA <= 1 ? 'blink 0.8s ease-in-out infinite' : 'none'
+                            }}>
+                              {' '}{formatVideoDuration(photo.videoETA)}
+                            </span>
                           </>
                         ) : (
                           <span style={{ animation: 'twinkle 0.8s ease-in-out infinite' }}>✨ Starting...</span>
