@@ -34,6 +34,7 @@ import { generateGalleryFilename, getPortraitFolderWithFallback } from '../../ut
 import { generateVideo, cancelVideoGeneration, downloadVideo } from '../../services/VideoGenerator.ts';
 import { hasSeenVideoIntro, hasGeneratedVideo, formatVideoDuration } from '../../constants/videoSettings.ts';
 import VideoIntroPopup from './VideoIntroPopup.tsx';
+import CustomVideoPromptPopup from './CustomVideoPromptPopup';
 
 // Random video completion messages
 const VIDEO_READY_MESSAGES = [
@@ -50,6 +51,194 @@ const VIDEO_READY_MESSAGES = [
 const getRandomVideoMessage = () => {
   return VIDEO_READY_MESSAGES[Math.floor(Math.random() * VIDEO_READY_MESSAGES.length)];
 };
+
+// Motion templates for video generation - PRACTICAL I2V prompts for existing portraits
+// Key I2V principles: Can only animate what EXISTS in the image - expressions, movements, camera, effects
+const MOTION_TEMPLATES = [
+  // 😀 EXPRESSIONS - Facial reactions that work on any portrait
+  { emoji: '🤮', label: 'Barf', prompt: 'face turns green and sick, cheeks bulge, head lurches forward violently puking, vomit spews out' },
+  { emoji: '😉', label: 'Wink', prompt: 'winks playfully, slight head tilt, charming smile spreads' },
+  { emoji: '😊', label: 'Smile', prompt: 'breaks into warm genuine smile, eyes crinkle with joy, cheeks rise' },
+  { emoji: '🤯', label: 'Shocked', prompt: 'eyes widen dramatically, jaw drops open, head pulls back in shock' },
+  { emoji: '😱', label: 'Scream', prompt: 'mouth opens wide screaming, eyes bulge, head shakes with terror' },
+  { emoji: '🤪', label: 'Silly', prompt: 'eyes cross briefly, tongue pokes out, head wobbles playfully' },
+  { emoji: '😜', label: 'Wacky', prompt: 'one eye winks, tongue sticks out sideways, goofy expression' },
+  { emoji: '🥳', label: 'Celebrate', prompt: 'throws head back laughing, huge smile, eyes squeeze with joy' },
+  { emoji: '😏', label: 'Smirk', prompt: 'one eyebrow raises slowly, corner of mouth curls into smirk' },
+  { emoji: '🥺', label: 'Pleading', prompt: 'eyes widen sweetly, bottom lip pushes out, head tilts down sadly' },
+  { emoji: '😤', label: 'Fierce', prompt: 'nostrils flare, eyes narrow intensely, jaw clenches with power' },
+  { emoji: '😂', label: 'Laugh', prompt: 'bursts into laughter, shoulders shake, eyes crinkle, head tips back' },
+  { emoji: '😢', label: 'Cry', prompt: 'face crumples sadly, tears well up, lip quivers, sniffles' },
+  
+  // 🎭 DRAMATIC - Theatrical expressions and poses
+  { emoji: '💅', label: 'Slay', prompt: 'chin raises confidently, eyes narrow fiercely, hair tosses back' },
+  { emoji: '🙄', label: 'Eye Roll', prompt: 'eyes roll back hard, head tilts with attitude, sighs dramatically' },
+  { emoji: '💋', label: 'Kiss', prompt: 'puckers lips, blows kiss toward camera, winks flirtatiously' },
+  { emoji: '🤭', label: 'Gossip', prompt: 'hand covers mouth, eyes dart sideways, leans in secretively' },
+  { emoji: '👀', label: 'Side Eye', prompt: 'eyes shift suspiciously to the side, eyebrow raises slowly' },
+  { emoji: '😈', label: 'Devious', prompt: 'eyes narrow mischievously, slow sinister grin spreads across face' },
+  { emoji: '👑', label: 'Royal', prompt: 'chin lifts regally, eyes look down nose, dismissive wave' },
+  { emoji: '🤔', label: 'Think', prompt: 'eyebrows furrow, eyes look up thinking, hand touches chin' },
+  { emoji: '😴', label: 'Sleepy', prompt: 'eyes droop heavily, head nods forward, yawns wide, jerks awake' },
+  { emoji: '🤫', label: 'Shush', prompt: 'finger raises to lips, eyes widen, secretive expression' },
+  
+  // 🖐️ HEAD & BODY - Movement that works with existing pose
+  { emoji: '👍', label: 'Nod Yes', prompt: 'head nods up and down agreeing, warm smile, eyes brighten' },
+  { emoji: '👎', label: 'Shake No', prompt: 'head shakes side to side disagreeing, slight frown, eyes narrow' },
+  { emoji: '🔄', label: 'Look Around', prompt: 'head turns left then right curiously, eyes scan around, returns to center' },
+  { emoji: '↩️', label: 'Double Take', prompt: 'looks away then snaps back surprised, eyes widen, jaw drops' },
+  { emoji: '💃', label: 'Groove', prompt: 'shoulders bounce to beat, head bobs rhythmically, feeling the music' },
+  { emoji: '👋', label: 'Wave', prompt: 'hand raises waving hello, friendly smile, head tilts warmly' },
+  { emoji: '🙈', label: 'Hide', prompt: 'hands cover face shyly, peeks through fingers, giggles' },
+  { emoji: '🫣', label: 'Peek', prompt: 'hands slowly part from face, one eye peeks through nervously' },
+  { emoji: '🤟', label: 'Rock On', prompt: 'throws up rock horns, headbangs slightly, rocks out' },
+  
+  // 🎥 CAMERA - Cinematic movements
+  { emoji: '🔍', label: 'Zoom In', prompt: 'slow dramatic camera push in toward face, intense focus' },
+  { emoji: '🔭', label: 'Zoom Out', prompt: 'camera slowly pulls back revealing scene, epic reveal' },
+  { emoji: '🌀', label: 'Orbit', prompt: 'camera orbits smoothly around subject, cinematic rotation' },
+  { emoji: '📸', label: 'Flash', prompt: 'bright camera flashes pop, paparazzi strobe lighting effect' },
+  { emoji: '🎬', label: 'Shake', prompt: 'camera shakes with impact, dramatic handheld movement' },
+  { emoji: '↔️', label: 'Pan', prompt: 'camera pans slowly across scene, smooth horizontal motion' },
+  
+  // ✨ EFFECTS - Background/atmospheric
+  { emoji: '💨', label: 'Wind', prompt: 'hair blows wildly in strong wind, clothes whip around dramatically' },
+  { emoji: '✨', label: 'Sparkle', prompt: 'magical sparkles float around, twinkling lights dance everywhere' },
+  { emoji: '🎊', label: 'Confetti', prompt: 'colorful confetti rains down everywhere, celebration explosion' },
+  { emoji: '🌟', label: 'Glow', prompt: 'soft ethereal light radiates outward, angelic glow effect' },
+  { emoji: '❄️', label: 'Snow', prompt: 'snowflakes drift down, frost forms, breath becomes visible, shivering' },
+  { emoji: '🌸', label: 'Petals', prompt: 'cherry blossom petals swirl romantically through the air' },
+  { emoji: '⚡', label: 'Lightning', prompt: 'lightning crackles around dramatically, electric energy surges' },
+  
+  // 🔥 FIRE & ELEMENTAL - Dramatic effects that worked great!
+  { emoji: '🔥', label: 'On Fire', prompt: 'flames engulf and spread across, fire burns intensely, everything ablaze' },
+  { emoji: '🌋', label: 'Lava', prompt: 'molten lava drips down, skin cracks revealing glowing magma underneath' },
+  { emoji: '☄️', label: 'Meteor', prompt: 'fiery meteors rain down in background, apocalyptic destruction, explosions' },
+  { emoji: '💫', label: 'Supernova', prompt: 'blinding explosion of light and energy radiates outward, cosmic blast' },
+  { emoji: '🌊', label: 'Tsunami', prompt: 'massive wave crashes in from behind, water engulfs everything, underwater' },
+  { emoji: '🌪️', label: 'Tornado', prompt: 'violent tornado swirls around, debris flies everywhere, intense destruction' },
+  { emoji: '🌑', label: 'Eclipse', prompt: 'darkness sweeps across, solar eclipse darkens everything, eerie shadows' },
+  { emoji: '☀️', label: 'Solar Flare', prompt: 'intense sun rays blast outward, blinding golden light, solar energy' },
+  { emoji: '🌙', label: 'Moonlight', prompt: 'ethereal blue moonlight washes over, mystical night glow, stars appear' },
+  { emoji: '🌈', label: 'Rainbow', prompt: 'vibrant rainbow colors wash across, prismatic light beams everywhere' },
+  { emoji: '💎', label: 'Crystal', prompt: 'crystalline structures grow and spread, diamond-like reflections, ice crystals' },
+  { emoji: '⭐', label: 'Stardust', prompt: 'glittering stardust swirls around, cosmic particles float, galaxy backdrop' },
+  { emoji: '🕳️', label: 'Black Hole', prompt: 'swirling black hole vortex forms behind, everything gets pulled toward it' },
+  { emoji: '💜', label: 'Neon', prompt: 'vibrant neon lights pulse and glow, cyberpunk colors, synthwave aesthetic' },
+  
+  // 🎃 WILD TRANSFORMATIONS - Push the limits!
+  { emoji: '😳', label: 'Blush', prompt: 'cheeks flush bright red, face turns pink with embarrassment, shy smile' },
+  { emoji: '🥵', label: 'Overheat', prompt: 'face turns red and sweaty, steam rises from head, overheating dramatically' },
+  { emoji: '🥶', label: 'Freeze', prompt: 'face turns blue, ice crystals form on skin, freezing solid, frost spreads' },
+  { emoji: '😡', label: 'Rage', prompt: 'face turns red with anger, steam shoots from ears, veins bulge, furious' },
+  { emoji: '💚', label: 'Sick', prompt: 'face turns sickly green, looks nauseous, sweating, about to hurl' },
+  { emoji: '😍', label: 'Love', prompt: 'heart eyes appear, hearts float up from head, lovestruck dreamy expression' },
+  { emoji: '🤩', label: 'Starstruck', prompt: 'eyes turn to stars, sparkles surround face, amazed wonder expression' },
+  { emoji: '💀', label: 'Skull', prompt: 'face transforms into skeleton skull, flesh fades away revealing bones' },
+  { emoji: '🧟', label: 'Zombie', prompt: 'skin turns grey and rotting, eyes go white, zombie transformation, arms reach forward' },
+  { emoji: '🧛', label: 'Vampire', prompt: 'fangs extend from mouth, eyes glow red, menacing expression, pale skin' },
+  { emoji: '👻', label: 'Ghost', prompt: 'body turns translucent and ghostly, fades partially, floats eerily' },
+  { emoji: '👽', label: 'Alien', prompt: 'eyes turn large and black, skin turns grey, alien transformation' },
+  { emoji: '🤖', label: 'Robot', prompt: 'skin turns metallic, robotic parts appear, mechanical transformation' },
+  { emoji: '🫠', label: 'Melt', prompt: 'face slowly melts downward like wax, features droop and ooze, liquifying' },
+  { emoji: '💥', label: 'Explode', prompt: 'head explodes dramatically, mind literally blown, pieces scatter' },
+  { emoji: '🎭', label: 'Joker', prompt: 'creepy wide smile spreads across face, eyes go wild, maniacal laughter' },
+  { emoji: '👹', label: 'Demon', prompt: 'horns sprout from forehead, eyes glow, demonic transformation, snarling' },
+  { emoji: '😵‍💫', label: 'Dizzy', prompt: 'eyes spiral dizzily, head wobbles, stars circle around head, disoriented' },
+  { emoji: '🤧', label: 'Sneeze', prompt: 'face scrunches up, massive sneeze explodes out, snot flies everywhere' },
+  { emoji: '💦', label: 'Spit Take', prompt: 'liquid sprays out of mouth in shock, dramatic spit take reaction' },
+  { emoji: '👴', label: 'Age', prompt: 'rapidly ages, wrinkles form, hair turns grey then white, becoming elderly' },
+  { emoji: '👶', label: 'Young', prompt: 'face becomes younger, skin smooths, features soften, reverse aging' },
+  
+  // 🎪 BONUS WILD EFFECTS - More creative motion!
+  { emoji: '🎨', label: 'Paint', prompt: 'colorful paint splatters across face, drips down, artistic explosion' },
+  { emoji: '🔮', label: 'Crystal Ball', prompt: 'mystical glowing aura, magical energy swirls, fortune teller vibes' },
+  { emoji: '💥', label: 'Mind Blown', prompt: 'head explodes in dramatic fashion, pieces scatter, mind literally blown' },
+  { emoji: '🌊', label: 'Drip', prompt: 'face slowly drips and distorts downward, melting like liquid wax' },
+  { emoji: '🦋', label: 'Butterfly', prompt: 'butterflies flutter around, land on face, magical nature effect' },
+  { emoji: '🎆', label: 'Fireworks', prompt: 'fireworks explode behind in background, colorful bursts, celebration' },
+  { emoji: '🌺', label: 'Bloom', prompt: 'flowers bloom and grow around, petals open, nature flourishes' },
+];
+
+// Render a motion template button with tooltip showing prompt
+const renderMotionButton = (template, index, handleGenerateVideo, setShowVideoDropdown, setShowCustomVideoPromptPopup) => (
+  <button
+    key={template.label}
+    onClick={() => handleGenerateVideo(template.prompt)}
+    title={template.prompt}
+    style={{
+      padding: '8px 4px',
+      background: 'rgba(255, 255, 255, 0.08)',
+      border: '1px solid rgba(255, 255, 255, 0.15)',
+      color: 'white',
+      fontSize: '10px',
+      fontWeight: '500',
+      cursor: 'pointer',
+      borderRadius: '8px',
+      textAlign: 'center',
+      transition: 'all 0.2s ease',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      gap: '2px',
+      minHeight: window.innerWidth < 768 ? '44px' : '54px'
+    }}
+    onMouseOver={e => {
+      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)';
+      e.currentTarget.style.transform = 'translateY(-1px)';
+    }}
+    onMouseOut={e => {
+      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
+      e.currentTarget.style.transform = 'translateY(0)';
+    }}
+  >
+    <span style={{ fontSize: window.innerWidth < 768 ? '24px' : '18px' }}>{template.emoji}</span>
+    {window.innerWidth >= 768 && <span>{template.label}</span>}
+  </button>
+);
+
+// Custom button for the motion grid - styled distinctly as a powerful option
+const renderCustomButton = (setShowVideoDropdown, setShowCustomVideoPromptPopup) => (
+  <button
+    key="custom"
+    onClick={() => {
+      setShowVideoDropdown(false);
+      setShowCustomVideoPromptPopup(true);
+    }}
+    title="Create your own custom motion prompt - full creative control!"
+    style={{
+      width: window.innerWidth < 768 ? '100%' : 'auto',
+      padding: '12px 24px',
+      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      border: '2px solid rgba(255, 255, 255, 0.4)',
+      color: 'white',
+      fontSize: '14px',
+      fontWeight: '700',
+      cursor: 'pointer',
+      borderRadius: '10px',
+      textAlign: 'center',
+      transition: 'all 0.2s ease',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: '8px',
+      boxShadow: '0 2px 8px rgba(102, 126, 234, 0.4)'
+    }}
+    onMouseOver={e => {
+      e.currentTarget.style.background = 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)';
+      e.currentTarget.style.transform = 'translateY(-2px)';
+      e.currentTarget.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.6)';
+    }}
+    onMouseOut={e => {
+      e.currentTarget.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+      e.currentTarget.style.transform = 'translateY(0)';
+      e.currentTarget.style.boxShadow = '0 2px 8px rgba(102, 126, 234, 0.4)';
+    }}
+  >
+    <span style={{ fontSize: '18px' }}>✨</span>
+    <span>Custom Prompt</span>
+  </button>
+);
 
 // Memoized placeholder image component to prevent blob reloading
 const PlaceholderImage = memo(({ placeholderUrl }) => {
@@ -228,6 +417,7 @@ const PhotoGallery = ({
   const [showVideoDropdown, setShowVideoDropdown] = useState(false);
   const [showVideoIntroPopup, setShowVideoIntroPopup] = useState(false);
   const [showVideoNewBadge, setShowVideoNewBadge] = useState(() => !hasGeneratedVideo());
+  const [showCustomVideoPromptPopup, setShowCustomVideoPromptPopup] = useState(false);
 
   // Get selected photo dimensions for video cost estimation
   const selectedPhoto = selectedPhotoIndex !== null ? photos[selectedPhotoIndex] : null;
@@ -942,7 +1132,7 @@ const PhotoGallery = ({
   }, [handleShowControlOverlay]);
 
   // Handle video generation
-  const handleGenerateVideo = useCallback(async () => {
+  const handleGenerateVideo = useCallback(async (customMotionPrompt = null, customNegativePrompt = null) => {
     setShowVideoDropdown(false);
 
     if (selectedPhotoIndex === null) return;
@@ -966,6 +1156,10 @@ const PhotoGallery = ({
       return;
     }
 
+    // Use custom prompts if provided, otherwise use settings defaults
+    const motionPrompt = customMotionPrompt || settings.videoPositivePrompt || '';
+    const negativePrompt = customNegativePrompt !== null ? customNegativePrompt : (settings.videoNegativePrompt || '');
+
     // Load image to get actual dimensions
     const img = new Image();
     
@@ -984,8 +1178,8 @@ const PhotoGallery = ({
         resolution: settings.videoResolution || '480p',
         quality: settings.videoQuality || 'fast',
         fps: settings.videoFramerate || 16,
-        positivePrompt: settings.videoPositivePrompt || '',
-        negativePrompt: settings.videoNegativePrompt || '',
+        positivePrompt: motionPrompt,
+        negativePrompt: negativePrompt,
         onComplete: (videoUrl) => {
           // Auto-play the generated video when completed
           setPlayingGeneratedVideoId(photo.id);
@@ -1035,8 +1229,8 @@ const PhotoGallery = ({
         resolution: settings.videoResolution || '480p',
         quality: settings.videoQuality || 'fast',
         fps: settings.videoFramerate || 16,
-        positivePrompt: settings.videoPositivePrompt || '',
-        negativePrompt: settings.videoNegativePrompt || '',
+        positivePrompt: motionPrompt,
+        negativePrompt: negativePrompt,
         onComplete: (videoUrl) => {
           // Auto-play the generated video when completed
           setPlayingGeneratedVideoId(photo.id);
@@ -2842,15 +3036,15 @@ const PhotoGallery = ({
           ref={moreButtonRef}
           className="more-photos-btn corner-btn"
           onClick={handleMoreButtonClick}
-          disabled={!isGenerating && (activeProjectReference.current !== null || !isSogniReady || !lastPhotoData.blob)}
+          disabled={!isGenerating && (!isSogniReady || !lastPhotoData.blob)}
           style={{
             position: 'fixed',
             right: '20px',
             bottom: '20px',
             left: 'auto',
-            cursor: (!isGenerating && (activeProjectReference.current !== null || !isSogniReady || !lastPhotoData.blob)) ? 'not-allowed' : 'pointer',
+            cursor: (!isGenerating && (!isSogniReady || !lastPhotoData.blob)) ? 'not-allowed' : 'pointer',
             zIndex: 9999,
-            opacity: (!isGenerating && (activeProjectReference.current !== null || !isSogniReady || !lastPhotoData.blob)) ? 0.6 : 1,
+            opacity: (!isGenerating && (!isSogniReady || !lastPhotoData.blob)) ? 0.6 : 1,
             backgroundColor: isGenerating ? '#ff6b6b' : undefined,
             borderColor: isGenerating ? '#ff6b6b' : undefined,
           }}
@@ -3087,8 +3281,8 @@ const PhotoGallery = ({
               />
             )}
 
-          {/* Download Framed Button - Hide in Vibe Explorer */}
-          {!isPromptSelectorMode && (
+          {/* Download Framed Button - Hide in Vibe Explorer or when video exists */}
+          {!isPromptSelectorMode && !selectedPhoto.videoUrl && (
           <button
             className="action-button download-btn"
             onClick={(e) => {
@@ -3107,8 +3301,8 @@ const PhotoGallery = ({
           </button>
           )}
 
-          {/* Download Raw Button - Hide in Vibe Explorer */}
-          {!isPromptSelectorMode && (
+          {/* Download Raw Button - Hide in Vibe Explorer or when video exists */}
+          {!isPromptSelectorMode && !selectedPhoto.videoUrl && (
           <button
             className="action-button download-raw-btn"
             onClick={(e) => {
@@ -3124,6 +3318,20 @@ const PhotoGallery = ({
           >
             <span>💾</span>
             Raw
+          </button>
+          )}
+
+          {/* Download Video Button - Show when video exists (replaces Framed/Raw buttons) */}
+          {!isPromptSelectorMode && selectedPhoto.videoUrl && (
+          <button
+            className="action-button download-video-btn"
+            onClick={(e) => {
+              handleDownloadVideo();
+              e.stopPropagation();
+            }}
+          >
+            <span>💾</span>
+            Video
           </button>
           )}
 
@@ -3481,9 +3689,6 @@ const PhotoGallery = ({
                 }}
                 disabled={selectedPhoto.loading || selectedPhoto.enhancing}
                 style={{
-                  background: 'linear-gradient(135deg, #667eea, #764ba2)',
-                  border: 'none',
-                  color: 'white',
                   position: 'relative',
                   overflow: 'visible'
                 }}
@@ -3560,41 +3765,30 @@ const PhotoGallery = ({
                     className="video-dropdown"
                     style={{
                       position: 'fixed',
-                      bottom: (() => {
-                        const videoButton = document.querySelector('.video-button-container');
-                        if (videoButton) {
-                          const rect = videoButton.getBoundingClientRect();
-                          return window.innerHeight - rect.top + 10;
-                        }
-                        return 88;
-                      })(),
-                      left: (() => {
-                        const videoButton = document.querySelector('.video-button-container');
-                        if (videoButton) {
-                          const rect = videoButton.getBoundingClientRect();
-                          const dropdownWidth = 280;
-                          let leftPos = rect.left + (rect.width / 2) - (dropdownWidth / 2);
-                          if (leftPos < 10) leftPos = 10;
-                          if (leftPos + dropdownWidth > window.innerWidth - 10) {
-                            leftPos = window.innerWidth - dropdownWidth - 10;
+                      ...(window.innerWidth < 768 
+                        ? { 
+                            top: '10px',
+                            bottom: '10px',
+                            height: 'auto'
                           }
-                          return leftPos;
-                        }
-                        return '50%';
-                      })(),
-                      transform: (() => {
-                        const videoButton = document.querySelector('.video-button-container');
-                        return videoButton ? 'none' : 'translateX(-50%)';
-                      })(),
-                      background: 'rgba(26, 26, 46, 0.95)',
-                      backdropFilter: 'blur(10px)',
-                      borderRadius: '16px',
-                      padding: '8px',
-                      minWidth: '260px',
-                      boxShadow: '0 10px 40px rgba(0, 0, 0, 0.5)',
+                        : { 
+                            bottom: '80px',
+                            maxHeight: 'calc(100vh - 100px)'
+                          }
+                      ),
+                      left: '50%',
+                      transform: 'translateX(-50%)',
+                      background: 'linear-gradient(135deg, rgba(30, 30, 60, 0.98) 0%, rgba(20, 20, 45, 0.98) 100%)',
+                      backdropFilter: 'blur(20px)',
+                      borderRadius: '20px',
+                      padding: '12px',
+                      width: selectedPhoto.generatingVideo ? 'min(90vw, 280px)' : 'min(95vw, 750px)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      boxShadow: '0 20px 60px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.1) inset',
                       zIndex: 9999999,
-                      border: '1px solid rgba(255, 255, 255, 0.1)',
-                      animation: 'slideUp 0.2s ease-out'
+                      border: '2px solid rgba(138, 126, 234, 0.3)',
+                      animation: 'videoDropdownSlideUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)'
                     }}
                     onClick={(e) => e.stopPropagation()}
                   >
@@ -3645,15 +3839,6 @@ const PhotoGallery = ({
                         }}>
                           Video generating...
                         </div>
-                        {/* Cost info */}
-                        <div style={{
-                          padding: '8px 16px',
-                          fontSize: '12px',
-                          color: 'rgba(255, 255, 255, 0.6)',
-                          borderBottom: '1px solid rgba(255, 255, 255, 0.1)'
-                        }}>
-                          Cost: {videoLoading ? 'Calculating...' : formatCost(videoCostRaw, videoUSD) || 'N/A'}
-                        </div>
                         <button
                           onClick={handleCancelVideo}
                           style={{
@@ -3675,134 +3860,81 @@ const PhotoGallery = ({
                         </button>
                       </>
                     ) : selectedPhoto.videoUrl ? (
-                      /* Completed state - video plays inline, show controls here */
+                      /* Completed state - show same grid for generating another */
                       <>
                         <div style={{
-                          padding: '12px 16px',
-                          color: 'white',
-                          fontSize: '13px',
-                          opacity: 0.8,
+                          padding: '10px 16px 6px 16px',
+                          fontSize: '12px',
+                          fontWeight: '500',
+                          color: 'rgba(255, 255, 255, 0.8)',
+                          textAlign: 'center',
                           borderBottom: '1px solid rgba(255, 255, 255, 0.1)'
                         }}>
-                          ✨ Your Motion Clip is ready! 😎
+                          ✨ Generate another motion
                         </div>
-                        <button
-                          onClick={handleDownloadVideo}
-                          style={{
-                            width: '100%',
-                            padding: '12px 16px',
-                            background: 'linear-gradient(135deg, #4CAF50, #45a049)',
-                            border: 'none',
-                            color: 'white',
-                            fontSize: '14px',
-                            fontWeight: '600',
-                            cursor: 'pointer',
-                            borderRadius: '8px',
-                            margin: '8px 0 6px 0',
-                            transition: 'all 0.2s ease'
-                          }}
-                          onMouseOver={e => {
-                            e.currentTarget.style.transform = 'translateY(-2px)';
-                            e.currentTarget.style.boxShadow = '0 6px 20px rgba(76, 175, 80, 0.4)';
-                          }}
-                          onMouseOut={e => {
-                            e.currentTarget.style.transform = 'translateY(0)';
-                            e.currentTarget.style.boxShadow = 'none';
-                          }}
-                        >
-                          💾 Download Video
-                        </button>
-                        <button
-                          onClick={handleGenerateVideo}
-                          style={{
-                            width: '100%',
-                            padding: '12px 16px',
-                            background: 'linear-gradient(135deg, #667eea, #764ba2)',
-                            border: 'none',
-                            color: 'white',
-                            fontSize: '14px',
-                            fontWeight: '600',
-                            cursor: 'pointer',
-                            borderRadius: '8px',
-                            textAlign: 'center',
-                            transition: 'all 0.2s ease'
-                          }}
-                          onMouseOver={e => {
-                            e.currentTarget.style.transform = 'translateY(-2px)';
-                            e.currentTarget.style.boxShadow = '0 6px 20px rgba(102, 126, 234, 0.4)';
-                          }}
-                          onMouseOut={e => {
-                            e.currentTarget.style.transform = 'translateY(0)';
-                            e.currentTarget.style.boxShadow = 'none';
-                          }}
-                        >
-                          <div>🔄 Generate New Video (5s)</div>
-                          {!videoLoading && formatCost(videoCostRaw, videoUSD) && (
-                            <div style={{ fontSize: '12px', opacity: 0.9, marginTop: '4px' }}>
-                              {formatCost(videoCostRaw, videoUSD)}
-                            </div>
-                          )}
-                          {videoLoading && (
-                            <div style={{ fontSize: '12px', opacity: 0.7, marginTop: '4px' }}>
-                              Calculating cost...
-                            </div>
-                          )}
-                        </button>
-                      </>
-                    ) : (
-                      /* Initial state - show generate option with cost */
-                      <button
-                        onClick={handleGenerateVideo}
-                        style={{
-                          width: '100%',
-                          padding: '14px 16px',
-                          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                          border: '2px solid rgba(255, 255, 255, 0.15)',
-                          color: 'white',
-                          fontSize: '15px',
-                          fontWeight: '600',
-                          cursor: 'pointer',
-                          borderRadius: '12px',
-                          textAlign: 'center',
-                          transition: 'all 0.2s ease',
-                          boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'center',
-                          gap: '4px'
-                        }}
-                        onMouseOver={e => {
-                          e.currentTarget.style.transform = 'translateY(-2px)';
-                          e.currentTarget.style.boxShadow = '0 6px 20px rgba(102, 126, 234, 0.4)';
-                        }}
-                        onMouseOut={e => {
-                          e.currentTarget.style.transform = 'translateY(0)';
-                          e.currentTarget.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.3)';
-                        }}
-                      >
+                        
+                        {/* Motion Style Options Grid - uses full width, scrolls on mobile */}
                         <div style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '8px',
-                          fontSize: '15px',
-                          fontWeight: '600'
+                          display: 'grid',
+                          gridTemplateColumns: window.innerWidth < 768 ? 'repeat(5, 1fr)' : 'repeat(11, 1fr)',
+                          gap: '4px',
+                          padding: '8px',
+                          flex: '1 1 auto',
+                          overflowY: 'auto',
+                          overflowX: 'hidden',
+                          WebkitOverflowScrolling: 'touch',
+                          touchAction: 'pan-y',
+                          minHeight: 0
                         }}>
-                          <span style={{
-                            fontSize: '20px',
-                            animation: 'videoPulse 2s ease-in-out infinite',
-                            display: 'inline-block'
-                          }}>🎬</span>
-                          <span>One-click motion video (5s)</span>
+                          {MOTION_TEMPLATES.map((template, index) => 
+                            renderMotionButton(template, index, handleGenerateVideo, setShowVideoDropdown, setShowCustomVideoPromptPopup)
+                          )}
                         </div>
+
+                        {/* Custom Prompt Button - Always visible below grid */}
+                        <div style={{
+                          padding: '16px',
+                          borderTop: '2px solid rgba(138, 126, 234, 0.3)',
+                          background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%)',
+                          display: 'flex',
+                          flexDirection: window.innerWidth < 768 ? 'column' : 'row',
+                          alignItems: window.innerWidth < 768 ? 'stretch' : 'center',
+                          justifyContent: window.innerWidth < 768 ? 'center' : 'flex-end',
+                          gap: '12px',
+                          flexShrink: 0
+                        }}>
+                          <div style={{
+                            fontSize: '13px',
+                            color: 'rgba(255, 255, 255, 0.6)',
+                            fontWeight: '500',
+                            letterSpacing: '0.3px',
+                            textAlign: window.innerWidth < 768 ? 'center' : 'right',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: window.innerWidth < 768 ? 'center' : 'flex-end',
+                            gap: '8px'
+                          }}>
+                            <span>Or create your own</span>
+                            {window.innerWidth >= 768 && <span style={{ fontSize: '20px', opacity: 0.4 }}>→</span>}
+                          </div>
+                          {renderCustomButton(setShowVideoDropdown, setShowCustomVideoPromptPopup)}
+                        </div>
+
+                        {/* Pricing info below Custom button */}
                         {!videoLoading && formatCost(videoCostRaw, videoUSD) ? (
                           <div style={{
+                            padding: '8px 16px 12px 16px',
                             fontSize: '11px',
                             fontWeight: '400',
                             opacity: 0.85,
                             letterSpacing: '0.2px',
                             display: 'flex',
                             gap: '4px',
-                            alignItems: 'center'
+                            alignItems: 'center',
+                            justifyContent: 'flex-end',
+                            borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+                            color: 'rgba(255, 255, 255, 0.8)',
+                            flexShrink: 0
                           }}>
                             <span style={{ fontWeight: '600', opacity: 1 }}>
                               {(() => {
@@ -3826,20 +3958,147 @@ const PhotoGallery = ({
                           </div>
                         ) : videoLoading ? (
                           <div style={{
+                            padding: '8px 16px 12px 16px',
                             fontSize: '11px',
                             opacity: 0.75,
-                            fontWeight: '400'
+                            fontWeight: '400',
+                            textAlign: 'right',
+                            borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+                            color: 'rgba(255, 255, 255, 0.7)',
+                            flexShrink: 0
                           }}>
                             Calculating cost...
                           </div>
                         ) : null}
+                        
                         <style>{`
                           @keyframes videoPulse {
                             0%, 100% { transform: scale(1); }
                             50% { transform: scale(1.15); }
                           }
                         `}</style>
-                      </button>
+                      </>
+                    ) : (
+                      /* Initial state - show motion style options grid */
+                      <>
+                        <div style={{
+                          padding: '10px 16px 6px 16px',
+                          fontSize: '14px',
+                          fontWeight: '600',
+                          color: 'white',
+                          textAlign: 'center',
+                          borderBottom: '1px solid rgba(138, 126, 234, 0.3)',
+                          background: 'linear-gradient(90deg, rgba(138, 126, 234, 0.15) 0%, rgba(138, 126, 234, 0.05) 50%, rgba(138, 126, 234, 0.15) 100%)',
+                          flexShrink: 0
+                        }}>
+                          ✨ Choose a motion style
+                        </div>
+                        
+                        {/* Motion Style Options Grid - uses full width, scrolls on mobile */}
+                        <div style={{
+                          display: 'grid',
+                          gridTemplateColumns: window.innerWidth < 768 ? 'repeat(5, 1fr)' : 'repeat(11, 1fr)',
+                          gap: '4px',
+                          padding: '8px',
+                          flex: '1 1 auto',
+                          overflowY: 'auto',
+                          overflowX: 'hidden',
+                          WebkitOverflowScrolling: 'touch',
+                          touchAction: 'pan-y',
+                          minHeight: 0
+                        }}>
+                          {MOTION_TEMPLATES.map((template, index) => 
+                            renderMotionButton(template, index, handleGenerateVideo, setShowVideoDropdown, setShowCustomVideoPromptPopup)
+                          )}
+                        </div>
+
+                        {/* Custom Prompt Button - Always visible below grid */}
+                        <div style={{
+                          padding: '16px',
+                          borderTop: '2px solid rgba(138, 126, 234, 0.3)',
+                          background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%)',
+                          display: 'flex',
+                          flexDirection: window.innerWidth < 768 ? 'column' : 'row',
+                          alignItems: window.innerWidth < 768 ? 'stretch' : 'center',
+                          justifyContent: window.innerWidth < 768 ? 'center' : 'flex-end',
+                          gap: '12px',
+                          flexShrink: 0
+                        }}>
+                          <div style={{
+                            fontSize: '13px',
+                            color: 'rgba(255, 255, 255, 0.6)',
+                            fontWeight: '500',
+                            letterSpacing: '0.3px',
+                            textAlign: window.innerWidth < 768 ? 'center' : 'right',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: window.innerWidth < 768 ? 'center' : 'flex-end',
+                            gap: '8px'
+                          }}>
+                            <span>Or create your own</span>
+                            {window.innerWidth >= 768 && <span style={{ fontSize: '20px', opacity: 0.4 }}>→</span>}
+                          </div>
+                          {renderCustomButton(setShowVideoDropdown, setShowCustomVideoPromptPopup)}
+                        </div>
+
+                        {/* Pricing info below Custom button */}
+                        {!videoLoading && formatCost(videoCostRaw, videoUSD) ? (
+                          <div style={{
+                            padding: '8px 16px 12px 16px',
+                            fontSize: '11px',
+                            fontWeight: '400',
+                            opacity: 0.85,
+                            letterSpacing: '0.2px',
+                            display: 'flex',
+                            gap: '4px',
+                            alignItems: 'center',
+                            justifyContent: 'flex-end',
+                            borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+                            color: 'rgba(255, 255, 255, 0.8)',
+                            flexShrink: 0
+                          }}>
+                            <span style={{ fontWeight: '600', opacity: 1 }}>
+                              {(() => {
+                                const formatted = formatCost(videoCostRaw, videoUSD);
+                                const parts = formatted.split('(');
+                                return parts[0].trim();
+                              })()}
+                            </span>
+                            {(() => {
+                              const formatted = formatCost(videoCostRaw, videoUSD);
+                              const usdMatch = formatted.match(/\((.*?)\)/);
+                              if (usdMatch) {
+                                return (
+                                  <span style={{ fontWeight: '400', opacity: 0.75, fontSize: '10px' }}>
+                                    ≈ {usdMatch[1]}
+                                  </span>
+                                );
+                              }
+                              return null;
+                            })()}
+                          </div>
+                        ) : videoLoading ? (
+                          <div style={{
+                            padding: '8px 16px 12px 16px',
+                            fontSize: '11px',
+                            opacity: 0.75,
+                            fontWeight: '400',
+                            textAlign: 'right',
+                            borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+                            color: 'rgba(255, 255, 255, 0.7)',
+                            flexShrink: 0
+                          }}>
+                            Calculating cost...
+                          </div>
+                        ) : null}
+                        
+                        <style>{`
+                          @keyframes videoPulse {
+                            0%, 100% { transform: scale(1); }
+                            50% { transform: scale(1.15); }
+                          }
+                        `}</style>
+                      </>
                     )}
                   </div>
                 ),
@@ -6872,6 +7131,16 @@ const PhotoGallery = ({
         visible={showVideoIntroPopup}
         onDismiss={handleVideoIntroDismiss}
         onProceed={handleVideoIntroProceed}
+      />
+
+      {/* Custom Video Prompt Popup */}
+      <CustomVideoPromptPopup
+        visible={showCustomVideoPromptPopup}
+        onGenerate={(positivePrompt, negativePrompt) => {
+          // Generate video with custom prompts
+          handleGenerateVideo(positivePrompt, negativePrompt);
+        }}
+        onClose={() => setShowCustomVideoPromptPopup(false)}
       />
 
       {/* Custom Prompt Popup for Sample Gallery mode */}

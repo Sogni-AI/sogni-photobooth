@@ -13,6 +13,17 @@
   }
 }
 
+@keyframes videoDropdownSlideUp {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(30px) scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+}
+
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
@@ -1478,7 +1489,6 @@ html body .photo-action-buttons .action-button,
 
 .video-generate-btn:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
 }
 
 .video-generate-btn:disabled {
