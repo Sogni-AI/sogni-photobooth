@@ -391,8 +391,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       numImages: resetToDefaults.numImages,
     });
     
-    // Save non-model-specific settings to regular storage including video settings
-    saveSettingsToCookies({
+    // Save non-model-specific settings to both localStorage AND sessionStorage
+    // to ensure the reset works for both authenticated and non-authenticated users
+    const nonModelSettings = {
       selectedStyle: resetToDefaults.selectedStyle,
       positivePrompt: resetToDefaults.positivePrompt,
       aspectRatio: resetToDefaults.aspectRatio,
@@ -402,7 +403,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       videoPositivePrompt: resetToDefaults.videoPositivePrompt,
       videoNegativePrompt: resetToDefaults.videoNegativePrompt,
       // ... (only save non-model-specific settings here)
-    } as Partial<Settings>, false); // false = not authenticated, use sessionStorage by default
+    } as Partial<Settings>;
+    
+    // Save to both storages to ensure reset works regardless of auth state
+    saveSettingsToCookies(nonModelSettings, true);  // localStorage
+    saveSettingsToCookies(nonModelSettings, false); // sessionStorage
     
     console.log('✅ Settings reset to defaults:', modelDefaults);
   };
