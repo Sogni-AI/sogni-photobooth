@@ -212,11 +212,11 @@ function Step3({ step1, step2, onReturn, onContinue }: Props) {
             Sogni's Terms & Privacy Policy.
           </a>
         </p>
-        <button type="button" className="login-modal-button secondary" onClick={onReturn}>
-          Go back and make changes
-        </button>
         <button type="submit" className="login-modal-button primary" disabled={!turnstileToken || isLoading}>
           {isLoading ? 'Creating account...' : 'Create account'}
+        </button>
+        <button type="button" className="login-modal-button secondary" onClick={onReturn}>
+          Back
         </button>
       </FormFooter>
     </FormPanel>

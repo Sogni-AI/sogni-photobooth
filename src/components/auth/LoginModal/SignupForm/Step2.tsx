@@ -66,10 +66,6 @@ function Step2({ step1, initialState, onContinue, onReturn }: Props) {
   return (
     <FormPanel onSubmit={handleFormSubmit} disabled={isLoading} autoComplete="on">
       <FormContent subHeading="Create a secure password">
-        <div className="login-modal-password-warning">
-          <strong>⚠️ We cannot reset or recover your password.</strong>
-          <p>Backing up your password is recommended.</p>
-        </div>
         {/* Hidden username field for browser password manager */}
         <input
           type="text"
