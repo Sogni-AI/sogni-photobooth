@@ -1611,6 +1611,7 @@ const App = () => {
   // Add state for Twitter share modal
   const [showTwitterModal, setShowTwitterModal] = useState(false);
   const [twitterPhotoIndex, setTwitterPhotoIndex] = useState(null);
+  const [twitterPhotoData, setTwitterPhotoData] = useState(null); // Store actual photo object for sharing
   const [lastTwitterMessage, setLastTwitterMessage] = useState(null);
 
   // Add state for QR code modal (Kiosk Mode)
@@ -2412,9 +2413,12 @@ const App = () => {
   const [backendError, setBackendError] = useState(null);
 
   // Update the handler for initiating Twitter share
-  const handleShareToX = async (photoIndex) => {
+  // Can accept either (photoIndex) or (photoIndex, photoObject) for filtered scenarios
+  const handleShareToX = async (photoIndex, photoObject = null) => {
     // Set the photo index and open the modal
     setTwitterPhotoIndex(photoIndex);
+    // Store the actual photo object if provided, otherwise use from photos array
+    setTwitterPhotoData(photoObject || photos[photoIndex] || null);
     setShowTwitterModal(true);
   };
 
@@ -2900,10 +2904,12 @@ const App = () => {
     // Store the message for potential retry
     setLastTwitterMessage(customMessage);
     
-    // Debug: Log the photo being shared to verify videoUrl is present
-    const photoToShare = photos[twitterPhotoIndex];
+    // Use stored photo data if available, otherwise fall back to photos array
+    // This handles the case where filters change the index mapping
+    const photoToShare = twitterPhotoData || photos[twitterPhotoIndex];
     console.log('[handleTwitterShare] Sharing photo:', {
       photoIndex: twitterPhotoIndex,
+      usingStoredData: !!twitterPhotoData,
       hasVideoUrl: !!photoToShare?.videoUrl,
       videoUrl: photoToShare?.videoUrl ? photoToShare.videoUrl.substring(0, 80) + '...' : null,
       photoKeys: photoToShare ? Object.keys(photoToShare) : []
@@ -2923,9 +2929,10 @@ const App = () => {
     }
     
     // Call the extracted Twitter sharing service with custom message and URL
+    // Pass the actual photo to share (using stored photo data to handle filtered scenarios)
     await shareToTwitter({
-      photoIndex: twitterPhotoIndex,
-      photos,
+      photoIndex: 0, // Always 0 since we're passing a single-element array
+      photos: [photoToShare], // Pass array with the specific photo to share
       setBackendError,
       customMessage,
       shareUrl: shareUrl.toString(), // Pass the full URL with parameters
@@ -2943,7 +2950,7 @@ const App = () => {
       metadata: {
         model: selectedModel,
         inferenceSteps,
-        seed: photos[twitterPhotoIndex]?.seed || null,
+        seed: photoToShare?.seed || null,
         guidance: isFluxKontextModel(selectedModel) ? guidance : promptGuidance,
         aspectRatio
       },
@@ -2957,7 +2964,7 @@ const App = () => {
             timeout: 5000
           });
         } else {
-          const hasVideo = photos[twitterPhotoIndex]?.videoUrl;
+          const hasVideo = photoToShare?.videoUrl;
           showToast({
             title: 'Success!',
             message: `Your ${hasVideo ? 'video' : 'photo'} has been shared to X/Twitter!`,
@@ -8866,8 +8873,8 @@ const App = () => {
         isOpen={showTwitterModal}
         onClose={() => setShowTwitterModal(false)}
         onShare={handleTwitterShare}
-        imageUrl={twitterPhotoIndex !== null && photos[twitterPhotoIndex] ? photos[twitterPhotoIndex].images[0] : null}
-        photoData={twitterPhotoIndex !== null ? photos[twitterPhotoIndex] : null}
+        imageUrl={twitterPhotoData?.images?.[0] || (twitterPhotoIndex !== null && photos[twitterPhotoIndex]?.images?.[0]) || null}
+        photoData={twitterPhotoData || (twitterPhotoIndex !== null ? photos[twitterPhotoIndex] : null)}
         stylePrompts={stylePrompts}
         tezdevTheme={tezdevTheme}
         aspectRatio={aspectRatio}

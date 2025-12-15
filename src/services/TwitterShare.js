@@ -183,7 +183,8 @@ export const shareToTwitter = async ({
     console.log('Video detected - will share video to Twitter');
   }
 
-  console.log(`Creating ${hasVideo ? 'video' : 'image'} for sharing to X with TezDev theme: ${tezdevTheme}`);
+  console.log(`[TwitterShare] Creating ${hasVideo ? 'video' : 'image'} for sharing to X with TezDev theme: ${tezdevTheme}`);
+  console.log('[TwitterShare] Video check:', { hasVideo, videoUrl: videoUrl ? videoUrl.substring(0, 80) + '...' : null });
   
   try {
     // Attempt to manually load the Permanent Marker font to ensure it's available

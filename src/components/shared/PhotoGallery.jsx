@@ -3386,7 +3386,11 @@ const PhotoGallery = ({
               </>
             ) : (
               <ShareMenu
-                onShareToTwitter={() => handleShareToX(selectedPhotoIndex)}
+                onShareToTwitter={() => {
+                  // Pass both index and actual photo object to handle filtered scenarios
+                  const actualPhoto = (isPromptSelectorMode ? filteredPhotos : photos)[selectedPhotoIndex];
+                  handleShareToX(selectedPhotoIndex, actualPhoto);
+                }}
                 onShareViaWebShare={handleShareViaWebShare ? () => handleShareViaWebShare(selectedPhotoIndex) : undefined}
                 onSubmitToGallery={handleGallerySubmitRequest}
                 onShareQRCode={handleShareQRCode ? () => handleShareQRCode(selectedPhotoIndex) : undefined}
