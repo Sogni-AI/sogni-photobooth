@@ -3395,8 +3395,8 @@ const PhotoGallery = ({
               selectedPhoto.images.length === 0
             }
           >
-            <span>💾</span>
-            Framed
+            <span>⬇️</span>
+            <span>Framed</span>
           </button>
           )}
 
@@ -3415,8 +3415,8 @@ const PhotoGallery = ({
               selectedPhoto.images.length === 0
             }
           >
-            <span>💾</span>
-            Raw
+            <span>⬇️</span>
+            <span>Raw</span>
           </button>
           )}
 
@@ -3429,8 +3429,8 @@ const PhotoGallery = ({
               e.stopPropagation();
             }}
           >
-            <span>💾</span>
-            Video
+            <span>⬇️</span>
+            <span>Video</span>
           </button>
           )}
 
@@ -3455,7 +3455,8 @@ const PhotoGallery = ({
             </button>
           )}
 
-          {/* Enhanced Enhance Button with Undo/Redo functionality */}
+          {/* Enhanced Enhance Button with Undo/Redo functionality - Hide when video exists */}
+          {!selectedPhoto.videoUrl && (
           <div className="enhance-button-container">
             {selectedPhoto.enhanced ? (
               <div className="enhance-buttons-group">
@@ -3770,6 +3771,7 @@ const PhotoGallery = ({
               </div>
             )}
           </div>
+          )}
 
           {/* Video Generation Button - Only for authenticated users */}
           {isAuthenticated && !isPromptSelectorMode && !selectedPhoto.isOriginal && (
@@ -3792,7 +3794,8 @@ const PhotoGallery = ({
                   overflow: 'visible'
                 }}
               >
-                <span>🎥 Video</span>
+                <span>🎥</span>
+                <span>Video</span>
                 
                 {/* NEW Badge */}
                 {showVideoNewBadge && !selectedPhoto.videoUrl && !selectedPhoto.generatingVideo && (

@@ -8791,7 +8791,7 @@ const App = () => {
         isOpen={showTwitterModal}
         onClose={() => setShowTwitterModal(false)}
         onShare={handleTwitterShare}
-        imageUrl={twitterPhotoIndex !== null && photos[twitterPhotoIndex] ? photos[twitterPhotoIndex].images[0] : null}
+        imageUrl={twitterPhotoIndex !== null && photos[twitterPhotoIndex] ? (photos[twitterPhotoIndex].videoUrl || photos[twitterPhotoIndex].images[0]) : null}
         photoData={twitterPhotoIndex !== null ? photos[twitterPhotoIndex] : null}
         stylePrompts={stylePrompts}
         tezdevTheme={tezdevTheme}
