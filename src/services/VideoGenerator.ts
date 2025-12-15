@@ -230,6 +230,13 @@ export async function generateVideo(options: GenerateVideoOptions): Promise<void
     // Calculate frames based on duration (fps only affects playback, not frame count)
     const frames = calculateVideoFrames(duration);
     
+    console.log('🎬 VIDEO SETTINGS RECEIVED:');
+    console.log(`   Duration setting: ${duration}s`);
+    console.log(`   FPS setting: ${fps}`);
+    console.log(`   Calculated frames: ${frames} (BASE_FPS 16 * ${duration}s + 1)`);
+    console.log(`   Resolution: ${resolution}`);
+    console.log(`   Quality: ${quality}`);
+    
     const createParams = {
       type: 'video',
       modelId: qualityConfig.model,

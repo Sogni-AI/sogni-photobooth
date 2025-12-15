@@ -206,6 +206,11 @@ export const VIDEO_INTRO_SEEN_KEY = 'sogni_video_intro_seen';
 export const VIDEO_GENERATED_KEY = 'sogni_video_generated';
 
 /**
+ * LocalStorage key for tracking if user has seen the concurrent video tip toast
+ */
+export const VIDEO_TIP_SHOWN_KEY = 'sogni_video_tip_shown';
+
+/**
  * Check if the user has seen the video intro popup
  */
 export function hasSeenVideoIntro(): boolean {
@@ -244,6 +249,28 @@ export function hasGeneratedVideo(): boolean {
 export function markVideoGenerated(): void {
   try {
     localStorage.setItem(VIDEO_GENERATED_KEY, 'true');
+  } catch {
+    // Ignore storage errors
+  }
+}
+
+/**
+ * Check if the user has seen the video tip about concurrent generation
+ */
+export function hasSeenVideoTip(): boolean {
+  try {
+    return localStorage.getItem(VIDEO_TIP_SHOWN_KEY) === 'true';
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Mark that user has seen the video tip about concurrent generation
+ */
+export function markVideoTipShown(): void {
+  try {
+    localStorage.setItem(VIDEO_TIP_SHOWN_KEY, 'true');
   } catch {
     // Ignore storage errors
   }

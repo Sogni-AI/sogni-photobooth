@@ -814,6 +814,14 @@ html body .photo-action-buttons .action-button,
   cursor: pointer !important;
 }
 
+.photo-motion-btn-batch {
+  opacity: 0 !important;
+  transform: scale(0.8) !important;
+  transition: all 0.2s ease !important;
+  pointer-events: auto !important;
+  cursor: pointer !important;
+}
+
 /* Show hide button, refresh button, block button, and favorite button on photo hover - only for grid photos (not selected) and only on non-touch devices */
 @media (hover: hover) and (pointer: fine) {
   .film-frame:not(.selected):hover .photo-hide-btn {
@@ -829,6 +837,12 @@ html body .photo-action-buttons .action-button,
   }
 
   .film-frame:not(.selected):hover .photo-block-btn-batch {
+    opacity: 1 !important;
+    transform: scale(1) !important;
+    pointer-events: auto !important;
+  }
+
+  .film-frame:not(.selected):hover .photo-motion-btn-batch {
     opacity: 1 !important;
     transform: scale(1) !important;
     pointer-events: auto !important;
@@ -880,6 +894,7 @@ html body .photo-action-buttons .action-button,
   /* When favorited but not hovering or touch-hovered, hide all icons except heart */
   .film-frame:not(.selected):not(:hover):not(.touch-hovered) .vibe-icons-container .photo-fullscreen-btn,
   .film-frame:not(.selected):not(:hover):not(.touch-hovered) .vibe-icons-container .photo-video-btn,
+  .film-frame:not(.selected):not(:hover):not(.touch-hovered) .vibe-icons-container .photo-motion-btn,
   .film-frame:not(.selected):not(:hover):not(.touch-hovered) .vibe-icons-container .photo-block-btn {
     display: none !important;
   }
@@ -905,8 +920,10 @@ html body .photo-action-buttons .action-button,
 .film-frame.selected .photo-hide-btn,
 .film-frame.selected .photo-refresh-btn,
 .film-frame.selected .photo-block-btn-batch,
+.film-frame.selected .photo-motion-btn-batch,
 .film-frame.selected .photo-favorite-btn,
 .film-frame.selected .photo-video-btn,
+.film-frame.selected .photo-motion-btn,
 .film-frame.selected .photo-favorite-btn-batch,
 .film-frame.selected .photo-block-btn {
   opacity: 1 !important;
@@ -925,6 +942,12 @@ html body .photo-action-buttons .action-button,
   cursor: pointer !important;
   transition: none !important;
   transform: none !important;
+}
+
+/* Video play button - always clickable */
+.photo-video-btn {
+  pointer-events: auto !important;
+  cursor: pointer !important;
 }
 
 /* When not hovering, move favorite button to top-right corner (where X button is) */

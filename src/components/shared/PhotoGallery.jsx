@@ -32,7 +32,7 @@ import { getTokenLabel } from '../../services/walletService';
 import { useToastContext } from '../../context/ToastContext';
 import { generateGalleryFilename, getPortraitFolderWithFallback } from '../../utils/galleryLoader';
 import { generateVideo, cancelVideoGeneration, downloadVideo } from '../../services/VideoGenerator.ts';
-import { hasSeenVideoIntro, hasGeneratedVideo, formatVideoDuration } from '../../constants/videoSettings.ts';
+import { hasSeenVideoIntro, hasGeneratedVideo, formatVideoDuration, hasSeenVideoTip, markVideoTipShown } from '../../constants/videoSettings.ts';
 import VideoIntroPopup from './VideoIntroPopup.tsx';
 import CustomVideoPromptPopup from './CustomVideoPromptPopup';
 
@@ -418,12 +418,13 @@ const PhotoGallery = ({
   const [showVideoIntroPopup, setShowVideoIntroPopup] = useState(false);
   const [showVideoNewBadge, setShowVideoNewBadge] = useState(() => !hasGeneratedVideo());
   const [showCustomVideoPromptPopup, setShowCustomVideoPromptPopup] = useState(false);
-  
-  // Track if user has generated their first video in this session
-  const hasShownVideoTipRef = useRef(false);
+  const [videoTargetPhotoIndex, setVideoTargetPhotoIndex] = useState(null); // Track photo for video generation without selecting it
 
   // Get selected photo dimensions for video cost estimation
   const selectedPhoto = selectedPhotoIndex !== null ? photos[selectedPhotoIndex] : null;
+  
+  // Get target photo for video dropdown (from gallery motion button or slideshow)
+  const videoTargetPhoto = videoTargetPhotoIndex !== null ? photos[videoTargetPhotoIndex] : selectedPhoto;
 
   // Video cost estimation - include selectedPhotoIndex to bust cache when switching photos
   const { loading: videoLoading, cost: videoCostRaw, costInUSD: videoUSD, refetch: refetchVideoCost } = useVideoCostEstimation({
@@ -1098,6 +1099,7 @@ const PhotoGallery = ({
   // Handle video intro popup dismiss
   const handleVideoIntroDismiss = useCallback(() => {
     setShowVideoIntroPopup(false);
+    setVideoTargetPhotoIndex(null); // Clear target when popup is dismissed
   }, []);
 
   // Handle video intro popup proceed (user wants to generate)
@@ -1140,9 +1142,15 @@ const PhotoGallery = ({
   const handleGenerateVideo = useCallback(async (customMotionPrompt = null, customNegativePrompt = null) => {
     setShowVideoDropdown(false);
 
-    if (selectedPhotoIndex === null) return;
+    // Use videoTargetPhotoIndex if set (from gallery motion button), otherwise selectedPhotoIndex (from slideshow)
+    const targetIndex = videoTargetPhotoIndex !== null ? videoTargetPhotoIndex : selectedPhotoIndex;
+    
+    // Clear the video target after using it
+    setVideoTargetPhotoIndex(null);
+    
+    if (targetIndex === null) return;
 
-    const photo = photos[selectedPhotoIndex];
+    const photo = photos[targetIndex];
     if (!photo || photo.generatingVideo) {
       return;
     }
@@ -1150,9 +1158,9 @@ const PhotoGallery = ({
     // Hide the NEW badge after first video generation attempt
     setShowVideoNewBadge(false);
     
-    // Show tip toast on first video generation (2 seconds after generation starts)
-    if (!hasShownVideoTipRef.current) {
-      hasShownVideoTipRef.current = true;
+    // Show tip toast on first video generation (once per user lifetime)
+    if (!hasSeenVideoTip()) {
+      markVideoTipShown();
       setTimeout(() => {
         showToast({
           title: '💡 Pro Tip',
@@ -1179,7 +1187,7 @@ const PhotoGallery = ({
     const negativePrompt = customNegativePrompt !== null ? customNegativePrompt : (settings.videoNegativePrompt || '');
     
     // Capture the photo index and ID for the onClick handler (don't rely on selectedPhotoIndex which may change)
-    const generatingPhotoIndex = selectedPhotoIndex;
+    const generatingPhotoIndex = targetIndex;
     const generatingPhotoId = photo.id;
 
     // Load image to get actual dimensions
@@ -1349,7 +1357,7 @@ const PhotoGallery = ({
     };
     
     img.src = imageUrl;
-  }, [selectedPhotoIndex, selectedSubIndex, desiredWidth, desiredHeight, sogniClient, setPhotos, settings.videoResolution, settings.videoQuality, photos, showToast]);
+  }, [videoTargetPhotoIndex, selectedPhotoIndex, selectedSubIndex, desiredWidth, desiredHeight, sogniClient, setPhotos, settings.videoResolution, settings.videoQuality, photos, showToast]);
 
   // Handle video cancellation
   const handleCancelVideo = useCallback(() => {
@@ -1952,13 +1960,20 @@ const PhotoGallery = ({
       const target = event.target;
       const inVideoContainer = !!target.closest('.video-button-container');
       const inVideoDropdown = !!target.closest('.video-dropdown');
-      if (!inVideoContainer && !inVideoDropdown) {
+      const inMotionBtn = !!target.closest('.photo-motion-btn-batch');
+      if (!inVideoContainer && !inVideoDropdown && !inMotionBtn) {
         setShowVideoDropdown(false);
+        setVideoTargetPhotoIndex(null); // Clear target when dropdown is dismissed
       }
     };
 
-    document.addEventListener('click', handleClickOutside);
+    // Delay adding listener to avoid immediate close when opening from motion button
+    const timeoutId = setTimeout(() => {
+      document.addEventListener('click', handleClickOutside);
+    }, 10);
+    
     return () => {
+      clearTimeout(timeoutId);
       document.removeEventListener('click', handleClickOutside);
     };
   }, [showVideoDropdown]);
@@ -5335,7 +5350,9 @@ const PhotoGallery = ({
                           }}
                           title="Never use this prompt"
                         >
-                          ⚠️
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg" style={{ transform: 'translateY(1px)' }}>
+                            <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
+                          </svg>
                         </button>
                       )}
                       {/* Favorite heart button - show for batch-generated images on desktop */}
@@ -5521,11 +5538,13 @@ const PhotoGallery = ({
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      fontSize: '10px',
                       boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
-                      transition: 'background 0.2s ease'
+                      transition: 'background 0.2s ease',
+                      pointerEvents: 'none'
                     }}>
-                      ⚠️
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg" style={{ pointerEvents: 'none', transform: 'translateY(1px)' }}>
+                        <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
+                      </svg>
                     </div>
                   </div>
                 )}
@@ -5664,6 +5683,7 @@ const PhotoGallery = ({
                     el.classList.contains('photo-hide-btn') ||
                     el.classList.contains('photo-fullscreen-btn') ||
                     el.classList.contains('photo-video-btn') ||
+                    el.classList.contains('photo-motion-btn-batch') ||
                     el.classList.contains('photo-block-btn') ||
                     el.classList.contains('vibe-icons-container')
                   )) {
@@ -5674,7 +5694,7 @@ const PhotoGallery = ({
                 
                 // Check if click coordinates are within any button's bounding box with tolerance
                 // This handles clicks in padding areas around small buttons
-                const buttons = e.currentTarget.querySelectorAll('.photo-favorite-btn-batch, .photo-refresh-btn, .photo-hide-btn');
+                const buttons = e.currentTarget.querySelectorAll('.photo-favorite-btn-batch, .photo-refresh-btn, .photo-hide-btn, .photo-motion-btn-batch, .photo-video-btn');
                 const clickX = e.clientX;
                 const clickY = e.clientY;
                 
@@ -6009,10 +6029,11 @@ const PhotoGallery = ({
 
                 {/* Video Play Button - Shows for photos with AI-generated video */}
                 {photo.videoUrl && !photo.generatingVideo && (
-                  <div
+                  <button
                     className="photo-video-btn"
-                    onClick={(e) => {
+                    onMouseDown={(e) => {
                       e.stopPropagation();
+                      e.preventDefault();
                       // Toggle generated video playback (multiple videos can play simultaneously)
                       setPlayingGeneratedVideoIds(prev => {
                         const newSet = new Set(prev);
@@ -6032,24 +6053,27 @@ const PhotoGallery = ({
                       height: '32px',
                       borderRadius: '50%',
                       background: 'rgba(0, 0, 0, 0.6)',
+                      border: 'none',
+                      padding: 0,
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       cursor: 'pointer',
-                      zIndex: 10,
+                      zIndex: 999,
                       transition: 'all 0.2s ease',
-                      color: 'white'
+                      color: 'white',
+                      pointerEvents: 'auto'
                     }}
                     title={playingGeneratedVideoIds.has(photo.id) ? 'Stop video' : 'Play video'}
                   >
-                    <svg fill="currentColor" width="16" height="16" viewBox="0 0 24 24">
+                    <svg fill="currentColor" width="16" height="16" viewBox="0 0 24 24" style={{ pointerEvents: 'none' }}>
                       {playingGeneratedVideoIds.has(photo.id) ? (
                         <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
                       ) : (
                         <path d="M8 5v14l11-7z"/>
                       )}
                     </svg>
-                  </div>
+                  </button>
                 )}
 
                 {/* AI-Generated Video Overlay - Show when generated video is playing */}
@@ -6067,7 +6091,8 @@ const PhotoGallery = ({
                       width: '100%',
                       height: '100%',
                       objectFit: 'cover',
-                      zIndex: 5
+                      zIndex: 5,
+                      pointerEvents: 'none'
                     }}
                   />
                 )}
@@ -6583,7 +6608,7 @@ const PhotoGallery = ({
                         style={{
                           position: 'absolute',
                           top: '4px',
-                          right: '80px',
+                          right: '100px',
                           background: 'rgba(0, 0, 0, 0.7)',
                           color: 'white',
                           border: 'none',
@@ -6603,7 +6628,9 @@ const PhotoGallery = ({
                         }}
                         title="Never use this prompt"
                       >
-                        ⚠️
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg" style={{ transform: 'translateY(1px)' }}>
+                          <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
+                        </svg>
                       </button>
                     )}
                     {/* Favorite heart button - show for batch-generated images on desktop */}
@@ -6645,6 +6672,69 @@ const PhotoGallery = ({
                         title={isPhotoFavorited(photo) ? "Remove from favorites" : "Add to favorites"}
                       >
                         {isPhotoFavorited(photo) ? '❤️' : '🤍'}
+                      </button>
+                    )}
+                    {/* Motion video button - show for batch-generated images on desktop */}
+                    {!isMobile() && photo.promptKey && (photo.stylePrompt || photo.positivePrompt) && (
+                      <button
+                        className="photo-motion-btn-batch"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          // Check if user has seen the intro popup first
+                          if (!hasSeenVideoIntro()) {
+                            setShowVideoIntroPopup(true);
+                            setVideoTargetPhotoIndex(index);
+                            return;
+                          }
+                          // Otherwise show the video dropdown for this photo (without selecting it)
+                          setVideoTargetPhotoIndex(index);
+                          setShowVideoDropdown(true);
+                        }}
+                        style={{
+                          position: 'absolute',
+                          top: '4px',
+                          right: '76px',
+                          background: 'rgba(0, 0, 0, 0.7)',
+                          color: 'white',
+                          border: 'none',
+                          width: '20px',
+                          height: '20px',
+                          borderRadius: '50%',
+                          fontSize: '11px',
+                          fontWeight: 'bold',
+                          cursor: photo.generatingVideo ? 'wait' : 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          zIndex: 999,
+                          boxShadow: '0 1px 3px rgba(0,0,0,0.5)',
+                          opacity: photo.generatingVideo ? '0.6' : '0',
+                          transform: 'scale(0.8)',
+                          transition: 'all 0.2s ease'
+                        }}
+                        onMouseOver={(e) => {
+                          if (!photo.generatingVideo) {
+                            e.currentTarget.style.background = 'rgba(139, 92, 246, 0.9)';
+                            e.currentTarget.style.transform = 'scale(1)';
+                            e.currentTarget.style.opacity = '1';
+                          }
+                        }}
+                        onMouseOut={(e) => {
+                          e.currentTarget.style.background = 'rgba(0, 0, 0, 0.7)';
+                          e.currentTarget.style.transform = 'scale(0.8)';
+                          e.currentTarget.style.opacity = photo.generatingVideo ? '0.6' : '0';
+                        }}
+                        title={photo.generatingVideo ? "Generating video..." : "Generate motion video"}
+                      >
+                        {photo.generatingVideo ? (
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg" style={{ animation: 'spin 1s linear infinite' }}>
+                            <path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83"/>
+                          </svg>
+                        ) : (
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/>
+                          </svg>
+                        )}
                       </button>
                     )}
                     {/* Refresh button - only show if photo has a prompt */}
@@ -6981,11 +7071,13 @@ const PhotoGallery = ({
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        fontSize: '10px',
                         boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
-                        transition: 'background 0.2s ease'
+                        transition: 'background 0.2s ease',
+                        pointerEvents: 'none'
                       }}>
-                        ⚠️
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg" style={{ pointerEvents: 'none', transform: 'translateY(1px)' }}>
+                          <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
+                        </svg>
                       </div>
                     </div>
                   )}
@@ -7282,6 +7374,56 @@ const PhotoGallery = ({
         onDismiss={handleVideoIntroDismiss}
         onProceed={handleVideoIntroProceed}
       />
+
+      {/* Video Dropdown Portal for Gallery Mode (when not in slideshow) */}
+      {showVideoDropdown && videoTargetPhotoIndex !== null && selectedPhotoIndex === null && createPortal(
+        <div 
+          className="video-dropdown"
+          style={{
+            position: 'fixed',
+            bottom: '80px',
+            maxHeight: 'calc(100vh - 100px)',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            background: 'linear-gradient(135deg, rgba(30, 30, 60, 0.98) 0%, rgba(20, 20, 45, 0.98) 100%)',
+            backdropFilter: 'blur(20px)',
+            borderRadius: '20px',
+            padding: '12px',
+            width: 'min(95vw, 750px)',
+            display: 'flex',
+            flexDirection: 'column',
+            boxShadow: '0 20px 60px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.1) inset',
+            zIndex: 9999999,
+            border: '2px solid rgba(138, 126, 234, 0.3)',
+            animation: 'videoDropdownSlideUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)'
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div style={{ position: 'relative' }}>
+            <button
+              onClick={() => { setShowVideoDropdown(false); setVideoTargetPhotoIndex(null); }}
+              style={{
+                position: 'absolute', top: '0px', right: '0px', width: '28px', height: '28px',
+                borderRadius: '50%', border: 'none', background: 'rgba(255, 255, 255, 0.1)',
+                color: 'rgba(255, 255, 255, 0.8)', fontSize: '18px', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center'
+              }}
+            >×</button>
+          </div>
+          <div style={{ padding: '10px 16px 6px', fontSize: '14px', fontWeight: '600', color: 'white', textAlign: 'center', borderBottom: '1px solid rgba(138, 126, 234, 0.3)' }}>
+            ✨ Choose a motion style
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(11, 1fr)', gap: '4px', padding: '8px' }}>
+            {MOTION_TEMPLATES.map((template, index) => 
+              renderMotionButton(template, index, handleGenerateVideo, setShowVideoDropdown, setShowCustomVideoPromptPopup)
+            )}
+          </div>
+          <div style={{ padding: '16px', borderTop: '2px solid rgba(138, 126, 234, 0.3)', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+            {renderCustomButton(setShowVideoDropdown, setShowCustomVideoPromptPopup)}
+          </div>
+        </div>,
+        document.body
+      )}
 
       {/* Custom Video Prompt Popup */}
       <CustomVideoPromptPopup
