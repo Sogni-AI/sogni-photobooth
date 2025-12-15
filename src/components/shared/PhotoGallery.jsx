@@ -34,6 +34,7 @@ import { generateGalleryFilename, getPortraitFolderWithFallback } from '../../ut
 import { generateVideo, cancelVideoGeneration, downloadVideo } from '../../services/VideoGenerator.ts';
 import { hasSeenVideoIntro, hasGeneratedVideo, formatVideoDuration, hasSeenVideoTip, markVideoTipShown } from '../../constants/videoSettings.ts';
 import VideoIntroPopup from './VideoIntroPopup.tsx';
+import { playSonicLogo } from '../../utils/sonicLogos';
 import CustomVideoPromptPopup from './CustomVideoPromptPopup';
 
 // Random video completion messages
@@ -1200,10 +1201,12 @@ const PhotoGallery = ({
         negativePrompt: negativePrompt,
         motionEmoji: selectedEmoji,
         onComplete: (videoUrl) => {
+          // Play sonic logo before auto-play
+          playSonicLogo();
           // Auto-play the generated video when completed
           setPlayingGeneratedVideoIds(prev => new Set([...prev, generatingPhotoId]));
           const videoMessage = getRandomVideoMessage();
-          
+
           console.log('[VIDEO TOAST] Video generation completed:', {
             generatingPhotoId,
             generatingPhotoIndex,
@@ -1282,10 +1285,12 @@ const PhotoGallery = ({
         positivePrompt: motionPrompt,
         negativePrompt: negativePrompt,
         onComplete: (videoUrl) => {
+          // Play sonic logo before auto-play
+          playSonicLogo();
           // Auto-play the generated video when completed
           setPlayingGeneratedVideoIds(prev => new Set([...prev, generatingPhotoId]));
           const videoMessage = getRandomVideoMessage();
-          
+
           console.log('[VIDEO TOAST FALLBACK] Video generation completed:', {
             generatingPhotoId,
             generatingPhotoIndex,
@@ -1395,13 +1400,6 @@ const PhotoGallery = ({
     const filename = `sogni-photobooth-${cleanStyleName}${emojiPart}-video_${duration}s_${resolution}_${fps}fps.mp4`;
 
     downloadVideo(photo.videoUrl, filename)
-      .then(() => {
-        showToast({
-          title: 'Download Started',
-          message: 'Your video is being downloaded.',
-          type: 'success'
-        });
-      })
       .catch(() => {
         showToast({
           title: 'Download Failed',
