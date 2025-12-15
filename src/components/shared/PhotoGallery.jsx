@@ -1212,7 +1212,7 @@ const PhotoGallery = ({
             onClick: () => {
               // Navigate to this photo if not already viewing it
               if (selectedPhotoIndex !== generatingPhotoIndex) {
-                onSelectPhoto(generatingPhotoIndex);
+                setSelectedPhotoIndex(generatingPhotoIndex);
               }
             }
           });
@@ -1271,7 +1271,7 @@ const PhotoGallery = ({
             onClick: () => {
               // Navigate to this photo if not already viewing it
               if (selectedPhotoIndex !== generatingPhotoIndex) {
-                onSelectPhoto(generatingPhotoIndex);
+                setSelectedPhotoIndex(generatingPhotoIndex);
               }
             }
           });
