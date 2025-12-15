@@ -1,5 +1,17 @@
 /* AuthStatus Component Styles */
 
+/* Daily Boost Glow Animation - More obvious and faster */
+@keyframes dailyBoostGlow {
+  0%, 100% {
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.6), 0 0 20px rgba(16, 185, 129, 0.7);
+    filter: brightness(1);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.8), 0 0 30px rgba(16, 185, 129, 0.9);
+    filter: brightness(1.15);
+  }
+}
+
 /* Auth status wrapper positioning adjustments */
 .auth-status-wrapper {
   transition: left 0.3s ease;

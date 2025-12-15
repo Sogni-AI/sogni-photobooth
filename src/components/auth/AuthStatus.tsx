@@ -29,6 +29,8 @@ export const AuthStatus: React.FC<AuthStatusProps> = ({ onPurchaseClick, onSignu
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [loginModalMode, setLoginModalMode] = useState<LoginModalMode>('login');
   const [highlightDailyBoost, setHighlightDailyBoost] = useState(false);
+  // Track if we've already shown the login boost prompt for this session
+  const hasShownLoginBoostRef = useRef(false);
   // Compute button text ONCE based on visitor status (before marking as visited)
   // Use useRef to preserve the initial value across renders
   const authButtonTextRef = useRef<string>(getAuthButtonText());
@@ -43,6 +45,56 @@ export const AuthStatus: React.FC<AuthStatusProps> = ({ onPurchaseClick, onSignu
   useEffect(() => {
     markAsVisited();
   }, [authButtonText]);
+
+  // Get daily boost reward (ID "2" is the daily boost)
+  const dailyBoostReward = rewards.find(r => r.id === '2');
+  const canClaimDailyBoost = dailyBoostReward?.canClaim && 
+    (!dailyBoostReward?.nextClaim || dailyBoostReward.nextClaim.getTime() <= Date.now());
+  const hasClaimedToday = dailyBoostReward?.nextClaim && dailyBoostReward.nextClaim.getTime() > Date.now();
+
+  // Auto-open wallet view on login/session resume if Daily Boost is available
+  useEffect(() => {
+    // Skip if already shown
+    if (hasShownLoginBoostRef.current) {
+      return;
+    }
+
+    // Only proceed once authenticated, rewards are loaded, and we have reward data
+    if (!isAuthenticated || rewardsLoading || rewards.length === 0) {
+      return;
+    }
+
+    // Check if daily boost is claimable
+    if (!canClaimDailyBoost) {
+      console.log('🎁 Daily Boost check: not claimable', {
+        dailyBoostReward,
+        canClaimDailyBoost,
+        hasClaimedToday
+      });
+      return;
+    }
+
+    // All conditions met - show the wallet prompt!
+    console.log('🎁 User has available Daily Boost - opening wallet view', {
+      isAuthenticated,
+      rewardsLoading,
+      canClaimDailyBoost,
+      rewardsCount: rewards.length
+    });
+    
+    hasShownLoginBoostRef.current = true;
+    
+    // Wait a moment for any animations to complete
+    setTimeout(() => {
+      setShowUserMenu(true);
+      setHighlightDailyBoost(true);
+      
+      // Remove highlight after 8 seconds to give user time to notice
+      setTimeout(() => {
+        setHighlightDailyBoost(false);
+      }, 8000);
+    }, 800);
+  }, [isAuthenticated, canClaimDailyBoost, rewardsLoading, rewards.length, dailyBoostReward, hasClaimedToday]);
 
   // Close user menu when clicking outside
   useEffect(() => {
@@ -124,12 +176,6 @@ export const AuthStatus: React.FC<AuthStatusProps> = ({ onPurchaseClick, onSignu
     
     window.open(`${appUrl}/wallet`, '_blank');
   };
-
-  // Get daily boost reward (ID "2" is the daily boost)
-  const dailyBoostReward = rewards.find(r => r.id === '2');
-  const canClaimDailyBoost = dailyBoostReward?.canClaim && 
-    (!dailyBoostReward?.nextClaim || dailyBoostReward.nextClaim.getTime() <= Date.now());
-  const hasClaimedToday = dailyBoostReward?.nextClaim && dailyBoostReward.nextClaim.getTime() > Date.now();
 
   const handleClaimDailyBoost = () => {
     if (dailyBoostReward && canClaimDailyBoost) {
@@ -395,8 +441,13 @@ export const AuthStatus: React.FC<AuthStatusProps> = ({ onPurchaseClick, onSignu
                           transition: 'all 0.2s',
                           opacity: rewardsLoading ? 0.6 : 1,
                           whiteSpace: 'nowrap',
-                          boxShadow: highlightDailyBoost && canClaimDailyBoost ? '0 0 0 3px rgba(16, 185, 129, 0.4), 0 0 20px rgba(16, 185, 129, 0.6)' : 'none',
-                          animation: highlightDailyBoost && canClaimDailyBoost ? 'pulse 2s ease-in-out infinite' : 'none'
+                          // Always glow when claimable, extra intense glow when highlighted
+                          boxShadow: canClaimDailyBoost 
+                            ? (highlightDailyBoost 
+                              ? '0 0 0 4px rgba(16, 185, 129, 0.8), 0 0 30px rgba(16, 185, 129, 0.9)' 
+                              : '0 0 0 3px rgba(16, 185, 129, 0.6), 0 0 20px rgba(16, 185, 129, 0.7)')
+                            : 'none',
+                          animation: canClaimDailyBoost ? 'dailyBoostGlow 1.2s ease-in-out infinite' : 'none'
                         }}
                         onMouseOver={(e) => {
                           if (canClaimDailyBoost && !rewardsLoading) {

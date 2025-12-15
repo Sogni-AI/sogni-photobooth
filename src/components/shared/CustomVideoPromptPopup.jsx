@@ -224,7 +224,8 @@ const CustomVideoPromptPopup = ({ visible, onGenerate, onClose }) => {
                 fontSize: '15px',
                 fontWeight: '600',
                 cursor: 'pointer',
-                transition: 'all 0.2s ease'
+                transition: 'all 0.2s ease',
+                touchAction: 'manipulation'
               }}
               onMouseOver={(e) => {
                 e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
@@ -233,6 +234,12 @@ const CustomVideoPromptPopup = ({ visible, onGenerate, onClose }) => {
               onMouseOut={(e) => {
                 e.currentTarget.style.background = 'transparent';
                 e.currentTarget.style.transform = 'translateY(0)';
+              }}
+              onTouchStart={(e) => {
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+              }}
+              onTouchEnd={(e) => {
+                e.currentTarget.style.background = 'transparent';
               }}
             >
               Cancel
@@ -250,7 +257,8 @@ const CustomVideoPromptPopup = ({ visible, onGenerate, onClose }) => {
                 fontWeight: '700',
                 cursor: 'pointer',
                 transition: 'all 0.2s ease',
-                boxShadow: '0 4px 15px rgba(16, 185, 129, 0.3)'
+                boxShadow: '0 4px 15px rgba(16, 185, 129, 0.3)',
+                touchAction: 'manipulation'
               }}
               onMouseOver={(e) => {
                 e.currentTarget.style.background = 'linear-gradient(135deg, #34d399, #10b981)';
@@ -262,11 +270,43 @@ const CustomVideoPromptPopup = ({ visible, onGenerate, onClose }) => {
                 e.currentTarget.style.transform = 'translateY(0)';
                 e.currentTarget.style.boxShadow = '0 4px 15px rgba(16, 185, 129, 0.3)';
               }}
+              onTouchStart={(e) => {
+                e.currentTarget.style.background = 'linear-gradient(135deg, #34d399, #10b981)';
+              }}
+              onTouchEnd={(e) => {
+                e.currentTarget.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+              }}
             >
               🎬 Generate Video
             </button>
           </div>
         </form>
+
+        {/* Mobile-friendly bottom dismiss area */}
+        <div
+          onClick={onClose}
+          style={{
+            display: 'block',
+            marginTop: '16px',
+            padding: '12px',
+            textAlign: 'center',
+            color: 'rgba(255, 255, 255, 0.7)',
+            fontSize: '13px',
+            fontWeight: '500',
+            cursor: 'pointer',
+            touchAction: 'manipulation',
+            WebkitTapHighlightColor: 'transparent',
+            userSelect: 'none'
+          }}
+          onMouseOver={(e) => {
+            e.currentTarget.style.color = 'white';
+          }}
+          onMouseOut={(e) => {
+            e.currentTarget.style.color = 'rgba(255, 255, 255, 0.7)';
+          }}
+        >
+          Tap anywhere outside to close
+        </div>
       </div>
 
       {/* CSS animations */}

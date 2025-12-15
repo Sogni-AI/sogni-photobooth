@@ -418,6 +418,9 @@ const PhotoGallery = ({
   const [showVideoIntroPopup, setShowVideoIntroPopup] = useState(false);
   const [showVideoNewBadge, setShowVideoNewBadge] = useState(() => !hasGeneratedVideo());
   const [showCustomVideoPromptPopup, setShowCustomVideoPromptPopup] = useState(false);
+  
+  // Track if user has generated their first video in this session
+  const hasShownVideoTipRef = useRef(false);
 
   // Get selected photo dimensions for video cost estimation
   const selectedPhoto = selectedPhotoIndex !== null ? photos[selectedPhotoIndex] : null;
@@ -1144,6 +1147,19 @@ const PhotoGallery = ({
 
     // Hide the NEW badge after first video generation attempt
     setShowVideoNewBadge(false);
+    
+    // Show tip toast on first video generation (2 seconds after generation starts)
+    if (!hasShownVideoTipRef.current) {
+      hasShownVideoTipRef.current = true;
+      setTimeout(() => {
+        showToast({
+          title: '💡 Pro Tip',
+          message: 'Video in progress! You can start generating a video on another photo while you wait!',
+          type: 'info',
+          timeout: 8000
+        });
+      }, 2000);
+    }
 
     // Get the actual image dimensions by loading the image
     const imageUrl = photo.enhancedImageUrl || photo.images?.[selectedSubIndex || 0] || photo.originalDataUrl;
@@ -1159,6 +1175,9 @@ const PhotoGallery = ({
     // Use custom prompts if provided, otherwise use settings defaults
     const motionPrompt = customMotionPrompt || settings.videoPositivePrompt || '';
     const negativePrompt = customNegativePrompt !== null ? customNegativePrompt : (settings.videoNegativePrompt || '');
+    
+    // Capture the photo index for the onClick handler (don't rely on selectedPhotoIndex which may change)
+    const generatingPhotoIndex = selectedPhotoIndex;
 
     // Load image to get actual dimensions
     const img = new Image();
@@ -1184,10 +1203,18 @@ const PhotoGallery = ({
           // Auto-play the generated video when completed
           setPlayingGeneratedVideoId(photo.id);
           const videoMessage = getRandomVideoMessage();
+          
+          // Show success toast with click handler to navigate to photo
           showToast({
             title: videoMessage.title,
             message: videoMessage.message,
-            type: 'success'
+            type: 'success',
+            onClick: () => {
+              // Navigate to this photo if not already viewing it
+              if (selectedPhotoIndex !== generatingPhotoIndex) {
+                onSelectPhoto(generatingPhotoIndex);
+              }
+            }
           });
         },
         onError: (error) => {
@@ -1235,10 +1262,18 @@ const PhotoGallery = ({
           // Auto-play the generated video when completed
           setPlayingGeneratedVideoId(photo.id);
           const videoMessage = getRandomVideoMessage();
+          
+          // Show success toast with click handler to navigate to photo
           showToast({
             title: videoMessage.title,
             message: videoMessage.message,
-            type: 'success'
+            type: 'success',
+            onClick: () => {
+              // Navigate to this photo if not already viewing it
+              if (selectedPhotoIndex !== generatingPhotoIndex) {
+                onSelectPhoto(generatingPhotoIndex);
+              }
+            }
           });
         },
         onError: (error) => {
@@ -3792,19 +3827,21 @@ const PhotoGallery = ({
                     }}
                     onClick={(e) => e.stopPropagation()}
                   >
-                    {/* Settings cog icon - top right corner */}
+                    {/* Top right buttons container - Settings and Close */}
                     <div style={{ position: 'relative' }}>
+                      {/* Settings cog icon - left of close button */}
                       <button
                         onClick={handleOpenVideoSettings}
                         title="Video Settings"
                         style={{
                           position: 'absolute',
                           top: '0px',
-                          right: '0px',
+                          right: '36px',
                           width: '24px',
                           height: '24px',
                           borderRadius: '50%',
                           border: 'none',
+                          background: 'rgba(255, 255, 255, 0.1)',
                           color: 'rgba(255, 255, 255, 0.6)',
                           fontSize: '12px',
                           cursor: 'pointer',
@@ -3824,6 +3861,44 @@ const PhotoGallery = ({
                         }}
                       >
                         ⚙️
+                      </button>
+                      
+                      {/* Close button - far right */}
+                      <button
+                        onClick={() => setShowVideoDropdown(false)}
+                        title="Close"
+                        style={{
+                          position: 'absolute',
+                          top: '0px',
+                          right: '0px',
+                          width: '28px',
+                          height: '28px',
+                          borderRadius: '50%',
+                          border: 'none',
+                          background: 'rgba(255, 255, 255, 0.1)',
+                          color: 'rgba(255, 255, 255, 0.8)',
+                          fontSize: '18px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          transition: 'all 0.2s ease',
+                          zIndex: 1,
+                          lineHeight: '1',
+                          fontWeight: '300'
+                        }}
+                        onMouseOver={e => {
+                          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
+                          e.currentTarget.style.color = 'white';
+                          e.currentTarget.style.transform = 'scale(1.1)';
+                        }}
+                        onMouseOut={e => {
+                          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                          e.currentTarget.style.color = 'rgba(255, 255, 255, 0.8)';
+                          e.currentTarget.style.transform = 'scale(1)';
+                        }}
+                      >
+                        ×
                       </button>
                     </div>
                     

@@ -57,9 +57,15 @@ const ToastContainer = ({ toasts }) => {
             className={`toast toast-${toast.type} ${toast.visible ? 'toast-visible' : 'toast-hidden'}`}
             style={{
               background: colors.background,
-              boxShadow: `0 8px 32px ${colors.shadowColor}`
+              boxShadow: `0 8px 32px ${colors.shadowColor}`,
+              cursor: toast.onClick ? 'pointer' : 'default'
             }}
-            onClick={toast.hideToast}
+            onClick={() => {
+              if (toast.onClick) {
+                toast.onClick();
+              }
+              toast.hideToast();
+            }}
           >
             <div className="toast-icon">
               {getToastIcon(toast.type)}

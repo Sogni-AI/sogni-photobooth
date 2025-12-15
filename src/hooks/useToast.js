@@ -16,6 +16,7 @@ export const useToast = () => {
       visible: false,
       autoClose: options.autoClose !== false, // Default to true
       onClose: options.onClose,
+      onClick: options.onClick, // Custom click handler
       hideToast: () => {
         // Start fade-out animation
         setToasts((prev) => prev.map((t) => (t.id === id ? { ...t, visible: false } : t)));
