@@ -3,9 +3,12 @@
 
 import { TWITTER_SHARE_CONFIG } from '../constants.js';
 
-export function renderMobileSharePage({ imageUrl, twitterMessage }) {
+export function renderMobileSharePage({ imageUrl, videoUrl, isVideo, twitterMessage }) {
   const defaultMessage = TWITTER_SHARE_CONFIG.DEFAULT_MESSAGE;
   const safeTwitterMessage = twitterMessage || defaultMessage;
+  const mediaUrl = videoUrl || imageUrl;
+  const mediaType = isVideo ? 'video' : 'photo';
+  const mediaDescription = isVideo ? 'AI-generated video' : 'AI-generated photo';
 
   return `
       <!DOCTYPE html>
@@ -13,15 +16,17 @@ export function renderMobileSharePage({ imageUrl, twitterMessage }) {
       <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Share Your Photo - Sogni Photobooth</title>
+        <title>Share Your ${isVideo ? 'Video' : 'Photo'} - Sogni Photobooth</title>
         <meta property="og:title" content="My Sogni Photobooth Creation">
-        <meta property="og:description" content="Check out my AI-generated photo from Sogni Photobooth!">
+        <meta property="og:description" content="Check out my ${mediaDescription} from Sogni Photobooth!">
         <meta property="og:image" content="${imageUrl}">
-        <meta property="og:type" content="website">
-        <meta name="twitter:card" content="summary_large_image">
+        ${isVideo ? `<meta property="og:video" content="${videoUrl}">` : ''}
+        <meta property="og:type" content="${isVideo ? 'video.other' : 'website'}">
+        <meta name="twitter:card" content="${isVideo ? 'player' : 'summary_large_image'}">
         <meta name="twitter:title" content="My Sogni Photobooth Creation">
-        <meta name="twitter:description" content="Check out my AI-generated photo from Sogni Photobooth!">
+        <meta name="twitter:description" content="Check out my ${mediaDescription} from Sogni Photobooth!">
         <meta name="twitter:image" content="${imageUrl}">
+        ${isVideo ? `<meta name="twitter:player" content="${videoUrl}">` : ''}
         <style>
           * {
             margin: 0;
@@ -47,6 +52,11 @@ export function renderMobileSharePage({ imageUrl, twitterMessage }) {
             align-items: center;
             padding: 10px 10px 60px 10px;
             box-sizing: border-box;
+          }
+          
+          /* Video pages have normal padding */
+          .container.video-page {
+            padding: 10px 10px 60px 10px;
           }
           
           .header {
@@ -77,11 +87,26 @@ export function renderMobileSharePage({ imageUrl, twitterMessage }) {
             min-height: 0;
           }
           
+          /* For video pages, slightly wider content area */
+          .content.video-page {
+            max-width: 500px;
+            padding: 0 10px;
+          }
+          
           .photo-container {
             margin-bottom: 15px;
             width: 100%;
             display: flex;
             justify-content: center;
+          }
+          
+          /* Video container - centered with constrained size */
+          .video-container {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 15px;
           }
           
           .photo {
@@ -92,6 +117,15 @@ export function renderMobileSharePage({ imageUrl, twitterMessage }) {
             display: block;
             object-fit: contain;
             border-radius: 8px;
+          }
+          
+          .video {
+            width: 100%;
+            max-width: 100%;
+            height: auto;
+            max-height: 60vh;
+            display: block;
+            object-fit: contain;
           }
           
           .actions {
@@ -491,16 +525,30 @@ export function renderMobileSharePage({ imageUrl, twitterMessage }) {
         </style>
       </head>
               <body>
-        <div class="container">
+        <div class="container${isVideo ? ' video-page' : ''}">
           <div class="header">
-            <h1>📸 Your Sogni Creation</h1>
+            <h1>${isVideo ? '🎥' : '📸'} Your Sogni Creation</h1>
             <p>Share your AI-generated masterpiece!</p>
           </div>
           
-          <div class="content">
+          <div class="content${isVideo ? ' video-page' : ''}">
+            ${isVideo ? `
+            <div class="video-container">
+              <video 
+                src="${videoUrl}" 
+                class="video" 
+                autoplay 
+                loop 
+                muted 
+                playsinline
+                poster="${imageUrl}"
+              ></video>
+            </div>
+            ` : `
             <div class="photo-container">
               <img src="${imageUrl}" alt="Your Sogni Photobooth creation" class="photo" />
             </div>
+            `}
             
             <div id="messages"></div>
             
@@ -1013,24 +1061,29 @@ export function renderMobileSharePage({ imageUrl, twitterMessage }) {
           
           // Smart save functionality - same logic as main app
           function handleSaveToPhone() {
-            const imageUrl = "${imageUrl}";
+            const mediaUrl = "${isVideo ? videoUrl : imageUrl}";
+            const isVideoMedia = ${isVideo ? 'true' : 'false'};
+            const fileExtension = isVideoMedia ? 'mp4' : 'jpg';
+            const mimeType = isVideoMedia ? 'video/mp4' : 'image/jpeg';
+            const fileName = \`sogni-photobooth-creation.\${fileExtension}\`;
+            
             const userAgent = navigator.userAgent.toLowerCase();
             const isIOS = /iphone|ipad|ipod/.test(userAgent);
             const isAndroid = /android/.test(userAgent);
             const isSafari = /safari/.test(userAgent) && !/chrome/.test(userAgent);
             
-            console.log('Save to phone - Device detection:', { isIOS, isAndroid, isSafari });
+            console.log('Save to phone - Device detection:', { isIOS, isAndroid, isSafari, isVideo: isVideoMedia });
             
             if (isIOS) {
               // iOS: Use the share API if available, otherwise fallback to download
               if (navigator.share) {
-                fetch(imageUrl)
+                fetch(mediaUrl)
                   .then(response => response.blob())
                   .then(blob => {
-                    const file = new File([blob], 'sogni-photobooth-creation.jpg', { type: 'image/jpeg' });
+                    const file = new File([blob], fileName, { type: mimeType });
                     return navigator.share({
                       title: 'My Sogni Photobooth Creation',
-                      text: 'Check out my AI-generated photo!',
+                      text: \`Check out my AI-generated \${isVideoMedia ? 'video' : 'photo'}!\`,
                       files: [file]
                     });
                   })
@@ -1044,10 +1097,10 @@ export function renderMobileSharePage({ imageUrl, twitterMessage }) {
             } else if (isAndroid) {
               // Android: Try share API first, then fallback
               if (navigator.share) {
-                fetch(imageUrl)
+                fetch(mediaUrl)
                   .then(response => response.blob())
                   .then(blob => {
-                    const file = new File([blob], 'sogni-photobooth-creation.jpg', { type: 'image/jpeg' });
+                    const file = new File([blob], fileName, { type: mimeType });
                     return navigator.share({
                       title: 'My Sogni Photobooth Creation',
                       files: [file]
@@ -1069,10 +1122,14 @@ export function renderMobileSharePage({ imageUrl, twitterMessage }) {
           window.handleSaveToPhone = handleSaveToPhone;
           
           function fallbackSave() {
+            const mediaUrl = "${isVideo ? videoUrl : imageUrl}";
+            const isVideoMedia = ${isVideo ? 'true' : 'false'};
+            const fileExtension = isVideoMedia ? 'mp4' : 'jpg';
+            
             // Create a temporary link and trigger download
             const link = document.createElement('a');
-            link.href = "${imageUrl}";
-            link.download = 'sogni-photobooth-creation.jpg';
+            link.href = mediaUrl;
+            link.download = \`sogni-photobooth-creation.\${fileExtension}\`;
             link.style.display = 'none';
             document.body.appendChild(link);
             link.click();

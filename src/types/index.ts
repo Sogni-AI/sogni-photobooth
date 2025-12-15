@@ -46,6 +46,7 @@ export interface Photo {
   videoResolution?: '480p' | '580p' | '720p';
   videoFramerate?: 16 | 32;
   videoDuration?: 3 | 5 | 7;
+  videoMotionPrompt?: string; // The motion prompt used for video generation
 }
 
 export interface ProjectState {

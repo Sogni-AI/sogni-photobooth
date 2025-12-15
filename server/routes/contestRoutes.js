@@ -128,6 +128,8 @@ router.post('/gallery-submissions/entry', async (req, res) => {
   try {
     const {
       imageUrl,
+      videoUrl,
+      isVideo,
       promptKey,
       username,
       address,
@@ -159,6 +161,8 @@ router.post('/gallery-submissions/entry', async (req, res) => {
     const entry = await saveContestEntry({
       contestId: 'gallery-submissions',
       imageUrl,
+      videoUrl: videoUrl || null,
+      isVideo: isVideo || false,
       prompt: styleDisplayName, // Store the style display name instead of the prompt text
       username,
       address,
@@ -272,13 +276,13 @@ router.get('/:contestId/stats', async (req, res) => {
   }
 });
 
-// GET /api/contest/:contestId/image/:filename - Serve contest image
+// GET /api/contest/:contestId/image/:filename - Serve contest image or video
 router.get('/:contestId/image/:filename', async (req, res) => {
   try {
     const { contestId, filename } = req.params;
 
-    // Validate filename to prevent directory traversal
-    if (!filename.match(/^[a-f0-9-]+\.(jpg|jpeg|png|gif|webp)$/i)) {
+    // Validate filename to prevent directory traversal (allow images and videos)
+    if (!filename.match(/^[a-f0-9-]+(-video)?\.(jpg|jpeg|png|gif|webp|mp4|webm)$/i)) {
       return res.status(400).json({
         success: false,
         message: 'Invalid filename'
@@ -287,29 +291,29 @@ router.get('/:contestId/image/:filename', async (req, res) => {
 
     // Use the same uploads directory pattern as imageHosting.js
     const uploadsDir = path.join(process.cwd(), 'uploads');
-    const imagePath = path.join(uploadsDir, 'contest', contestId, filename);
+    const mediaPath = path.join(uploadsDir, 'contest', contestId, filename);
 
     // Check if file exists
     try {
-      await fs.access(imagePath);
+      await fs.access(mediaPath);
     } catch (err) {
-      console.error(`[Contest] Image not found at ${imagePath}:`, err);
+      console.error(`[Contest] Media file not found at ${mediaPath}:`, err);
       return res.status(404).json({
         success: false,
-        message: 'Image not found',
-        path: imagePath,
+        message: 'Media file not found',
+        path: mediaPath,
         filename: filename
       });
     }
 
-    console.log(`[Contest] Serving image: ${imagePath}`);
-    // Serve the image
-    res.sendFile(imagePath);
+    console.log(`[Contest] Serving media: ${mediaPath}`);
+    // Serve the file
+    res.sendFile(mediaPath);
   } catch (error) {
-    console.error('[Contest] Error serving image:', error);
+    console.error('[Contest] Error serving media:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to serve image',
+      message: 'Failed to serve media',
       error: error.message
     });
   }

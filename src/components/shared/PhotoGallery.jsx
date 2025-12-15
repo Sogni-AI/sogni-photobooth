@@ -54,110 +54,96 @@ const getRandomVideoMessage = () => {
 
 // Motion templates for video generation - PRACTICAL I2V prompts for existing portraits
 // Key I2V principles: Can only animate what EXISTS in the image - expressions, movements, camera, effects
+// Sorted alphabetically by label
 const MOTION_TEMPLATES = [
-  // 😀 EXPRESSIONS - Facial reactions that work on any portrait
+  { emoji: '👴', label: 'Age', prompt: 'rapidly ages, wrinkles form, hair turns grey then white, becoming elderly' },
+  { emoji: '👽', label: 'Alien', prompt: 'eyes turn large and black, skin turns grey, alien transformation' },
   { emoji: '🤮', label: 'Barf', prompt: 'face turns green and sick, cheeks bulge, head lurches forward violently puking, vomit spews out' },
-  { emoji: '😉', label: 'Wink', prompt: 'winks playfully, slight head tilt, charming smile spreads' },
-  { emoji: '😊', label: 'Smile', prompt: 'breaks into warm genuine smile, eyes crinkle with joy, cheeks rise' },
-  { emoji: '🤯', label: 'Shocked', prompt: 'eyes widen dramatically, jaw drops open, head pulls back in shock' },
-  { emoji: '😱', label: 'Scream', prompt: 'mouth opens wide screaming, eyes bulge, head shakes with terror' },
-  { emoji: '🤪', label: 'Silly', prompt: 'eyes cross briefly, tongue pokes out, head wobbles playfully' },
-  { emoji: '😜', label: 'Wacky', prompt: 'one eye winks, tongue sticks out sideways, goofy expression' },
+  { emoji: '🕳️', label: 'Black Hole', prompt: 'swirling black hole vortex forms behind, everything gets pulled toward it' },
+  { emoji: '🌺', label: 'Bloom', prompt: 'flowers bloom and grow around, petals open, nature flourishes' },
+  { emoji: '😳', label: 'Blush', prompt: 'cheeks flush bright red, face turns pink with embarrassment, shy smile' },
+  { emoji: '🦋', label: 'Butterfly', prompt: 'butterflies flutter around, land on face, magical nature effect' },
   { emoji: '🥳', label: 'Celebrate', prompt: 'throws head back laughing, huge smile, eyes squeeze with joy' },
-  { emoji: '😏', label: 'Smirk', prompt: 'one eyebrow raises slowly, corner of mouth curls into smirk' },
-  { emoji: '🥺', label: 'Pleading', prompt: 'eyes widen sweetly, bottom lip pushes out, head tilts down sadly' },
-  { emoji: '😤', label: 'Fierce', prompt: 'nostrils flare, eyes narrow intensely, jaw clenches with power' },
-  { emoji: '😂', label: 'Laugh', prompt: 'bursts into laughter, shoulders shake, eyes crinkle, head tips back' },
+  { emoji: '🎊', label: 'Confetti', prompt: 'colorful confetti rains down everywhere, celebration explosion' },
   { emoji: '😢', label: 'Cry', prompt: 'face crumples sadly, tears well up, lip quivers, sniffles' },
-  
-  // 🎭 DRAMATIC - Theatrical expressions and poses
-  { emoji: '💅', label: 'Slay', prompt: 'chin raises confidently, eyes narrow fiercely, hair tosses back' },
-  { emoji: '🙄', label: 'Eye Roll', prompt: 'eyes roll back hard, head tilts with attitude, sighs dramatically' },
-  { emoji: '💋', label: 'Kiss', prompt: 'puckers lips, blows kiss toward camera, winks flirtatiously' },
-  { emoji: '🤭', label: 'Gossip', prompt: 'hand covers mouth, eyes dart sideways, leans in secretively' },
-  { emoji: '👀', label: 'Side Eye', prompt: 'eyes shift suspiciously to the side, eyebrow raises slowly' },
+  { emoji: '💎', label: 'Crystal', prompt: 'crystalline structures grow and spread, diamond-like reflections, ice crystals' },
+  { emoji: '🔮', label: 'Crystal Ball', prompt: 'mystical glowing aura, magical energy swirls, fortune teller vibes' },
+  { emoji: '👹', label: 'Demon', prompt: 'horns sprout from forehead, eyes glow, demonic transformation, snarling' },
   { emoji: '😈', label: 'Devious', prompt: 'eyes narrow mischievously, slow sinister grin spreads across face' },
-  { emoji: '👑', label: 'Royal', prompt: 'chin lifts regally, eyes look down nose, dismissive wave' },
-  { emoji: '🤔', label: 'Think', prompt: 'eyebrows furrow, eyes look up thinking, hand touches chin' },
-  { emoji: '😴', label: 'Sleepy', prompt: 'eyes droop heavily, head nods forward, yawns wide, jerks awake' },
-  { emoji: '🤫', label: 'Shush', prompt: 'finger raises to lips, eyes widen, secretive expression' },
-  
-  // 🖐️ HEAD & BODY - Movement that works with existing pose
-  { emoji: '👍', label: 'Nod Yes', prompt: 'head nods up and down agreeing, warm smile, eyes brighten' },
-  { emoji: '👎', label: 'Shake No', prompt: 'head shakes side to side disagreeing, slight frown, eyes narrow' },
-  { emoji: '🔄', label: 'Look Around', prompt: 'head turns left then right curiously, eyes scan around, returns to center' },
+  { emoji: '😵‍💫', label: 'Dizzy', prompt: 'eyes spiral dizzily, head wobbles, stars circle around head, disoriented' },
   { emoji: '↩️', label: 'Double Take', prompt: 'looks away then snaps back surprised, eyes widen, jaw drops' },
+  { emoji: '🌊', label: 'Drip', prompt: 'face slowly drips and distorts downward, melting like liquid wax' },
+  { emoji: '🌑', label: 'Eclipse', prompt: 'darkness sweeps across, solar eclipse darkens everything, eerie shadows' },
+  { emoji: '💥', label: 'Explode', prompt: 'head explodes dramatically, mind literally blown, pieces scatter' },
+  { emoji: '🙄', label: 'Eye Roll', prompt: 'eyes roll back hard, head tilts with attitude, sighs dramatically' },
+  { emoji: '😤', label: 'Fierce', prompt: 'nostrils flare, eyes narrow intensely, jaw clenches with power' },
+  { emoji: '🎆', label: 'Fireworks', prompt: 'fireworks explode behind in background, colorful bursts, celebration' },
+  { emoji: '📸', label: 'Flash', prompt: 'bright camera flashes pop, paparazzi strobe lighting effect' },
+  { emoji: '🥶', label: 'Freeze', prompt: 'face turns blue, ice crystals form on skin, freezing solid, frost spreads' },
+  { emoji: '👻', label: 'Ghost', prompt: 'body turns translucent and ghostly, fades partially, floats eerily' },
+  { emoji: '🌟', label: 'Glow', prompt: 'soft ethereal light radiates outward, angelic glow effect' },
+  { emoji: '🤭', label: 'Gossip', prompt: 'hand covers mouth, eyes dart sideways, leans in secretively' },
   { emoji: '💃', label: 'Groove', prompt: 'shoulders bounce to beat, head bobs rhythmically, feeling the music' },
-  { emoji: '👋', label: 'Wave', prompt: 'hand raises waving hello, friendly smile, head tilts warmly' },
   { emoji: '🙈', label: 'Hide', prompt: 'hands cover face shyly, peeks through fingers, giggles' },
+  { emoji: '🎭', label: 'Joker', prompt: 'creepy wide smile spreads across face, eyes go wild, maniacal laughter' },
+  { emoji: '💋', label: 'Kiss', prompt: 'puckers lips, blows kiss toward camera, winks flirtatiously' },
+  { emoji: '😂', label: 'Laugh', prompt: 'bursts into laughter, shoulders shake, eyes crinkle, head tips back' },
+  { emoji: '🌋', label: 'Lava', prompt: 'molten lava drips down, skin cracks revealing glowing magma underneath' },
+  { emoji: '⚡', label: 'Lightning', prompt: 'lightning crackles around dramatically, electric energy surges' },
+  { emoji: '🔄', label: 'Look Around', prompt: 'head turns left then right curiously, eyes scan around, returns to center' },
+  { emoji: '😍', label: 'Love', prompt: 'heart eyes appear, hearts float up from head, lovestruck dreamy expression' },
+  { emoji: '🫠', label: 'Melt', prompt: 'face slowly melts downward like wax, features droop and ooze, liquifying' },
+  { emoji: '☄️', label: 'Meteor', prompt: 'fiery meteors rain down in background, apocalyptic destruction, explosions' },
+  { emoji: '💥', label: 'Mind Blown', prompt: 'head explodes in dramatic fashion, pieces scatter, mind literally blown' },
+  { emoji: '🌙', label: 'Moonlight', prompt: 'ethereal blue moonlight washes over, mystical night glow, stars appear' },
+  { emoji: '💜', label: 'Neon', prompt: 'vibrant neon lights pulse and glow, cyberpunk colors, synthwave aesthetic' },
+  { emoji: '👍', label: 'Nod Yes', prompt: 'head nods up and down agreeing, warm smile, eyes brighten' },
+  { emoji: '🔥', label: 'On Fire', prompt: 'flames engulf and spread across, fire burns intensely, everything ablaze' },
+  { emoji: '🌀', label: 'Orbit', prompt: 'camera orbits smoothly around subject, cinematic rotation' },
+  { emoji: '🥵', label: 'Overheat', prompt: 'face turns red and sweaty, steam rises from head, overheating dramatically' },
+  { emoji: '🎨', label: 'Paint', prompt: 'colorful paint splatters across face, drips down, artistic explosion' },
+  { emoji: '↔️', label: 'Pan', prompt: 'camera pans slowly across scene, smooth horizontal motion' },
   { emoji: '🫣', label: 'Peek', prompt: 'hands slowly part from face, one eye peeks through nervously' },
+  { emoji: '🌸', label: 'Petals', prompt: 'cherry blossom petals swirl romantically through the air' },
+  { emoji: '🥺', label: 'Pleading', prompt: 'eyes widen sweetly, bottom lip pushes out, head tilts down sadly' },
+  { emoji: '😡', label: 'Rage', prompt: 'face turns red with anger, steam shoots from ears, veins bulge, furious' },
+  { emoji: '🌈', label: 'Rainbow', prompt: 'vibrant rainbow colors wash across, prismatic light beams everywhere' },
+  { emoji: '🤖', label: 'Robot', prompt: 'skin turns metallic, robotic parts appear, mechanical transformation' },
   { emoji: '🤟', label: 'Rock On', prompt: 'throws up rock horns, headbangs slightly, rocks out' },
-  
-  // 🎥 CAMERA - Cinematic movements
+  { emoji: '👑', label: 'Royal', prompt: 'chin lifts regally, eyes look down nose, dismissive wave' },
+  { emoji: '😱', label: 'Scream', prompt: 'mouth opens wide screaming, eyes bulge, head shakes with terror' },
+  { emoji: '🎬', label: 'Shake', prompt: 'camera shakes with impact, dramatic handheld movement' },
+  { emoji: '👎', label: 'Shake No', prompt: 'head shakes side to side disagreeing, slight frown, eyes narrow' },
+  { emoji: '🤯', label: 'Shocked', prompt: 'eyes widen dramatically, jaw drops open, head pulls back in shock' },
+  { emoji: '🤫', label: 'Shush', prompt: 'finger raises to lips, eyes widen, secretive expression' },
+  { emoji: '💚', label: 'Sick', prompt: 'face turns sickly green, looks nauseous, sweating, about to hurl' },
+  { emoji: '👀', label: 'Side Eye', prompt: 'eyes shift suspiciously to the side, eyebrow raises slowly' },
+  { emoji: '🤪', label: 'Silly', prompt: 'eyes cross briefly, tongue pokes out, head wobbles playfully' },
+  { emoji: '💀', label: 'Skull', prompt: 'face transforms into skeleton skull, flesh fades away revealing bones' },
+  { emoji: '💅', label: 'Slay', prompt: 'chin raises confidently, eyes narrow fiercely, hair tosses back' },
+  { emoji: '😴', label: 'Sleepy', prompt: 'eyes droop heavily, head nods forward, yawns wide, jerks awake' },
+  { emoji: '😊', label: 'Smile', prompt: 'breaks into warm genuine smile, eyes crinkle with joy, cheeks rise' },
+  { emoji: '😏', label: 'Smirk', prompt: 'one eyebrow raises slowly, corner of mouth curls into smirk' },
+  { emoji: '🤧', label: 'Sneeze', prompt: 'face scrunches up, massive sneeze explodes out, snot flies everywhere' },
+  { emoji: '❄️', label: 'Snow', prompt: 'snowflakes drift down, frost forms, breath becomes visible, shivering' },
+  { emoji: '☀️', label: 'Solar Flare', prompt: 'intense sun rays blast outward, blinding golden light, solar energy' },
+  { emoji: '✨', label: 'Sparkle', prompt: 'magical sparkles float around, twinkling lights dance everywhere' },
+  { emoji: '💦', label: 'Spit Take', prompt: 'liquid sprays out of mouth in shock, dramatic spit take reaction' },
+  { emoji: '⭐', label: 'Stardust', prompt: 'glittering stardust swirls around, cosmic particles float, galaxy backdrop' },
+  { emoji: '🤩', label: 'Starstruck', prompt: 'eyes turn to stars, sparkles surround face, amazed wonder expression' },
+  { emoji: '💫', label: 'Supernova', prompt: 'blinding explosion of light and energy radiates outward, cosmic blast' },
+  { emoji: '🤔', label: 'Think', prompt: 'eyebrows furrow, eyes look up thinking, hand touches chin' },
+  { emoji: '🌪️', label: 'Tornado', prompt: 'violent tornado swirls around, debris flies everywhere, intense destruction' },
+  { emoji: '🌊', label: 'Tsunami', prompt: 'massive wave crashes in from behind, water engulfs everything, underwater' },
+  { emoji: '🧛', label: 'Vampire', prompt: 'fangs extend from mouth, eyes glow red, menacing expression, pale skin' },
+  { emoji: '😜', label: 'Wacky', prompt: 'one eye winks, tongue sticks out sideways, goofy expression' },
+  { emoji: '👋', label: 'Wave', prompt: 'hand raises waving hello, friendly smile, head tilts warmly' },
+  { emoji: '💨', label: 'Wind', prompt: 'hair blows wildly in strong wind, clothes whip around dramatically' },
+  { emoji: '😉', label: 'Wink', prompt: 'winks playfully, slight head tilt, charming smile spreads' },
+  { emoji: '👶', label: 'Young', prompt: 'face becomes younger, skin smooths, features soften, reverse aging' },
+  { emoji: '🧟', label: 'Zombie', prompt: 'skin turns grey and rotting, eyes go white, zombie transformation, arms reach forward' },
   { emoji: '🔍', label: 'Zoom In', prompt: 'slow dramatic camera push in toward face, intense focus' },
   { emoji: '🔭', label: 'Zoom Out', prompt: 'camera slowly pulls back revealing scene, epic reveal' },
-  { emoji: '🌀', label: 'Orbit', prompt: 'camera orbits smoothly around subject, cinematic rotation' },
-  { emoji: '📸', label: 'Flash', prompt: 'bright camera flashes pop, paparazzi strobe lighting effect' },
-  { emoji: '🎬', label: 'Shake', prompt: 'camera shakes with impact, dramatic handheld movement' },
-  { emoji: '↔️', label: 'Pan', prompt: 'camera pans slowly across scene, smooth horizontal motion' },
-  
-  // ✨ EFFECTS - Background/atmospheric
-  { emoji: '💨', label: 'Wind', prompt: 'hair blows wildly in strong wind, clothes whip around dramatically' },
-  { emoji: '✨', label: 'Sparkle', prompt: 'magical sparkles float around, twinkling lights dance everywhere' },
-  { emoji: '🎊', label: 'Confetti', prompt: 'colorful confetti rains down everywhere, celebration explosion' },
-  { emoji: '🌟', label: 'Glow', prompt: 'soft ethereal light radiates outward, angelic glow effect' },
-  { emoji: '❄️', label: 'Snow', prompt: 'snowflakes drift down, frost forms, breath becomes visible, shivering' },
-  { emoji: '🌸', label: 'Petals', prompt: 'cherry blossom petals swirl romantically through the air' },
-  { emoji: '⚡', label: 'Lightning', prompt: 'lightning crackles around dramatically, electric energy surges' },
-  
-  // 🔥 FIRE & ELEMENTAL - Dramatic effects that worked great!
-  { emoji: '🔥', label: 'On Fire', prompt: 'flames engulf and spread across, fire burns intensely, everything ablaze' },
-  { emoji: '🌋', label: 'Lava', prompt: 'molten lava drips down, skin cracks revealing glowing magma underneath' },
-  { emoji: '☄️', label: 'Meteor', prompt: 'fiery meteors rain down in background, apocalyptic destruction, explosions' },
-  { emoji: '💫', label: 'Supernova', prompt: 'blinding explosion of light and energy radiates outward, cosmic blast' },
-  { emoji: '🌊', label: 'Tsunami', prompt: 'massive wave crashes in from behind, water engulfs everything, underwater' },
-  { emoji: '🌪️', label: 'Tornado', prompt: 'violent tornado swirls around, debris flies everywhere, intense destruction' },
-  { emoji: '🌑', label: 'Eclipse', prompt: 'darkness sweeps across, solar eclipse darkens everything, eerie shadows' },
-  { emoji: '☀️', label: 'Solar Flare', prompt: 'intense sun rays blast outward, blinding golden light, solar energy' },
-  { emoji: '🌙', label: 'Moonlight', prompt: 'ethereal blue moonlight washes over, mystical night glow, stars appear' },
-  { emoji: '🌈', label: 'Rainbow', prompt: 'vibrant rainbow colors wash across, prismatic light beams everywhere' },
-  { emoji: '💎', label: 'Crystal', prompt: 'crystalline structures grow and spread, diamond-like reflections, ice crystals' },
-  { emoji: '⭐', label: 'Stardust', prompt: 'glittering stardust swirls around, cosmic particles float, galaxy backdrop' },
-  { emoji: '🕳️', label: 'Black Hole', prompt: 'swirling black hole vortex forms behind, everything gets pulled toward it' },
-  { emoji: '💜', label: 'Neon', prompt: 'vibrant neon lights pulse and glow, cyberpunk colors, synthwave aesthetic' },
-  
-  // 🎃 WILD TRANSFORMATIONS - Push the limits!
-  { emoji: '😳', label: 'Blush', prompt: 'cheeks flush bright red, face turns pink with embarrassment, shy smile' },
-  { emoji: '🥵', label: 'Overheat', prompt: 'face turns red and sweaty, steam rises from head, overheating dramatically' },
-  { emoji: '🥶', label: 'Freeze', prompt: 'face turns blue, ice crystals form on skin, freezing solid, frost spreads' },
-  { emoji: '😡', label: 'Rage', prompt: 'face turns red with anger, steam shoots from ears, veins bulge, furious' },
-  { emoji: '💚', label: 'Sick', prompt: 'face turns sickly green, looks nauseous, sweating, about to hurl' },
-  { emoji: '😍', label: 'Love', prompt: 'heart eyes appear, hearts float up from head, lovestruck dreamy expression' },
-  { emoji: '🤩', label: 'Starstruck', prompt: 'eyes turn to stars, sparkles surround face, amazed wonder expression' },
-  { emoji: '💀', label: 'Skull', prompt: 'face transforms into skeleton skull, flesh fades away revealing bones' },
-  { emoji: '🧟', label: 'Zombie', prompt: 'skin turns grey and rotting, eyes go white, zombie transformation, arms reach forward' },
-  { emoji: '🧛', label: 'Vampire', prompt: 'fangs extend from mouth, eyes glow red, menacing expression, pale skin' },
-  { emoji: '👻', label: 'Ghost', prompt: 'body turns translucent and ghostly, fades partially, floats eerily' },
-  { emoji: '👽', label: 'Alien', prompt: 'eyes turn large and black, skin turns grey, alien transformation' },
-  { emoji: '🤖', label: 'Robot', prompt: 'skin turns metallic, robotic parts appear, mechanical transformation' },
-  { emoji: '🫠', label: 'Melt', prompt: 'face slowly melts downward like wax, features droop and ooze, liquifying' },
-  { emoji: '💥', label: 'Explode', prompt: 'head explodes dramatically, mind literally blown, pieces scatter' },
-  { emoji: '🎭', label: 'Joker', prompt: 'creepy wide smile spreads across face, eyes go wild, maniacal laughter' },
-  { emoji: '👹', label: 'Demon', prompt: 'horns sprout from forehead, eyes glow, demonic transformation, snarling' },
-  { emoji: '😵‍💫', label: 'Dizzy', prompt: 'eyes spiral dizzily, head wobbles, stars circle around head, disoriented' },
-  { emoji: '🤧', label: 'Sneeze', prompt: 'face scrunches up, massive sneeze explodes out, snot flies everywhere' },
-  { emoji: '💦', label: 'Spit Take', prompt: 'liquid sprays out of mouth in shock, dramatic spit take reaction' },
-  { emoji: '👴', label: 'Age', prompt: 'rapidly ages, wrinkles form, hair turns grey then white, becoming elderly' },
-  { emoji: '👶', label: 'Young', prompt: 'face becomes younger, skin smooths, features soften, reverse aging' },
-  
-  // 🎪 BONUS WILD EFFECTS - More creative motion!
-  { emoji: '🎨', label: 'Paint', prompt: 'colorful paint splatters across face, drips down, artistic explosion' },
-  { emoji: '🔮', label: 'Crystal Ball', prompt: 'mystical glowing aura, magical energy swirls, fortune teller vibes' },
-  { emoji: '💥', label: 'Mind Blown', prompt: 'head explodes in dramatic fashion, pieces scatter, mind literally blown' },
-  { emoji: '🌊', label: 'Drip', prompt: 'face slowly drips and distorts downward, melting like liquid wax' },
-  { emoji: '🦋', label: 'Butterfly', prompt: 'butterflies flutter around, land on face, magical nature effect' },
-  { emoji: '🎆', label: 'Fireworks', prompt: 'fireworks explode behind in background, colorful bursts, celebration' },
-  { emoji: '🌺', label: 'Bloom', prompt: 'flowers bloom and grow around, petals open, nature flourishes' },
 ];
 
 // Render a motion template button with tooltip showing prompt
@@ -2534,13 +2520,17 @@ const PhotoGallery = ({
     
     try {
       const promptKey = currentPhoto.promptKey || currentPhoto.selectedStyle;
-      const blobUrl = currentPhoto.images[selectedSubIndex || 0];
       
-      // Convert blob URL to data URL for server storage
-      let imageDataUrl = blobUrl;
-      if (blobUrl && blobUrl.startsWith('blob:')) {
+      // Check if this is a video submission
+      const isVideo = !!currentPhoto.videoUrl;
+      const thumbnailUrl = currentPhoto.images[selectedSubIndex || 0];
+      const videoUrl = currentPhoto.videoUrl;
+      
+      // Convert thumbnail image to data URL for server storage
+      let imageDataUrl = thumbnailUrl;
+      if (thumbnailUrl && thumbnailUrl.startsWith('blob:')) {
         try {
-          const response = await fetch(blobUrl);
+          const response = await fetch(thumbnailUrl);
           const blob = await response.blob();
           imageDataUrl = await new Promise((resolve) => {
             const reader = new FileReader();
@@ -2548,8 +2538,25 @@ const PhotoGallery = ({
             reader.readAsDataURL(blob);
           });
         } catch (err) {
-          console.error('Failed to convert blob to data URL:', err);
-          // Continue with blob URL as fallback
+          console.error('Failed to convert thumbnail to data URL:', err);
+        }
+      }
+      
+      // Convert video URL to data URL if it's a video submission
+      let videoDataUrl = null;
+      if (isVideo && videoUrl) {
+        try {
+          const response = await fetch(videoUrl);
+          const blob = await response.blob();
+          videoDataUrl = await new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result);
+            reader.readAsDataURL(blob);
+          });
+        } catch (err) {
+          console.error('Failed to convert video to data URL:', err);
+          // Use the URL directly as fallback (may be a CDN URL)
+          videoDataUrl = videoUrl;
         }
       }
       
@@ -2563,7 +2570,15 @@ const PhotoGallery = ({
         width: desiredWidth,
         height: desiredHeight,
         promptKey: promptKey,
-        promptText: currentPhoto.positivePrompt || currentPhoto.stylePrompt || stylePrompts[promptKey] || ''
+        promptText: currentPhoto.positivePrompt || currentPhoto.stylePrompt || stylePrompts[promptKey] || '',
+        isVideo: isVideo,
+        // Video-specific metadata
+        ...(isVideo && {
+          videoMotionPrompt: currentPhoto.videoMotionPrompt || settings.videoMotionPrompt || '',
+          videoResolution: currentPhoto.videoResolution || settings.videoResolution || '480p',
+          videoFramerate: currentPhoto.videoFramerate || settings.videoFramerate || 16,
+          videoDuration: currentPhoto.videoDuration || settings.videoDuration || 5
+        })
       };
       
       // Submit to gallery API
@@ -2574,7 +2589,9 @@ const PhotoGallery = ({
         },
         credentials: 'include',
         body: JSON.stringify({
-          imageUrl: imageDataUrl,
+          imageUrl: imageDataUrl, // Always send thumbnail image
+          videoUrl: isVideo ? videoDataUrl : undefined, // Send video if available
+          isVideo: isVideo,
           promptKey,
           username: user?.username,
           address: user?.address,
@@ -2593,7 +2610,7 @@ const PhotoGallery = ({
       showToast({
         type: 'success',
         title: '✨ Successfully submitted to gallery!',
-        message: 'Your image will be reviewed by moderators.',
+        message: `Your ${isVideo ? 'video' : 'image'} will be reviewed by moderators.`,
         timeout: 5000
       });
       
@@ -7115,10 +7132,16 @@ const PhotoGallery = ({
           }
           originalImage={(isPromptSelectorMode ? filteredPhotos : photos)[selectedPhotoIndex]}
           onImageSelect={(entry) => {
-            console.log('🖼️ [PhotoGallery] onImageSelect called - Gallery entry clicked (preview only)');
+            console.log('🖼️ [PhotoGallery] onImageSelect called - Gallery entry clicked', {
+              entryId: entry.id,
+              hasImageUrl: !!entry.imageUrl,
+              hasVideoUrl: !!entry.videoUrl,
+              isOriginal: entry.isOriginal
+            });
             
+            // Need at least an imageUrl to display
             if (!entry.imageUrl) {
-              console.warn('🖼️ [PhotoGallery] No imageUrl, returning');
+              console.warn('🖼️ [PhotoGallery] No imageUrl in entry, cannot display');
               return;
             }
             
@@ -7131,16 +7154,28 @@ const PhotoGallery = ({
               // Instead, we'll create a temporary display by replacing just the image URL
               // The actual photo object in the photos array stays the same
               const currentPhoto = filteredPhotos[selectedPhotoIndex];
-              if (!currentPhoto) return;
+              if (!currentPhoto) {
+                console.warn('🖼️ [PhotoGallery] No current photo at selectedPhotoIndex:', selectedPhotoIndex);
+                return;
+              }
               
               // Create a modified version for display
               const modifiedPhoto = {
                 ...currentPhoto,
                 images: [entry.imageUrl],
+                videoUrl: entry.videoUrl || undefined, // Include video URL if available
                 selectedGalleryEntry: entry,
                 gallerySeed: entry.metadata?.seed,
-                galleryMetadata: entry.metadata
+                galleryMetadata: entry.metadata,
+                // Mark as showing a gallery entry (not the original style sample)
+                isShowingGalleryEntry: !entry.isOriginal
               };
+              
+              console.log('🖼️ [PhotoGallery] Updating photo with gallery entry:', {
+                photoId: currentPhoto.id,
+                newImageUrl: entry.imageUrl?.substring(0, 50) + '...',
+                hasVideoUrl: !!modifiedPhoto.videoUrl
+              });
               
               // Replace the photo at the current index in the photos array used by prompt selector
               setPhotos(prev => {
@@ -7450,6 +7485,7 @@ const PhotoGallery = ({
         onCancel={handleGallerySubmitCancel}
         promptKey={selectedPhotoIndex !== null && photos[selectedPhotoIndex] ? (photos[selectedPhotoIndex].promptKey || photos[selectedPhotoIndex].selectedStyle) : null}
         imageUrl={selectedPhotoIndex !== null && photos[selectedPhotoIndex] && photos[selectedPhotoIndex].images ? photos[selectedPhotoIndex].images[selectedSubIndex || 0] : null}
+        videoUrl={selectedPhotoIndex !== null && photos[selectedPhotoIndex] ? photos[selectedPhotoIndex].videoUrl : null}
       />
     </div>
   );

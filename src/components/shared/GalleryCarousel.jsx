@@ -77,11 +77,28 @@ const GalleryCarouselItem = memo(({ entry, index, isSelected, onClick, onModelCl
       onMouseEnter={handleMouseEnter}
     >
       <div className="gallery-carousel-image-wrapper">
-        <img
-          src={entry.imageUrl}
-          alt={`Gallery submission by ${entry.username || 'Anonymous'}`}
-          loading="lazy"
-        />
+        {entry.videoUrl ? (
+          <video
+            src={entry.videoUrl}
+            poster={entry.imageUrl}
+            loop
+            muted
+            playsInline
+            autoPlay={isSelected}
+            style={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              background: '#000'
+            }}
+          />
+        ) : (
+          <img
+            src={entry.imageUrl}
+            alt={`Gallery submission by ${entry.username || 'Anonymous'}`}
+            loading="lazy"
+          />
+        )}
       </div>
       {isSelected && (
         <div className="gallery-carousel-selected-indicator">▲</div>

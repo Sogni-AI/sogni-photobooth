@@ -13,14 +13,24 @@ const GallerySubmissionConfirm = ({
   onConfirm, 
   onCancel,
   promptKey,
-  imageUrl
+  imageUrl,
+  videoUrl
 }) => {
   const [polaroidPreview, setPolaroidPreview] = useState(null);
   const [isGeneratingPreview, setIsGeneratingPreview] = useState(false);
   const { user } = useSogniAuth();
   
-  // Generate polaroid preview with username label
+  // Check if we're showing a video
+  const isVideo = !!videoUrl;
+  
+  // Generate polaroid preview with username label (only for images)
   useEffect(() => {
+    // Skip polaroid generation for videos - we'll show the video directly
+    if (isVideo) {
+      setPolaroidPreview(null);
+      return;
+    }
+    
     if (!isOpen || !imageUrl || !user?.username) {
       setPolaroidPreview(null);
       return;
@@ -45,7 +55,7 @@ const GallerySubmissionConfirm = ({
     };
     
     generatePreview();
-  }, [isOpen, imageUrl, user]);
+  }, [isOpen, imageUrl, videoUrl, isVideo, user]);
   
   if (!isOpen) return null;
 
@@ -64,13 +74,22 @@ const GallerySubmissionConfirm = ({
         </div>
         
         <div className="gallery-confirm-content">
-          {(polaroidPreview || imageUrl) && (
+          {(isVideo ? videoUrl : (polaroidPreview || imageUrl)) && (
             <div className="gallery-confirm-preview">
               {isGeneratingPreview ? (
                 <div className="preview-loading">
                   <span className="loading-spinner"></span>
                   <p>Preparing preview...</p>
                 </div>
+              ) : isVideo ? (
+                <video 
+                  src={videoUrl} 
+                  autoPlay 
+                  loop 
+                  muted 
+                  playsInline
+                  poster={imageUrl}
+                />
               ) : (
                 <img src={polaroidPreview || imageUrl} alt="Preview" />
               )}
@@ -78,11 +97,11 @@ const GallerySubmissionConfirm = ({
           )}
           
           <p className="gallery-confirm-message">
-            Submit this photo to <strong>{promptDisplayName}</strong>'s public gallery?
+            Submit this {isVideo ? 'video' : 'photo'} to <strong>{promptDisplayName}</strong>'s public gallery?
           </p>
           
           <p className="gallery-confirm-note">
-            Your image will be reviewed by moderators before appearing in the gallery.
+            Your {isVideo ? 'video' : 'image'} will be reviewed by moderators before appearing in the gallery.
             If approved, other users will see it as an example when browsing this style.
           </p>
         </div>
@@ -114,7 +133,8 @@ GallerySubmissionConfirm.propTypes = {
   onConfirm: PropTypes.func.isRequired,
   onCancel: PropTypes.func.isRequired,
   promptKey: PropTypes.string,
-  imageUrl: PropTypes.string
+  imageUrl: PropTypes.string,
+  videoUrl: PropTypes.string
 };
 
 export default GallerySubmissionConfirm;

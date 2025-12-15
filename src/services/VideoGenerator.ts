@@ -773,10 +773,11 @@ export async function generateVideo(options: GenerateVideoOptions): Promise<void
           videoUrl,
           videoETA: 0,
           videoError: undefined,
-          // Store video generation metadata for download filename
+          // Store video generation metadata for download filename and gallery submissions
           videoResolution: resolution,
           videoFramerate: fps,
-          videoDuration: duration
+          videoDuration: duration,
+          videoMotionPrompt: positivePrompt || '' // Store the motion prompt used
         };
         return updated;
       });

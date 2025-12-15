@@ -43,64 +43,86 @@ export const shareViaWebShare = async ({
   }
 
   const photo = photos[photoIndex];
-  const photoUrl = photo.images[0];
+  
+  // Prioritize video over image if available
+  const mediaUrl = photo.videoUrl || photo.images[0];
+  const isVideo = !!photo.videoUrl;
+  const photoUrl = photo.images[0]; // Keep for fallback/frame generation
 
   try {
-    console.log('Starting Web Share API process...');
+    console.log(`Starting Web Share API process for ${isVideo ? 'video' : 'image'}...`);
 
-    let framedImageUrl;
-
-    // Web Share: Only use frame if custom theme is enabled
-    if (tezdevTheme !== 'off') {
-      // Custom theme - include the frame
-      console.log('Creating Web Share image with custom theme frame');
-      framedImageUrl = await createPolaroidImage(photoUrl, '', {
-        tezdevTheme,
-        aspectRatio,
-        outputFormat,
-        // Add QR watermark for sharing (if enabled)
-        watermarkOptions: sogniWatermark ? {
-          size: sogniWatermarkSize,
-          margin: sogniWatermarkMargin,
-          position: 'top-right',
-          opacity: 1.0
-        } : null
-      });
+    let shareFile;
+    
+    // If we have a video, share it directly
+    if (isVideo) {
+      console.log('Preparing video for Web Share');
+      
+      // Fetch the video and convert to blob
+      const response = await fetch(mediaUrl);
+      const blob = await response.blob();
+      
+      // Create a file from the blob
+      const filename = `sogni-video-${Date.now()}.mp4`;
+      shareFile = new File([blob], filename, { type: 'video/mp4' });
     } else {
-      // No custom theme - share raw image without polaroid frame
-      console.log('Creating Web Share image without polaroid frame (raw image)');
-      framedImageUrl = await createPolaroidImage(photoUrl, '', {
-        tezdevTheme: 'off',
-        aspectRatio,
-        frameWidth: 0,      // No polaroid frame
-        frameTopWidth: 0,   // No polaroid frame
-        frameBottomWidth: 0, // No polaroid frame
-        frameColor: 'transparent', // No polaroid background
-        outputFormat,
-        // Add QR watermark for sharing (if enabled)
-        watermarkOptions: sogniWatermark ? {
-          size: sogniWatermarkSize,
-          margin: sogniWatermarkMargin,
-          position: 'top-right',
-          opacity: 1.0
-        } : null
-      });
+      // Process image with frames/watermarks as before
+
+      // Process image with frames/watermarks as before
+      let framedImageUrl;
+
+      // Web Share: Only use frame if custom theme is enabled
+      if (tezdevTheme !== 'off') {
+        // Custom theme - include the frame
+        console.log('Creating Web Share image with custom theme frame');
+        framedImageUrl = await createPolaroidImage(photoUrl, '', {
+          tezdevTheme,
+          aspectRatio,
+          outputFormat,
+          // Add QR watermark for sharing (if enabled)
+          watermarkOptions: sogniWatermark ? {
+            size: sogniWatermarkSize,
+            margin: sogniWatermarkMargin,
+            position: 'top-right',
+            opacity: 1.0
+          } : null
+        });
+      } else {
+        // No custom theme - share raw image without polaroid frame
+        console.log('Creating Web Share image without polaroid frame (raw image)');
+        framedImageUrl = await createPolaroidImage(photoUrl, '', {
+          tezdevTheme: 'off',
+          aspectRatio,
+          frameWidth: 0,      // No polaroid frame
+          frameTopWidth: 0,   // No polaroid frame
+          frameBottomWidth: 0, // No polaroid frame
+          frameColor: 'transparent', // No polaroid background
+          outputFormat,
+          // Add QR watermark for sharing (if enabled)
+          watermarkOptions: sogniWatermark ? {
+            size: sogniWatermarkSize,
+            margin: sogniWatermarkMargin,
+            position: 'top-right',
+            opacity: 1.0
+          } : null
+        });
+      }
+
+      // Convert data URL to blob
+      const response = await fetch(framedImageUrl);
+      const blob = await response.blob();
+      
+      // Create a file from the blob
+      const filename = `sogni-photo-${Date.now()}.${outputFormat === 'jpg' ? 'jpg' : 'png'}`;
+      shareFile = new File([blob], filename, { type: blob.type });
     }
 
-    // Convert data URL to blob
-    const response = await fetch(framedImageUrl);
-    const blob = await response.blob();
-    
-    // Create a file from the blob
-    const filename = `sogni-photo-${Date.now()}.${outputFormat === 'jpg' ? 'jpg' : 'png'}`;
-    const file = new File([blob], filename, { type: blob.type });
-
     // Check if Web Share API is available and supports files
-    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+    if (navigator.share && navigator.canShare && navigator.canShare({ files: [shareFile] })) {
       try {
         await navigator.share({
-          files: [file],
-          title: 'Check out my Sogni AI photo!',
+          files: [shareFile],
+          title: isVideo ? 'Check out my Sogni AI video!' : 'Check out my Sogni AI photo!',
           text: 'Made with Sogni AI Photobooth ✨'
         });
         console.log('Successfully shared via Web Share API');

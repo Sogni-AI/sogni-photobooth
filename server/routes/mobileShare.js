@@ -58,9 +58,9 @@ setInterval(cleanupOldShares, 15 * 60 * 1000);
 // Create a new mobile share
 router.post('/create', (req, res) => {
   try {
-    const { shareId, photoIndex, imageUrl, tezdevTheme, aspectRatio, outputFormat, timestamp, twitterMessage } = req.body;
+    const { shareId, photoIndex, imageUrl, videoUrl, isVideo, tezdevTheme, aspectRatio, outputFormat, timestamp, twitterMessage } = req.body;
     
-    if (!shareId || !imageUrl) {
+    if (!shareId || (!imageUrl && !videoUrl)) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
@@ -68,6 +68,8 @@ router.post('/create', (req, res) => {
     const shareDataObj = {
       photoIndex,
       imageUrl,
+      videoUrl: videoUrl || null,
+      isVideo: isVideo || false,
       tezdevTheme,
       aspectRatio,
       outputFormat,
@@ -373,7 +375,12 @@ router.get('/:shareId', async (req, res) => {
     const twitterMessage = data.twitterMessage || TWITTER_SHARE_CONFIG.DEFAULT_MESSAGE;
     
     // Render via external template for maintainability
-    return res.send(renderMobileSharePage({ imageUrl: data.imageUrl, twitterMessage }));
+    return res.send(renderMobileSharePage({ 
+      imageUrl: data.imageUrl, 
+      videoUrl: data.videoUrl,
+      isVideo: data.isVideo || false,
+      twitterMessage 
+    }));
   } catch (error) {
     console.error(`[Mobile Share] FATAL ERROR serving mobile share page:`, error);
     console.error(`[Mobile Share] Error name:`, error.name);

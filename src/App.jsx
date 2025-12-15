@@ -2479,8 +2479,62 @@ const App = () => {
       console.log('🔗 Starting mobile share creation process...');
       // Utilities are now pre-imported at the top of the file for better performance
       
-      // Get the original image URL (handle enhanced images like Twitter sharing does)
+      // Get the media URL - prioritize video over image
       const photo = photos[photoIndex];
+      const isVideo = !!photo.videoUrl;
+      
+      // If video exists, use it directly; otherwise process image
+      if (isVideo) {
+        console.log('🔗 Creating QR code for video share');
+
+        // Convert the thumbnail blob URL to a permanent URL
+        // This is required because blob URLs are only accessible in the browser that created them
+        const thumbnailBlobUrl = photo.images[selectedSubIndex || 0];
+        console.log('🔗 Converting thumbnail blob URL to permanent URL...');
+        const permanentThumbnailUrl = await ensurePermanentUrl(thumbnailBlobUrl);
+        console.log('🔗 Thumbnail uploaded, permanent URL:', permanentThumbnailUrl);
+
+        // Generate a unique sharing ID
+        const shareId = `share-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        const currentUrl = new URL(window.location.href);
+        const baseUrl = currentUrl.origin;
+        const mobileShareUrl = `${baseUrl}/mobile-share/${shareId}`;
+
+        // Create share data for video
+        const shareData = {
+          shareId,
+          photoIndex,
+          videoUrl: photo.videoUrl,
+          imageUrl: permanentThumbnailUrl, // Permanent URL for thumbnail (required for verification)
+          isVideo: true,
+          tezdevTheme,
+          aspectRatio,
+          timestamp: Date.now(),
+          twitterMessage: TWITTER_SHARE_CONFIG.DEFAULT_MESSAGE
+        };
+
+        // Send to backend
+        const response = await fetch('/api/mobile-share/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(shareData),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to create video mobile share');
+        }
+
+        // Set QR code data
+        setQrCodeData({
+          shareUrl: mobileShareUrl,
+          photoIndex: photoIndex,
+          isLoading: false
+        });
+
+        return; // Success, exit early
+      }
+      
+      // Continue with image processing...
       const currentSubIndex = photo.enhanced && photo.enhancedImageUrl 
         ? -1 // Special case for enhanced images
         : (selectedSubIndex || 0);
@@ -2835,6 +2889,15 @@ const App = () => {
     // Store the message for potential retry
     setLastTwitterMessage(customMessage);
     
+    // Debug: Log the photo being shared to verify videoUrl is present
+    const photoToShare = photos[twitterPhotoIndex];
+    console.log('[handleTwitterShare] Sharing photo:', {
+      photoIndex: twitterPhotoIndex,
+      hasVideoUrl: !!photoToShare?.videoUrl,
+      videoUrl: photoToShare?.videoUrl ? photoToShare.videoUrl.substring(0, 80) + '...' : null,
+      photoKeys: photoToShare ? Object.keys(photoToShare) : []
+    });
+    
     // Create a clean URL - use /event path if user came from an event
     const shareUrl = new URL(window.location.origin);
     if (settings.halloweenContext) {
@@ -2883,9 +2946,10 @@ const App = () => {
             timeout: 5000
           });
         } else {
+          const hasVideo = photos[twitterPhotoIndex]?.videoUrl;
           showToast({
             title: 'Success!',
-            message: 'Your photo has been shared to X/Twitter!',
+            message: `Your ${hasVideo ? 'video' : 'photo'} has been shared to X/Twitter!`,
             type: 'success',
             timeout: 4000
           });
@@ -8791,7 +8855,7 @@ const App = () => {
         isOpen={showTwitterModal}
         onClose={() => setShowTwitterModal(false)}
         onShare={handleTwitterShare}
-        imageUrl={twitterPhotoIndex !== null && photos[twitterPhotoIndex] ? (photos[twitterPhotoIndex].videoUrl || photos[twitterPhotoIndex].images[0]) : null}
+        imageUrl={twitterPhotoIndex !== null && photos[twitterPhotoIndex] ? photos[twitterPhotoIndex].images[0] : null}
         photoData={twitterPhotoIndex !== null ? photos[twitterPhotoIndex] : null}
         stylePrompts={stylePrompts}
         tezdevTheme={tezdevTheme}

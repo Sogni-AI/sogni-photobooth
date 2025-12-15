@@ -141,7 +141,20 @@ export const shareToTwitter = async ({
   }
 
   const photo = photos[photoIndex];
-  const originalImageUrl = photo.images[0];
+  
+  // Debug: Log the photo object to understand what we're working with
+  console.log('[TwitterShare] Photo object:', {
+    hasVideoUrl: !!photo.videoUrl,
+    videoUrl: photo.videoUrl ? photo.videoUrl.substring(0, 80) + '...' : null,
+    hasImages: !!photo.images,
+    imageCount: photo.images?.length,
+    photoKeys: Object.keys(photo)
+  });
+  
+  // Check if this is a video - we now support video sharing via chunked upload
+  const hasVideo = !!photo.videoUrl;
+  const videoUrl = photo.videoUrl; // The video URL from Sogni (S3 signed URL)
+  const originalImageUrl = photo.images[0]; // Always have the image as fallback/thumbnail
   
   // Determine the appropriate message format based on TezDev theme
   let twitterMessage = customMessage;
@@ -163,8 +176,14 @@ export const shareToTwitter = async ({
     // Use default message for no theme
     twitterMessage = TWITTER_SHARE_CONFIG.DEFAULT_MESSAGE;
   }
+  
+  // If sharing a video, update message to mention video instead of photo
+  if (hasVideo && twitterMessage) {
+    twitterMessage = twitterMessage.replace(/\bphoto\b/gi, 'video');
+    console.log('Video detected - will share video to Twitter');
+  }
 
-  console.log(`Creating image for sharing to X with TezDev theme: ${tezdevTheme}`);
+  console.log(`Creating ${hasVideo ? 'video' : 'image'} for sharing to X with TezDev theme: ${tezdevTheme}`);
   
   try {
     // Attempt to manually load the Permanent Marker font to ensure it's available
@@ -235,7 +254,7 @@ export const shareToTwitter = async ({
     
     // Use the data URL directly instead of creating a blob URL
     // This ensures the server can access the image data directly
-    console.log('Successfully created image for X sharing');
+    console.log(`Successfully created image for X sharing${hasVideo ? ' (video thumbnail)' : ''}`);
     console.log('Attempting to share image to X');
 
     let retries = 0;
@@ -252,7 +271,9 @@ export const shareToTwitter = async ({
           },
           credentials: 'include', // Important! Ensures cookies are sent
           body: JSON.stringify({ 
-            imageUrl: imageDataUrl, // Send the data URL directly instead of blob URL
+            imageUrl: imageDataUrl, // Send the image data URL (used as thumbnail for videos)
+            videoUrl: hasVideo ? videoUrl : null, // Send video URL if sharing a video
+            isVideo: hasVideo, // Flag to indicate video sharing
             message: twitterMessage, // Use the appropriate message format
             shareUrl: shareUrl, // Include the share URL if provided
             halloweenContext, // Include Halloween context flag
@@ -299,7 +320,7 @@ export const shareToTwitter = async ({
         
         // Handle direct share - backend used an existing token without requiring auth
         if (responseData.success === true && !responseData.authUrl) {
-          console.log('Image shared directly using existing token');
+          console.log(`${hasVideo ? 'Video' : 'Image'} shared directly using existing token`);
           
           // Close the pre-opened popup immediately; show success only in-app
           if (popup && !popup.closed) {

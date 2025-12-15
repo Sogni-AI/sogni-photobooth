@@ -19,10 +19,12 @@ const __dirname = path.dirname(__filename);
 const uploadsDir = path.join(process.cwd(), 'uploads');
 
 /**
- * Save a contest entry image and metadata
+ * Save a contest entry image/video and metadata
  * @param {Object} params - Contest entry parameters
  * @param {string} params.contestId - Contest identifier (e.g., 'halloween')
  * @param {string} params.imageUrl - Image data URL or URL to download
+ * @param {string} [params.videoUrl] - Video data URL or URL to download
+ * @param {boolean} [params.isVideo] - Whether this is a video submission
  * @param {string} params.prompt - User's prompt
  * @param {string} [params.username] - Username (from Sogni account)
  * @param {string} [params.address] - Wallet address
@@ -34,6 +36,8 @@ const uploadsDir = path.join(process.cwd(), 'uploads');
 export async function saveContestEntry({
   contestId,
   imageUrl,
+  videoUrl,
+  isVideo = false,
   prompt,
   username,
   address,
@@ -92,6 +96,48 @@ export async function saveContestEntry({
       }
     }
 
+    // Save video file if provided
+    let videoFilename = null;
+    let savedVideoPath = null;
+    
+    if (videoUrl && isVideo) {
+      // Extract video data from data URL or download from URL
+      if (videoUrl.startsWith('data:')) {
+        // Data URL - extract and save
+        const matches = videoUrl.match(/^data:video\/([a-zA-Z0-9]+);base64,(.+)$/);
+        if (matches) {
+          const ext = matches[1]; // e.g., 'mp4'
+          const base64Data = matches[2];
+          videoFilename = `${entryId}-video.${ext}`;
+          savedVideoPath = path.join(contestDir, videoFilename);
+          
+          await fs.writeFile(savedVideoPath, Buffer.from(base64Data, 'base64'));
+          console.log(`[Contest] Saved data URL video to ${savedVideoPath} (size: ${base64Data.length} chars)`);
+        } else {
+          console.error('[Contest] Failed to parse video data URL format:', videoUrl.substring(0, 100));
+        }
+      } else {
+        // Regular URL - download and save
+        try {
+          const response = await fetch(videoUrl);
+          const buffer = await response.arrayBuffer();
+          
+          // Try to determine extension from content-type
+          const contentType = response.headers.get('content-type');
+          const ext = contentType?.includes('webm') ? 'webm' : 'mp4';
+          
+          videoFilename = `${entryId}-video.${ext}`;
+          savedVideoPath = path.join(contestDir, videoFilename);
+          
+          await fs.writeFile(savedVideoPath, Buffer.from(buffer));
+          console.log(`[Contest] Downloaded and saved video to ${savedVideoPath}`);
+        } catch (downloadError) {
+          console.error('[Contest] Failed to download video:', downloadError);
+          // Continue without video file
+        }
+      }
+    }
+
     // Determine the API base URL based on CLIENT_ORIGIN (same pattern as static file serving)
     const isLocal = process.env.CLIENT_ORIGIN?.includes('local');
     const isStaging = process.env.CLIENT_ORIGIN?.includes('staging');
@@ -118,6 +164,10 @@ export async function saveContestEntry({
       imageFilename,
       imagePath: savedImagePath,
       imageUrl: imageFilename ? `${apiBaseUrl}/api/contest/${contestId}/image/${imageFilename}` : null,
+      videoFilename: videoFilename || null,
+      videoPath: savedVideoPath || null,
+      videoUrl: videoFilename ? `${apiBaseUrl}/api/contest/${contestId}/image/${videoFilename}` : null,
+      isVideo: isVideo || false,
       moderationStatus: 'PENDING',
       metadata: {
         ...metadata,

@@ -416,6 +416,170 @@ export const shareImageToX = async (userClient, imageUrl, tweetText = "") => {
 export { CLIENT_ORIGIN };
 
 /**
+ * Shares a video to Twitter on behalf of the user.
+ * @param {TwitterApi} userClient - The user's Twitter API client.
+ * @param {string} videoUrl - The URL of the video to share.
+ * @param {string} [tweetText=""] - Optional text for the tweet.
+ * @returns {Promise<object>} The result of the tweet posting (data part).
+ */
+export const shareVideoToX = async (userClient, videoUrl, tweetText = "") => {
+  try {
+    // Verify the passed-in client object
+    if (!userClient) {
+      throw new Error('Twitter API client (userClient) was not provided.');
+    }
+    console.log('[Twitter Video] Using provided Twitter API client for video sharing.');
+
+    // Verify required methods exist
+    if (!userClient.v1 || !userClient.v1.uploadMedia || typeof userClient.v1.uploadMedia !== 'function') {
+      throw new Error('Provided Twitter API client missing required method: v1.uploadMedia');
+    }
+    if (!userClient.v2 || !userClient.v2.tweet || typeof userClient.v2.tweet !== 'function') {
+      throw new Error('Provided Twitter API client missing required method: v2.tweet');
+    }
+
+    // Optional: Verify token
+    try {
+      console.log('[Twitter Video] Verifying provided Twitter API client token...');
+      await userClient.currentUserV2();
+      console.log('[Twitter Video] Token verification successful.');
+    } catch (verifyError) {
+      console.warn('[Twitter Video] Token verification warning (non-fatal):', verifyError.message);
+      console.log('[Twitter Video] Continuing with video upload as token may still have write access.');
+    }
+
+    console.log(`[Twitter Video] Downloading video from URL...`);
+    let videoBuffer;
+    let videoResponse;
+    
+    try {
+      // Add longer timeout for videos as they're larger
+      videoResponse = await axios.get(videoUrl, {
+        responseType: 'arraybuffer',
+        timeout: 60000, // 60 second timeout for video download
+        maxContentLength: 512 * 1024 * 1024, // 512MB max
+        headers: {
+          'Accept': 'video/*'
+        }
+      });
+
+      console.log(`[Twitter Video] Video download status: ${videoResponse.status}`);
+
+      if (!videoResponse.data || videoResponse.data.length === 0) {
+        throw new Error('Downloaded video is empty');
+      }
+
+      videoBuffer = Buffer.from(videoResponse.data);
+      console.log(`[Twitter Video] Video downloaded successfully. Size: ${(videoBuffer.length / 1024 / 1024).toFixed(2)} MB`);
+
+      // Validate buffer is not empty
+      if (videoBuffer.length === 0) {
+        throw new Error('Video buffer is empty after download');
+      }
+
+      // Twitter video limits: 512MB max, 140 seconds max for most accounts
+      if (videoBuffer.length > 512 * 1024 * 1024) {
+        throw new Error('Video is too large for Twitter (max 512MB)');
+      }
+
+    } catch (downloadError) {
+      console.error('[Twitter Video] Error downloading video:', downloadError.message);
+      if (downloadError.response) {
+        console.error(`[Twitter Video] Response status: ${downloadError.response.status}`);
+      }
+      throw new Error(`Failed to download video: ${downloadError.message}`);
+    }
+
+    // Detect MIME type
+    let mimeType = 'video/mp4'; // Default for most video
+    try {
+      const contentType = videoResponse?.headers?.['content-type'];
+      if (contentType && typeof contentType === 'string' && contentType.startsWith('video/')) {
+        mimeType = contentType.split(';')[0].trim();
+        console.log(`[Twitter Video] Using content-type header for MIME type: ${mimeType}`);
+      } else if (videoUrl.toLowerCase().includes('.webm')) {
+        mimeType = 'video/webm';
+      } else if (videoUrl.toLowerCase().includes('.mov')) {
+        mimeType = 'video/quicktime';
+      }
+    } catch (error) {
+      console.warn('[Twitter Video] Error detecting MIME type, using default:', error.message);
+    }
+
+    console.log(`[Twitter Video] Final MIME type for upload: ${mimeType}`);
+    console.log(`[Twitter Video] Uploading video to Twitter (this may take a while)...`);
+
+    let mediaId;
+    try {
+      // Use v1 uploadMedia for video - it handles chunked upload automatically
+      // and supports the longVideo option for videos over 30 seconds
+      mediaId = await userClient.v1.uploadMedia(videoBuffer, {
+        mimeType: mimeType,
+        target: 'tweet', // Target for the media
+        shared: false, // Not a shared media
+      });
+
+      if (!mediaId) {
+        throw new Error('Media ID was not returned from video upload.');
+      }
+
+      console.log(`[Twitter Video] Video uploaded successfully. Media ID: ${mediaId}`);
+
+    } catch (uploadError) {
+      console.error('[Twitter Video] Error uploading video to Twitter:', uploadError);
+      
+      if (uploadError && typeof uploadError === 'object') {
+        if (uploadError.data && uploadError.data.errors) {
+          const errorDetail = JSON.stringify(uploadError.data.errors);
+          throw new Error(`Twitter video upload failed: ${errorDetail}`);
+        } else if (uploadError.data && uploadError.data.error) {
+          throw new Error(`Twitter video upload failed: ${uploadError.data.error}`);
+        } else if (uploadError.code || uploadError.statusCode) {
+          const statusCode = uploadError.code || uploadError.statusCode;
+          throw new Error(`Twitter video upload failed with status code ${statusCode}: ${uploadError.message || 'Unknown error'}`);
+        }
+      }
+      throw new Error(`Twitter video upload failed: ${uploadError ? uploadError.message || uploadError.toString() : 'Unknown error'}`);
+    }
+
+    // Post the tweet with the video
+    console.log('[Twitter Video] Posting tweet with video...');
+    try {
+      const tweetResult = await userClient.v2.tweet({
+        text: tweetText,
+        media: { media_ids: [mediaId] },
+      });
+
+      if (!tweetResult || !tweetResult.data || !tweetResult.data.id) {
+        console.warn('[Twitter Video] Unexpected tweet result structure:', JSON.stringify(tweetResult, null, 2));
+        throw new Error('Incomplete tweet data returned from Twitter API');
+      }
+
+      console.log('[Twitter Video] Tweet with video posted successfully! ID:', tweetResult.data.id);
+      return tweetResult;
+
+    } catch (tweetError) {
+      console.error('[Twitter Video] Error posting tweet:', tweetError);
+
+      if (tweetError && typeof tweetError === 'object') {
+        if (tweetError.data && tweetError.data.errors) {
+          const errorDetail = JSON.stringify(tweetError.data.errors);
+          throw new Error(`Twitter video tweet posting failed: ${errorDetail}`);
+        } else if (tweetError.code === 324) {
+          throw new Error('Twitter rejected the video. It may still be processing. Please try again in a moment.');
+        }
+      }
+
+      throw new Error(`Twitter video tweet posting failed: ${tweetError ? tweetError.message || tweetError.toString() : 'Unknown error'}`);
+    }
+
+  } catch (error) {
+    console.error('[Twitter Video] Error sharing video to X:', error.message);
+    throw new Error(`Failed to share video on X: ${error.message}`);
+  }
+};
+
+/**
  * Creates a Twitter client from a stored access token
  * @param {Object} accessToken - The stored Twitter access token object
  * @returns {TwitterApi} A configured Twitter API client

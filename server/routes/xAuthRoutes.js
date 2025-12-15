@@ -1,7 +1,7 @@
 import express from 'express';
 // import { generateAuthLink, loginWithOAuth2, shareImageToX } from '../services/twitterShareService.js'; // We'll uncomment later
 import crypto from 'crypto'; // For generating a random state string
-import { generateAuthLink, loginWithOAuth2, shareImageToX, CLIENT_ORIGIN, refreshOAuth2Token, getClientFromToken } from '../services/twitterShareService.js';
+import { generateAuthLink, loginWithOAuth2, shareImageToX, shareVideoToX, CLIENT_ORIGIN, refreshOAuth2Token, getClientFromToken } from '../services/twitterShareService.js';
 import { v4 as uuidv4 } from 'uuid';
 import process from 'process'; // Add process import for environment variables
 import { 
@@ -215,11 +215,17 @@ const getSessionId = (req, res, next) => {
 // POST /api/auth/x/start - Initiate Twitter OAuth flow
 router.post('/start', getSessionId, async (req, res) => {
   try {
-    // Check for required data
-    const { imageUrl, message, shareUrl, halloweenContext, submitToContest, prompt, username, address, metadata } = req.body;
-    if (!imageUrl) {
-      return res.status(400).json({ message: 'No image URL provided' });
+    // Check for required data - support both image and video
+    const { imageUrl, videoUrl, isVideo, message, shareUrl, halloweenContext, submitToContest, prompt, username, address, metadata } = req.body;
+    
+    // For videos, we need either videoUrl or imageUrl (as fallback thumbnail)
+    const mediaUrl = isVideo ? (videoUrl || imageUrl) : imageUrl;
+    
+    if (!mediaUrl) {
+      return res.status(400).json({ message: 'No media URL provided' });
     }
+    
+    console.log(`[Twitter OAuth] Starting share flow - isVideo: ${isVideo}, mediaUrl: ${mediaUrl.substring(0, 80)}...`);
 
     const sessionId = req.sessionId;
     
@@ -275,7 +281,7 @@ router.post('/start', getSessionId, async (req, res) => {
       // Try to use existing token for direct share if still valid or successfully refreshed
       if (!isExpired || existingOAuthData.lastRefresh) {
         try {
-          console.log('[Twitter OAuth] Using existing token to share directly');
+          console.log(`[Twitter OAuth] Using existing token to share directly (isVideo: ${isVideo})`);
           
           // Create Twitter client from the stored token
           const loggedUserClient = getClientFromToken(existingOAuthData.accessToken);
@@ -287,8 +293,15 @@ router.post('/start', getSessionId, async (req, res) => {
             shareUrl || (message ? fallbackUrl : null) // Only add fallback URL if no shareUrl and we have a custom message
           );
           
-          // Attempt to share the image directly
-          const tweetResult = await shareImageToX(loggedUserClient, imageUrl, tweetText);
+          // Attempt to share the media directly - use video function if it's a video
+          let tweetResult;
+          if (isVideo && videoUrl) {
+            console.log('[Twitter OAuth] Sharing video to Twitter...');
+            tweetResult = await shareVideoToX(loggedUserClient, videoUrl, tweetText);
+          } else {
+            console.log('[Twitter OAuth] Sharing image to Twitter...');
+            tweetResult = await shareImageToX(loggedUserClient, mediaUrl, tweetText);
+          }
           
           // Update usage timestamps
           existingOAuthData.lastUsed = Date.now();
@@ -372,6 +385,8 @@ router.post('/start', getSessionId, async (req, res) => {
       codeVerifier,
       timestamp: Date.now(),
       pendingImageUrl: imageUrl,
+      pendingVideoUrl: videoUrl || null,
+      pendingIsVideo: isVideo || false,
       pendingMessage: message,
       pendingShareUrl: shareUrl,
       halloweenContext: halloweenContext || false,
@@ -458,7 +473,7 @@ router.get('/callback', async (req, res) => {
     // onsole.log('[Twitter OAuth] Retrieved OAuth data successfully, proceeding with Twitter API call');
 
     // Extract required data from OAuth data
-    const { codeVerifier, pendingImageUrl: imageUrl, pendingMessage: message } = oauthData;
+    const { codeVerifier, pendingImageUrl: imageUrl, pendingVideoUrl: videoUrl, pendingIsVideo: isVideo, pendingMessage: message } = oauthData;
     
     // IMPORTANT: Do not delete OAuth data yet, wait until the token exchange is successful
     
@@ -510,8 +525,10 @@ router.get('/callback', async (req, res) => {
       // Extract the pending data
       const shareUrl = oauthData.pendingShareUrl;
       
-      if (!imageUrl) {
-        throw new Error('No pending image URL found in session data');
+      // Need either imageUrl or videoUrl
+      const mediaUrl = isVideo ? (videoUrl || imageUrl) : imageUrl;
+      if (!mediaUrl) {
+        throw new Error('No pending media URL found in session data');
       }
       
       // Construct tweet text with custom message and shareUrl, truncated to Twitter's character limit
@@ -521,8 +538,15 @@ router.get('/callback', async (req, res) => {
         shareUrl || (message ? fallbackUrl : null) // Only add fallback URL if no shareUrl and we have a custom message
       );
       
-      // Share the image on Twitter with the logged in user
-      const tweetResult = await shareImageToX(loggedUserClient, imageUrl, tweetText);
+      // Share media on Twitter with the logged in user - use video function if it's a video
+      let tweetResult;
+      if (isVideo && videoUrl) {
+        console.log('[Twitter OAuth] Sharing video to Twitter via callback...');
+        tweetResult = await shareVideoToX(loggedUserClient, videoUrl, tweetText);
+      } else {
+        console.log('[Twitter OAuth] Sharing image to Twitter via callback...');
+        tweetResult = await shareImageToX(loggedUserClient, mediaUrl, tweetText);
+      }
       
       // Add specific check for successful tweet result
       if (!tweetResult || !tweetResult.data || !tweetResult.data.id) {

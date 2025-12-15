@@ -194,11 +194,12 @@ export const RewardsProvider: React.FC<RewardsProviderProps> = ({ children }) =>
         .then(() => {
           console.log('✅ Rewards claimed successfully:', claimedRewards.map(r => r.title));
           
-          // Show success toast
+          // Show success toast with credit amount
           const rewardTitles = claimedRewards.map(r => r.title).join(', ');
+          const totalAmount = claimedRewards.reduce((sum, r) => sum + parseFloat(r.amount), 0);
           showToast({
             title: '🎁 Reward Claimed!',
-            message: `Successfully claimed: ${rewardTitles}`,
+            message: `Successfully claimed: ${rewardTitles} (${totalAmount} credits)`,
             type: 'success'
           });
           

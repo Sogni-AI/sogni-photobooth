@@ -342,9 +342,26 @@ const Moderate = () => {
           <div className="entries-grid">
             {entries.map((entry) => (
               <div key={entry.id} className="entry-card">
-                {entry.imageUrl && (
+                {(entry.videoUrl || entry.imageUrl) && (
                   <div className="entry-image">
-                    <img src={entry.imageUrl} alt="Contest entry" />
+                    {entry.videoUrl ? (
+                      <video 
+                        src={entry.videoUrl} 
+                        controls 
+                        loop 
+                        muted 
+                        playsInline
+                        poster={entry.imageUrl}
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'contain',
+                          background: '#000'
+                        }}
+                      />
+                    ) : (
+                      <img src={entry.imageUrl} alt="Contest entry" />
+                    )}
                   </div>
                 )}
                 <div className="entry-details">
@@ -431,6 +448,31 @@ const Moderate = () => {
                       <div className="entry-seed">
                         <strong>Seed:</strong> {entry.metadata.seed}
                       </div>
+                    )}
+                    {/* Video-specific metadata */}
+                    {entry.isVideo && (
+                      <>
+                        {entry.metadata?.videoMotionPrompt && (
+                          <div className="entry-motion-prompt">
+                            <strong>Motion:</strong> {entry.metadata.videoMotionPrompt}
+                          </div>
+                        )}
+                        {entry.metadata?.videoResolution && (
+                          <div className="entry-resolution">
+                            <strong>Resolution:</strong> {entry.metadata.videoResolution}
+                          </div>
+                        )}
+                        {entry.metadata?.videoFramerate && (
+                          <div className="entry-fps">
+                            <strong>FPS:</strong> {entry.metadata.videoFramerate}
+                          </div>
+                        )}
+                        {entry.metadata?.videoDuration && (
+                          <div className="entry-duration">
+                            <strong>Duration:</strong> {entry.metadata.videoDuration}s
+                          </div>
+                        )}
+                      </>
                     )}
                     {entry.tweetUrl && (
                       <div className="entry-tweet">
