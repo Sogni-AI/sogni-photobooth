@@ -1299,8 +1299,17 @@ const App = () => {
     return () => window.removeEventListener('popstate', handlePopState);
   }, [stylePrompts, promptsData]);
   
+  // Track if we've already handled the gallery deep link for this session
+  const galleryDeepLinkHandled = useRef(false);
+  
   // Handle gallery URL parameter for deep linking to Community Gallery
+  // This should only run ONCE on initial load, not when galleryPhotos changes due to user interaction
   useEffect(() => {
+    // Skip if we've already handled a deep link this session
+    if (galleryDeepLinkHandled.current) {
+      return;
+    }
+    
     const url = new URL(window.location.href);
     const galleryParam = url.searchParams.get('gallery');
     
@@ -1314,6 +1323,8 @@ const App = () => {
       
       if (photoIndex !== -1) {
         console.log('🖼️ Found gallery photo at index:', photoIndex);
+        // Mark as handled BEFORE the timeout to prevent race conditions
+        galleryDeepLinkHandled.current = true;
         // Small delay to ensure everything is rendered
         setTimeout(() => {
           setSelectedPhotoIndex(photoIndex);
