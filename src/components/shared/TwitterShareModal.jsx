@@ -97,14 +97,13 @@ const TwitterShareModal = ({
         return baseMessage;
       }
       
-      // For standard prompts, add hashtag and prompt-specific URL
-      // Remove existing URL from base message to avoid duplication
+      // For standard prompts, add hashtag and base URL (no deep link)
       const baseUrl = 'https://photobooth.sogni.ai';
       const messageWithoutUrl = baseMessage.replace(baseUrl, '').trim();
       
       if (styleDisplayText) {
         const styleTag = styleDisplayText.toLowerCase().replace(/\s+/g, '');
-        return `${messageWithoutUrl} #${styleTag} ${baseUrl}?prompt=${styleTag}`;
+        return `${messageWithoutUrl} #${styleTag} ${baseUrl}`;
       }
       return baseMessage;
     }
