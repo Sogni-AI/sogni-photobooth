@@ -518,7 +518,7 @@ export function renderMobileSharePage({ imageUrl, videoUrl, isVideo, twitterMess
         <div class="container${isVideo ? ' video-page' : ''}">
           <div class="header">
             <h1>${isVideo ? '🎥' : '📸'} Your Sogni Creation</h1>
-            <p>Share your AI-generated masterpiece!</p>
+            <p>Share your creation from Sogni AI Photobooth!</p>
           </div>
           
           <div class="content${isVideo ? ' video-page' : ''}">
@@ -601,7 +601,7 @@ export function renderMobileSharePage({ imageUrl, videoUrl, isVideo, twitterMess
                     const file = new File([blob], fileName, { type: mimeType });
                     return navigator.share({
                       title: 'My Sogni Photobooth Creation',
-                      text: \`Check out my AI-generated \${isVideoMedia ? 'video' : 'photo'}!\`,
+                      text: \`Check out my \${isVideoMedia ? 'video' : 'photo'} from Sogni AI Photobooth!\`,
                       files: [file]
                     });
                   })
@@ -621,6 +621,7 @@ export function renderMobileSharePage({ imageUrl, videoUrl, isVideo, twitterMess
                     const file = new File([blob], fileName, { type: mimeType });
                     return navigator.share({
                       title: 'My Sogni Photobooth Creation',
+                      text: \`Check out my \${isVideoMedia ? 'video' : 'photo'} from Sogni AI Photobooth!\`,
                       files: [file]
                     });
                   })

@@ -122,8 +122,8 @@ export const shareViaWebShare = async ({
       try {
         await navigator.share({
           files: [shareFile],
-          title: isVideo ? 'Check out my Sogni AI video!' : 'Check out my Sogni AI photo!',
-          text: 'Made with Sogni AI Photobooth ✨'
+          title: 'My Sogni Photobooth Creation',
+          text: `Check out my ${isVideo ? 'video' : 'photo'} from Sogni AI Photobooth!`
         });
         console.log('Successfully shared via Web Share API');
         // Note: Some apps (like Telegram) may not properly handle file sharing through Web Share API
