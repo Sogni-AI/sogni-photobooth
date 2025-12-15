@@ -401,8 +401,8 @@ export const refreshPhoto = async (options) => {
             ...current,
             progress: progressPercent,
             statusText: progressPercent > 0 
-              ? `${currentWorkerName} makin' art ${progressPercent}%`
-              : `${currentWorkerName} makin' art`,
+              ? `${currentWorkerName} makin art ${progressPercent}%`
+              : `${currentWorkerName} makin art`,
             workerName: currentWorkerName
           };
           return updated;

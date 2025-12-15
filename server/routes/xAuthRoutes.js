@@ -296,8 +296,15 @@ router.post('/start', getSessionId, async (req, res) => {
           // Attempt to share the media directly - use video function if it's a video
           let tweetResult;
           if (isVideo && videoUrl) {
-            console.log('[Twitter OAuth] Sharing video to Twitter...');
-            tweetResult = await shareVideoToX(loggedUserClient, videoUrl, tweetText);
+            console.log('[Twitter OAuth] Sharing video to Twitter (direct share)...');
+            console.log('[Twitter OAuth] Video URL:', videoUrl.substring(0, 100) + '...');
+            try {
+              tweetResult = await shareVideoToX(loggedUserClient, videoUrl, tweetText);
+            } catch (videoError) {
+              console.error('[Twitter OAuth] DIRECT VIDEO UPLOAD FAILED:', videoError.message);
+              console.error('[Twitter OAuth] Full video error:', videoError);
+              throw videoError;
+            }
           } else {
             console.log('[Twitter OAuth] Sharing image to Twitter...');
             tweetResult = await shareImageToX(loggedUserClient, mediaUrl, tweetText);
@@ -542,7 +549,14 @@ router.get('/callback', async (req, res) => {
       let tweetResult;
       if (isVideo && videoUrl) {
         console.log('[Twitter OAuth] Sharing video to Twitter via callback...');
-        tweetResult = await shareVideoToX(loggedUserClient, videoUrl, tweetText);
+        console.log('[Twitter OAuth] Video URL:', videoUrl.substring(0, 100) + '...');
+        try {
+          tweetResult = await shareVideoToX(loggedUserClient, videoUrl, tweetText);
+        } catch (videoError) {
+          console.error('[Twitter OAuth] VIDEO UPLOAD FAILED:', videoError.message);
+          console.error('[Twitter OAuth] Full video error:', videoError);
+          throw videoError;
+        }
       } else {
         console.log('[Twitter OAuth] Sharing image to Twitter via callback...');
         tweetResult = await shareImageToX(loggedUserClient, mediaUrl, tweetText);
@@ -713,6 +727,16 @@ router.get('/callback', async (req, res) => {
       userMessage = 'Could not complete Twitter authorization. The request may have expired or been invalid.';
     } else if (error.message.includes('Failed to share image on X')) {
       userMessage = `Could not share your image to Twitter. ${error.message.replace('Failed to share image on X: ','')}`;
+    } else if (error.message.includes('403 Forbidden') || error.message.includes('rejected video upload')) {
+      userMessage = 'Video upload to Twitter is not available. Twitter API video uploads require elevated access. Please use the native share menu to share videos, or share the image instead.';
+      console.error('[Twitter OAuth] Video upload 403 - API permissions issue');
+    } else if (error.message.includes('video') || error.message.includes('Video')) {
+      userMessage = `Could not share your video to Twitter: ${error.message}`;
+      console.error('[Twitter OAuth] Video share error details:', error);
+    } else if (error.message.includes('download')) {
+      userMessage = `Could not download media for Twitter: ${error.message}`;
+    } else if (error.message.includes('upload')) {
+      userMessage = `Could not upload media to Twitter: ${error.message}`;
     }
     
     // Send HTML with error message that will post to opener

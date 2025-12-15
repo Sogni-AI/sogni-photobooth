@@ -580,19 +580,21 @@ export async function generateVideo(options: GenerateVideoOptions): Promise<void
 
       switch (event.type) {
         case 'initiating':
-          // Worker assigned but not yet started - capture worker name early
-          if (event.workerName) {
-            setPhotos(prev => {
-              const updated = [...prev];
-              if (!updated[photoIndex]) return prev;
-              updated[photoIndex] = {
-                ...updated[photoIndex],
-                videoWorkerName: event.workerName,
-                videoStatus: 'Initiating'
-              };
-              return updated;
-            });
-          }
+          // Worker assigned, model being initialized - show clear status to user
+          // This is the 'initiatingModel' event from the SDK indicating model is loading
+          setPhotos(prev => {
+            const updated = [...prev];
+            if (!updated[photoIndex]) return prev;
+            updated[photoIndex] = {
+              ...updated[photoIndex],
+              videoWorkerName: event.workerName || updated[photoIndex].videoWorkerName,
+              videoStatus: 'Initializing Model'
+            };
+            return updated;
+          });
+          // Update activity time to prevent timeout during model initialization
+          activeProject.lastActivityTime = Date.now();
+          console.log(`[VIDEO] Model initializing on worker: ${event.workerName || 'unknown'} for project ${project.id}`);
           break;
 
         case 'queued':
@@ -646,6 +648,28 @@ export async function generateVideo(options: GenerateVideoOptions): Promise<void
                 });
               }
             }, 1000);
+          }
+          break;
+
+        case 'progress':
+          // Handle step/stepCount progress events (if video model sends them)
+          if (event.step !== undefined && event.stepCount !== undefined) {
+            const progressPercent = Math.round((event.step / event.stepCount) * 100);
+
+            // Update last activity time
+            activeProject.lastActivityTime = Date.now();
+
+            setPhotos(prev => {
+              const updated = [...prev];
+              if (!updated[photoIndex]?.generatingVideo) return prev;
+              updated[photoIndex] = {
+                ...updated[photoIndex],
+                videoProgress: progressPercent,
+                videoStatus: 'Processing',
+                videoWorkerName: event.workerName || updated[photoIndex].videoWorkerName
+              };
+              return updated;
+            });
           }
           break;
 

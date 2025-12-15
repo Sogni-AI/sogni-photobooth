@@ -2418,7 +2418,18 @@ const App = () => {
     // Set the photo index and open the modal
     setTwitterPhotoIndex(photoIndex);
     // Store the actual photo object if provided, otherwise use from photos array
-    setTwitterPhotoData(photoObject || photos[photoIndex] || null);
+    const photoData = photoObject || photos[photoIndex] || null;
+    setTwitterPhotoData(photoData);
+    
+    // Debug: Log what's being stored for sharing
+    console.log('[handleShareToX] Opening Twitter modal:', {
+      photoIndex,
+      hasPhotoObject: !!photoObject,
+      hasVideoUrl: !!photoData?.videoUrl,
+      videoUrl: photoData?.videoUrl ? photoData.videoUrl.substring(0, 80) + '...' : null,
+      photoKeys: photoData ? Object.keys(photoData) : []
+    });
+    
     setShowTwitterModal(true);
   };
 
@@ -2940,15 +2951,65 @@ const App = () => {
     // Store the message for potential retry
     setLastTwitterMessage(customMessage);
     
-    // Use stored photo data if available, otherwise fall back to photos array
-    // This handles the case where filters change the index mapping
-    const photoToShare = twitterPhotoData || photos[twitterPhotoIndex];
-    console.log('[handleTwitterShare] Sharing photo:', {
+    // CRITICAL: The stored twitterPhotoData may be stale if:
+    // 1. User opened share modal before video generation completed
+    // 2. Photos array was updated after modal opened (React creates new object references)
+    // We need to find the latest version of this photo in the photos array
+    const storedPhoto = twitterPhotoData;
+    
+    // Try to find the live version of this photo by matching ID or promptKey
+    let livePhoto = null;
+    if (storedPhoto?.id) {
+      livePhoto = photos.find(p => p.id === storedPhoto.id);
+    } else if (storedPhoto?.promptKey) {
+      livePhoto = photos.find(p => p.promptKey === storedPhoto.promptKey);
+    }
+    
+    // Fallback: try index-based lookup (may be wrong in filtered mode but worth trying)
+    if (!livePhoto && twitterPhotoIndex !== null && twitterPhotoIndex < photos.length) {
+      livePhoto = photos[twitterPhotoIndex];
+    }
+    
+    // Determine which photo to use
+    // Priority: 
+    // 1. If livePhoto has videoUrl that storedPhoto doesn't -> use livePhoto (data was updated)
+    // 2. If storedPhoto has all the data we need -> use storedPhoto (handles filtered scenarios)
+    // 3. Fall back to livePhoto
+    let photoToShare;
+    let source = 'unknown';
+    
+    if (livePhoto?.videoUrl && !storedPhoto?.videoUrl) {
+      // Live data has video that stored data is missing - use live data
+      console.log('[handleTwitterShare] Using LIVE photo - has videoUrl that stored data is missing');
+      photoToShare = livePhoto;
+      source = 'live (has video)';
+    } else if (storedPhoto?.videoUrl) {
+      // Stored data has video - use it
+      photoToShare = storedPhoto;
+      source = 'stored (has video)';
+    } else if (livePhoto?.videoUrl) {
+      // Live data has video - use it
+      photoToShare = livePhoto;
+      source = 'live (has video)';
+    } else if (storedPhoto) {
+      // No video anywhere, use stored data
+      photoToShare = storedPhoto;
+      source = 'stored (no video)';
+    } else {
+      // Last resort - use live photo
+      photoToShare = livePhoto;
+      source = 'live (fallback)';
+    }
+    
+    console.log('[handleTwitterShare] Photo selection:', {
+      source,
       photoIndex: twitterPhotoIndex,
-      usingStoredData: !!twitterPhotoData,
-      hasVideoUrl: !!photoToShare?.videoUrl,
-      videoUrl: photoToShare?.videoUrl ? photoToShare.videoUrl.substring(0, 80) + '...' : null,
-      photoKeys: photoToShare ? Object.keys(photoToShare) : []
+      storedPhotoId: storedPhoto?.id,
+      livePhotoFound: !!livePhoto,
+      storedHasVideo: !!storedPhoto?.videoUrl,
+      liveHasVideo: !!livePhoto?.videoUrl,
+      finalHasVideoUrl: !!photoToShare?.videoUrl,
+      videoUrl: photoToShare?.videoUrl ? photoToShare.videoUrl.substring(0, 80) + '...' : null
     });
     
     // Create a clean URL - use /event path if user came from an event
@@ -5206,8 +5267,8 @@ const App = () => {
                   loading: true,
                   progress: displayProgress,
                   statusText: displayProgress > 0 
-                    ? `${currentWorkerName} makin' art ${displayProgress}%`
-                    : `${currentWorkerName} makin' art`,
+                    ? `${currentWorkerName} makin art ${displayProgress}%`
+                    : `${currentWorkerName} makin art`,
                   workerName: currentWorkerName, // Update the cached worker name
                   jobId,
                   lastProgressTime: Date.now()
@@ -5238,8 +5299,9 @@ const App = () => {
               const updated = [...prev];
               if (photoIndex >= updated.length) return prev;
               // Process the event type
-              if (type === 'initiating' || type === 'started') {
-                // Try to find a hashtag for the style prompt
+              if (type === 'initiating') {
+                // 'initiating' means worker assigned, model is being initialized
+                // This is the 'initiatingModel' event from the SDK
                 let hashtag = '';
                 const stylePromptValue = updated[photoIndex].stylePrompt;
                 if (stylePromptValue) {
@@ -5253,7 +5315,30 @@ const App = () => {
                   ...updated[photoIndex],
                   generating: true,
                   loading: true,
-                  statusText: workerName ? `${workerName} starting` : 'Worker starting',
+                  statusText: workerName ? `${workerName} initializing model...` : 'Initializing model...',
+                  workerName: workerName || 'Worker',
+                  jobId,
+                  jobIndex,
+                  positivePrompt,
+                  stylePrompt: stylePromptValue?.trim() || '',
+                  hashtag
+                };
+              } else if (type === 'started') {
+                // 'started' means model is loaded and generation has begun
+                let hashtag = '';
+                const stylePromptValue = updated[photoIndex].stylePrompt;
+                if (stylePromptValue) {
+                  const foundKey = Object.entries(stylePrompts).find(([, value]) => value === stylePromptValue)?.[0];
+                  if (foundKey) {
+                    hashtag = `#${foundKey}`;
+                  }
+                }
+                
+                updated[photoIndex] = {
+                  ...updated[photoIndex],
+                  generating: true,
+                  loading: true,
+                  statusText: workerName ? `${workerName} generating...` : 'Generating...',
                   workerName: workerName || 'Worker',
                   jobId,
                   jobIndex,
@@ -8910,6 +8995,7 @@ const App = () => {
         onClose={() => setShowTwitterModal(false)}
         onShare={handleTwitterShare}
         imageUrl={twitterPhotoData?.images?.[0] || (twitterPhotoIndex !== null && photos[twitterPhotoIndex]?.images?.[0]) || null}
+        videoUrl={twitterPhotoData?.videoUrl || (twitterPhotoIndex !== null && photos[twitterPhotoIndex]?.videoUrl) || null}
         photoData={twitterPhotoData || (twitterPhotoIndex !== null ? photos[twitterPhotoIndex] : null)}
         stylePrompts={stylePrompts}
         tezdevTheme={tezdevTheme}

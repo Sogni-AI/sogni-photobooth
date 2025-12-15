@@ -22,7 +22,8 @@ const TwitterShareModal = ({
   isOpen, 
   onClose, 
   onShare, 
-  imageUrl, 
+  imageUrl,
+  videoUrl = null, // Video URL if sharing a video
   defaultMessage = TWITTER_SHARE_CONFIG.DEFAULT_MESSAGE,
   photoData,
   stylePrompts = {},
@@ -31,6 +32,8 @@ const TwitterShareModal = ({
   aspectRatio = null,
   outputFormat = 'png' // Note: Twitter always uses JPG regardless of this setting
 }) => {
+  // Determine if we're sharing a video
+  const isVideoShare = !!videoUrl;
   const [message, setMessage] = useState('');
   const [isSharing, setIsSharing] = useState(false);
   const [polaroidImageUrl, setPolaroidImageUrl] = useState(null);
@@ -72,30 +75,40 @@ const TwitterShareModal = ({
   
   // Helper function to generate message
   const generateMessage = useCallback(async () => {
+    // Use video-specific message if sharing a video
+    const baseMessage = isVideoShare 
+      ? defaultMessage.replace('my photo', 'my video')
+      : defaultMessage;
+    
     if (tezdevTheme !== 'off') {
       // Use dynamic theme-specific message format
       try {
         const styleTag = styleDisplayText ? styleDisplayText.toLowerCase().replace(/\s+/g, '') : '';
         const themeTemplate = await themeConfigService.getTweetTemplate(tezdevTheme, styleTag);
-        return themeTemplate;
+        // Also replace "photo" with "video" in theme templates if it's a video
+        return isVideoShare ? themeTemplate.replace(/photo/gi, 'video') : themeTemplate;
       } catch (error) {
         console.warn('Could not load theme tweet template, using default:', error);
-        return defaultMessage;
+        return baseMessage;
       }
     } else {
       // For custom prompts (with customSceneName), don't add hashtag or URL params
       if (photoData?.customSceneName) {
-        return defaultMessage;
+        return baseMessage;
       }
       
-      // Original behavior for non-TezDev themes and non-custom prompts
-      const currentUrl = window.location.href;
-      const initialMessage = styleDisplayText 
-        ? `${defaultMessage} #${styleDisplayText.toLowerCase().replace(/\s+/g, '')} ${currentUrl.split('?')[0]}?prompt=${styleDisplayText.toLowerCase().replace(/\s+/g, '')}`
-        : defaultMessage;
-      return initialMessage;
+      // For standard prompts, add hashtag and prompt-specific URL
+      // Remove existing URL from base message to avoid duplication
+      const baseUrl = 'https://photobooth.sogni.ai';
+      const messageWithoutUrl = baseMessage.replace(baseUrl, '').trim();
+      
+      if (styleDisplayText) {
+        const styleTag = styleDisplayText.toLowerCase().replace(/\s+/g, '');
+        return `${messageWithoutUrl} #${styleTag} ${baseUrl}?prompt=${styleTag}`;
+      }
+      return baseMessage;
     }
-  }, [tezdevTheme, styleDisplayText, defaultMessage, photoData]);
+  }, [tezdevTheme, styleDisplayText, defaultMessage, photoData, isVideoShare]);
 
   // Initialize message when modal opens
   useEffect(() => {
@@ -223,7 +236,7 @@ const TwitterShareModal = ({
           <svg className="twitter-logo" fill="#1DA1F2" viewBox="0 0 24 24">
             <path d="M22.46 6c-.77.35-1.6.58-2.46.67.9-.53 1.59-1.37 1.92-2.38-.84.5-1.78.86-2.79 1.07C18.27 4.49 17.01 4 15.63 4c-2.38 0-4.31 1.94-4.31 4.31 0 .34.04.67.11.99C7.83 9.09 4.16 7.19 1.69 4.23-.07 6.29.63 8.43 2.49 9.58c-.71-.02-1.38-.22-1.97-.54v.05c0 2.09 1.49 3.83 3.45 4.23-.36.1-.74.15-1.14.15-.28 0-.55-.03-.81-.08.55 1.71 2.14 2.96 4.03 3-1.48 1.16-3.35 1.85-5.37 1.85-.35 0-.69-.02-1.03-.06 1.92 1.23 4.2 1.95 6.67 1.95 8.01 0 12.38-6.63 12.38-12.38 0-.19 0-.38-.01-.56.85-.61 1.58-1.37 2.16-2.24z"/>
           </svg>
-          <h2>Share to X</h2>
+          <h2>{isVideoShare ? 'Share Video to X' : 'Share to X'}</h2>
         </div>
         
         <div className="twitter-modal-content">
@@ -233,7 +246,7 @@ const TwitterShareModal = ({
               className="twitter-message"
               value={message}
               onChange={(e) => setMessage(e.target.value)}
-              placeholder="What would you like to say about this photo?"
+              placeholder={isVideoShare ? "What would you like to say about this video?" : "What would you like to say about this photo?"}
               maxLength={maxLength}
               autoComplete="off"
               autoCapitalize="off"
@@ -245,7 +258,19 @@ const TwitterShareModal = ({
           </div>
           
           <div className="twitter-image-preview">
-            {isLoadingPreview ? (
+            {isVideoShare ? (
+              // Show video preview for video shares
+              <div className="preview-container video-preview">
+                <video 
+                  src={videoUrl} 
+                  autoPlay 
+                  loop 
+                  muted 
+                  playsInline
+                  style={{ maxWidth: '100%', maxHeight: '300px', borderRadius: '8px' }}
+                />
+              </div>
+            ) : isLoadingPreview ? (
               <div className="twitter-image-loading">
                 <span className="loading-spinner"></span>
                 <p>Preparing image...</p>
@@ -286,14 +311,14 @@ const TwitterShareModal = ({
                   <span className="dot"></span>
                   <span className="dot"></span>
                 </span>
-                <span>Sharing your masterpiece...</span>
+                <span>{isVideoShare ? 'Uploading video...' : 'Sharing your masterpiece...'}</span>
               </span>
             ) : (
               <>
                 <svg className="twitter-icon" fill="white" viewBox="0 0 24 24">
                   <path d="M22.46 6c-.77.35-1.6.58-2.46.67.9-.53 1.59-1.37 1.92-2.38-.84.5-1.78.86-2.79 1.07C18.27 4.49 17.01 4 15.63 4c-2.38 0-4.31 1.94-4.31 4.31 0 .34.04.67.11.99C7.83 9.09 4.16 7.19 1.69 4.23-.07 6.29.63 8.43 2.49 9.58c-.71-.02-1.38-.22-1.97-.54v.05c0 2.09 1.49 3.83 3.45 4.23-.36.1-.74.15-1.14.15-.28 0-.55-.03-.81-.08.55 1.71 2.14 2.96 4.03 3-1.48 1.16-3.35 1.85-5.37 1.85-.35 0-.69-.02-1.03-.06 1.92 1.23 4.2 1.95 6.67 1.95 8.01 0 12.38-6.63 12.38-12.38 0-.19 0-.38-.01-.56.85-.61 1.58-1.37 2.16-2.24z"/>
                 </svg>
-                Post
+                {isVideoShare ? 'Post Video' : 'Post'}
               </>
             )}
           </button>
@@ -308,6 +333,7 @@ TwitterShareModal.propTypes = {
   onClose: PropTypes.func.isRequired,
   onShare: PropTypes.func.isRequired,
   imageUrl: PropTypes.string,
+  videoUrl: PropTypes.string,
   defaultMessage: PropTypes.string,
   photoData: PropTypes.object,
   stylePrompts: PropTypes.object,

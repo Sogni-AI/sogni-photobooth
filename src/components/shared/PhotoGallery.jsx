@@ -3389,6 +3389,16 @@ const PhotoGallery = ({
                 onShareToTwitter={() => {
                   // Pass both index and actual photo object to handle filtered scenarios
                   const actualPhoto = (isPromptSelectorMode ? filteredPhotos : photos)[selectedPhotoIndex];
+                  
+                  // DEBUG: Log what's being passed to share
+                  console.log('[ShareMenu] Share to Twitter clicked:', {
+                    selectedPhotoIndex,
+                    isPromptSelectorMode,
+                    hasVideoUrl: !!actualPhoto?.videoUrl,
+                    videoUrl: actualPhoto?.videoUrl ? actualPhoto.videoUrl.substring(0, 100) : 'NO VIDEO URL',
+                    photoKeys: actualPhoto ? Object.keys(actualPhoto) : 'NO PHOTO'
+                  });
+                  
                   handleShareToX(selectedPhotoIndex, actualPhoto);
                 }}
                 onShareViaWebShare={handleShareViaWebShare ? () => handleShareViaWebShare(selectedPhotoIndex) : undefined}
@@ -6196,7 +6206,19 @@ const PhotoGallery = ({
                         color: 'rgba(255, 255, 255, 0.9)', 
                         marginBottom: '8px'
                       }}>
-                        {photo.videoWorkerName ? (
+                        {photo.videoStatus === 'Initializing Model' ? (
+                          <>
+                            <span style={{ animation: 'spin 1.5s linear infinite' }}>⚙️</span>
+                            {' '}
+                            <span style={{
+                              color: '#ffb74d',
+                              fontWeight: '600',
+                              textShadow: '0 0 10px rgba(255, 183, 77, 0.6)'
+                            }}>
+                              {photo.videoWorkerName ? `${photo.videoWorkerName} - ` : ''}Initializing Model...
+                            </span>
+                          </>
+                        ) : photo.videoWorkerName ? (
                           <>
                             <span style={{ animation: 'pulse 0.5s ease-in-out infinite' }}>⚡</span>
                             {' '}

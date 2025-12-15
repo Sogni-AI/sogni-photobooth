@@ -449,6 +449,47 @@ export const shareVideoToX = async (userClient, videoUrl, tweetText = "") => {
     }
 
     console.log(`[Twitter Video] Downloading video from URL...`);
+    console.log(`[Twitter Video] Video URL (first 200 chars): ${videoUrl.substring(0, 200)}`);
+    
+    // Check if S3 signed URL might be expired
+    if (videoUrl.includes('X-Amz-Expires')) {
+      try {
+        const urlParams = new URL(videoUrl).searchParams;
+        const amzDate = urlParams.get('X-Amz-Date');
+        const amzExpires = parseInt(urlParams.get('X-Amz-Expires') || '0', 10);
+        
+        if (amzDate && amzExpires) {
+          // Parse AWS date format: 20251215T080327Z
+          const year = parseInt(amzDate.substring(0, 4), 10);
+          const month = parseInt(amzDate.substring(4, 6), 10) - 1;
+          const day = parseInt(amzDate.substring(6, 8), 10);
+          const hour = parseInt(amzDate.substring(9, 11), 10);
+          const minute = parseInt(amzDate.substring(11, 13), 10);
+          const second = parseInt(amzDate.substring(13, 15), 10);
+          
+          const signedAt = new Date(Date.UTC(year, month, day, hour, minute, second));
+          const expiresAt = new Date(signedAt.getTime() + amzExpires * 1000);
+          const now = new Date();
+          
+          console.log(`[Twitter Video] S3 URL signed at: ${signedAt.toISOString()}`);
+          console.log(`[Twitter Video] S3 URL expires at: ${expiresAt.toISOString()}`);
+          console.log(`[Twitter Video] Current time: ${now.toISOString()}`);
+          
+          if (now > expiresAt) {
+            throw new Error(`S3 video URL has expired (expired at ${expiresAt.toISOString()}). Please generate a new video or try sharing again.`);
+          }
+          
+          const remainingMs = expiresAt.getTime() - now.getTime();
+          console.log(`[Twitter Video] URL expires in ${Math.round(remainingMs / 1000)} seconds`);
+        }
+      } catch (urlParseError) {
+        if (urlParseError.message.includes('expired')) {
+          throw urlParseError;
+        }
+        console.warn('[Twitter Video] Could not parse S3 URL expiry:', urlParseError.message);
+      }
+    }
+    
     let videoBuffer;
     let videoResponse;
     
@@ -507,17 +548,38 @@ export const shareVideoToX = async (userClient, videoUrl, tweetText = "") => {
     }
 
     console.log(`[Twitter Video] Final MIME type for upload: ${mimeType}`);
+    console.log(`[Twitter Video] Video buffer size: ${videoBuffer.length} bytes (${(videoBuffer.length / 1024 / 1024).toFixed(2)} MB)`);
     console.log(`[Twitter Video] Uploading video to Twitter (this may take a while)...`);
 
     let mediaId;
     try {
-      // Use v1 uploadMedia for video - it handles chunked upload automatically
-      // and supports the longVideo option for videos over 30 seconds
-      mediaId = await userClient.v1.uploadMedia(videoBuffer, {
-        mimeType: mimeType,
-        target: 'tweet', // Target for the media
-        shared: false, // Not a shared media
-      });
+      // Try v2.uploadMedia first (same as images) - this works with OAuth2 tokens
+      console.log('[Twitter Video] Starting v2.uploadMedia call...');
+      const startTime = Date.now();
+      
+      try {
+        // Use v2 uploadMedia with tweet_video category
+        mediaId = await userClient.v2.uploadMedia(videoBuffer, {
+          mimeType: mimeType,
+          media_category: 'tweet_video' // Use tweet_video for video uploads
+        });
+        
+        const uploadTime = Date.now() - startTime;
+        console.log(`[Twitter Video] v2 upload completed in ${uploadTime}ms`);
+      } catch (v2Error) {
+        console.warn('[Twitter Video] v2.uploadMedia failed, trying v1.uploadMedia as fallback...');
+        console.warn('[Twitter Video] v2 error:', v2Error.message);
+        
+        // Fallback to v1 if v2 doesn't work
+        mediaId = await userClient.v1.uploadMedia(videoBuffer, {
+          mimeType: mimeType,
+          target: 'tweet',
+          shared: false,
+        });
+        
+        const uploadTime = Date.now() - startTime;
+        console.log(`[Twitter Video] v1 fallback upload completed in ${uploadTime}ms`);
+      }
 
       if (!mediaId) {
         throw new Error('Media ID was not returned from video upload.');
@@ -527,8 +589,16 @@ export const shareVideoToX = async (userClient, videoUrl, tweetText = "") => {
 
     } catch (uploadError) {
       console.error('[Twitter Video] Error uploading video to Twitter:', uploadError);
+      console.error('[Twitter Video] Upload error name:', uploadError?.name);
+      console.error('[Twitter Video] Upload error code:', uploadError?.code);
+      console.error('[Twitter Video] Upload error data:', JSON.stringify(uploadError?.data, null, 2));
       
       if (uploadError && typeof uploadError === 'object') {
+        // Check for 403 Forbidden - this usually means the Twitter app doesn't have video upload permissions
+        if (uploadError.code === 403 || uploadError.statusCode === 403) {
+          throw new Error('Twitter API rejected video upload (403 Forbidden). Your Twitter Developer App may not have permission to upload videos. Video uploads require elevated API access. Please check your Twitter Developer Portal settings or share the image instead.');
+        }
+        
         if (uploadError.data && uploadError.data.errors) {
           const errorDetail = JSON.stringify(uploadError.data.errors);
           throw new Error(`Twitter video upload failed: ${errorDetail}`);
