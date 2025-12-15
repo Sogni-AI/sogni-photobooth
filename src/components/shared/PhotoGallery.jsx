@@ -3389,16 +3389,6 @@ const PhotoGallery = ({
                 onShareToTwitter={() => {
                   // Pass both index and actual photo object to handle filtered scenarios
                   const actualPhoto = (isPromptSelectorMode ? filteredPhotos : photos)[selectedPhotoIndex];
-                  
-                  // DEBUG: Log what's being passed to share
-                  console.log('[ShareMenu] Share to Twitter clicked:', {
-                    selectedPhotoIndex,
-                    isPromptSelectorMode,
-                    hasVideoUrl: !!actualPhoto?.videoUrl,
-                    videoUrl: actualPhoto?.videoUrl ? actualPhoto.videoUrl.substring(0, 100) : 'NO VIDEO URL',
-                    photoKeys: actualPhoto ? Object.keys(actualPhoto) : 'NO PHOTO'
-                  });
-                  
                   handleShareToX(selectedPhotoIndex, actualPhoto);
                 }}
                 onShareViaWebShare={handleShareViaWebShare ? () => handleShareViaWebShare(selectedPhotoIndex) : undefined}

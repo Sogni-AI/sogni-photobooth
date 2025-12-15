@@ -142,29 +142,10 @@ export const shareToTwitter = async ({
 
   const photo = photos[photoIndex];
   
-  // Debug: Log the photo object to understand what we're working with
-  console.log('[TwitterShare] ====== SHARE START ======');
-  console.log('[TwitterShare] Photo object:', {
-    hasVideoUrl: !!photo.videoUrl,
-    videoUrl: photo.videoUrl ? photo.videoUrl.substring(0, 80) + '...' : null,
-    hasImages: !!photo.images,
-    imageCount: photo.images?.length,
-    photoKeys: Object.keys(photo)
-  });
-  
   // Check if this is a video - we now support video sharing via chunked upload
   const hasVideo = !!photo.videoUrl;
   const videoUrl = photo.videoUrl; // The video URL from Sogni (S3 signed URL)
   const originalImageUrl = photo.images[0]; // Always have the image as fallback/thumbnail
-  
-  // CRITICAL: Log video detection result prominently
-  if (hasVideo) {
-    console.log('[TwitterShare] ✅ VIDEO DETECTED - Will share VIDEO to Twitter');
-    console.log('[TwitterShare] Video URL:', videoUrl);
-  } else {
-    console.log('[TwitterShare] ❌ NO VIDEO - Will share IMAGE to Twitter');
-    console.log('[TwitterShare] Photo has these keys:', Object.keys(photo));
-  }
   
   // Determine the appropriate message format based on TezDev theme
   let twitterMessage = customMessage;
@@ -190,11 +171,7 @@ export const shareToTwitter = async ({
   // If sharing a video, update message to mention video instead of photo
   if (hasVideo && twitterMessage) {
     twitterMessage = twitterMessage.replace(/\bphoto\b/gi, 'video');
-    console.log('Video detected - will share video to Twitter');
   }
-
-  console.log(`[TwitterShare] Creating ${hasVideo ? 'video' : 'image'} for sharing to X with TezDev theme: ${tezdevTheme}`);
-  console.log('[TwitterShare] Video check:', { hasVideo, videoUrl: videoUrl ? videoUrl.substring(0, 80) + '...' : null });
   
   try {
     // Attempt to manually load the Permanent Marker font to ensure it's available

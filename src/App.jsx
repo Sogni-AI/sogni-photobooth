@@ -2420,16 +2420,6 @@ const App = () => {
     // Store the actual photo object if provided, otherwise use from photos array
     const photoData = photoObject || photos[photoIndex] || null;
     setTwitterPhotoData(photoData);
-    
-    // Debug: Log what's being stored for sharing
-    console.log('[handleShareToX] Opening Twitter modal:', {
-      photoIndex,
-      hasPhotoObject: !!photoObject,
-      hasVideoUrl: !!photoData?.videoUrl,
-      videoUrl: photoData?.videoUrl ? photoData.videoUrl.substring(0, 80) + '...' : null,
-      photoKeys: photoData ? Object.keys(photoData) : []
-    });
-    
     setShowTwitterModal(true);
   };
 
@@ -2976,41 +2966,23 @@ const App = () => {
     // 2. If storedPhoto has all the data we need -> use storedPhoto (handles filtered scenarios)
     // 3. Fall back to livePhoto
     let photoToShare;
-    let source = 'unknown';
     
     if (livePhoto?.videoUrl && !storedPhoto?.videoUrl) {
       // Live data has video that stored data is missing - use live data
-      console.log('[handleTwitterShare] Using LIVE photo - has videoUrl that stored data is missing');
       photoToShare = livePhoto;
-      source = 'live (has video)';
     } else if (storedPhoto?.videoUrl) {
       // Stored data has video - use it
       photoToShare = storedPhoto;
-      source = 'stored (has video)';
     } else if (livePhoto?.videoUrl) {
       // Live data has video - use it
       photoToShare = livePhoto;
-      source = 'live (has video)';
     } else if (storedPhoto) {
       // No video anywhere, use stored data
       photoToShare = storedPhoto;
-      source = 'stored (no video)';
     } else {
       // Last resort - use live photo
       photoToShare = livePhoto;
-      source = 'live (fallback)';
     }
-    
-    console.log('[handleTwitterShare] Photo selection:', {
-      source,
-      photoIndex: twitterPhotoIndex,
-      storedPhotoId: storedPhoto?.id,
-      livePhotoFound: !!livePhoto,
-      storedHasVideo: !!storedPhoto?.videoUrl,
-      liveHasVideo: !!livePhoto?.videoUrl,
-      finalHasVideoUrl: !!photoToShare?.videoUrl,
-      videoUrl: photoToShare?.videoUrl ? photoToShare.videoUrl.substring(0, 80) + '...' : null
-    });
     
     // Create a clean URL - use /event path if user came from an event
     const shareUrl = new URL(window.location.origin);
