@@ -509,7 +509,8 @@ const PhotoGallery = ({
   const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
   
   // State for AI-generated video playback (separate from easter egg videos)
-  const [playingGeneratedVideoId, setPlayingGeneratedVideoId] = useState(null);
+  // Use a Set to allow multiple videos to play simultaneously (since videos are muted)
+  const [playingGeneratedVideoIds, setPlayingGeneratedVideoIds] = useState(new Set());
   
   // State to track if user wants fullscreen mode in Style Explorer
   const [wantsFullscreen, setWantsFullscreen] = useState(false);
@@ -1201,7 +1202,7 @@ const PhotoGallery = ({
         negativePrompt: negativePrompt,
         onComplete: (videoUrl) => {
           // Auto-play the generated video when completed
-          setPlayingGeneratedVideoId(photo.id);
+          setPlayingGeneratedVideoIds(prev => new Set([...prev, photo.id]));
           const videoMessage = getRandomVideoMessage();
           
           // Show success toast with click handler to navigate to photo
@@ -1260,7 +1261,7 @@ const PhotoGallery = ({
         negativePrompt: negativePrompt,
         onComplete: (videoUrl) => {
           // Auto-play the generated video when completed
-          setPlayingGeneratedVideoId(photo.id);
+          setPlayingGeneratedVideoIds(prev => new Set([...prev, photo.id]));
           const videoMessage = getRandomVideoMessage();
           
           // Show success toast with click handler to navigate to photo
@@ -5946,8 +5947,16 @@ const PhotoGallery = ({
                     className="photo-video-btn"
                     onClick={(e) => {
                       e.stopPropagation();
-                      // Toggle generated video playback (separate from easter egg videos)
-                      setPlayingGeneratedVideoId(prev => prev === photo.id ? null : photo.id);
+                      // Toggle generated video playback (multiple videos can play simultaneously)
+                      setPlayingGeneratedVideoIds(prev => {
+                        const newSet = new Set(prev);
+                        if (newSet.has(photo.id)) {
+                          newSet.delete(photo.id);
+                        } else {
+                          newSet.add(photo.id);
+                        }
+                        return newSet;
+                      });
                     }}
                     style={{
                       position: 'absolute',
@@ -5965,10 +5974,10 @@ const PhotoGallery = ({
                       transition: 'all 0.2s ease',
                       color: 'white'
                     }}
-                    title={playingGeneratedVideoId === photo.id ? 'Stop video' : 'Play video'}
+                    title={playingGeneratedVideoIds.has(photo.id) ? 'Stop video' : 'Play video'}
                   >
                     <svg fill="currentColor" width="16" height="16" viewBox="0 0 24 24">
-                      {playingGeneratedVideoId === photo.id ? (
+                      {playingGeneratedVideoIds.has(photo.id) ? (
                         <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
                       ) : (
                         <path d="M8 5v14l11-7z"/>
@@ -5978,7 +5987,7 @@ const PhotoGallery = ({
                 )}
 
                 {/* AI-Generated Video Overlay - Show when generated video is playing */}
-                {photo.videoUrl && !photo.generatingVideo && playingGeneratedVideoId === photo.id && (
+                {photo.videoUrl && !photo.generatingVideo && playingGeneratedVideoIds.has(photo.id) && (
                   <video
                     src={photo.videoUrl}
                     autoPlay
