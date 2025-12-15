@@ -2,6 +2,9 @@
  * Sonic Logo - Whoosh Dreamy Arpeggio
  * Soft whoosh into Fmaj7 arpeggio with pitch drift
  * Uses Web Audio API for cross-browser/device compatibility
+ *
+ * iOS AUDIO FIX: Call warmUpAudio() during a user gesture (e.g., button click)
+ * before calling playSonicLogo() from an async callback.
  */
 
 let audioContext: AudioContext | null = null;
@@ -21,6 +24,30 @@ const getAudioContext = (): AudioContext | null => {
     audioContext.resume().catch(() => {});
   }
   return audioContext;
+};
+
+/**
+ * Pre-warms the AudioContext for iOS compatibility.
+ * Call this during a user interaction (click/tap) BEFORE the async
+ * callback that will play the sonic logo.
+ *
+ * On iOS, AudioContext must be created/resumed during a user gesture.
+ * This function also plays a silent buffer to fully "unlock" audio.
+ */
+export const warmUpAudio = (): void => {
+  const ctx = getAudioContext();
+  if (!ctx) return;
+
+  // Play a silent buffer to fully unlock iOS audio
+  try {
+    const buffer = ctx.createBuffer(1, 1, 22050);
+    const source = ctx.createBufferSource();
+    source.buffer = buffer;
+    source.connect(ctx.destination);
+    source.start(0);
+  } catch {
+    // Silently fail - audio just won't work
+  }
 };
 
 /**

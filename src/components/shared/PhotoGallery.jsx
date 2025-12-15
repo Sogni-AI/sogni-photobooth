@@ -34,7 +34,7 @@ import { generateGalleryFilename, getPortraitFolderWithFallback } from '../../ut
 import { generateVideo, cancelVideoGeneration, downloadVideo } from '../../services/VideoGenerator.ts';
 import { hasSeenVideoIntro, hasGeneratedVideo, formatVideoDuration, hasSeenVideoTip, markVideoTipShown } from '../../constants/videoSettings.ts';
 import VideoIntroPopup from './VideoIntroPopup.tsx';
-import { playSonicLogo } from '../../utils/sonicLogos';
+import { playSonicLogo, warmUpAudio } from '../../utils/sonicLogos';
 import CustomVideoPromptPopup from './CustomVideoPromptPopup';
 
 // Random video completion messages
@@ -1128,6 +1128,10 @@ const PhotoGallery = ({
   // Handle video generation
   const handleGenerateVideo = useCallback(async (customMotionPrompt = null, customNegativePrompt = null, motionEmoji = null) => {
     setShowVideoDropdown(false);
+
+    // Pre-warm audio for iOS - must happen during user gesture
+    // This unlocks audio so sonic logo can play when video completes
+    warmUpAudio();
 
     // Use videoTargetPhotoIndex if set (from gallery motion button), otherwise selectedPhotoIndex (from slideshow)
     const targetIndex = videoTargetPhotoIndex !== null ? videoTargetPhotoIndex : selectedPhotoIndex;
