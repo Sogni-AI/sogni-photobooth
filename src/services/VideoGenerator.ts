@@ -954,8 +954,8 @@ export async function downloadVideo(videoUrl: string, filename?: string): Promis
       if (navigator.canShare({ files: [file] })) {
         await navigator.share({
           files: [file],
-          title: 'Save Video',
-          text: 'Your AI-generated video from Sogni Photobooth'
+          title: 'My Sogni Photobooth Creation',
+          text: 'Check out my video from Sogni AI Photobooth!'
         });
         return; // Success - user can save via share sheet
       }

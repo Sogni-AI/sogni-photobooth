@@ -3,12 +3,39 @@
 
 import { TWITTER_SHARE_CONFIG } from '../constants.js';
 
-export function renderMobileSharePage({ imageUrl, videoUrl, isVideo, twitterMessage }) {
+export function renderMobileSharePage({ 
+  imageUrl, 
+  videoUrl, 
+  isVideo, 
+  twitterMessage,
+  // Metadata for proper filename generation
+  styleName = 'sogni',
+  videoDuration,
+  videoResolution,
+  videoFramerate,
+  outputFormat = 'jpg',
+  isFramed = false
+}) {
   const defaultMessage = TWITTER_SHARE_CONFIG.DEFAULT_MESSAGE;
   const safeTwitterMessage = twitterMessage || defaultMessage;
   const mediaUrl = videoUrl || imageUrl;
   const mediaType = isVideo ? 'video' : 'photo';
   const mediaDescription = isVideo ? 'AI-generated video' : 'AI-generated photo';
+  
+  // Generate proper filename matching desktop download format
+  let fileName;
+  if (isVideo) {
+    // Video format: sogni-photobooth-{style}-video_{duration}s_{resolution}_{fps}fps.mp4
+    const duration = videoDuration || 5;
+    const resolution = videoResolution || '480p';
+    const fps = videoFramerate || 16;
+    fileName = `sogni-photobooth-${styleName}-video_${duration}s_${resolution}_${fps}fps.mp4`;
+  } else {
+    // Image format: sogni-photobooth-{style}-framed.jpg or sogni-photobooth-{style}.jpg
+    const extension = outputFormat === 'png' ? 'png' : 'jpg';
+    const frameType = isFramed ? '-framed' : '';
+    fileName = `sogni-photobooth-${styleName}${frameType}.${extension}`;
+  }
 
   return `
       <!DOCTYPE html>
@@ -581,9 +608,9 @@ export function renderMobileSharePage({ imageUrl, videoUrl, isVideo, twitterMess
           function handleSaveToPhone() {
             const mediaUrl = "${isVideo ? videoUrl : imageUrl}";
             const isVideoMedia = ${isVideo ? 'true' : 'false'};
-            const fileExtension = isVideoMedia ? 'mp4' : 'jpg';
             const mimeType = isVideoMedia ? 'video/mp4' : 'image/jpeg';
-            const fileName = \`sogni-photobooth-creation.\${fileExtension}\`;
+            // Use proper filename matching desktop download format
+            const fileName = "${fileName}";
             
             const userAgent = navigator.userAgent.toLowerCase();
             const isIOS = /iphone|ipad|ipod/.test(userAgent);
@@ -642,13 +669,12 @@ export function renderMobileSharePage({ imageUrl, videoUrl, isVideo, twitterMess
           
           function fallbackSave() {
             const mediaUrl = "${isVideo ? videoUrl : imageUrl}";
-            const isVideoMedia = ${isVideo ? 'true' : 'false'};
-            const fileExtension = isVideoMedia ? 'mp4' : 'jpg';
             
             // Create a temporary link and trigger download
             const link = document.createElement('a');
             link.href = mediaUrl;
-            link.download = \`sogni-photobooth-creation.\${fileExtension}\`;
+            // Use proper filename matching desktop download format
+            link.download = "${fileName}";
             link.style.display = 'none';
             document.body.appendChild(link);
             link.click();

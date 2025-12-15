@@ -2515,6 +2515,13 @@ const App = () => {
         const baseUrl = currentUrl.origin;
         const mobileShareUrl = `${baseUrl}/mobile-share/${shareId}`;
 
+        // Extract style name from photo for filename
+        const styleName = photo.statusText?.replace('#', '') || 
+                         photo.promptKey || 
+                         photo.selectedStyle || 
+                         'sogni';
+        const cleanStyleName = styleName.toLowerCase().replace(/\s+/g, '-');
+
         // Create share data for video
         const shareData = {
           shareId,
@@ -2525,7 +2532,12 @@ const App = () => {
           tezdevTheme,
           aspectRatio,
           timestamp: Date.now(),
-          twitterMessage: TWITTER_SHARE_CONFIG.DEFAULT_MESSAGE
+          twitterMessage: TWITTER_SHARE_CONFIG.DEFAULT_MESSAGE,
+          // Add metadata for proper filename generation
+          styleName: cleanStyleName,
+          videoDuration: photo.videoDuration || settings.videoDuration || 5,
+          videoResolution: photo.videoResolution || settings.videoResolution || '480p',
+          videoFramerate: photo.videoFramerate || settings.videoFramerate || 16
         };
 
         // Send to backend
@@ -2576,6 +2588,13 @@ const App = () => {
           const baseUrl = currentUrl.origin;
           const mobileShareUrl = `${baseUrl}/mobile-share/${shareId}`;
 
+          // Extract style name from photo for filename
+          const styleName = photo.statusText?.replace('#', '') || 
+                           photo.promptKey || 
+                           photo.selectedStyle || 
+                           'sogni';
+          const cleanStyleName = styleName.toLowerCase().replace(/\s+/g, '-');
+
           const shareData = {
             shareId,
             photoIndex,
@@ -2585,7 +2604,8 @@ const App = () => {
             outputFormat: 'jpg',
             timestamp: Date.now(),
             isFramed: true,
-            twitterMessage: cachedMobileShare.twitterMessage || TWITTER_SHARE_CONFIG.DEFAULT_MESSAGE
+            twitterMessage: cachedMobileShare.twitterMessage || TWITTER_SHARE_CONFIG.DEFAULT_MESSAGE,
+            styleName: cleanStyleName
           };
 
           console.log('🔗 Sending cached mobile share data to backend...');
@@ -2646,6 +2666,13 @@ const App = () => {
           const baseUrl = currentUrl.origin;
           const mobileShareUrl = `${baseUrl}/mobile-share/${shareId}`;
           
+          // Extract style name from photo for filename
+          const styleName = photo.statusText?.replace('#', '') || 
+                           photo.promptKey || 
+                           photo.selectedStyle || 
+                           'sogni';
+          const cleanStyleName = styleName.toLowerCase().replace(/\s+/g, '-');
+          
           // Create share data
           const shareData = {
             shareId,
@@ -2656,7 +2683,8 @@ const App = () => {
             outputFormat: outputFormat, // Use original format instead of forcing JPG
             timestamp: Date.now(),
             isFramed: true,
-            twitterMessage: twitterMessage
+            twitterMessage: twitterMessage,
+            styleName: cleanStyleName
           };
           
           // Send to backend
@@ -2819,6 +2847,13 @@ const App = () => {
       // Create the mobile sharing URL
       const mobileShareUrl = `${baseUrl}/mobile-share/${shareId}`;
       
+      // Extract style name from photo for filename
+      const styleName = photo.statusText?.replace('#', '') || 
+                       photo.promptKey || 
+                       photo.selectedStyle || 
+                       'sogni';
+      const cleanStyleName = styleName.toLowerCase().replace(/\s+/g, '-');
+      
       // Store the sharing data with permanent framed image URL
       const shareData = {
         shareId,
@@ -2829,7 +2864,8 @@ const App = () => {
         outputFormat,
         timestamp: Date.now(),
         isFramed: true, // Flag to indicate this image already includes the frame
-        twitterMessage: twitterMessage // Include the generated Twitter message
+        twitterMessage: twitterMessage, // Include the generated Twitter message
+        styleName: cleanStyleName
       };
 
       console.log('Creating mobile share with framed data:', shareData);
