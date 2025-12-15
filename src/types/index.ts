@@ -47,6 +47,7 @@ export interface Photo {
   videoFramerate?: 16 | 32;
   videoDuration?: 3 | 5 | 7;
   videoMotionPrompt?: string; // The motion prompt used for video generation
+  videoMotionEmoji?: string; // The emoji used for video generation (e.g., '🔥', '😂')
 }
 
 export interface ProjectState {

@@ -53,6 +53,7 @@ interface GenerateVideoOptions {
   duration?: 3 | 5 | 7;
   positivePrompt?: string;
   negativePrompt?: string;
+  motionEmoji?: string;
   onComplete?: (videoUrl: string) => void;
   onError?: (error: Error) => void;
   onCancel?: () => void;
@@ -131,6 +132,7 @@ export async function generateVideo(options: GenerateVideoOptions): Promise<void
     duration = 5,
     positivePrompt = '',
     negativePrompt = '',
+    motionEmoji,
     onComplete,
     onError,
     onOutOfCredits
@@ -219,7 +221,7 @@ export async function generateVideo(options: GenerateVideoOptions): Promise<void
         videoProjectId: undefined,
         videoError: undefined,
         videoWorkerName: undefined,
-        videoStatus: 'In line...'
+        videoStatus: 'Generating'
       };
       return updated;
     });
@@ -805,7 +807,8 @@ export async function generateVideo(options: GenerateVideoOptions): Promise<void
           videoResolution: resolution,
           videoFramerate: fps,
           videoDuration: duration,
-          videoMotionPrompt: positivePrompt || '' // Store the motion prompt used
+          videoMotionPrompt: positivePrompt || '', // Store the motion prompt used
+          videoMotionEmoji: motionEmoji || '' // Store the emoji used for video generation
         };
         return updated;
       });

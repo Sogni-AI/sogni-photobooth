@@ -150,7 +150,7 @@ const MOTION_TEMPLATES = [
 const renderMotionButton = (template, index, handleGenerateVideo, setShowVideoDropdown, setShowCustomVideoPromptPopup) => (
   <button
     key={template.label}
-    onClick={() => handleGenerateVideo(template.prompt)}
+    onClick={() => handleGenerateVideo(template.prompt, null, template.emoji)}
     title={template.prompt}
     style={{
       padding: '8px 4px',
@@ -1125,7 +1125,7 @@ const PhotoGallery = ({
   }, [handleShowControlOverlay]);
 
   // Handle video generation
-  const handleGenerateVideo = useCallback(async (customMotionPrompt = null, customNegativePrompt = null) => {
+  const handleGenerateVideo = useCallback(async (customMotionPrompt = null, customNegativePrompt = null, motionEmoji = null) => {
     setShowVideoDropdown(false);
 
     // Use videoTargetPhotoIndex if set (from gallery motion button), otherwise selectedPhotoIndex (from slideshow)
@@ -1171,6 +1171,7 @@ const PhotoGallery = ({
     // Use custom prompts if provided, otherwise use settings defaults
     const motionPrompt = customMotionPrompt || settings.videoPositivePrompt || '';
     const negativePrompt = customNegativePrompt !== null ? customNegativePrompt : (settings.videoNegativePrompt || '');
+    const selectedEmoji = motionEmoji || null; // Store emoji if from template
     
     // Capture the photo index and ID for the onClick handler (don't rely on selectedPhotoIndex which may change)
     const generatingPhotoIndex = targetIndex;
@@ -1197,6 +1198,7 @@ const PhotoGallery = ({
         duration: settings.videoDuration || 5,
         positivePrompt: motionPrompt,
         negativePrompt: negativePrompt,
+        motionEmoji: selectedEmoji,
         onComplete: (videoUrl) => {
           // Auto-play the generated video when completed
           setPlayingGeneratedVideoIds(prev => new Set([...prev, generatingPhotoId]));
@@ -1374,7 +1376,7 @@ const PhotoGallery = ({
     if (!photo?.videoUrl) return;
 
     // Build filename using the same logic as image downloads
-    // Format: sogni-photobooth-{style-name}-video_{duration}s_{resolution}_{fps}fps.mp4
+    // Format: sogni-photobooth-{style-name}-{emoji}-video_{duration}s_{resolution}_{fps}fps.mp4
     
     // Get style display text and clean it (same as image download)
     const styleDisplayText = getStyleDisplayText(photo);
@@ -1385,8 +1387,12 @@ const PhotoGallery = ({
     const resolution = photo.videoResolution || settings.videoResolution || '480p';
     const fps = photo.videoFramerate || settings.videoFramerate || 16;
     
-    // Build filename: sogni-photobooth-{style}-video_{duration}s_{resolution}_{fps}fps.mp4
-    const filename = `sogni-photobooth-${cleanStyleName}-video_${duration}s_${resolution}_${fps}fps.mp4`;
+    // Include motion emoji in filename if available
+    const motionEmoji = photo.videoMotionEmoji || '';
+    const emojiPart = motionEmoji ? `-${motionEmoji}` : '';
+    
+    // Build filename: sogni-photobooth-{style}-{emoji}-video_{duration}s_{resolution}_{fps}fps.mp4
+    const filename = `sogni-photobooth-${cleanStyleName}${emojiPart}-video_${duration}s_${resolution}_${fps}fps.mp4`;
 
     downloadVideo(photo.videoUrl, filename)
       .then(() => {
@@ -1403,7 +1409,7 @@ const PhotoGallery = ({
           type: 'error'
         });
       });
-  }, [selectedPhotoIndex, photos, settings.videoDuration, settings.videoResolution, settings.videoFramerate, showToast]);
+  }, [selectedPhotoIndex, photos, settings.videoDuration, settings.videoResolution, settings.videoFramerate, showToast, getStyleDisplayText]);
 
   // Handle theme group toggle for prompt selector mode
   const handleThemeGroupToggle = useCallback((groupId) => {
