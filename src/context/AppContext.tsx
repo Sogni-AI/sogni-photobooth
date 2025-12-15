@@ -208,6 +208,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       videoResolution: getSettingFromCookie('videoResolution', DEFAULT_SETTINGS.videoResolution),
       videoQuality: getSettingFromCookie('videoQuality', DEFAULT_SETTINGS.videoQuality),
       videoFramerate: getSettingFromCookie('videoFramerate', DEFAULT_SETTINGS.videoFramerate),
+      videoDuration: getSettingFromCookie('videoDuration', DEFAULT_SETTINGS.videoDuration),
       videoPositivePrompt: getSettingFromCookie('videoPositivePrompt', DEFAULT_SETTINGS.videoPositivePrompt),
       videoNegativePrompt: getSettingFromCookie('videoNegativePrompt', DEFAULT_SETTINGS.videoNegativePrompt)
     };

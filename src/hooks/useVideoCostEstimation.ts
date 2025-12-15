@@ -11,6 +11,7 @@ import {
   VIDEO_QUALITY_PRESETS,
   VIDEO_CONFIG,
   calculateVideoDimensions,
+  calculateVideoFrames,
   VideoQualityPreset,
   VideoResolution
 } from '../constants/videoSettings';
@@ -24,10 +25,12 @@ interface VideoCostEstimationParams {
   resolution?: VideoResolution;
   /** Video quality preset */
   quality?: VideoQualityPreset;
-  /** Number of frames (default: 81 for 5s video) */
+  /** Number of frames (default: calculated from duration and fps) */
   frames?: number;
   /** Frames per second (default: 16) */
   fps?: number;
+  /** Video duration in seconds (default: 5) */
+  duration?: number;
   /** Whether estimation is enabled */
   enabled?: boolean;
   /** Photo ID to bust cache when switching photos */
@@ -94,11 +97,15 @@ export function useVideoCostEstimation(params: VideoCostEstimationParams): Video
     imageHeight,
     resolution = '480p',
     quality = 'fast',
-    frames = VIDEO_CONFIG.defaultFrames,
+    frames: providedFrames,
     fps = VIDEO_CONFIG.defaultFps,
+    duration = VIDEO_CONFIG.defaultDuration,
     enabled = true,
     photoId
   } = params;
+
+  // Calculate frames from duration and fps if not explicitly provided
+  const frames = providedFrames ?? calculateVideoFrames(duration);
 
   const fetchCost = useCallback(async () => {
     // Don't fetch if disabled or missing required params
@@ -230,12 +237,13 @@ export async function getVideoCostEstimate(
   imageHeight: number,
   resolution: VideoResolution = '480p',
   quality: VideoQualityPreset = 'fast',
-  frames: number = VIDEO_CONFIG.defaultFrames,
+  duration: number = VIDEO_CONFIG.defaultDuration,
   fps: number = VIDEO_CONFIG.defaultFps
 ): Promise<{ cost: number | null; costInUSD: number | null }> {
   try {
     const qualityConfig = VIDEO_QUALITY_PRESETS[quality];
     const dimensions = calculateVideoDimensions(imageWidth, imageHeight, resolution);
+    const frames = calculateVideoFrames(duration);
 
     const result = await fetchVideoCostEstimate(
       tokenType,

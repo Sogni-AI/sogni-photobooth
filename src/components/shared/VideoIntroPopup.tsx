@@ -242,7 +242,7 @@ export const VideoIntroPopup: React.FC<VideoIntroPopupProps> = ({
                 margin: 0,
                 lineHeight: 1.3
               }}>
-                Transform your photos into 5-second motion videos with AI.
+                Transform your photos into motion videos with AI.
               </p>
             </div>
 

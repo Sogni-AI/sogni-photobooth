@@ -392,6 +392,7 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
     resolution: '480p',
     quality: currentVideoQuality,
     fps: settings.videoFramerate || 16,
+    duration: settings.videoDuration || 5,
     enabled: authState.isAuthenticated
   });
 
@@ -401,6 +402,7 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
     resolution: '580p',
     quality: currentVideoQuality,
     fps: settings.videoFramerate || 16,
+    duration: settings.videoDuration || 5,
     enabled: authState.isAuthenticated
   });
 
@@ -410,6 +412,7 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
     resolution: '720p',
     quality: currentVideoQuality,
     fps: settings.videoFramerate || 16,
+    duration: settings.videoDuration || 5,
     enabled: authState.isAuthenticated
   });
 
@@ -429,9 +432,11 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
     return result;
   };
 
-  // Helper function to calculate time estimates based on resolution
-  // Base times are for 480p, increase by 25% for 580p, and 25% more for 720p
-  const getVideoTimeEstimate = (quality: VideoQualityPreset, resolution: VideoResolution): string => {
+  // Helper function to calculate time estimates based on resolution, duration, and fps
+  // Base times are for 480p at 5s duration at 16fps, increase by 25% for 580p, and 25% more for 720p
+  // Scale by duration ratio (3s = 0.6x, 5s = 1.0x, 7s = 1.4x)
+  // Scale by fps (32fps takes 10% longer than 16fps)
+  const getVideoTimeEstimate = (quality: VideoQualityPreset, resolution: VideoResolution, duration: number = 5, fps: number = 16): string => {
     const baseEstimates: Record<VideoQualityPreset, { min: number; max: number; label: string }> = {
       fast: { min: 12, max: 20, label: 's' },
       balanced: { min: 25, max: 40, label: 's' },
@@ -448,6 +453,14 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
     } else if (resolution === '720p') {
       multiplier = 1.5625; // 1.25 * 1.25
     }
+
+    // Apply duration multiplier relative to 5s baseline
+    const durationMultiplier = duration / 5;
+    multiplier *= durationMultiplier;
+
+    // Apply fps multiplier (32fps takes 10% longer)
+    const fpsMultiplier = fps === 32 ? 1.1 : 1.0;
+    multiplier *= fpsMultiplier;
 
     const minTime = Math.round(base.min * multiplier);
     const maxTime = Math.round(base.max * multiplier);
@@ -1252,10 +1265,10 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
                     onChange={(e) => updateSetting('videoQuality', e.target.value as VideoQualityPreset)}
                     value={currentVideoQuality}
                   >
-                    <option value="fast">Fast - Quick generation ({getVideoTimeEstimate('fast', currentVideoResolution)})</option>
-                    <option value="balanced">Balanced - Good balance ({getVideoTimeEstimate('balanced', currentVideoResolution)})</option>
-                    <option value="quality">High Quality - Slower ({getVideoTimeEstimate('quality', currentVideoResolution)})</option>
-                    <option value="pro">Pro - Maximum quality ({getVideoTimeEstimate('pro', currentVideoResolution)})</option>
+                    <option value="fast">Fast - Quick generation ({getVideoTimeEstimate('fast', currentVideoResolution, settings.videoDuration || 5, settings.videoFramerate || 16)})</option>
+                    <option value="balanced">Balanced - Good balance ({getVideoTimeEstimate('balanced', currentVideoResolution, settings.videoDuration || 5, settings.videoFramerate || 16)})</option>
+                    <option value="quality">High Quality - Slower ({getVideoTimeEstimate('quality', currentVideoResolution, settings.videoDuration || 5, settings.videoFramerate || 16)})</option>
+                    <option value="pro">Pro - Maximum quality ({getVideoTimeEstimate('pro', currentVideoResolution, settings.videoDuration || 5, settings.videoFramerate || 16)})</option>
                   </select>
                 </div>
                 <div className="control-description" style={{ marginTop: '-8px', marginBottom: '12px', marginLeft: '8px' }}>
@@ -1292,6 +1305,49 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
                 </div>
                 <div className="control-description" style={{ marginTop: '-8px', marginBottom: '12px', marginLeft: '8px' }}>
                   32 fps is smoother but costs more
+                </div>
+
+                {/* Video Duration selector */}
+                <div className="control-option">
+                  <label className="control-label">Duration:</label>
+                  <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', color: 'white' }}>
+                      <input
+                        type="radio"
+                        name="videoDuration"
+                        value="3"
+                        checked={(settings.videoDuration || 5) === 3}
+                        onChange={() => updateSetting('videoDuration', 3)}
+                        style={{ cursor: 'pointer' }}
+                      />
+                      3s
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', color: 'white' }}>
+                      <input
+                        type="radio"
+                        name="videoDuration"
+                        value="5"
+                        checked={(settings.videoDuration || 5) === 5}
+                        onChange={() => updateSetting('videoDuration', 5)}
+                        style={{ cursor: 'pointer' }}
+                      />
+                      5s
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', color: 'white' }}>
+                      <input
+                        type="radio"
+                        name="videoDuration"
+                        value="7"
+                        checked={(settings.videoDuration || 5) === 7}
+                        onChange={() => updateSetting('videoDuration', 7)}
+                        style={{ cursor: 'pointer' }}
+                      />
+                      7s
+                    </label>
+                  </div>
+                </div>
+                <div className="control-description" style={{ marginTop: '-8px', marginBottom: '12px', marginLeft: '8px' }}>
+                  Longer videos take more time and cost more
                 </div>
 
                 {/* Video Positive Motion Prompt */}

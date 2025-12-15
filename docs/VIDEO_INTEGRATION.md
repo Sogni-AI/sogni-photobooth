@@ -1,10 +1,10 @@
 # Video Integration Documentation
 
-This document outlines the image-to-video generation feature in Sogni Photobooth, which uses the Wan 2.2 14B FP8 model to create 5-second motion videos from photos.
+This document outlines the image-to-video generation feature in Sogni Photobooth, which uses the Wan 2.2 14B FP8 model to create motion videos from photos.
 
 ## Overview
 
-The video feature allows authenticated users to generate AI-powered motion videos from their generated photos. Videos are approximately 5 seconds long (81 frames at 16fps) and can be generated at different quality levels.
+The video feature allows authenticated users to generate AI-powered motion videos from their generated photos. Videos can be 3, 5, or 7 seconds long and can be generated at different quality levels and resolutions.
 
 ## Architecture
 
@@ -83,6 +83,19 @@ Video dimensions are automatically calculated to:
 - Maintain the original image aspect ratio
 - Be divisible by 16 (required by the model)
 - Not exceed the resolution's max dimension
+
+### Duration Options
+
+| Duration | Frames (16fps) | Frames (32fps) | Description |
+|----------|----------------|----------------|-------------|
+| 3s | 49 | 97 | Short video (0.6x cost/time) |
+| 5s | 81 | 161 | Standard duration (default) |
+| 7s | 113 | 225 | Extended duration (1.4x cost/time) |
+
+Duration setting affects:
+- Frame count calculation (fps × duration + 1)
+- Cost estimation (proportional to frame count)
+- Generation time (proportional to frame count)
 
 ## Photo State Properties
 
@@ -171,6 +184,8 @@ generateVideo({
   setPhotos,
   resolution: settings.videoResolution,
   quality: settings.videoQuality,
+  fps: settings.videoFramerate,
+  duration: settings.videoDuration,
   onComplete: (videoUrl) => {
     showToast({ title: 'Video Ready!', type: 'success' });
   },
@@ -230,7 +245,6 @@ This feature requires Sogni Client SDK v4.0.0-alpha.25 or later with:
 Potential future improvements:
 - Multiple video storage per photo
 - Video gallery/history
-- Custom duration options
 - Sound-to-video generation
 - Video sharing to social media
 

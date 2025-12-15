@@ -72,7 +72,8 @@ export const DEFAULT_VIDEO_SETTINGS = {
   resolution: '480p' as VideoResolution,
   quality: 'fast' as VideoQualityPreset,
   frames: 81, // 5 seconds at 16fps
-  fps: 16
+  fps: 16,
+  duration: 5 // 5 seconds
 };
 
 // Video generation config
@@ -82,6 +83,9 @@ export const VIDEO_CONFIG = {
   // Frames per second options
   fpsOptions: [16, 32] as const,
   defaultFps: 16,
+  // Duration options in seconds
+  durationOptions: [3, 5, 7] as const,
+  defaultDuration: 5,
   // Frame range limits
   minFrames: 17,
   maxFrames: 161,
@@ -137,6 +141,17 @@ export function getVideoQualityConfig(quality: VideoQualityPreset) {
  */
 export function calculateVideoDuration(frames: number = VIDEO_CONFIG.defaultFrames, fps: number = VIDEO_CONFIG.defaultFps): number {
   return Math.round((frames - 1) / fps);
+}
+
+/**
+ * Calculate frames based on duration (fps is NOT used - it's for playback interpolation only)
+ * Formula: 16 * duration + 1 (16fps is the base generation rate)
+ * The fps parameter passed to the API only affects playback smoothness, not frame count
+ */
+export function calculateVideoFrames(duration: number = VIDEO_CONFIG.defaultDuration): number {
+  // Use constant 16fps base for frame calculation regardless of playback fps setting
+  const BASE_FPS = 16;
+  return BASE_FPS * duration + 1;
 }
 
 /**

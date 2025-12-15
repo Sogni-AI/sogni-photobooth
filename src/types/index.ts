@@ -42,6 +42,10 @@ export interface Photo {
   videoError?: string;
   videoWorkerName?: string; // Worker processing the video job
   videoStatus?: string; // Current status text (e.g., "Queued", "Processing")
+  // Video generation settings metadata
+  videoResolution?: '480p' | '580p' | '720p';
+  videoFramerate?: 16 | 32;
+  videoDuration?: 3 | 5 | 7;
 }
 
 export interface ProjectState {
@@ -125,6 +129,7 @@ export interface Settings {
   videoResolution?: '480p' | '720p';
   videoQuality?: 'fast' | 'balanced' | 'quality' | 'pro';
   videoFramerate?: 16 | 32;
+  videoDuration?: 3 | 5 | 7;
   videoPositivePrompt?: string;
   videoNegativePrompt?: string;
 } 

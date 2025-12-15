@@ -432,6 +432,7 @@ const PhotoGallery = ({
     resolution: settings.videoResolution || '480p',
     quality: settings.videoQuality || 'fast',
     fps: settings.videoFramerate || 16,
+    duration: settings.videoDuration || 5,
     enabled: isAuthenticated && selectedPhoto !== null,
     // Include photo index to bust cache when switching between photos
     photoId: selectedPhotoIndex
@@ -1177,8 +1178,9 @@ const PhotoGallery = ({
     const motionPrompt = customMotionPrompt || settings.videoPositivePrompt || '';
     const negativePrompt = customNegativePrompt !== null ? customNegativePrompt : (settings.videoNegativePrompt || '');
     
-    // Capture the photo index for the onClick handler (don't rely on selectedPhotoIndex which may change)
+    // Capture the photo index and ID for the onClick handler (don't rely on selectedPhotoIndex which may change)
     const generatingPhotoIndex = selectedPhotoIndex;
+    const generatingPhotoId = photo.id;
 
     // Load image to get actual dimensions
     const img = new Image();
@@ -1189,7 +1191,7 @@ const PhotoGallery = ({
       
       generateVideo({
         photo,
-        photoIndex: selectedPhotoIndex,
+        photoIndex: generatingPhotoIndex,
         subIndex: selectedSubIndex || 0,
         imageWidth: actualWidth,
         imageHeight: actualHeight,
@@ -1198,12 +1200,19 @@ const PhotoGallery = ({
         resolution: settings.videoResolution || '480p',
         quality: settings.videoQuality || 'fast',
         fps: settings.videoFramerate || 16,
+        duration: settings.videoDuration || 5,
         positivePrompt: motionPrompt,
         negativePrompt: negativePrompt,
         onComplete: (videoUrl) => {
           // Auto-play the generated video when completed
-          setPlayingGeneratedVideoIds(prev => new Set([...prev, photo.id]));
+          setPlayingGeneratedVideoIds(prev => new Set([...prev, generatingPhotoId]));
           const videoMessage = getRandomVideoMessage();
+          
+          console.log('[VIDEO TOAST] Video generation completed:', {
+            generatingPhotoId,
+            generatingPhotoIndex,
+            videoUrl
+          });
           
           // Show success toast with click handler to navigate to photo
           showToast({
@@ -1211,9 +1220,25 @@ const PhotoGallery = ({
             message: videoMessage.message,
             type: 'success',
             onClick: () => {
-              // Navigate to this photo if not already viewing it
-              if (selectedPhotoIndex !== generatingPhotoIndex) {
-                setSelectedPhotoIndex(generatingPhotoIndex);
+              console.log('[VIDEO TOAST] Toast clicked!');
+              console.log('[VIDEO TOAST] Current selectedPhotoIndex:', selectedPhotoIndex);
+              console.log('[VIDEO TOAST] Looking for photo with ID:', generatingPhotoId);
+              console.log('[VIDEO TOAST] Total photos in array:', photos.length);
+              
+              // Find current index of the photo that just completed video generation
+              const currentIndex = photos.findIndex(p => p.id === generatingPhotoId);
+              
+              console.log('[VIDEO TOAST] Found photo at index:', currentIndex);
+              
+              // Always navigate to the photo - this will either:
+              // 1. Open slideshow if it's closed
+              // 2. Switch to this photo if slideshow is open to a different photo
+              // 3. Re-select the same photo if already viewing it (harmless)
+              if (currentIndex !== -1) {
+                console.log('[VIDEO TOAST] Navigating to index', currentIndex);
+                setSelectedPhotoIndex(currentIndex);
+              } else {
+                console.warn('[VIDEO TOAST] Photo with ID', generatingPhotoId, 'not found in photos array');
               }
             }
           });
@@ -1248,7 +1273,7 @@ const PhotoGallery = ({
       
       generateVideo({
         photo,
-        photoIndex: selectedPhotoIndex,
+        photoIndex: generatingPhotoIndex,
         subIndex: selectedSubIndex || 0,
         imageWidth: fallbackWidth,
         imageHeight: fallbackHeight,
@@ -1257,12 +1282,19 @@ const PhotoGallery = ({
         resolution: settings.videoResolution || '480p',
         quality: settings.videoQuality || 'fast',
         fps: settings.videoFramerate || 16,
+        duration: settings.videoDuration || 5,
         positivePrompt: motionPrompt,
         negativePrompt: negativePrompt,
         onComplete: (videoUrl) => {
           // Auto-play the generated video when completed
-          setPlayingGeneratedVideoIds(prev => new Set([...prev, photo.id]));
+          setPlayingGeneratedVideoIds(prev => new Set([...prev, generatingPhotoId]));
           const videoMessage = getRandomVideoMessage();
+          
+          console.log('[VIDEO TOAST FALLBACK] Video generation completed:', {
+            generatingPhotoId,
+            generatingPhotoIndex,
+            videoUrl
+          });
           
           // Show success toast with click handler to navigate to photo
           showToast({
@@ -1270,9 +1302,25 @@ const PhotoGallery = ({
             message: videoMessage.message,
             type: 'success',
             onClick: () => {
-              // Navigate to this photo if not already viewing it
-              if (selectedPhotoIndex !== generatingPhotoIndex) {
-                setSelectedPhotoIndex(generatingPhotoIndex);
+              console.log('[VIDEO TOAST FALLBACK] Toast clicked!');
+              console.log('[VIDEO TOAST FALLBACK] Current selectedPhotoIndex:', selectedPhotoIndex);
+              console.log('[VIDEO TOAST FALLBACK] Looking for photo with ID:', generatingPhotoId);
+              console.log('[VIDEO TOAST FALLBACK] Total photos in array:', photos.length);
+              
+              // Find current index of the photo that just completed video generation
+              const currentIndex = photos.findIndex(p => p.id === generatingPhotoId);
+              
+              console.log('[VIDEO TOAST FALLBACK] Found photo at index:', currentIndex);
+              
+              // Always navigate to the photo - this will either:
+              // 1. Open slideshow if it's closed
+              // 2. Switch to this photo if slideshow is open to a different photo
+              // 3. Re-select the same photo if already viewing it (harmless)
+              if (currentIndex !== -1) {
+                console.log('[VIDEO TOAST FALLBACK] Navigating to index', currentIndex);
+                setSelectedPhotoIndex(currentIndex);
+              } else {
+                console.warn('[VIDEO TOAST FALLBACK] Photo with ID', generatingPhotoId, 'not found in photos array');
               }
             }
           });
@@ -1331,7 +1379,22 @@ const PhotoGallery = ({
     const photo = photos[selectedPhotoIndex];
     if (!photo?.videoUrl) return;
 
-    downloadVideo(photo.videoUrl, `sogni-video-${Date.now()}.mp4`)
+    // Build filename using the same logic as image downloads
+    // Format: sogni-photobooth-{style-name}-video_{duration}s_{resolution}_{fps}fps.mp4
+    
+    // Get style display text and clean it (same as image download)
+    const styleDisplayText = getStyleDisplayText(photo);
+    const cleanStyleName = styleDisplayText ? styleDisplayText.toLowerCase().replace(/\s+/g, '-') : 'sogni';
+    
+    // Get video metadata (use defaults if not stored)
+    const duration = photo.videoDuration || settings.videoDuration || 5;
+    const resolution = photo.videoResolution || settings.videoResolution || '480p';
+    const fps = photo.videoFramerate || settings.videoFramerate || 16;
+    
+    // Build filename: sogni-photobooth-{style}-video_{duration}s_{resolution}_{fps}fps.mp4
+    const filename = `sogni-photobooth-${cleanStyleName}-video_${duration}s_${resolution}_${fps}fps.mp4`;
+
+    downloadVideo(photo.videoUrl, filename)
       .then(() => {
         showToast({
           title: 'Download Started',
@@ -1346,7 +1409,7 @@ const PhotoGallery = ({
           type: 'error'
         });
       });
-  }, [selectedPhotoIndex, photos, showToast]);
+  }, [selectedPhotoIndex, photos, settings.videoDuration, settings.videoResolution, settings.videoFramerate, showToast]);
 
   // Handle theme group toggle for prompt selector mode
   const handleThemeGroupToggle = useCallback((groupId) => {

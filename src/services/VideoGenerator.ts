@@ -15,6 +15,7 @@ import {
   VIDEO_RESOLUTIONS,
   formatVideoDuration,
   markVideoGenerated,
+  calculateVideoFrames,
   VideoQualityPreset,
   VideoResolution
 } from '../constants/videoSettings';
@@ -49,6 +50,7 @@ interface GenerateVideoOptions {
   resolution?: VideoResolution;
   quality?: VideoQualityPreset;
   fps?: 16 | 32;
+  duration?: 3 | 5 | 7;
   positivePrompt?: string;
   negativePrompt?: string;
   onComplete?: (videoUrl: string) => void;
@@ -126,6 +128,7 @@ export async function generateVideo(options: GenerateVideoOptions): Promise<void
     resolution = '480p',
     quality = 'fast',
     fps = 16,
+    duration = 5,
     positivePrompt = '',
     negativePrompt = '',
     onComplete,
@@ -224,6 +227,9 @@ export async function generateVideo(options: GenerateVideoOptions): Promise<void
     // Create project - pass SCALED dimensions with sizePreset: 'custom' like image generation
     const seed = Math.floor(Math.random() * 2147483647);
     
+    // Calculate frames based on duration (fps only affects playback, not frame count)
+    const frames = calculateVideoFrames(duration);
+    
     const createParams = {
       type: 'video',
       modelId: qualityConfig.model,
@@ -237,8 +243,8 @@ export async function generateVideo(options: GenerateVideoOptions): Promise<void
       width: scaled.width,
       height: scaled.height,
       referenceImage: imageBuffer,
-      // Frame count stays constant - fps only affects playback smoothness
-      frames: 81,
+      // Frame count calculated from duration and fps
+      frames: frames,
       fps: fps,
       tokenType: 'spark'
     };
@@ -255,7 +261,8 @@ export async function generateVideo(options: GenerateVideoOptions): Promise<void
     console.log(`   Model: ${qualityConfig.model}`);
     console.log(`   Steps: ${qualityConfig.steps}`);
     console.log(`   Original Image Dimensions: ${WIDTH}x${HEIGHT}px`);
-    console.log(`   Frames: 81`);
+    console.log(`   Duration: ${duration}s`);
+    console.log(`   Frames: ${frames}`);
     console.log(`   FPS: ${fps}`);
     console.log(`   Seed: ${seed}`);
     console.log('');
@@ -758,7 +765,11 @@ export async function generateVideo(options: GenerateVideoOptions): Promise<void
           generatingVideo: false,
           videoUrl,
           videoETA: 0,
-          videoError: undefined
+          videoError: undefined,
+          // Store video generation metadata for download filename
+          videoResolution: resolution,
+          videoFramerate: fps,
+          videoDuration: duration
         };
         return updated;
       });

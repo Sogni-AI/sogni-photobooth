@@ -247,6 +247,7 @@ const createDefaultSettings = (): Settings => {
     videoResolution: '480p', // Default to 480p for faster, cheaper generation
     videoQuality: 'fast', // Default to fast (4-step) for quick results
     videoFramerate: 16, // Default to 16fps (smoother playback at 32fps costs more)
+    videoDuration: 5, // Default to 5 seconds
     videoPositivePrompt: '{@a small playful gesture: a tiny wave or a brief peace sign, then returns to the original pose|fast 360 camera pan as the subject dances|the subject looks around and then winks|the subject steps out of the frame nonchalantly and then returns}', // Optional motion guidance (e.g., "smooth camera pan")
     videoNegativePrompt: 'slow motion, talking, blurry, low quality, static, deformed overexposed, blurred details, worst quality, low quality, JPEG compression, ugly, still picture, walking backwards', // Default negative prompt for video motion
   };
