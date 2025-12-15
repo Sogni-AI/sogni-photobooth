@@ -1409,7 +1409,7 @@ const PhotoGallery = ({
           type: 'error'
         });
       });
-  }, [selectedPhotoIndex, photos, settings.videoDuration, settings.videoResolution, settings.videoFramerate, showToast, getStyleDisplayText]);
+  }, [selectedPhotoIndex, photos, settings.videoDuration, settings.videoResolution, settings.videoFramerate, showToast]);
 
   // Handle theme group toggle for prompt selector mode
   const handleThemeGroupToggle = useCallback((groupId) => {
