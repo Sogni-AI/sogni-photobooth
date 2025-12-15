@@ -6220,7 +6220,7 @@ const PhotoGallery = ({
                               {photo.videoWorkerName}
                             </span>
                           </>
-                        ) : photo.videoStatus?.startsWith('Queue') ? (
+                        ) : photo.videoStatus?.startsWith('Queue') || photo.videoStatus?.startsWith('Next') || photo.videoStatus?.startsWith('In line') ? (
                           <span style={{ animation: 'pulse 1s ease-in-out infinite' }}>📋 {photo.videoStatus}</span>
                         ) : (
                           <span style={{ animation: 'pulse 1s ease-in-out infinite' }}>⏳ Finding worker...</span>
@@ -6245,6 +6245,8 @@ const PhotoGallery = ({
                               {' '}{formatVideoDuration(photo.videoETA)}
                             </span>
                           </>
+                        ) : photo.videoStatus?.startsWith('Queue') || photo.videoStatus?.startsWith('Next') || photo.videoStatus?.startsWith('In line') ? (
+                          <span style={{ animation: 'twinkle 0.8s ease-in-out infinite' }}>In line...</span>
                         ) : (
                           <span style={{ animation: 'twinkle 0.8s ease-in-out infinite' }}>✨ Starting...</span>
                         )}

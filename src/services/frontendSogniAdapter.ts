@@ -386,17 +386,31 @@ export class FrontendProjectAdapter extends BrowserEventEmitter implements Sogni
         
         // Handle different event types
         switch (event.type) {
+          case 'queued': {
+            // Handle queued events - emit with queue position for video and image jobs
+            const queuePosition = event.queuePosition;
+            if (queuePosition !== undefined) {
+              this.emit('job', {
+                type: 'queued',
+                jobId: event.jobId,
+                projectId: this.realProject.id,
+                queuePosition: queuePosition
+              });
+            }
+            break;
+          }
+
           case 'progress': {
             if (event.step && event.stepCount) {
               // Cache worker name if provided (matches backend logic)
               if (event.workerName && event.jobId) {
                 this.workerNameCache.set(event.jobId, event.workerName);
               }
-              
+
               // Get cached worker name or use default
               const cachedWorkerName = event.jobId ? this.workerNameCache.get(event.jobId) : null;
               const workerName = event.workerName || cachedWorkerName || 'Worker';
-              
+
               // Emit progress event for the UI
               this.emit('job', {
                 type: 'progress',

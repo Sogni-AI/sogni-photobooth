@@ -219,7 +219,7 @@ export async function generateVideo(options: GenerateVideoOptions): Promise<void
         videoProjectId: undefined,
         videoError: undefined,
         videoWorkerName: undefined,
-        videoStatus: 'Queued'
+        videoStatus: 'In line...'
       };
       return updated;
     });
@@ -598,14 +598,18 @@ export async function generateVideo(options: GenerateVideoOptions): Promise<void
           break;
 
         case 'queued':
-          // Job is queued - show queue position if greater than 1
-          if (event.queuePosition !== undefined && event.queuePosition > 1) {
+          // Job is queued - always show queue position to keep users informed
+          if (event.queuePosition !== undefined) {
             setPhotos(prev => {
               const updated = [...prev];
               if (!updated[photoIndex]) return prev;
+              // Show position for all queue positions (1 = next in line, 2+ = position in queue)
+              const statusText = event.queuePosition === 1
+                ? 'Next in line'
+                : `Queue #${event.queuePosition}`;
               updated[photoIndex] = {
                 ...updated[photoIndex],
-                videoStatus: `Queue #${event.queuePosition}`
+                videoStatus: statusText
               };
               return updated;
             });
