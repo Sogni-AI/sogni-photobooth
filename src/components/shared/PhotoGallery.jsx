@@ -274,7 +274,7 @@ const renderMotionButton = (template, index, handleGenerateVideo, setShowVideoDr
   </button>
 );
 
-// Custom button for the motion grid - styled as a polaroid with marker text
+// Custom button for the motion grid - styled with bright yellow
 const renderCustomButton = (setShowVideoDropdown, setShowCustomVideoPromptPopup) => (
   <button
     key="custom"
@@ -286,9 +286,9 @@ const renderCustomButton = (setShowVideoDropdown, setShowCustomVideoPromptPopup)
     style={{
       width: window.innerWidth < 768 ? '100%' : 'auto',
       padding: '10px 20px',
-      background: 'linear-gradient(165deg, #fdf8e8 0%, #f5ecd3 50%, #ebe0c4 100%)',
-      border: '1px solid rgba(139, 119, 85, 0.4)',
-      color: '#3d3424',
+      background: 'linear-gradient(165deg, #fff176 0%, #ffeb3b 50%, #fdd835 100%)',
+      border: '2px solid rgba(0, 0, 0, 0.15)',
+      color: '#1a1a1a',
       fontFamily: '"Permanent Marker", cursive',
       fontSize: '14px',
       fontWeight: '400',
@@ -300,15 +300,15 @@ const renderCustomButton = (setShowVideoDropdown, setShowCustomVideoPromptPopup)
       alignItems: 'center',
       justifyContent: 'center',
       gap: '8px',
-      boxShadow: '0 3px 8px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.5)'
+      boxShadow: '0 3px 8px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.5)'
     }}
     onMouseOver={e => {
       e.currentTarget.style.transform = 'translateY(-3px) rotate(-0.5deg)';
-      e.currentTarget.style.boxShadow = '0 6px 16px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.5)';
+      e.currentTarget.style.boxShadow = '0 6px 16px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.5)';
     }}
     onMouseOut={e => {
       e.currentTarget.style.transform = 'translateY(0) rotate(0deg)';
-      e.currentTarget.style.boxShadow = '0 3px 8px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.5)';
+      e.currentTarget.style.boxShadow = '0 3px 8px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.5)';
     }}
   >
     <span style={{ fontSize: '16px' }}>✨</span>
@@ -335,19 +335,19 @@ const getSquareGridDimensions = (itemCount, isMobile, maxRows = null) => {
   return { cols: finalCols, rows: Math.ceil(itemCount / finalCols) };
 };
 
-// Polaroid frame style - aged yellow pages look
+// Polaroid frame style - bright yellow matching main page
 const getPolaroidStyle = () => ({
-  background: 'linear-gradient(165deg, #fdf8e8 0%, #f5ecd3 50%, #ebe0c4 100%)',
+  background: 'linear-gradient(165deg, #fff176 0%, #ffeb3b 50%, #fdd835 100%)',
   border: 'none',
-  borderRadius: '3px',
-  boxShadow: '0 3px 8px rgba(0,0,0,0.25), 0 1px 2px rgba(0,0,0,0.15), inset 0 0 20px rgba(139, 119, 85, 0.08)',
+  borderRadius: '4px',
+  boxShadow: '0 3px 8px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.5)',
   position: 'relative',
 });
 
 // Polaroid hover style - subtle lift
 const getPolaroidHoverStyle = () => ({
   transform: 'translateY(-4px) rotate(-1deg)',
-  boxShadow: '0 8px 20px rgba(0,0,0,0.3), 0 4px 8px rgba(0,0,0,0.2), inset 0 0 20px rgba(139, 119, 85, 0.08)',
+  boxShadow: '0 8px 20px rgba(0,0,0,0.35), 0 4px 8px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.5)',
 });
 
 // Category color mapping - muted vintage tones for polaroid icons
@@ -427,7 +427,7 @@ const renderCategoryButton = (category, onClick, index) => {
         padding: isMobile ? '4px 4px 6px 4px' : '6px 6px 8px 6px',
         fontFamily: '"Permanent Marker", cursive',
         fontSize: 'clamp(10px, 2.4vmin, 14px)',
-        color: '#3d3424',
+        color: '#1a1a1a',
         textAlign: 'center',
         lineHeight: 1.1,
         whiteSpace: 'nowrap',
@@ -527,18 +527,18 @@ const renderMotionPicker = (selectedCategory, setSelectedCategory, handleGenerat
         alignItems: 'center',
         gap: '10px',
         padding: '8px 12px',
-        borderBottom: '2px solid rgba(139, 119, 85, 0.2)',
-        background: 'linear-gradient(90deg, rgba(139, 119, 85, 0.1) 0%, transparent 100%)',
+        borderBottom: '2px solid rgba(0, 0, 0, 0.15)',
+        background: 'linear-gradient(90deg, rgba(0, 0, 0, 0.05) 0%, transparent 100%)',
         flexShrink: 0
       }}>
         <button
           onClick={() => setSelectedCategory(null)}
           style={{
             padding: '6px 12px',
-            background: 'linear-gradient(165deg, #f8f4e8 0%, #e8dfc5 100%)',
-            border: '1px solid rgba(139, 119, 85, 0.3)',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.5)',
-            color: '#3d3424',
+            background: 'linear-gradient(165deg, #fff176 0%, #ffeb3b 100%)',
+            border: '2px solid rgba(0, 0, 0, 0.15)',
+            boxShadow: '0 2px 4px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.5)',
+            color: '#1a1a1a',
             fontFamily: '"Permanent Marker", cursive',
             fontSize: '12px',
             fontWeight: '400',
@@ -551,11 +551,11 @@ const renderMotionPicker = (selectedCategory, setSelectedCategory, handleGenerat
           }}
           onMouseOver={e => {
             e.currentTarget.style.transform = 'translateX(-2px)';
-            e.currentTarget.style.boxShadow = '0 3px 6px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.5)';
+            e.currentTarget.style.boxShadow = '0 3px 6px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.5)';
           }}
           onMouseOut={e => {
             e.currentTarget.style.transform = 'translateX(0)';
-            e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.5)';
+            e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.5)';
           }}
         >
           <span style={{ fontSize: '14px' }}>←</span>
@@ -568,9 +568,9 @@ const renderMotionPicker = (selectedCategory, setSelectedCategory, handleGenerat
           fontFamily: '"Permanent Marker", cursive',
           fontSize: '16px',
           fontWeight: '400',
-          color: '#3d3424'
+          color: '#1a1a1a'
         }}>
-          <span style={{ fontSize: '22px', filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.2))' }}>{category.emoji}</span>
+          <span style={{ fontSize: '22px', filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.15))' }}>{category.emoji}</span>
           <span>{category.name}</span>
         </div>
       </div>
@@ -665,7 +665,7 @@ const renderPolaroidMotionButton = (template, index, handleGenerateVideo, setSho
         padding: isMobile ? '2px 2px 3px 2px' : '3px 3px 5px 3px',
         fontFamily: '"Permanent Marker", cursive',
         fontSize: 'clamp(7px, 1.6vmin, 10px)',
-        color: '#3d3424',
+        color: '#1a1a1a',
         textAlign: 'center',
         lineHeight: 1.1,
         whiteSpace: 'nowrap',
@@ -4380,12 +4380,12 @@ const PhotoGallery = ({
                       ),
                       left: '50%',
                       transform: 'translateX(-50%)',
-                      background: 'linear-gradient(165deg, #f5ecd3 0%, #e8dfc5 50%, #ddd4b8 100%)',
+                      background: 'linear-gradient(165deg, #fff59d 0%, #ffeb3b 50%, #fdd835 100%)',
                       backdropFilter: 'blur(10px)',
                       borderRadius: '8px',
                       padding: '8px',
-                      boxShadow: '0 8px 32px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.4)',
-                      border: '1px solid rgba(139, 119, 85, 0.3)',
+                      boxShadow: '0 8px 32px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.6)',
+                      border: '2px solid rgba(0,0,0,0.1)',
                       width: selectedPhoto.generatingVideo ? 'min(90vw, 280px)' : 'min(95vw, 750px)',
                       display: 'flex',
                       flexDirection: 'column',
@@ -4522,8 +4522,8 @@ const PhotoGallery = ({
                         {/* Custom Prompt Button - Always visible below grid */}
                         <div style={{
                           padding: '12px',
-                          borderTop: '2px solid rgba(139, 119, 85, 0.2)',
-                          background: 'linear-gradient(180deg, rgba(139, 119, 85, 0.08) 0%, rgba(139, 119, 85, 0.04) 100%)',
+                          borderTop: '2px solid rgba(0, 0, 0, 0.15)',
+                          background: 'linear-gradient(180deg, rgba(0, 0, 0, 0.05) 0%, rgba(0, 0, 0, 0.02) 100%)',
                           display: 'flex',
                           flexDirection: window.innerWidth < 768 ? 'column' : 'row',
                           alignItems: window.innerWidth < 768 ? 'stretch' : 'center',
@@ -4614,10 +4614,10 @@ const PhotoGallery = ({
                           fontFamily: '"Permanent Marker", cursive',
                           fontSize: '16px',
                           fontWeight: '400',
-                          color: '#3d3424',
+                          color: '#1a1a1a',
                           textAlign: 'center',
-                          borderBottom: '2px solid rgba(139, 119, 85, 0.2)',
-                          background: 'linear-gradient(90deg, rgba(139, 119, 85, 0.08) 0%, transparent 50%, rgba(139, 119, 85, 0.08) 100%)',
+                          borderBottom: '2px solid rgba(0, 0, 0, 0.15)',
+                          background: 'linear-gradient(90deg, rgba(0, 0, 0, 0.05) 0%, transparent 50%, rgba(0, 0, 0, 0.05) 100%)',
                           flexShrink: 0
                         }}>
                           ✨ Choose a motion style
@@ -4629,8 +4629,8 @@ const PhotoGallery = ({
                         {/* Custom Prompt Button - Always visible below grid */}
                         <div style={{
                           padding: '12px',
-                          borderTop: '2px solid rgba(139, 119, 85, 0.2)',
-                          background: 'linear-gradient(180deg, rgba(139, 119, 85, 0.08) 0%, rgba(139, 119, 85, 0.04) 100%)',
+                          borderTop: '2px solid rgba(0, 0, 0, 0.15)',
+                          background: 'linear-gradient(180deg, rgba(0, 0, 0, 0.05) 0%, rgba(0, 0, 0, 0.02) 100%)',
                           display: 'flex',
                           flexDirection: window.innerWidth < 768 ? 'column' : 'row',
                           alignItems: window.innerWidth < 768 ? 'stretch' : 'center',
@@ -7894,20 +7894,20 @@ const PhotoGallery = ({
               onClick={() => { setShowVideoDropdown(false); setSelectedMotionCategory(null); setVideoTargetPhotoIndex(null); }}
               style={{
                 position: 'absolute', top: '2px', right: '2px', width: '26px', height: '26px',
-                borderRadius: '4px', border: '1px solid rgba(139, 119, 85, 0.3)', 
-                background: 'linear-gradient(165deg, #f8f4e8 0%, #e8dfc5 100%)',
-                color: '#6b5b45', fontSize: '16px', cursor: 'pointer',
+                borderRadius: '4px', border: '2px solid rgba(0, 0, 0, 0.15)', 
+                background: 'linear-gradient(165deg, #fff176 0%, #ffeb3b 100%)',
+                color: '#1a1a1a', fontSize: '16px', cursor: 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                boxShadow: '0 2px 4px rgba(0,0,0,0.15)',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
                 fontFamily: '"Permanent Marker", cursive'
               }}
             >×</button>
           </div>
-          <div style={{ padding: '10px 16px 8px', fontFamily: '"Permanent Marker", cursive', fontSize: '16px', fontWeight: '400', color: '#3d3424', textAlign: 'center', borderBottom: '2px solid rgba(139, 119, 85, 0.2)', background: 'linear-gradient(90deg, rgba(139, 119, 85, 0.08) 0%, transparent 50%, rgba(139, 119, 85, 0.08) 100%)' }}>
+          <div style={{ padding: '10px 16px 8px', fontFamily: '"Permanent Marker", cursive', fontSize: '16px', fontWeight: '400', color: '#1a1a1a', textAlign: 'center', borderBottom: '2px solid rgba(0, 0, 0, 0.15)', background: 'linear-gradient(90deg, rgba(0, 0, 0, 0.05) 0%, transparent 50%, rgba(0, 0, 0, 0.05) 100%)' }}>
             ✨ Choose a motion style
           </div>
           {renderMotionPicker(selectedMotionCategory, setSelectedMotionCategory, handleGenerateVideo, setShowVideoDropdown, setShowCustomVideoPromptPopup)}
-          <div style={{ padding: '12px', borderTop: '2px solid rgba(139, 119, 85, 0.2)', background: 'linear-gradient(180deg, rgba(139, 119, 85, 0.08) 0%, rgba(139, 119, 85, 0.04) 100%)', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+          <div style={{ padding: '12px', borderTop: '2px solid rgba(0, 0, 0, 0.15)', background: 'linear-gradient(180deg, rgba(0, 0, 0, 0.05) 0%, rgba(0, 0, 0, 0.02) 100%)', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
             {renderCustomButton(setShowVideoDropdown, setShowCustomVideoPromptPopup)}
           </div>
         </div>,
