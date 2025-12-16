@@ -1205,8 +1205,8 @@ const PhotoGallery = ({
         negativePrompt: negativePrompt,
         motionEmoji: selectedEmoji,
         onComplete: (videoUrl) => {
-          // Play sonic logo before auto-play
-          playSonicLogo();
+          // Play sonic logo before auto-play (respects sound settings)
+          playSonicLogo(settings.soundEnabled);
           // Auto-play the generated video when completed
           setPlayingGeneratedVideoIds(prev => new Set([...prev, generatingPhotoId]));
           const videoMessage = getRandomVideoMessage();
@@ -1289,8 +1289,8 @@ const PhotoGallery = ({
         positivePrompt: motionPrompt,
         negativePrompt: negativePrompt,
         onComplete: (videoUrl) => {
-          // Play sonic logo before auto-play
-          playSonicLogo();
+          // Play sonic logo before auto-play (respects sound settings)
+          playSonicLogo(settings.soundEnabled);
           // Auto-play the generated video when completed
           setPlayingGeneratedVideoIds(prev => new Set([...prev, generatingPhotoId]));
           const videoMessage = getRandomVideoMessage();

@@ -9,7 +9,8 @@ import { Reward } from '../types/rewards';
 import { useSogniAuth } from '../services/sogniAuth';
 import { getTurnstileKey } from '../config/env';
 import { useToastContext } from './ToastContext';
-import { playSogniSignature } from '../utils/sonicLogos';
+import { playSogniSignatureIfEnabled } from '../utils/sonicLogos';
+import { useApp } from './AppContext';
 
 interface RewardsContextType {
   rewards: Reward[];
@@ -44,6 +45,7 @@ interface RewardsProviderProps {
 export const RewardsProvider: React.FC<RewardsProviderProps> = ({ children }) => {
   const { isAuthenticated, getSogniClient } = useSogniAuth();
   const { showToast } = useToastContext();
+  const { settings } = useApp();
   const [rewards, setRewards] = useState<Reward[]>([]);
   const [claimIntent, setClaimIntent] = useState<{ id?: string | string[]; token?: string }>({});
   const [claimLoading, setClaimLoading] = useState(false);
@@ -204,8 +206,8 @@ export const RewardsProvider: React.FC<RewardsProviderProps> = ({ children }) =>
             type: 'success'
           });
 
-          // Play sonic logo for reward claim
-          playSogniSignature();
+          // Play sonic logo for reward claim (respects sound settings)
+          playSogniSignatureIfEnabled(settings.soundEnabled);
 
           // Refresh rewards list
           return fetchRewards();

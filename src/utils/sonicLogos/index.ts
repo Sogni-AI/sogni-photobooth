@@ -261,6 +261,13 @@ export const playVideoComplete = (): void => {
   });
 };
 
-// Default export for video completion (most common use)
-export const playSonicLogo = playVideoComplete;
+// Wrapper functions that respect soundEnabled setting
+export const playSonicLogo = (soundEnabled = true): void => {
+  if (soundEnabled) playVideoComplete();
+};
+
+export const playSogniSignatureIfEnabled = (soundEnabled = true): void => {
+  if (soundEnabled) playSogniSignature();
+};
+
 export default playVideoComplete;

@@ -4,7 +4,8 @@ import { useEffect } from 'react';
 import { trackEvent, trackPurchase } from '../../utils/analytics';
 import { getCampaignSource } from '../../utils/campaignAttribution';
 import { getReferralSource } from '../../utils/referralTracking';
-import { playSogniSignature } from '../../utils/sonicLogos';
+import { playSogniSignatureIfEnabled } from '../../utils/sonicLogos';
+import { useApp } from '../../context/AppContext';
 
 interface Props {
   purchase: PurchaseStatus | null;
@@ -16,6 +17,7 @@ interface Props {
 }
 
 function PurchaseProgress({ purchase, loading, onReset, onRefresh, onClose, currentBalance }: Props) {
+  const { settings } = useApp();
   const isCompleted = purchase?.status === 'completed' || purchase?.status === 'processing';
   const productId = purchase?.productId;
 
@@ -74,10 +76,10 @@ function PurchaseProgress({ purchase, loading, onReset, onRefresh, onClose, curr
         // Note: The referral cookie persists for 30 days, so multiple conversions can be tracked
       }
 
-      // Play sonic logo for successful purchase
-      playSogniSignature();
+      // Play sonic logo for successful purchase (respects sound settings)
+      playSogniSignatureIfEnabled(settings.soundEnabled);
     }
-  }, [isCompleted, productId, purchase]);
+  }, [isCompleted, productId, purchase, settings.soundEnabled]);
 
   let status;
   let heading;
