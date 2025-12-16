@@ -274,7 +274,7 @@ const renderMotionButton = (template, index, handleGenerateVideo, setShowVideoDr
   </button>
 );
 
-// Custom button for the motion grid - styled with bright yellow
+// Custom button for the motion grid - contrasting color on yellow background
 const renderCustomButton = (setShowVideoDropdown, setShowCustomVideoPromptPopup) => (
   <button
     key="custom"
@@ -286,29 +286,31 @@ const renderCustomButton = (setShowVideoDropdown, setShowCustomVideoPromptPopup)
     style={{
       width: window.innerWidth < 768 ? '100%' : 'auto',
       padding: '10px 20px',
-      background: 'linear-gradient(165deg, #fff176 0%, #ffeb3b 50%, #fdd835 100%)',
-      border: '2px solid rgba(0, 0, 0, 0.15)',
-      color: '#1a1a1a',
+      background: '#ff5252',
+      border: 'none',
+      color: '#ffffff',
       fontFamily: '"Permanent Marker", cursive',
       fontSize: '14px',
       fontWeight: '400',
       cursor: 'pointer',
-      borderRadius: '4px',
+      borderRadius: '6px',
       textAlign: 'center',
-      transition: 'all 0.25s ease',
+      transition: 'all 0.2s ease',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
       gap: '8px',
-      boxShadow: '0 3px 8px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.5)'
+      boxShadow: '0 2px 8px rgba(255, 82, 82, 0.4)'
     }}
     onMouseOver={e => {
-      e.currentTarget.style.transform = 'translateY(-3px) rotate(-0.5deg)';
-      e.currentTarget.style.boxShadow = '0 6px 16px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.5)';
+      e.currentTarget.style.transform = 'translateY(-2px)';
+      e.currentTarget.style.boxShadow = '0 4px 12px rgba(255, 82, 82, 0.5)';
+      e.currentTarget.style.background = '#ff6b6b';
     }}
     onMouseOut={e => {
-      e.currentTarget.style.transform = 'translateY(0) rotate(0deg)';
-      e.currentTarget.style.boxShadow = '0 3px 8px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.5)';
+      e.currentTarget.style.transform = 'translateY(0)';
+      e.currentTarget.style.boxShadow = '0 2px 8px rgba(255, 82, 82, 0.4)';
+      e.currentTarget.style.background = '#ff5252';
     }}
   >
     <span style={{ fontSize: '16px' }}>✨</span>
@@ -335,20 +337,19 @@ const getSquareGridDimensions = (itemCount, isMobile, maxRows = null) => {
   return { cols: finalCols, rows: Math.ceil(itemCount / finalCols) };
 };
 
-// Polaroid frame style - classic white
+// Polaroid frame style - classic white with taller bottom
 const getPolaroidStyle = () => ({
   background: '#ffffff',
   border: 'none',
   borderRadius: '2px',
-  boxShadow: '0 3px 10px rgba(0,0,0,0.25), 0 1px 3px rgba(0,0,0,0.15)',
+  boxShadow: '0 2px 8px rgba(0,0,0,0.2), 0 1px 2px rgba(0,0,0,0.1)',
   position: 'relative',
-  aspectRatio: '1 / 1',
 });
 
 // Polaroid hover style - subtle lift
 const getPolaroidHoverStyle = () => ({
-  transform: 'translateY(-4px) rotate(-1deg)',
-  boxShadow: '0 8px 20px rgba(0,0,0,0.3), 0 4px 8px rgba(0,0,0,0.2)',
+  transform: 'translateY(-2px) rotate(-0.5deg)',
+  boxShadow: '0 6px 16px rgba(0,0,0,0.25), 0 3px 6px rgba(0,0,0,0.15)',
 });
 
 // Category color mapping - muted vintage tones for polaroid icons
@@ -363,13 +364,16 @@ const categoryColors = {
   'Party': '#d4a03c',        // Aged gold
 };
 
-// Render a category tile button as polaroid frame - square 1:1 aspect ratio
+// Render a category tile button as polaroid frame with taller bottom
 const renderCategoryButton = (category, onClick, index) => {
   const polaroidStyle = getPolaroidStyle();
   const polaroidHoverStyle = getPolaroidHoverStyle();
   const isMobile = window.innerWidth < 768;
-  const padding = isMobile ? 4 : 6;
-  const bottomPadding = isMobile ? 18 : 24; // Extra space for label
+  
+  // Polaroid proportions: thin border on top/sides, thick at bottom
+  const sidePadding = isMobile ? 3 : 4;
+  const topPadding = isMobile ? 3 : 4;
+  const bottomPadding = isMobile ? 16 : 20;
   
   return (
     <button
@@ -378,15 +382,15 @@ const renderCategoryButton = (category, onClick, index) => {
       title={`${category.templates.length} effects`}
       style={{
         ...polaroidStyle,
-        padding: `${padding}px ${padding}px ${bottomPadding}px ${padding}px`,
+        padding: `${topPadding}px ${sidePadding}px ${bottomPadding}px ${sidePadding}px`,
         cursor: 'pointer',
         textAlign: 'center',
-        transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
+        transition: 'all 0.2s ease',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'stretch',
         overflow: 'hidden',
-        animation: `polaroidDrop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) ${index * 0.06}s both`,
+        animation: `polaroidDrop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) ${index * 0.04}s both`,
       }}
       onMouseOver={e => {
         Object.assign(e.currentTarget.style, polaroidHoverStyle);
@@ -396,45 +400,41 @@ const renderCategoryButton = (category, onClick, index) => {
         e.currentTarget.style.boxShadow = polaroidStyle.boxShadow;
       }}
       onMouseDown={e => {
-        e.currentTarget.style.transform = 'scale(0.96) rotate(0deg)';
+        e.currentTarget.style.transform = 'scale(0.97)';
       }}
       onMouseUp={e => {
         Object.assign(e.currentTarget.style, polaroidHoverStyle);
       }}
     >
-      {/* Photo area - emoji centered, takes most of space */}
+      {/* Photo area - square, emoji centered */}
       <div style={{
-        flex: '1 1 auto',
+        aspectRatio: '1 / 1',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'linear-gradient(180deg, #fafafa 0%, #f0f0f0 100%)',
+        background: '#f5f5f5',
         borderRadius: '1px',
-        boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.08)',
-        minHeight: 0,
-        overflow: 'hidden',
       }}>
         <span style={{ 
-          fontSize: 'clamp(32px, 8vmin, 52px)', 
-          filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.15))', 
+          fontSize: 'clamp(24px, 6vmin, 40px)', 
           lineHeight: 1,
         }}>{category.emoji}</span>
       </div>
-      {/* Label area - polaroid caption at bottom */}
+      {/* Label area - in the white bottom space */}
       <div style={{
         position: 'absolute',
-        bottom: isMobile ? '2px' : '4px',
+        bottom: isMobile ? '2px' : '3px',
         left: 0,
         right: 0,
         fontFamily: '"Permanent Marker", cursive',
-        fontSize: 'clamp(9px, 2vmin, 12px)',
+        fontSize: 'clamp(8px, 1.8vmin, 11px)',
         color: '#333',
         textAlign: 'center',
         lineHeight: 1,
         whiteSpace: 'nowrap',
         overflow: 'hidden',
         textOverflow: 'ellipsis',
-        padding: '0 4px',
+        padding: '0 2px',
       }}>{category.name}</div>
     </button>
   );
@@ -491,8 +491,8 @@ const renderMotionPicker = (selectedCategory, setSelectedCategory, handleGenerat
           display: 'grid',
           gridTemplateColumns: `repeat(${catGrid.cols}, 1fr)`,
           gridTemplateRows: `repeat(${catGrid.rows}, 1fr)`,
-          gap: isMobile ? '8px' : '10px',
-          padding: isMobile ? '10px' : '14px',
+          gap: isMobile ? '6px' : '8px',
+          padding: isMobile ? '8px' : '10px',
           flex: '1 1 auto',
           overflow: 'hidden',
           minHeight: 0,
@@ -528,21 +528,20 @@ const renderMotionPicker = (selectedCategory, setSelectedCategory, handleGenerat
         display: 'flex',
         alignItems: 'center',
         gap: '10px',
-        padding: '8px 12px',
-        borderBottom: '2px solid rgba(0, 0, 0, 0.15)',
-        background: 'linear-gradient(90deg, rgba(0, 0, 0, 0.05) 0%, transparent 100%)',
+        padding: '8px 10px',
+        borderBottom: '1px solid rgba(0, 0, 0, 0.1)',
         flexShrink: 0
       }}>
         <button
           onClick={() => setSelectedCategory(null)}
           style={{
-            padding: '6px 12px',
-            background: 'linear-gradient(165deg, #fff176 0%, #ffeb3b 100%)',
-            border: '2px solid rgba(0, 0, 0, 0.15)',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.5)',
-            color: '#1a1a1a',
+            padding: '5px 10px',
+            background: '#333',
+            border: 'none',
+            boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+            color: '#fff',
             fontFamily: '"Permanent Marker", cursive',
-            fontSize: '12px',
+            fontSize: '11px',
             fontWeight: '400',
             cursor: 'pointer',
             borderRadius: '4px',
@@ -553,26 +552,26 @@ const renderMotionPicker = (selectedCategory, setSelectedCategory, handleGenerat
           }}
           onMouseOver={e => {
             e.currentTarget.style.transform = 'translateX(-2px)';
-            e.currentTarget.style.boxShadow = '0 3px 6px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.5)';
+            e.currentTarget.style.background = '#444';
           }}
           onMouseOut={e => {
             e.currentTarget.style.transform = 'translateX(0)';
-            e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.5)';
+            e.currentTarget.style.background = '#333';
           }}
         >
-          <span style={{ fontSize: '14px' }}>←</span>
+          <span style={{ fontSize: '12px' }}>←</span>
           <span>Back</span>
         </button>
         <div style={{
           display: 'flex',
           alignItems: 'center',
-          gap: '8px',
+          gap: '6px',
           fontFamily: '"Permanent Marker", cursive',
-          fontSize: '16px',
+          fontSize: '14px',
           fontWeight: '400',
           color: '#1a1a1a'
         }}>
-          <span style={{ fontSize: '22px', filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.15))' }}>{category.emoji}</span>
+          <span style={{ fontSize: '18px' }}>{category.emoji}</span>
           <span>{category.name}</span>
         </div>
       </div>
@@ -583,8 +582,8 @@ const renderMotionPicker = (selectedCategory, setSelectedCategory, handleGenerat
           display: 'grid',
           gridTemplateColumns: `repeat(${templateGrid.cols}, 1fr)`,
           gridTemplateRows: `repeat(${Math.ceil(category.templates.length / templateGrid.cols)}, 1fr)`,
-          gap: isMobile ? '6px' : '8px',
-          padding: isMobile ? '10px' : '12px',
+          gap: isMobile ? '5px' : '6px',
+          padding: isMobile ? '8px' : '10px',
           flex: '1 1 auto',
           overflow: 'hidden',
           minHeight: 0,
@@ -598,16 +597,19 @@ const renderMotionPicker = (selectedCategory, setSelectedCategory, handleGenerat
   );
 };
 
-// Render polaroid-styled motion button for template - square 1:1 aspect ratio
+// Render polaroid-styled motion button for template with taller bottom
 const renderPolaroidMotionButton = (template, index, handleGenerateVideo, setShowVideoDropdown, setShowCustomVideoPromptPopup, categoryName = '') => {
   const polaroidStyle = getPolaroidStyle();
   const polaroidHoverStyle = getPolaroidHoverStyle();
   const isMobile = window.innerWidth < 768;
-  const padding = isMobile ? 3 : 4;
-  const bottomPadding = isMobile ? 14 : 18; // Extra space for label
   
-  // Slight random rotation for organic feel (-0.8 to 0.8 degrees)
-  const rotation = ((index % 5) - 2) * 0.4;
+  // Polaroid proportions: thin border on top/sides, thick at bottom
+  const sidePadding = isMobile ? 2 : 3;
+  const topPadding = isMobile ? 2 : 3;
+  const bottomPadding = isMobile ? 12 : 16;
+  
+  // Slight random rotation for organic scattered look
+  const rotation = ((index % 5) - 2) * 0.3;
   
   return (
     <button
@@ -616,19 +618,19 @@ const renderPolaroidMotionButton = (template, index, handleGenerateVideo, setSho
       title={template.prompt}
       style={{
         ...polaroidStyle,
-        padding: `${padding}px ${padding}px ${bottomPadding}px ${padding}px`,
+        padding: `${topPadding}px ${sidePadding}px ${bottomPadding}px ${sidePadding}px`,
         cursor: 'pointer',
         textAlign: 'center',
-        transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
+        transition: 'all 0.2s ease',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'stretch',
         overflow: 'hidden',
         transform: `rotate(${rotation}deg)`,
-        animation: `polaroidDrop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) ${index * 0.025}s both`,
+        animation: `polaroidDrop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) ${index * 0.02}s both`,
       }}
       onMouseOver={e => {
-        e.currentTarget.style.transform = `translateY(-3px) rotate(${rotation - 0.5}deg)`;
+        e.currentTarget.style.transform = `translateY(-2px) rotate(${rotation - 0.3}deg)`;
         e.currentTarget.style.boxShadow = polaroidHoverStyle.boxShadow;
       }}
       onMouseOut={e => {
@@ -636,45 +638,41 @@ const renderPolaroidMotionButton = (template, index, handleGenerateVideo, setSho
         e.currentTarget.style.boxShadow = polaroidStyle.boxShadow;
       }}
       onMouseDown={e => {
-        e.currentTarget.style.transform = `scale(0.95) rotate(${rotation}deg)`;
+        e.currentTarget.style.transform = `scale(0.97) rotate(${rotation}deg)`;
       }}
       onMouseUp={e => {
-        e.currentTarget.style.transform = `translateY(-3px) rotate(${rotation - 0.5}deg)`;
+        e.currentTarget.style.transform = `translateY(-2px) rotate(${rotation - 0.3}deg)`;
       }}
     >
-      {/* Photo area - emoji centered, takes most of space */}
+      {/* Photo area - square, emoji centered */}
       <div style={{
-        flex: '1 1 auto',
+        aspectRatio: '1 / 1',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'linear-gradient(180deg, #fafafa 0%, #f0f0f0 100%)',
+        background: '#f5f5f5',
         borderRadius: '1px',
-        boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.08)',
-        minHeight: 0,
-        overflow: 'hidden',
       }}>
         <span style={{ 
-          fontSize: 'clamp(22px, 5.5vmin, 36px)', 
-          filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.1))', 
+          fontSize: 'clamp(18px, 4.5vmin, 28px)', 
           lineHeight: 1,
         }}>{template.emoji}</span>
       </div>
-      {/* Label area - polaroid caption at bottom */}
+      {/* Label area - in the white bottom space */}
       <div style={{
         position: 'absolute',
-        bottom: isMobile ? '1px' : '3px',
+        bottom: isMobile ? '1px' : '2px',
         left: 0,
         right: 0,
         fontFamily: '"Permanent Marker", cursive',
-        fontSize: 'clamp(7px, 1.5vmin, 9px)',
+        fontSize: 'clamp(6px, 1.3vmin, 8px)',
         color: '#333',
         textAlign: 'center',
         lineHeight: 1,
         whiteSpace: 'nowrap',
         overflow: 'hidden',
         textOverflow: 'ellipsis',
-        padding: '0 2px',
+        padding: '0 1px',
       }}>{template.label}</div>
     </button>
   );
@@ -4525,9 +4523,8 @@ const PhotoGallery = ({
 
                         {/* Custom Prompt Button - Always visible below grid */}
                         <div style={{
-                          padding: '12px',
-                          borderTop: '2px solid rgba(0, 0, 0, 0.15)',
-                          background: 'linear-gradient(180deg, rgba(0, 0, 0, 0.05) 0%, rgba(0, 0, 0, 0.02) 100%)',
+                          padding: '10px',
+                          borderTop: '1px solid rgba(0, 0, 0, 0.1)',
                           display: 'flex',
                           flexDirection: window.innerWidth < 768 ? 'column' : 'row',
                           alignItems: window.innerWidth < 768 ? 'stretch' : 'center',
@@ -4616,12 +4613,11 @@ const PhotoGallery = ({
                         <div style={{
                           padding: '10px 16px 8px 16px',
                           fontFamily: '"Permanent Marker", cursive',
-                          fontSize: '16px',
+                          fontSize: '15px',
                           fontWeight: '400',
                           color: '#1a1a1a',
                           textAlign: 'center',
-                          borderBottom: '2px solid rgba(0, 0, 0, 0.15)',
-                          background: 'linear-gradient(90deg, rgba(0, 0, 0, 0.05) 0%, transparent 50%, rgba(0, 0, 0, 0.05) 100%)',
+                          borderBottom: '1px solid rgba(0, 0, 0, 0.1)',
                           flexShrink: 0
                         }}>
                           ✨ Choose a motion style
@@ -4632,9 +4628,8 @@ const PhotoGallery = ({
 
                         {/* Custom Prompt Button - Always visible below grid */}
                         <div style={{
-                          padding: '12px',
-                          borderTop: '2px solid rgba(0, 0, 0, 0.15)',
-                          background: 'linear-gradient(180deg, rgba(0, 0, 0, 0.05) 0%, rgba(0, 0, 0, 0.02) 100%)',
+                          padding: '10px',
+                          borderTop: '1px solid rgba(0, 0, 0, 0.1)',
                           display: 'flex',
                           flexDirection: window.innerWidth < 768 ? 'column' : 'row',
                           alignItems: window.innerWidth < 768 ? 'stretch' : 'center',
@@ -7897,21 +7892,22 @@ const PhotoGallery = ({
             <button
               onClick={() => { setShowVideoDropdown(false); setSelectedMotionCategory(null); setVideoTargetPhotoIndex(null); }}
               style={{
-                position: 'absolute', top: '2px', right: '2px', width: '26px', height: '26px',
-                borderRadius: '4px', border: '2px solid rgba(0, 0, 0, 0.15)', 
-                background: 'linear-gradient(165deg, #fff176 0%, #ffeb3b 100%)',
-                color: '#1a1a1a', fontSize: '16px', cursor: 'pointer',
+                position: 'absolute', top: '4px', right: '4px', width: '24px', height: '24px',
+                borderRadius: '50%', border: 'none', 
+                background: 'rgba(0, 0, 0, 0.6)',
+                color: '#fff', fontSize: '14px', cursor: 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-                fontFamily: '"Permanent Marker", cursive'
+                transition: 'all 0.2s ease'
               }}
+              onMouseOver={e => { e.currentTarget.style.background = 'rgba(0, 0, 0, 0.8)'; }}
+              onMouseOut={e => { e.currentTarget.style.background = 'rgba(0, 0, 0, 0.6)'; }}
             >×</button>
           </div>
-          <div style={{ padding: '10px 16px 8px', fontFamily: '"Permanent Marker", cursive', fontSize: '16px', fontWeight: '400', color: '#1a1a1a', textAlign: 'center', borderBottom: '2px solid rgba(0, 0, 0, 0.15)', background: 'linear-gradient(90deg, rgba(0, 0, 0, 0.05) 0%, transparent 50%, rgba(0, 0, 0, 0.05) 100%)' }}>
+          <div style={{ padding: '10px 16px 8px', fontFamily: '"Permanent Marker", cursive', fontSize: '15px', fontWeight: '400', color: '#1a1a1a', textAlign: 'center', borderBottom: '1px solid rgba(0, 0, 0, 0.1)' }}>
             ✨ Choose a motion style
           </div>
           {renderMotionPicker(selectedMotionCategory, setSelectedMotionCategory, handleGenerateVideo, setShowVideoDropdown, setShowCustomVideoPromptPopup)}
-          <div style={{ padding: '12px', borderTop: '2px solid rgba(0, 0, 0, 0.15)', background: 'linear-gradient(180deg, rgba(0, 0, 0, 0.05) 0%, rgba(0, 0, 0, 0.02) 100%)', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+          <div style={{ padding: '10px', borderTop: '1px solid rgba(0, 0, 0, 0.1)', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
             {renderCustomButton(setShowVideoDropdown, setShowCustomVideoPromptPopup)}
           </div>
         </div>,
