@@ -335,19 +335,20 @@ const getSquareGridDimensions = (itemCount, isMobile, maxRows = null) => {
   return { cols: finalCols, rows: Math.ceil(itemCount / finalCols) };
 };
 
-// Polaroid frame style - bright yellow matching main page
+// Polaroid frame style - classic white
 const getPolaroidStyle = () => ({
-  background: 'linear-gradient(165deg, #fff176 0%, #ffeb3b 50%, #fdd835 100%)',
+  background: '#ffffff',
   border: 'none',
-  borderRadius: '4px',
-  boxShadow: '0 3px 8px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.5)',
+  borderRadius: '2px',
+  boxShadow: '0 3px 10px rgba(0,0,0,0.25), 0 1px 3px rgba(0,0,0,0.15)',
   position: 'relative',
+  aspectRatio: '1 / 1',
 });
 
 // Polaroid hover style - subtle lift
 const getPolaroidHoverStyle = () => ({
   transform: 'translateY(-4px) rotate(-1deg)',
-  boxShadow: '0 8px 20px rgba(0,0,0,0.35), 0 4px 8px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.5)',
+  boxShadow: '0 8px 20px rgba(0,0,0,0.3), 0 4px 8px rgba(0,0,0,0.2)',
 });
 
 // Category color mapping - muted vintage tones for polaroid icons
@@ -362,12 +363,13 @@ const categoryColors = {
   'Party': '#d4a03c',        // Aged gold
 };
 
-// Render a category tile button as polaroid frame - fills grid cell
+// Render a category tile button as polaroid frame - square 1:1 aspect ratio
 const renderCategoryButton = (category, onClick, index) => {
-  const accentColor = categoryColors[category.name] || '#8a7eea';
   const polaroidStyle = getPolaroidStyle();
   const polaroidHoverStyle = getPolaroidHoverStyle();
   const isMobile = window.innerWidth < 768;
+  const padding = isMobile ? 4 : 6;
+  const bottomPadding = isMobile ? 18 : 24; // Extra space for label
   
   return (
     <button
@@ -376,16 +378,13 @@ const renderCategoryButton = (category, onClick, index) => {
       title={`${category.templates.length} effects`}
       style={{
         ...polaroidStyle,
-        padding: 0,
+        padding: `${padding}px ${padding}px ${bottomPadding}px ${padding}px`,
         cursor: 'pointer',
         textAlign: 'center',
         transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'stretch',
-        width: '100%',
-        height: '100%',
-        minHeight: 0,
         overflow: 'hidden',
         animation: `polaroidDrop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) ${index * 0.06}s both`,
       }}
@@ -403,36 +402,39 @@ const renderCategoryButton = (category, onClick, index) => {
         Object.assign(e.currentTarget.style, polaroidHoverStyle);
       }}
     >
-      {/* Photo area - emoji centered */}
+      {/* Photo area - emoji centered, takes most of space */}
       <div style={{
         flex: '1 1 auto',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: `linear-gradient(180deg, rgba(255,255,255,0.6) 0%, rgba(250,248,240,0.3) 100%)`,
-        margin: isMobile ? '4px 4px 0 4px' : '6px 6px 0 6px',
-        borderRadius: '2px',
-        boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.1)',
+        background: 'linear-gradient(180deg, #fafafa 0%, #f0f0f0 100%)',
+        borderRadius: '1px',
+        boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.08)',
         minHeight: 0,
         overflow: 'hidden',
       }}>
         <span style={{ 
-          fontSize: 'clamp(28px, 7vmin, 44px)', 
-          filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))', 
+          fontSize: 'clamp(32px, 8vmin, 52px)', 
+          filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.15))', 
           lineHeight: 1,
         }}>{category.emoji}</span>
       </div>
-      {/* Label area - polaroid caption */}
+      {/* Label area - polaroid caption at bottom */}
       <div style={{
-        padding: isMobile ? '4px 4px 6px 4px' : '6px 6px 8px 6px',
+        position: 'absolute',
+        bottom: isMobile ? '2px' : '4px',
+        left: 0,
+        right: 0,
         fontFamily: '"Permanent Marker", cursive',
-        fontSize: 'clamp(10px, 2.4vmin, 14px)',
-        color: '#1a1a1a',
+        fontSize: 'clamp(9px, 2vmin, 12px)',
+        color: '#333',
         textAlign: 'center',
-        lineHeight: 1.1,
+        lineHeight: 1,
         whiteSpace: 'nowrap',
         overflow: 'hidden',
         textOverflow: 'ellipsis',
+        padding: '0 4px',
       }}>{category.name}</div>
     </button>
   );
@@ -596,13 +598,15 @@ const renderMotionPicker = (selectedCategory, setSelectedCategory, handleGenerat
   );
 };
 
-// Render polaroid-styled motion button for template - fills grid cell
+// Render polaroid-styled motion button for template - square 1:1 aspect ratio
 const renderPolaroidMotionButton = (template, index, handleGenerateVideo, setShowVideoDropdown, setShowCustomVideoPromptPopup, categoryName = '') => {
   const polaroidStyle = getPolaroidStyle();
   const polaroidHoverStyle = getPolaroidHoverStyle();
   const isMobile = window.innerWidth < 768;
+  const padding = isMobile ? 3 : 4;
+  const bottomPadding = isMobile ? 14 : 18; // Extra space for label
   
-  // Slight random rotation for organic feel (-1 to 1 degrees)
+  // Slight random rotation for organic feel (-0.8 to 0.8 degrees)
   const rotation = ((index % 5) - 2) * 0.4;
   
   return (
@@ -612,16 +616,13 @@ const renderPolaroidMotionButton = (template, index, handleGenerateVideo, setSho
       title={template.prompt}
       style={{
         ...polaroidStyle,
-        padding: 0,
+        padding: `${padding}px ${padding}px ${bottomPadding}px ${padding}px`,
         cursor: 'pointer',
         textAlign: 'center',
         transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'stretch',
-        width: '100%',
-        height: '100%',
-        minHeight: 0,
         overflow: 'hidden',
         transform: `rotate(${rotation}deg)`,
         animation: `polaroidDrop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) ${index * 0.025}s both`,
@@ -641,36 +642,39 @@ const renderPolaroidMotionButton = (template, index, handleGenerateVideo, setSho
         e.currentTarget.style.transform = `translateY(-3px) rotate(${rotation - 0.5}deg)`;
       }}
     >
-      {/* Photo area - emoji centered */}
+      {/* Photo area - emoji centered, takes most of space */}
       <div style={{
         flex: '1 1 auto',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'linear-gradient(180deg, rgba(255,255,255,0.7) 0%, rgba(250,248,240,0.4) 100%)',
-        margin: isMobile ? '3px 3px 0 3px' : '4px 4px 0 4px',
-        borderRadius: '2px',
+        background: 'linear-gradient(180deg, #fafafa 0%, #f0f0f0 100%)',
+        borderRadius: '1px',
         boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.08)',
         minHeight: 0,
         overflow: 'hidden',
       }}>
         <span style={{ 
-          fontSize: 'clamp(20px, 5vmin, 32px)', 
-          filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.12))', 
+          fontSize: 'clamp(22px, 5.5vmin, 36px)', 
+          filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.1))', 
           lineHeight: 1,
         }}>{template.emoji}</span>
       </div>
-      {/* Label area - polaroid caption in marker font */}
+      {/* Label area - polaroid caption at bottom */}
       <div style={{
-        padding: isMobile ? '2px 2px 3px 2px' : '3px 3px 5px 3px',
+        position: 'absolute',
+        bottom: isMobile ? '1px' : '3px',
+        left: 0,
+        right: 0,
         fontFamily: '"Permanent Marker", cursive',
-        fontSize: 'clamp(7px, 1.6vmin, 10px)',
-        color: '#1a1a1a',
+        fontSize: 'clamp(7px, 1.5vmin, 9px)',
+        color: '#333',
         textAlign: 'center',
-        lineHeight: 1.1,
+        lineHeight: 1,
         whiteSpace: 'nowrap',
         overflow: 'hidden',
         textOverflow: 'ellipsis',
+        padding: '0 2px',
       }}>{template.label}</div>
     </button>
   );
