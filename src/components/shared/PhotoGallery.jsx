@@ -337,52 +337,25 @@ const getSquareGridDimensions = (itemCount, isMobile, maxRows = null) => {
   return { cols: finalCols, rows: Math.ceil(itemCount / finalCols) };
 };
 
-// Polaroid frame style - classic white with taller bottom
-const getPolaroidStyle = () => ({
-  background: '#ffffff',
-  border: 'none',
-  borderRadius: '2px',
-  boxShadow: '0 2px 8px rgba(0,0,0,0.2), 0 1px 2px rgba(0,0,0,0.1)',
-  position: 'relative',
-});
-
-// Polaroid hover style - subtle lift
-const getPolaroidHoverStyle = () => ({
-  transform: 'translateY(-2px) rotate(-0.5deg)',
-  boxShadow: '0 6px 16px rgba(0,0,0,0.25), 0 3px 6px rgba(0,0,0,0.15)',
-});
-
-// Category color mapping - muted vintage tones for polaroid icons
-const categoryColors = {
-  'Emotions': '#e8a857',     // Warm amber
-  'Reactions': '#5a9bcf',    // Vintage blue
-  'Camera': '#7a7a7a',       // Film gray
-  'Creatures': '#9b6bb5',    // Dusty purple
-  'Magic': '#d66ba0',        // Faded pink
-  'Nature': '#6bb56b',       // Soft green
-  'Chaos': '#c95f4e',        // Burnt red
-  'Party': '#d4a03c',        // Aged gold
-};
-
-// Render a category tile button as polaroid frame with taller bottom
-const renderCategoryButton = (category, onClick, index) => {
-  const polaroidStyle = getPolaroidStyle();
-  const polaroidHoverStyle = getPolaroidHoverStyle();
+// Polaroid mini-frame component - matches app's polaroid proportions (side:bottom = 1:3.5)
+// Based on --polaroid-side-border: 24px and --polaroid-bottom-border: 84px
+const renderPolaroidFrame = ({ emoji, label, onClick, index, rotation = 0, title = '' }) => {
   const isMobile = window.innerWidth < 768;
-  
-  // Polaroid proportions: thin border on top/sides, thick at bottom
-  const sidePadding = isMobile ? 3 : 4;
-  const topPadding = isMobile ? 3 : 4;
-  const bottomPadding = isMobile ? 16 : 20;
+  // Scaled down proportions: 3px sides, 10px bottom (ratio ~3.3x, close to 3.5x)
+  const sideBorder = isMobile ? 2 : 3;
+  const bottomBorder = isMobile ? 8 : 10;
   
   return (
     <button
-      key={category.name}
+      key={label}
       onClick={onClick}
-      title={`${category.templates.length} effects`}
+      title={title || label}
       style={{
-        ...polaroidStyle,
-        padding: `${topPadding}px ${sidePadding}px ${bottomPadding}px ${sidePadding}px`,
+        background: '#ffffff',
+        border: 'none',
+        borderRadius: '2px',
+        boxShadow: '0 1px 4px rgba(0,0,0,0.15), 0 1px 2px rgba(0,0,0,0.1)',
+        padding: `${sideBorder}px ${sideBorder}px ${bottomBorder}px ${sideBorder}px`,
         cursor: 'pointer',
         textAlign: 'center',
         transition: 'all 0.2s ease',
@@ -390,54 +363,68 @@ const renderCategoryButton = (category, onClick, index) => {
         flexDirection: 'column',
         alignItems: 'stretch',
         overflow: 'hidden',
-        animation: `polaroidDrop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) ${index * 0.04}s both`,
+        position: 'relative',
+        transform: `rotate(${rotation}deg)`,
+        animation: `polaroidDrop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) ${index * 0.025}s both`,
       }}
       onMouseOver={e => {
-        Object.assign(e.currentTarget.style, polaroidHoverStyle);
+        e.currentTarget.style.transform = `translateY(-2px) rotate(${rotation - 0.5}deg)`;
+        e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.2), 0 2px 4px rgba(0,0,0,0.1)';
       }}
       onMouseOut={e => {
-        e.currentTarget.style.transform = 'translateY(0) rotate(0deg)';
-        e.currentTarget.style.boxShadow = polaroidStyle.boxShadow;
+        e.currentTarget.style.transform = `rotate(${rotation}deg)`;
+        e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,0.15), 0 1px 2px rgba(0,0,0,0.1)';
       }}
       onMouseDown={e => {
-        e.currentTarget.style.transform = 'scale(0.97)';
+        e.currentTarget.style.transform = `scale(0.97) rotate(${rotation}deg)`;
       }}
       onMouseUp={e => {
-        Object.assign(e.currentTarget.style, polaroidHoverStyle);
+        e.currentTarget.style.transform = `translateY(-2px) rotate(${rotation - 0.5}deg)`;
       }}
     >
-      {/* Photo area - square, emoji centered */}
+      {/* Photo area - square */}
       <div style={{
         aspectRatio: '1 / 1',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: '#f5f5f5',
-        borderRadius: '1px',
+        background: '#f0f0f0',
       }}>
         <span style={{ 
-          fontSize: 'clamp(24px, 6vmin, 40px)', 
+          fontSize: isMobile ? 'clamp(16px, 4vmin, 24px)' : 'clamp(18px, 3.5vmin, 26px)', 
           lineHeight: 1,
-        }}>{category.emoji}</span>
+        }}>{emoji}</span>
       </div>
-      {/* Label area - in the white bottom space */}
+      {/* Label in bottom white area */}
       <div style={{
         position: 'absolute',
-        bottom: isMobile ? '2px' : '3px',
+        bottom: '1px',
         left: 0,
         right: 0,
         fontFamily: '"Permanent Marker", cursive',
-        fontSize: 'clamp(8px, 1.8vmin, 11px)',
+        fontSize: isMobile ? 'clamp(5px, 1vmin, 7px)' : 'clamp(6px, 1.2vmin, 8px)',
         color: '#333',
         textAlign: 'center',
         lineHeight: 1,
         whiteSpace: 'nowrap',
         overflow: 'hidden',
         textOverflow: 'ellipsis',
-        padding: '0 2px',
-      }}>{category.name}</div>
+        padding: '0 1px',
+      }}>{label}</div>
     </button>
   );
+};
+
+// Render category button using consistent polaroid frame
+const renderCategoryButton = (category, onClick, index) => {
+  return renderPolaroidFrame({
+    emoji: category.emoji,
+    label: category.name,
+    onClick,
+    index,
+    rotation: 0,
+    title: `${category.templates.length} effects`,
+  });
 };
 
 // Render the motion picker with category navigation and animations
@@ -597,85 +584,19 @@ const renderMotionPicker = (selectedCategory, setSelectedCategory, handleGenerat
   );
 };
 
-// Render polaroid-styled motion button for template with taller bottom
+// Render motion button using consistent polaroid frame
 const renderPolaroidMotionButton = (template, index, handleGenerateVideo, setShowVideoDropdown, setShowCustomVideoPromptPopup, categoryName = '') => {
-  const polaroidStyle = getPolaroidStyle();
-  const polaroidHoverStyle = getPolaroidHoverStyle();
-  const isMobile = window.innerWidth < 768;
-  
-  // Polaroid proportions: thin border on top/sides, thick at bottom
-  const sidePadding = isMobile ? 2 : 3;
-  const topPadding = isMobile ? 2 : 3;
-  const bottomPadding = isMobile ? 12 : 16;
-  
   // Slight random rotation for organic scattered look
   const rotation = ((index % 5) - 2) * 0.3;
   
-  return (
-    <button
-      key={template.label}
-      onClick={() => handleGenerateVideo(template.prompt, null, template.emoji)}
-      title={template.prompt}
-      style={{
-        ...polaroidStyle,
-        padding: `${topPadding}px ${sidePadding}px ${bottomPadding}px ${sidePadding}px`,
-        cursor: 'pointer',
-        textAlign: 'center',
-        transition: 'all 0.2s ease',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'stretch',
-        overflow: 'hidden',
-        transform: `rotate(${rotation}deg)`,
-        animation: `polaroidDrop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) ${index * 0.02}s both`,
-      }}
-      onMouseOver={e => {
-        e.currentTarget.style.transform = `translateY(-2px) rotate(${rotation - 0.3}deg)`;
-        e.currentTarget.style.boxShadow = polaroidHoverStyle.boxShadow;
-      }}
-      onMouseOut={e => {
-        e.currentTarget.style.transform = `rotate(${rotation}deg)`;
-        e.currentTarget.style.boxShadow = polaroidStyle.boxShadow;
-      }}
-      onMouseDown={e => {
-        e.currentTarget.style.transform = `scale(0.97) rotate(${rotation}deg)`;
-      }}
-      onMouseUp={e => {
-        e.currentTarget.style.transform = `translateY(-2px) rotate(${rotation - 0.3}deg)`;
-      }}
-    >
-      {/* Photo area - square, emoji centered */}
-      <div style={{
-        aspectRatio: '1 / 1',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: '#f5f5f5',
-        borderRadius: '1px',
-      }}>
-        <span style={{ 
-          fontSize: 'clamp(18px, 4.5vmin, 28px)', 
-          lineHeight: 1,
-        }}>{template.emoji}</span>
-      </div>
-      {/* Label area - in the white bottom space */}
-      <div style={{
-        position: 'absolute',
-        bottom: isMobile ? '1px' : '2px',
-        left: 0,
-        right: 0,
-        fontFamily: '"Permanent Marker", cursive',
-        fontSize: 'clamp(6px, 1.3vmin, 8px)',
-        color: '#333',
-        textAlign: 'center',
-        lineHeight: 1,
-        whiteSpace: 'nowrap',
-        overflow: 'hidden',
-        textOverflow: 'ellipsis',
-        padding: '0 1px',
-      }}>{template.label}</div>
-    </button>
-  );
+  return renderPolaroidFrame({
+    emoji: template.emoji,
+    label: template.label,
+    onClick: () => handleGenerateVideo(template.prompt, null, template.emoji),
+    index,
+    rotation,
+    title: template.prompt,
+  });
 };
 
 // Memoized placeholder image component to prevent blob reloading
