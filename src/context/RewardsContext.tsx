@@ -9,6 +9,7 @@ import { Reward } from '../types/rewards';
 import { useSogniAuth } from '../services/sogniAuth';
 import { getTurnstileKey } from '../config/env';
 import { useToastContext } from './ToastContext';
+import { playSogniSignature } from '../utils/sonicLogos';
 
 interface RewardsContextType {
   rewards: Reward[];
@@ -202,7 +203,10 @@ export const RewardsProvider: React.FC<RewardsProviderProps> = ({ children }) =>
             message: `Successfully claimed: ${rewardTitles} (${totalAmount} credits)`,
             type: 'success'
           });
-          
+
+          // Play sonic logo for reward claim
+          playSogniSignature();
+
           // Refresh rewards list
           return fetchRewards();
         })

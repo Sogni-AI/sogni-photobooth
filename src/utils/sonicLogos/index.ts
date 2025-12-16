@@ -1,7 +1,5 @@
 /**
- * Sonic Logo - Sogni Signature HD
- * Whoosh + stereo Fmaj7 arpeggio + "SOG-NI" rhythm tag
- * Enhanced with sub bass, stereo imaging, and harmonics
+ * Sonic Logos - Sogni Brand Sounds
  * Uses Web Audio API for cross-browser/device compatibility
  */
 
@@ -44,95 +42,63 @@ export const warmUpAudio = (): void => {
   }
 };
 
-/**
- * Creates sub bass
- */
-const createSubBass = (
-  ctx: AudioContext,
-  destination: AudioNode,
-  time: number,
-  freq: number,
-  duration: number
-): void => {
-  const sub = ctx.createOscillator();
-  const subGain = ctx.createGain();
-  sub.type = 'sine';
-  sub.frequency.setValueAtTime(freq, time);
-  subGain.gain.setValueAtTime(0, time);
-  subGain.gain.linearRampToValueAtTime(0.6, time + 0.08);
-  subGain.gain.exponentialRampToValueAtTime(0.01, time + duration);
-  sub.connect(subGain);
-  subGain.connect(destination);
-  sub.start(time);
-  sub.stop(time + duration);
-};
-
-/**
- * Creates whoosh sound
- */
-const createWhoosh = (
-  ctx: AudioContext,
-  destination: AudioNode,
-  time: number
-): void => {
-  const whoosh = ctx.createOscillator();
-  const whooshGain = ctx.createGain();
-  const whooshFilter = ctx.createBiquadFilter();
-
-  whoosh.type = 'sawtooth';
-  whoosh.frequency.setValueAtTime(80, time);
-  whoosh.frequency.exponentialRampToValueAtTime(400, time + 0.15);
-
-  whooshFilter.type = 'bandpass';
-  whooshFilter.frequency.setValueAtTime(200, time);
-  whooshFilter.frequency.exponentialRampToValueAtTime(1000, time + 0.15);
-  whooshFilter.Q.setValueAtTime(0.5, time);
-
-  whooshGain.gain.setValueAtTime(0, time);
-  whooshGain.gain.linearRampToValueAtTime(0.2, time + 0.08);
-  whooshGain.gain.exponentialRampToValueAtTime(0.001, time + 0.18);
-
-  whoosh.connect(whooshFilter);
-  whooshFilter.connect(whooshGain);
-  whooshGain.connect(destination);
-
-  whoosh.start(time);
-  whoosh.stop(time + 0.2);
-};
-
-/**
- * Plays the sonic logo - Sogni Signature HD
- * Safe to call anytime - will silently fail if audio unavailable
- */
-export const playSonicLogo = (): void => {
+// ============================================
+// SOGNI SIGNATURE HD
+// For: Daily boost collection, Stripe payment success
+// ============================================
+export const playSogniSignature = (): void => {
   const ctx = getAudioContext();
   if (!ctx) return;
 
   const now = ctx.currentTime;
 
-  // Master gain
   const master = ctx.createGain();
   master.connect(ctx.destination);
   master.gain.setValueAtTime(0.3, now);
 
-  // Punchy sub bass
-  createSubBass(ctx, master, now + 0.05, 55, 0.55);
+  // Sub bass
+  const sub = ctx.createOscillator();
+  const subGain = ctx.createGain();
+  sub.type = 'sine';
+  sub.frequency.setValueAtTime(55, now + 0.05);
+  subGain.gain.setValueAtTime(0, now + 0.05);
+  subGain.gain.linearRampToValueAtTime(0.6, now + 0.13);
+  subGain.gain.exponentialRampToValueAtTime(0.01, now + 0.6);
+  sub.connect(subGain);
+  subGain.connect(master);
+  sub.start(now + 0.05);
+  sub.stop(now + 0.65);
 
   // Whoosh
-  createWhoosh(ctx, master, now);
+  const whoosh = ctx.createOscillator();
+  const whooshGain = ctx.createGain();
+  const whooshFilter = ctx.createBiquadFilter();
+  whoosh.type = 'sawtooth';
+  whoosh.frequency.setValueAtTime(80, now);
+  whoosh.frequency.exponentialRampToValueAtTime(400, now + 0.15);
+  whooshFilter.type = 'bandpass';
+  whooshFilter.frequency.setValueAtTime(200, now);
+  whooshFilter.frequency.exponentialRampToValueAtTime(1000, now + 0.15);
+  whooshFilter.Q.setValueAtTime(0.5, now);
+  whooshGain.gain.setValueAtTime(0, now);
+  whooshGain.gain.linearRampToValueAtTime(0.2, now + 0.08);
+  whooshGain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+  whoosh.connect(whooshFilter);
+  whooshFilter.connect(whooshGain);
+  whooshGain.connect(master);
+  whoosh.start(now);
+  whoosh.stop(now + 0.2);
 
-  // Stereo arpeggio - Fmaj7: F4 A4 C5 E5
+  // Stereo arpeggio with harmonics
   const notes = [349, 440, 523, 659];
   const pans = [-0.5, -0.15, 0.15, 0.5];
 
   notes.forEach((freq, i) => {
     const start = now + 0.1 + (i * 0.07);
-
     const panner = ctx.createStereoPanner();
     panner.pan.setValueAtTime(pans[i], start);
     panner.connect(master);
 
-    // Main tone
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.type = 'sine';
@@ -145,7 +111,7 @@ export const playSonicLogo = (): void => {
     osc.start(start);
     osc.stop(start + 0.45);
 
-    // Harmonic shimmer (octave)
+    // Harmonic
     const osc2 = ctx.createOscillator();
     const gain2 = ctx.createGain();
     osc2.type = 'sine';
@@ -159,22 +125,20 @@ export const playSonicLogo = (): void => {
     osc2.stop(start + 0.3);
   });
 
-  // SOG-NI tag with stereo movement: L -> R -> Center
+  // SOG-NI tag
   const endTime = now + 0.1 + (3 * 0.07) + 0.12;
-  const pattern: Array<{ freq: number; start: number; dur: number; pan: number }> = [
-    { freq: 784, start: 0, dur: 0.12, pan: -0.5 },      // SOG (G5) - Left
-    { freq: 880, start: 0.1, dur: 0.12, pan: 0.5 },     // - (A5) - Right
-    { freq: 1047, start: 0.2, dur: 0.4, pan: 0 }        // NI (C6) - Center
+  const pattern = [
+    { freq: 784, start: 0, dur: 0.12, pan: -0.5 },
+    { freq: 880, start: 0.1, dur: 0.12, pan: 0.5 },
+    { freq: 1047, start: 0.2, dur: 0.4, pan: 0 }
   ];
 
   pattern.forEach(({ freq, start, dur, pan }) => {
     const t = endTime + start;
-
     const panner = ctx.createStereoPanner();
     panner.pan.setValueAtTime(pan, t);
     panner.connect(master);
 
-    // Main tone
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.type = 'sine';
@@ -187,7 +151,6 @@ export const playSonicLogo = (): void => {
     osc.start(t);
     osc.stop(t + dur + 0.05);
 
-    // Harmonic on final note
     if (freq === 1047) {
       const osc2 = ctx.createOscillator();
       const gain2 = ctx.createGain();
@@ -204,4 +167,100 @@ export const playSonicLogo = (): void => {
   });
 };
 
-export default playSonicLogo;
+// ============================================
+// SPARKLE CROWN HD
+// For: Video generation complete
+// ============================================
+export const playVideoComplete = (): void => {
+  const ctx = getAudioContext();
+  if (!ctx) return;
+
+  const now = ctx.currentTime;
+
+  const master = ctx.createGain();
+  master.connect(ctx.destination);
+  master.gain.setValueAtTime(0.28, now);
+
+  // Warm bass bed
+  const sub = ctx.createOscillator();
+  const subGain = ctx.createGain();
+  sub.type = 'sine';
+  sub.frequency.setValueAtTime(87, now + 0.05);
+  subGain.gain.setValueAtTime(0, now + 0.05);
+  subGain.gain.linearRampToValueAtTime(0.5, now + 0.12);
+  subGain.gain.exponentialRampToValueAtTime(0.01, now + 0.6);
+  sub.connect(subGain);
+  subGain.connect(master);
+  sub.start(now + 0.05);
+  sub.stop(now + 0.65);
+
+  // Whoosh
+  const whoosh = ctx.createOscillator();
+  const whooshGain = ctx.createGain();
+  const whooshFilter = ctx.createBiquadFilter();
+  whoosh.type = 'sawtooth';
+  whoosh.frequency.setValueAtTime(80, now);
+  whoosh.frequency.exponentialRampToValueAtTime(400, now + 0.15);
+  whooshFilter.type = 'bandpass';
+  whooshFilter.frequency.setValueAtTime(200, now);
+  whooshFilter.frequency.exponentialRampToValueAtTime(1000, now + 0.15);
+  whooshFilter.Q.setValueAtTime(0.5, now);
+  whooshGain.gain.setValueAtTime(0, now);
+  whooshGain.gain.linearRampToValueAtTime(0.2, now + 0.08);
+  whooshGain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+  whoosh.connect(whooshFilter);
+  whooshFilter.connect(whooshGain);
+  whooshGain.connect(master);
+  whoosh.start(now);
+  whoosh.stop(now + 0.2);
+
+  // Stereo arpeggio
+  const notes = [349, 440, 523, 659];
+  const pans = [-0.4, -0.12, 0.12, 0.4];
+
+  notes.forEach((freq, i) => {
+    const start = now + 0.1 + (i * 0.07);
+    const panner = ctx.createStereoPanner();
+    panner.pan.setValueAtTime(pans[i], start);
+    panner.connect(master);
+
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(freq, start);
+    gain.gain.setValueAtTime(0, start);
+    gain.gain.linearRampToValueAtTime(0.5, start + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.001, start + 0.45);
+    osc.connect(gain);
+    gain.connect(panner);
+    osc.start(start);
+    osc.stop(start + 0.5);
+  });
+
+  // Sparkles dancing across stereo
+  const sparkles = [1319, 1568, 1760, 1568, 2093];
+  const sparklePans = [-0.7, 0.5, -0.3, 0.7, 0];
+
+  sparkles.forEach((freq, i) => {
+    const start = now + 0.18 + (i * 0.07);
+    const panner = ctx.createStereoPanner();
+    panner.pan.setValueAtTime(sparklePans[i], start);
+    panner.connect(master);
+
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(freq, start);
+    gain.gain.setValueAtTime(0, start);
+    gain.gain.linearRampToValueAtTime(0.2, start + 0.005);
+    gain.gain.exponentialRampToValueAtTime(0.001, start + 0.22);
+    osc.connect(gain);
+    gain.connect(panner);
+    osc.start(start);
+    osc.stop(start + 0.25);
+  });
+};
+
+// Default export for video completion (most common use)
+export const playSonicLogo = playVideoComplete;
+export default playVideoComplete;

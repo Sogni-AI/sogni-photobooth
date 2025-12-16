@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { trackEvent, trackPurchase } from '../../utils/analytics';
 import { getCampaignSource } from '../../utils/campaignAttribution';
 import { getReferralSource } from '../../utils/referralTracking';
+import { playSogniSignature } from '../../utils/sonicLogos';
 
 interface Props {
   purchase: PurchaseStatus | null;
@@ -72,6 +73,9 @@ function PurchaseProgress({ purchase, loading, onReset, onRefresh, onClose, curr
         trackEvent('Referral', 'conversion_purchase', `Referred by: ${referralSource}, Product: ${productId}`);
         // Note: The referral cookie persists for 30 days, so multiple conversions can be tracked
       }
+
+      // Play sonic logo for successful purchase
+      playSogniSignature();
     }
   }, [isCompleted, productId, purchase]);
 
