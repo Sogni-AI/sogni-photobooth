@@ -15,6 +15,7 @@
  * @param {(updater: (prev: any[]) => any[]) => void} options.setPhotos - React setState function for photos
  * @param {(projectId: string | null) => void} options.onSetActiveProject - Callback to set active project reference
  * @param {() => void} options.onOutOfCredits - Callback to trigger out of credits popup
+ * @param {'spark' | 'sogni'} options.tokenType - Payment method to use (spark or sogni)
  * @returns {Promise<void>}
  */
 export const enhancePhoto = async (options) => {
@@ -32,6 +33,7 @@ export const enhancePhoto = async (options) => {
     // onSetActiveProject - not used for enhancement to avoid interfering with main generation
     useKontext = false,
     customPrompt = '',
+    tokenType = 'spark', // Payment method - defaults to spark for backwards compatibility
     onOutOfCredits // Callback to show out of credits popup
   } = options;
 
@@ -184,7 +186,7 @@ export const enhancePhoto = async (options) => {
       projectConfig = {
         type: 'image', // Required in SDK v4.x.x
         testnet: false,
-        tokenType: 'spark',
+        tokenType: tokenType,
         modelId: "flux1-dev-kontext_fp8_scaled",
         positivePrompt: customPrompt || 'Enhance the image',
         sizePreset: 'custom',
@@ -203,7 +205,7 @@ export const enhancePhoto = async (options) => {
       projectConfig = {
         type: 'image', // Required in SDK v4.x.x
         testnet: false,
-        tokenType: 'spark',
+        tokenType: tokenType,
         modelId: "flux1-krea-dev_fp8_scaled",
         positivePrompt: `(Extra detailed and contrasty portrait) ${photo.positivePrompt || 'Portrait masterpiece'}`,
         sizePreset: 'custom',

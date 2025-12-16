@@ -1008,9 +1008,10 @@ const PhotoGallery = ({
       onSetActiveProject: (projectId) => {
         activeProjectReference.current = projectId;
       },
+      tokenType: tokenType, // Use user's saved payment preference
       onOutOfCredits: onOutOfCredits // Pass out of credits callback
     });
-  }, [selectedPhotoIndex, selectedSubIndex, desiredWidth, desiredHeight, sogniClient, setPhotos, outputFormat, clearFrameCacheForPhoto, activeProjectReference, enhancePhoto, photos, onClearQrCode, onOutOfCredits]);
+  }, [selectedPhotoIndex, selectedSubIndex, desiredWidth, desiredHeight, sogniClient, setPhotos, outputFormat, clearFrameCacheForPhoto, activeProjectReference, enhancePhoto, photos, onClearQrCode, onOutOfCredits, tokenType]);
 
   // Handle enhancement with Kontext (with custom prompt)
   const handleEnhanceWithKontext = useCallback(() => {
@@ -1053,9 +1054,10 @@ const PhotoGallery = ({
       // Kontext-specific parameters
       useKontext: true,
       customPrompt: trimmed,
+      tokenType: tokenType, // Use user's saved payment preference
       onOutOfCredits: onOutOfCredits // Pass out of credits callback
     });
-  }, [selectedPhotoIndex, selectedSubIndex, desiredWidth, desiredHeight, sogniClient, setPhotos, outputFormat, clearFrameCacheForPhoto, activeProjectReference, enhancePhoto, onClearQrCode, photos, onOutOfCredits]);
+  }, [selectedPhotoIndex, selectedSubIndex, desiredWidth, desiredHeight, sogniClient, setPhotos, outputFormat, clearFrameCacheForPhoto, activeProjectReference, enhancePhoto, onClearQrCode, photos, onOutOfCredits, tokenType]);
 
   // Handle prompt modal submission
   const handlePromptSubmit = useCallback(() => {
@@ -1204,6 +1206,7 @@ const PhotoGallery = ({
         positivePrompt: motionPrompt,
         negativePrompt: negativePrompt,
         motionEmoji: selectedEmoji,
+        tokenType: tokenType,
         onComplete: (videoUrl) => {
           // Play sonic logo before auto-play (respects sound settings)
           playSonicLogo(settings.soundEnabled);
@@ -1288,6 +1291,7 @@ const PhotoGallery = ({
         duration: settings.videoDuration || 5,
         positivePrompt: motionPrompt,
         negativePrompt: negativePrompt,
+        tokenType: tokenType,
         onComplete: (videoUrl) => {
           // Play sonic logo before auto-play (respects sound settings)
           playSonicLogo(settings.soundEnabled);

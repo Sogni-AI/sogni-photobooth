@@ -54,6 +54,7 @@ interface GenerateVideoOptions {
   positivePrompt?: string;
   negativePrompt?: string;
   motionEmoji?: string;
+  tokenType?: 'spark' | 'sogni';
   onComplete?: (videoUrl: string) => void;
   onError?: (error: Error) => void;
   onCancel?: () => void;
@@ -133,6 +134,7 @@ export async function generateVideo(options: GenerateVideoOptions): Promise<void
     positivePrompt = '',
     negativePrompt = '',
     motionEmoji,
+    tokenType = 'spark',
     onComplete,
     onError,
     onOutOfCredits
@@ -255,7 +257,7 @@ export async function generateVideo(options: GenerateVideoOptions): Promise<void
       // Frame count calculated from duration and fps
       frames: frames,
       fps: fps,
-      tokenType: 'spark'
+      tokenType: tokenType
     };
 
     // Log video job submission for debugging
