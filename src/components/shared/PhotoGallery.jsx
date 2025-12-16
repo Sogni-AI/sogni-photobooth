@@ -57,7 +57,6 @@ const getRandomVideoMessage = () => {
 // Key I2V principles: Can only animate what EXISTS in the image - expressions, movements, camera, effects
 // Sorted alphabetically by label
 const MOTION_TEMPLATES = [
-  { emoji: '👴', label: 'Age', prompt: 'rapidly ages, wrinkles form, hair turns grey then white, becoming elderly' },
   { emoji: '👽', label: 'Alien', prompt: 'eyes turn large and black, skin turns grey, alien transformation' },
   { emoji: '🤮', label: 'Barf', prompt: 'face turns green and sick, cheeks bulge, head lurches forward violently puking, vomit spews out' },
   { emoji: '🕳️', label: 'Black Hole', prompt: 'swirling black hole vortex forms behind, everything gets pulled toward it' },
@@ -107,6 +106,7 @@ const MOTION_TEMPLATES = [
   { emoji: '🫣', label: 'Peek', prompt: 'hands slowly part from face, one eye peeks through nervously' },
   { emoji: '🌸', label: 'Petals', prompt: 'cherry blossom petals swirl romantically through the air' },
   { emoji: '🥺', label: 'Pleading', prompt: 'eyes widen sweetly, bottom lip pushes out, head tilts down sadly' },
+  { emoji: '🍕', label: 'Pizza', prompt: 'pizza slices rain down from above, cheese stretches and drips, mouth opens wide catching slices' },
   { emoji: '😡', label: 'Rage', prompt: 'face turns red with anger, steam shoots from ears, veins bulge, furious' },
   { emoji: '🌈', label: 'Rainbow', prompt: 'vibrant rainbow colors wash across, prismatic light beams everywhere' },
   { emoji: '🤖', label: 'Robot', prompt: 'skin turns metallic, robotic parts appear, mechanical transformation' },
