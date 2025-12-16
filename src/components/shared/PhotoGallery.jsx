@@ -498,7 +498,6 @@ const renderMotionPicker = (selectedCategory, setSelectedCategory, handleGenerat
   if (!category) return null;
   
   const templateGrid = getSquareGridDimensions(category.templates.length, isMobile);
-  const baseColor = categoryColors[category.name] || '138, 126, 234';
 
   return (
     <div 
