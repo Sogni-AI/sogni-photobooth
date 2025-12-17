@@ -30,7 +30,13 @@ import { trackShareWithStyle } from './services/analyticsService';
 import { CUSTOM_PROMPT_IMAGE_KEY } from './components/shared/CustomPromptPopup';
 import urls from './config/urls';
 import clickSound from './click.mp3';
-import cameraWindSound from './camera-wind.mp3';
+import { warmUpAudio } from './utils/sonicLogos';
+import flash1Sound from './flash1.mp3';
+import flash2Sound from './flash2.mp3';
+import flash3Sound from './flash3.mp3';
+import flash4Sound from './flash4.mp3';
+import flash5Sound from './flash5.mp3';
+import flash6Sound from './flash6.mp3';
 // import helloSound from './hello.mp3';
 import light1Image from './light1.png';
 import light2Image from './light2.png';
@@ -161,10 +167,18 @@ const App = () => {
   const videoReference = useRef(null);
   const canvasReference = useRef(null);
   const shutterSoundReference = useRef(null);
-  const cameraWindSoundReference = useRef(null);
   // const helloSoundReference = useRef(null);
   const slothicornReference = useRef(null);
   const soundPlayedForPhotos = useRef(new Set()); // Track which photo IDs have already played sound
+  
+  // Pool of pre-unlocked flash sound audio elements for iOS compatibility
+  // Each flash sound has multiple instances to allow concurrent playback
+  const flashSoundPoolRef = useRef({
+    pool: [], // Pool of available audio elements
+    unlocked: false, // Whether audio has been unlocked
+    poolSize: 12 // Number of audio elements in pool (2 per sound for concurrent playback)
+  });
+  
   const prevWinterContextRef = useRef(false); // Track previous winter context state (initialized to false)
   const prevModelRef = useRef(null); // Track previous model to detect actual model changes
   const prevStyleRef = useRef(null); // Track previous style to detect style changes
@@ -172,6 +186,44 @@ const App = () => {
   const isInitialRenderRef = useRef(true); // Track if this is the initial render
   const userExplicitlySelectedModelRef = useRef(false); // Track if user explicitly chose a model (disables auto-switching)
   const manualModelChangeRef = useRef(false); // Track if a manual model change is in progress (prevents auto-switching during reset)
+
+  // Array of flash sound sources for random selection
+  const flashSoundSources = useMemo(() => [
+    flash1Sound,
+    flash2Sound,
+    flash3Sound,
+    flash4Sound,
+    flash5Sound,
+    flash6Sound
+  ], []);
+
+  // Initialize flash sound pool
+  useEffect(() => {
+    const pool = flashSoundPoolRef.current;
+    
+    // Create pool of audio elements (2 instances per flash sound for concurrent playback)
+    // This ensures we have pre-unlocked audio elements ready for each sound
+    for (let soundIndex = 0; soundIndex < 6; soundIndex++) {
+      for (let instance = 0; instance < 2; instance++) {
+        const audio = new Audio(flashSoundSources[soundIndex]);
+        audio.volume = 1.0;
+        audio.preload = 'auto';
+        pool.pool.push({
+          audio,
+          soundIndex,
+          inUse: false
+        });
+      }
+    }
+    
+    return () => {
+      // Cleanup: remove all audio elements
+      pool.pool.forEach(item => {
+        item.audio.remove();
+      });
+      pool.pool = [];
+    };
+  }, [flashSoundSources]);
 
   useEffect(() => {
     const unlockAudio = () => {
@@ -187,30 +239,26 @@ const App = () => {
         });
       }
     
-      if (cameraWindSoundReference.current) {
-        const audio = cameraWindSoundReference.current;
-        audio.muted = true;
-        audio.play().then(() => {
-          audio.pause();
-          audio.currentTime = 0;
-          audio.muted = false;
-        }).catch(err => {
-          console.warn('Failed to unlock wind sound:', err);
+      // Unlock all flash sound audio elements in the pool
+      const pool = flashSoundPoolRef.current;
+      if (!pool.unlocked) {
+        pool.unlocked = true;
+        pool.pool.forEach((item, index) => {
+          const audio = item.audio;
+          audio.muted = true;
+          audio.play().then(() => {
+            audio.pause();
+            audio.currentTime = 0;
+            audio.muted = false;
+          }).catch(err => {
+            console.warn(`Failed to unlock flash sound ${index + 1}:`, err);
+          });
         });
       }
-      /*
-      if (helloSoundReference.current) {
-        const audio = helloSoundReference.current;
-        audio.muted = true;
-        audio.play().then(() => {
-          audio.pause();
-          audio.currentTime = 0;
-          audio.muted = false;
-        }).catch(err => {
-          console.warn('Failed to unlock hello sound:', err);
-        });
-      }
-      */
+      
+      // Warm up Web Audio API AudioContext for iOS compatibility
+      // This ensures video complete and daily boost sounds work throughout the session
+      warmUpAudio();
   
       window.removeEventListener("touchstart", unlockAudio);
       window.removeEventListener("click", unlockAudio);
@@ -264,6 +312,60 @@ const App = () => {
     showSplashOnInactivity,
     inactivityTimeout
   } = settings;
+
+  // Helper function to play a random flash sound using pre-unlocked pool (allows concurrent playback)
+  const playRandomFlashSound = useCallback(() => {
+    if (!soundEnabled) {
+      return;
+    }
+    
+    const pool = flashSoundPoolRef.current;
+    
+    // Randomly select one of the 6 flash sounds
+    const randomIndex = Math.floor(Math.random() * 6);
+    
+    // Find an available audio element for this specific sound
+    const availableItem = pool.pool.find(item => 
+      !item.inUse && item.soundIndex === randomIndex
+    );
+    
+    // If no available item for this sound, all instances are in use - skip this play
+    if (!availableItem) {
+      // Could optionally fall back to any available sound, but for now just skip
+      return;
+    }
+    
+    // Mark as in use
+    availableItem.inUse = true;
+    const audio = availableItem.audio;
+    
+    // Reset to beginning to ensure sound plays from start
+    audio.currentTime = 0;
+    
+    // Try to play
+    const playPromise = audio.play();
+    
+    if (playPromise !== undefined) {
+      playPromise
+        .then(() => {
+          // Successfully playing
+        })
+        .catch(error => {
+          console.warn(`[Flash Sound] Play failed for flash${randomIndex + 1}.mp3:`, error);
+          // Mark as available again on error
+          availableItem.inUse = false;
+        });
+    }
+    
+    // Return to pool when finished
+    const returnToPool = () => {
+      availableItem.inUse = false;
+      audio.currentTime = 0;
+    };
+    
+    audio.addEventListener('ended', returnToPool, { once: true });
+    audio.addEventListener('error', returnToPool, { once: true });
+  }, [soundEnabled]);
 
   // Add state to store the last used photo blob and data URL for "More" button
   const [lastPhotoData, setLastPhotoData] = useState({ blob: null, dataUrl: null }); // Keep this
@@ -6003,21 +6105,11 @@ const App = () => {
             if (updated[photoIndex] && !updated[photoIndex].permanentError) {
               const photoId = updated[photoIndex].id;
               
-              // Play camera wind sound for this final image if we haven't already
-              if (soundEnabled && !soundPlayedForPhotos.current.has(photoId) && cameraWindSoundReference.current) {
+              // Play random flash sound for this final image if we haven't already
+              // Using pre-unlocked audio pool allows concurrent playback and iOS compatibility
+              if (soundEnabled && !soundPlayedForPhotos.current.has(photoId)) {
                 soundPlayedForPhotos.current.add(photoId);
-                
-                // Reset to beginning to ensure sound plays every time
-                cameraWindSoundReference.current.currentTime = 0;
-                
-                try {
-                  cameraWindSoundReference.current.play();
-                } catch (error) {
-                  console.warn("Initial camera wind play attempt failed, trying promise-based approach:", error);
-                  cameraWindSoundReference.current.play().catch(error => {
-                    console.warn("Error playing camera wind sound:", error);
-                  });
-                }
+                playRandomFlashSound();
               }
               
               // Extract promptKey from hashtag or selectedStyle
@@ -9535,11 +9627,7 @@ const App = () => {
           Your browser does not support the audio element.
         </audio>
 
-        {/* Camera wind sound */}
-        <audio ref={cameraWindSoundReference} preload="auto">
-          <source src={cameraWindSound} type="audio/mpeg" />
-          Your browser does not support the audio element.
-        </audio>
+        {/* Flash sounds are created dynamically for concurrent playback */}
 
         {/* Hello sound */}
         {/*
