@@ -359,13 +359,13 @@ const renderCompactPolaroid = ({ emoji, label, onClick, index, rotation = 0, tit
   const hasBeenUsed = showUsedIndicator && hasUsedMotionEmoji(emoji);
   
   // Polaroid frame dimensions - THICK borders for categories, normal for templates
-  // Tighter on mobile portrait to maximize polaroid size
+  // Bigger frames and text on mobile portrait for templates
   const framePad = isLarge 
     ? (isMobilePortrait ? 6 : (isMobile ? 10 : 14)) 
-    : (isMobilePortrait ? 3 : (isMobile ? 4 : 5));
+    : (isMobilePortrait ? 6 : (isMobile ? 4 : 5));
   const bottomPad = isLarge 
     ? (isMobilePortrait ? 22 : (isMobile ? 32 : 42)) 
-    : (isMobilePortrait ? 14 : (isMobile ? 20 : 26));
+    : (isMobilePortrait ? 24 : (isMobile ? 20 : 26));
   
   return (
     <button
@@ -422,7 +422,7 @@ const renderCompactPolaroid = ({ emoji, label, onClick, index, rotation = 0, tit
         <span style={{ 
           fontSize: isLarge 
             ? (isMobilePortrait ? '32px' : (isMobile ? '42px' : '56px')) 
-            : (isMobilePortrait ? '20px' : (isMobile ? '28px' : '38px')),
+            : (isMobilePortrait ? '32px' : (isMobile ? '28px' : '38px')),
           lineHeight: 1,
         }}>{emoji}</span>
       </div>
@@ -439,7 +439,7 @@ const renderCompactPolaroid = ({ emoji, label, onClick, index, rotation = 0, tit
         fontFamily: '"Permanent Marker", cursive',
         fontSize: isLarge 
           ? (isMobilePortrait ? '10px' : (isMobile ? '13px' : '15px')) 
-          : (isMobilePortrait ? '8px' : (isMobile ? '10px' : '12px')),
+          : (isMobilePortrait ? '12px' : (isMobile ? '10px' : '12px')),
         color: '#333',
         textAlign: 'center',
         lineHeight: 1,
@@ -452,10 +452,10 @@ const renderCompactPolaroid = ({ emoji, label, onClick, index, rotation = 0, tit
       {hasBeenUsed && (
         <div style={{
           position: 'absolute',
-          bottom: isMobilePortrait ? '2px' : '3px',
-          right: isMobilePortrait ? '2px' : '3px',
-          width: isMobilePortrait ? '12px' : '16px',
-          height: isMobilePortrait ? '12px' : '16px',
+          bottom: isMobilePortrait ? (isLarge ? '2px' : '3px') : '3px',
+          right: isMobilePortrait ? (isLarge ? '2px' : '3px') : '3px',
+          width: isMobilePortrait ? (isLarge ? '12px' : '14px') : '16px',
+          height: isMobilePortrait ? (isLarge ? '12px' : '14px') : '16px',
           borderRadius: '50%',
           background: '#4CAF50',
           display: 'flex',
@@ -466,7 +466,7 @@ const renderCompactPolaroid = ({ emoji, label, onClick, index, rotation = 0, tit
         }}>
           <span style={{
             color: '#fff',
-            fontSize: isMobilePortrait ? '8px' : '10px',
+            fontSize: isMobilePortrait ? (isLarge ? '8px' : '9px') : '10px',
             fontWeight: 'bold',
             lineHeight: 1,
           }}>✓</span>
@@ -505,20 +505,21 @@ const renderMotionPicker = (selectedCategory, setSelectedCategory, handleGenerat
     document.head.appendChild(style);
   }
   
-  // Grid config: 4 cols always
-  // Categories: 8 items = 4x2
+  // Grid config: mobile portrait uses 2 cols for categories, otherwise 4 cols
+  // Categories: 8 items = 2x4 on mobile portrait, 4x2 otherwise
   // Templates: 16 items = 4x4
-  const cols = 4;
+  const categoryCols = isMobilePortrait ? 2 : 4;
+  const templateCols = 4;
   
-  // Category view: 8 items in 4x2 grid with larger tiles
+  // Category view: 8 items in 2x4 grid on mobile portrait, 4x2 otherwise
   if (!selectedCategory) {
     return (
       <div 
         key="categories"
         style={{
           display: 'grid',
-          gridTemplateColumns: `repeat(${cols}, 1fr)`,
-          gridTemplateRows: 'repeat(2, 1fr)',
+          gridTemplateColumns: `repeat(${categoryCols}, 1fr)`,
+          gridTemplateRows: `repeat(${8 / categoryCols}, 1fr)`,
           gap: isMobilePortrait ? '6px' : (isMobile ? '8px' : '12px'),
           padding: isMobilePortrait ? '6px' : (isMobile ? '10px' : '14px'),
           flex: '1 1 auto',
@@ -609,13 +610,13 @@ const renderMotionPicker = (selectedCategory, setSelectedCategory, handleGenerat
           flex: '1 1 auto',
           overflow: 'hidden',
           minHeight: 0,
-          padding: isMobilePortrait ? '4px' : (isMobile ? '8px' : '12px'),
+          padding: isMobilePortrait ? '8px' : (isMobile ? '8px' : '12px'),
         }}>
         <div style={{
           display: 'grid',
-          gridTemplateColumns: `repeat(${cols}, 1fr)`,
+          gridTemplateColumns: `repeat(${templateCols}, 1fr)`,
           gridTemplateRows: 'repeat(4, 1fr)',
-          gap: isMobilePortrait ? '4px' : (isMobile ? '6px' : '10px'),
+          gap: isMobilePortrait ? '10px' : (isMobile ? '6px' : '10px'),
           // Square grid: use height to determine size, center horizontally
           height: '100%',
           aspectRatio: '1 / 1',
@@ -4360,7 +4361,6 @@ const PhotoGallery = ({
                       background: '#ffeb3b',
                       borderRadius: '8px',
                       padding: '8px',
-                      boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
                       border: 'none',
                       width: selectedPhoto.generatingVideo ? 'min(90vw, 280px)' : 'min(95vw, 950px)',
                       display: 'flex',

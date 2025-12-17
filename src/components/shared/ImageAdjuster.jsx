@@ -107,6 +107,71 @@ const ImageAdjuster = ({
     }
   }, [initialPosition.x, initialPosition.y, defaultScale]);
 
+  // Reset imageLoaded when imageUrl changes (new image uploaded/selected)
+  // Also check if image is already loaded (cached images may load instantly)
+  useEffect(() => {
+    setImageLoaded(false);
+    
+    // Check if image is already loaded (cached images may load instantly)
+    // Use multiple checks with increasing delays to catch both cached and loading images
+    let checkCount = 0;
+    const maxChecks = 50; // Check for up to 5 seconds (50 * 100ms)
+    let timeoutId = null;
+    let isCleanedUp = false;
+    
+    const checkImageLoaded = () => {
+      if (isCleanedUp) return;
+      
+      checkCount++;
+      if (imageRef.current) {
+        const img = imageRef.current;
+        // Check if image is complete and has valid dimensions
+        // Don't check src match as blob URLs might be different objects
+        if (img.complete && img.naturalWidth > 0 && img.naturalHeight > 0) {
+          console.log('Image already loaded (cached or fast load), setting imageLoaded to true', {
+            complete: img.complete,
+            naturalWidth: img.naturalWidth,
+            naturalHeight: img.naturalHeight,
+            checkCount: checkCount,
+            src: img.src.substring(0, 50) + '...'
+          });
+          setImageLoaded(true);
+          return; // Stop checking
+        }
+      }
+      
+      // Continue checking if not loaded yet and haven't exceeded max checks
+      if (checkCount < maxChecks) {
+        timeoutId = setTimeout(checkImageLoaded, 100);
+      } else {
+        // After max checks, if image still not loaded, show it anyway to prevent stuck state
+        // This handles edge cases where onLoad never fires
+        console.warn('Image did not load within expected time, showing anyway to prevent stuck state', {
+          checkCount: checkCount,
+          imageRefExists: !!imageRef.current,
+          imageComplete: imageRef.current?.complete,
+          naturalWidth: imageRef.current?.naturalWidth,
+          naturalHeight: imageRef.current?.naturalHeight
+        });
+        // Show the image anyway - better to show a potentially broken image than stuck loading state
+        if (imageRef.current) {
+          setImageLoaded(true);
+        }
+      }
+    };
+    
+    // Start checking after a short delay to allow DOM to update
+    timeoutId = setTimeout(checkImageLoaded, 50);
+    
+    // Cleanup function to cancel pending checks
+    return () => {
+      isCleanedUp = true;
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
+  }, [imageUrl]);
+
   // Load theme frame URLs and padding when theme or aspect ratio changes
   useEffect(() => {
     const loadThemeFrames = async () => {
@@ -334,10 +399,31 @@ const ImageAdjuster = ({
   };
   
   // Handle image load
-  const handleImageLoad = () => {
-    setImageLoaded(true);
+  const handleImageLoad = useCallback(() => {
+    // Double-check that image is actually loaded before setting state
+    if (imageRef.current && imageRef.current.complete && 
+        imageRef.current.naturalWidth > 0 && imageRef.current.naturalHeight > 0) {
+      console.log('Image load event fired, image is ready', {
+        naturalWidth: imageRef.current.naturalWidth,
+        naturalHeight: imageRef.current.naturalHeight
+      });
+      setImageLoaded(true);
+    } else {
+      console.warn('Image load event fired but image not ready yet, will retry', {
+        complete: imageRef.current?.complete,
+        naturalWidth: imageRef.current?.naturalWidth,
+        naturalHeight: imageRef.current?.naturalHeight
+      });
+      // Retry after a short delay in case dimensions aren't ready yet
+      setTimeout(() => {
+        if (imageRef.current && imageRef.current.complete && 
+            imageRef.current.naturalWidth > 0 && imageRef.current.naturalHeight > 0) {
+          setImageLoaded(true);
+        }
+      }, 100);
+    }
     // Don't reset position - keep the initial position from props
-  };
+  }, []);
   
   // Add document-level event listeners for mouse drag operations
   useEffect(() => {
@@ -545,7 +631,7 @@ const ImageAdjuster = ({
   }, []);
   
   // Handle confirm button click
-  const handleConfirm = () => {
+  const handleConfirm = useCallback(() => {
     if (!containerRef.current || !imageRef.current) return;
     
     // Prevent multiple clicks while processing
@@ -554,12 +640,28 @@ const ImageAdjuster = ({
       return;
     }
     
+    // Check if image is loaded - critical for mobile to prevent crashes
+    const image = imageRef.current;
+    
+    // Validate image dimensions - prevent division by zero or invalid calculations
+    // This check must happen before any calculations to prevent React error #310
+    if (!image.complete || !image.naturalWidth || !image.naturalHeight || 
+        image.naturalWidth === 0 || image.naturalHeight === 0) {
+      console.warn('⚠️ Image not fully loaded yet:', {
+        complete: image.complete,
+        naturalWidth: image.naturalWidth,
+        naturalHeight: image.naturalHeight,
+        imageLoaded: imageLoaded
+      });
+      alert('Image is not ready yet. Please wait a moment for the image to fully load, then try again.');
+      return;
+    }
+    
     // Set processing state to prevent unmounting
     setIsProcessing(true);
     console.log('🎬 Starting image processing...');
     
     const container = containerRef.current;
-    const image = imageRef.current;
     
     // Create a canvas to render the adjusted image
     const canvas = document.createElement('canvas');
@@ -623,6 +725,7 @@ const ImageAdjuster = ({
       // Validate that blob was created successfully (can fail on mobile Safari)
       if (!pngBlob) {
         console.error('❌ canvas.toBlob() failed - blob is null/undefined');
+        setIsProcessing(false);
         alert('Failed to process image. This can happen on mobile with large images. Please try with a smaller zoom or take a new photo.');
         return;
       }
@@ -649,6 +752,7 @@ const ImageAdjuster = ({
       // Validate final blob before confirming
       if (!finalBlob) {
         console.error('❌ Final blob is null after conversion');
+        setIsProcessing(false);
         alert('Failed to process image. Please try again.');
         return;
       }
@@ -663,7 +767,7 @@ const ImageAdjuster = ({
       console.log('✅ Processing complete, calling onConfirm');
       onConfirm(finalBlob, { position, scale, batchCount: selectedBatchCount });
     }, 'image/png', 1.0);
-  };
+  }, [isProcessing, imageLoaded, dimensions, scale, position, selectedBatchCount, onConfirm]);
   
   
   return (
@@ -733,6 +837,7 @@ const ImageAdjuster = ({
         >
           <div className="image-container">
             <img
+              key={imageUrl} // Force re-render when URL changes to ensure onLoad fires
               ref={imageRef}
               src={imageUrl}
               alt="Adjust this image"
@@ -750,10 +855,19 @@ const ImageAdjuster = ({
                 objectPosition: 'center'
               }}
               onLoad={() => {
-                console.log('Image loaded with position:', position, 'scale:', scale);
+                console.log('Image onLoad event fired with position:', position, 'scale:', scale);
                 console.log('Frame padding for aethir2:', framePadding);
                 console.log('Theme:', tezdevTheme);
                 handleImageLoad();
+              }}
+              onError={(e) => {
+                console.error('Image failed to load:', e);
+                // Show image anyway after error to prevent stuck loading state
+                // User will see broken image rather than infinite loading
+                setTimeout(() => {
+                  console.warn('Setting imageLoaded to true despite error to prevent stuck state');
+                  setImageLoaded(true);
+                }, 500);
               }}
               onMouseDown={handleDragStart}
               onTouchStart={handleDragStart}
@@ -845,10 +959,10 @@ const ImageAdjuster = ({
             <button 
               className="confirm-button confirm-button-main" 
               onClick={handleConfirm}
-              disabled={isProcessing}
+              disabled={isProcessing || !imageLoaded}
               style={{
                 ...(headerText === 'Adjust Your Style Reference' ? { borderRadius: '12px' } : {}),
-                ...(isProcessing ? { opacity: 0.6, cursor: 'not-allowed' } : {})
+                ...(isProcessing || !imageLoaded ? { opacity: 0.6, cursor: 'not-allowed' } : {})
               }}
             >
               {headerText === 'Adjust Your Style Reference' ? (
@@ -856,7 +970,7 @@ const ImageAdjuster = ({
               ) : (
                 <div className="confirm-button-content">
                   <div className="confirm-button-label">
-                    {isProcessing ? '⏳ Processing...' : `Imagine ${selectedBatchCount}x`}
+                    {isProcessing ? '⏳ Processing...' : !imageLoaded ? '⏳ Loading image...' : `Imagine ${selectedBatchCount}x`}
                   </div>
                   <div className="confirm-button-details">
                     {!isProcessing && isAuthenticated && !costLoading && cost !== null && (
