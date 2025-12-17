@@ -3829,7 +3829,7 @@ const PhotoGallery = ({
       {!isPromptSelectorMode && selectedPhotoIndex === null && photos && photos.length > 0 && photos.filter(p => !p.hidden && !p.error && p.images && p.images.length > 0).length > 0 && (
         <div style={{ 
           position: 'fixed', 
-          right: '12px', 
+          right: '32px', 
           bottom: '32px', 
           display: 'flex', 
           gap: '8px', 
@@ -4219,7 +4219,7 @@ const PhotoGallery = ({
           }}
           style={{
             position: 'fixed',
-            right: '12px',
+            right: '32px',
             bottom: '32px',
             left: 'auto',
             zIndex: 9999,

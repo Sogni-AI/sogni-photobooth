@@ -451,7 +451,7 @@
 .splash-return-btn {
   position: fixed;
   bottom: 32px;
-  left: 12px;
+  left: 32px;
   background: linear-gradient(135deg, #ff5252, #e53935);
   color: white;
   padding: 8px 16px;
@@ -1216,7 +1216,7 @@ body:has(.camera-start-menu.phase-options .options-section.no-animations) .auth-
 
   .splash-return-btn {
     bottom: max(32px, calc(env(safe-area-inset-bottom) + 17px));
-    left: 12px;
+    left: 12px !important;
     padding: 8px 16px;
     padding-bottom: 10px;
     font-size: 16px;
@@ -1511,7 +1511,7 @@ body:has(.camera-start-menu.phase-options .options-section.no-animations) .auth-
 
   .splash-return-btn {
     bottom: max(32px, calc(env(safe-area-inset-bottom) + 17px));
-    left: 12px;
+    left: 12px !important;
     padding: 8px 16px;
     padding-bottom: 10px;
     font-size: 16px;
