@@ -577,7 +577,7 @@ body.has-selected-photo .film-frame.selected[data-enhancing="true"] .photo-label
   position: fixed;
   left: 20px;
   bottom: 20px;
-  background: #ff5252 !important;
+  background: linear-gradient(135deg, #ff5252, #e53935) !important;
   color: white;
   border: none;
   padding: 8px 16px;
@@ -607,7 +607,7 @@ body.has-selected-photo .film-frame.selected[data-enhancing="true"] .photo-label
 .corner-btn.continue-corner-btn {
   left: unset;
   right: 20px;
-  background: #ff5252 !important;
+  background: linear-gradient(135deg, #ff5252, #e53935) !important;
 }
 
 /* When on intro screen, position Continue differently */

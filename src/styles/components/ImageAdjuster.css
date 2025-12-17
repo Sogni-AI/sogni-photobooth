@@ -42,6 +42,7 @@
   touch-action: none;
   overflow: visible;
   min-width: 600px;
+  z-index: 1001;
 }
 
 .image-adjuster-container h2 {
@@ -475,7 +476,7 @@
 }
 
 .confirm-button-main:hover {
-  background: transparent !important;
+  background: rgba(255, 255, 255, 0.1) !important;
   box-shadow: none !important;
   transform: none !important;
 }
@@ -486,7 +487,8 @@
   min-width: auto !important;
   width: auto !important;
   flex-shrink: 0;
-  border-left: 1px solid rgba(255, 255, 255, 0.15);
+  border: none !important;
+  border-left: 1px solid rgba(255, 255, 255, 0.15) !important;
   background: transparent !important;
   box-shadow: none !important;
   transform: none !important;
@@ -494,7 +496,7 @@
 }
 
 .confirm-button-dropdown:hover {
-  background: transparent !important;
+  background: rgba(255, 255, 255, 0.1) !important;
   box-shadow: none !important;
   transform: none !important;
 }
@@ -514,7 +516,7 @@
   border-radius: 8px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
   overflow: hidden;
-  z-index: 10000;
+  z-index: 100000;
   width: 70px;
 }
 

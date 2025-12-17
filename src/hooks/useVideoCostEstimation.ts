@@ -35,6 +35,8 @@ interface VideoCostEstimationParams {
   enabled?: boolean;
   /** Photo ID to bust cache when switching photos */
   photoId?: number | null;
+  /** Number of jobs to request (default: 1) */
+  jobCount?: number;
 }
 
 interface VideoCostEstimationResult {
@@ -67,9 +69,10 @@ async function fetchVideoCostEstimate(
   height: number,
   frames: number,
   fps: number,
-  steps: number
+  steps: number,
+  jobCount: number = 1
 ): Promise<VideoEstimateResponse> {
-  const url = `https://socket.sogni.ai/api/v1/job-video/estimate/${tokenType}/${encodeURIComponent(modelId)}/${width}/${height}/${frames}/${fps}/${steps}`;
+  const url = `https://socket.sogni.ai/api/v1/job-video/estimate/${tokenType}/${encodeURIComponent(modelId)}/${width}/${height}/${frames}/${fps}/${steps}/${jobCount}`;
 
   const response = await fetch(url);
   if (!response.ok) {
@@ -101,7 +104,8 @@ export function useVideoCostEstimation(params: VideoCostEstimationParams): Video
     fps = VIDEO_CONFIG.defaultFps,
     duration = VIDEO_CONFIG.defaultDuration,
     enabled = true,
-    photoId
+    photoId,
+    jobCount = 1
   } = params;
 
   // Calculate frames from duration and fps if not explicitly provided
@@ -138,7 +142,8 @@ export function useVideoCostEstimation(params: VideoCostEstimationParams): Video
       frames,
       fps,
       steps: qualityConfig.steps,
-      photoId
+      photoId,
+      jobCount
     });
 
     if (paramsHash === lastParamsRef.current) {
@@ -157,7 +162,8 @@ export function useVideoCostEstimation(params: VideoCostEstimationParams): Video
         dimensions.height,
         frames,
         fps,
-        qualityConfig.steps
+        qualityConfig.steps,
+        jobCount
       );
 
       if (result?.quote?.project) {
@@ -202,7 +208,7 @@ export function useVideoCostEstimation(params: VideoCostEstimationParams): Video
       setCostInUSD(null);
       setLoading(false);
     }
-  }, [enabled, imageWidth, imageHeight, resolution, quality, frames, fps, tokenType, photoId]);
+  }, [enabled, imageWidth, imageHeight, resolution, quality, frames, fps, tokenType, photoId, jobCount]);
 
   // Fetch on mount and when params change
   useEffect(() => {
@@ -238,7 +244,8 @@ export async function getVideoCostEstimate(
   resolution: VideoResolution = '480p',
   quality: VideoQualityPreset = 'fast',
   duration: number = VIDEO_CONFIG.defaultDuration,
-  fps: number = VIDEO_CONFIG.defaultFps
+  fps: number = VIDEO_CONFIG.defaultFps,
+  jobCount: number = 1
 ): Promise<{ cost: number | null; costInUSD: number | null }> {
   try {
     const qualityConfig = VIDEO_QUALITY_PRESETS[quality];
@@ -252,7 +259,8 @@ export async function getVideoCostEstimate(
       dimensions.height,
       frames,
       fps,
-      qualityConfig.steps
+      qualityConfig.steps,
+      jobCount
     );
 
     if (result?.quote?.project) {

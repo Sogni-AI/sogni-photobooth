@@ -17,7 +17,7 @@ import { isFluxKontextModel, SAMPLE_GALLERY_CONFIG, getQRWatermarkConfig } from 
 import { themeConfigService } from '../../services/themeConfig';
 import { useApp } from '../../context/AppContext';
 import { trackDownloadWithStyle } from '../../services/analyticsService';
-import { downloadImagesAsZip } from '../../utils/bulkDownload';
+import { downloadImagesAsZip, downloadVideosAsZip } from '../../utils/bulkDownload';
 import { isWebShareSupported } from '../../services/WebShare';
 import CustomPromptPopup from './CustomPromptPopup';
 import ShareMenu from './ShareMenu';
@@ -247,12 +247,12 @@ const MOTION_CATEGORIES = [
       { emoji: '🤭', label: 'Gossip', prompt: 'hand covers mouth, eyes dart sideways, leans in secretively' },
       { emoji: '💋', label: 'Kiss', prompt: 'puckers lips, blows kiss toward camera, winks flirtatiously' },
       { emoji: '🫦', label: 'Lip Bite', prompt: 'teeth bite lower lip seductively, eyes smolder, flirty expression' },
-      { emoji: '👍', label: 'Nod Yes', prompt: 'head nods up and down agreeing, warm smile, eyes brighten' },
+      { emoji: '👍', label: 'Nod Yes', prompt: 'head nods up and down agreeing, thumb raises up in approval, warm smile, eyes brighten' },
       { emoji: '🫣', label: 'Peek', prompt: 'hands slowly part from face, one eye peeks through nervously' },
       { emoji: '🫵', label: 'Point', prompt: 'finger points directly at viewer, intense eye contact, calling you out' },
       { emoji: '🙏', label: 'Prayer', prompt: 'hands press together in prayer, eyes close peacefully, serene namaste' },
       { emoji: '🫡', label: 'Salute', prompt: 'hand snaps to forehead in salute, stands at attention, serious face' },
-      { emoji: '👎', label: 'Shake No', prompt: 'head shakes side to side disagreeing, slight frown, eyes narrow' },
+      { emoji: '👎', label: 'Shake No', prompt: 'head shakes side to side disagreeing, thumb points down, slight frown, eyes narrow' },
       { emoji: '🤫', label: 'Shush', prompt: 'finger raises to lips, eyes widen, secretive expression' },
       { emoji: '👀', label: 'Side Eye', prompt: 'eyes shift suspiciously to the side, eyebrow raises slowly' },
       { emoji: '💅', label: 'Slay', prompt: 'chin raises confidently, eyes narrow fiercely, hair tosses back' },
@@ -827,6 +827,13 @@ const PhotoGallery = ({
   // Get target photo for video dropdown (from gallery motion button or slideshow)
   const videoTargetPhoto = videoTargetPhotoIndex !== null ? photos[videoTargetPhotoIndex] : selectedPhoto;
 
+  // State for batch action mode (Download or Video) - declared early for use in hooks
+  const [batchActionMode, setBatchActionMode] = useState('download'); // 'download' or 'video'
+  const [showBatchActionDropdown, setShowBatchActionDropdown] = useState(false);
+  const [showBatchVideoDropdown, setShowBatchVideoDropdown] = useState(false);
+  const [showBatchCustomVideoPromptPopup, setShowBatchCustomVideoPromptPopup] = useState(false);
+  const [selectedBatchMotionCategory, setSelectedBatchMotionCategory] = useState(null);
+
   // Video cost estimation - include selectedPhotoIndex to bust cache when switching photos
   const { loading: videoLoading, cost: videoCostRaw, costInUSD: videoUSD, refetch: refetchVideoCost } = useVideoCostEstimation({
     imageWidth: desiredWidth || 768,
@@ -838,6 +845,22 @@ const PhotoGallery = ({
     enabled: isAuthenticated && selectedPhoto !== null,
     // Include photo index to bust cache when switching between photos
     photoId: selectedPhotoIndex
+  });
+
+  // Batch video cost estimation - for up to 4 images (excluding hidden/discarded ones)
+  const loadedPhotosCount = photos.filter(
+    photo => !photo.hidden && !photo.loading && !photo.generating && !photo.error && photo.images && photo.images.length > 0 && !photo.isOriginal
+  ).slice(0, 4).length;
+  
+  const { loading: batchVideoLoading, cost: batchVideoCostRaw, costInUSD: batchVideoUSD } = useVideoCostEstimation({
+    imageWidth: desiredWidth || 768,
+    imageHeight: desiredHeight || 1024,
+    resolution: settings.videoResolution || '480p',
+    quality: settings.videoQuality || 'fast',
+    fps: settings.videoFramerate || 16,
+    duration: settings.videoDuration || 5,
+    enabled: isAuthenticated && loadedPhotosCount > 0 && showBatchVideoDropdown,
+    jobCount: loadedPhotosCount
   });
   
   // State for custom prompt popup in Sample Gallery mode
@@ -1010,16 +1033,22 @@ const PhotoGallery = ({
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (e) => {
-      if (showMoreDropdown && !e.target.closest('.download-all-circular-btn') && !e.target.closest('.more-dropdown-menu')) {
+      if (showMoreDropdown && !e.target.closest('.batch-action-button') && !e.target.closest('.more-dropdown-menu')) {
         setShowMoreDropdown(false);
+      }
+      if (showBatchActionDropdown && !e.target.closest('.batch-action-dropdown-container') && !e.target.closest('.batch-action-mode-dropdown')) {
+        setShowBatchActionDropdown(false);
+      }
+      if (showBatchVideoDropdown && !e.target.closest('.batch-action-button') && !e.target.closest('.batch-video-dropdown')) {
+        setShowBatchVideoDropdown(false);
       }
     };
     
-    if (showMoreDropdown) {
+    if (showMoreDropdown || showBatchActionDropdown || showBatchVideoDropdown) {
       document.addEventListener('click', handleClickOutside);
       return () => document.removeEventListener('click', handleClickOutside);
     }
-  }, [showMoreDropdown]);
+  }, [showMoreDropdown, showBatchActionDropdown, showBatchVideoDropdown]);
   
   // Refs for dropdown animation buttons to prevent re-triggering animations
   const enhanceButton1Ref = useRef(null);
@@ -1134,6 +1163,21 @@ const PhotoGallery = ({
     });
     setFramedImageUrls({});
   }, [settings.sogniWatermark, settings.sogniWatermarkSize, settings.sogniWatermarkMargin, settings.qrCodeUrl]);
+  
+  // Reset batchActionMode to 'download' if video mode is selected but there are more than 4 loaded photos
+  // Note: This effect runs before filteredPhotos is defined, so we use photos directly
+  useEffect(() => {
+    if (batchActionMode === 'video' && photos) {
+      // Count loaded photos (excluding originals, loading, generating, errors)
+      const loadedPhotosCount = photos.filter(
+        photo => !photo.hidden && !photo.loading && !photo.generating && !photo.error && photo.images && photo.images.length > 0 && !photo.isOriginal
+      ).length;
+
+      if (loadedPhotosCount > 4) {
+        setBatchActionMode('download');
+      }
+    }
+  }, [batchActionMode, photos]);
   
   // Effect to handle the 5-second timeout for showing the "more" button during generation
   useEffect(() => {
@@ -1780,6 +1824,194 @@ const PhotoGallery = ({
     img.src = imageUrl;
   }, [videoTargetPhotoIndex, selectedPhotoIndex, selectedSubIndex, desiredWidth, desiredHeight, sogniClient, setPhotos, settings.videoResolution, settings.videoQuality, photos, showToast]);
 
+  // Handle batch video generation for all images (up to 4)
+  const handleBatchGenerateVideo = useCallback(async (customMotionPrompt = null, customNegativePrompt = null, motionEmoji = null) => {
+    setShowBatchVideoDropdown(false);
+    setSelectedMotionCategory(null);
+
+    // Pre-warm audio for iOS
+    warmUpAudio();
+
+    // Get all loaded photos (up to 4, excluding hidden/discarded ones)
+    const loadedPhotos = photos.filter(
+      photo => !photo.hidden && !photo.loading && !photo.generating && !photo.error && photo.images && photo.images.length > 0 && !photo.isOriginal
+    ).slice(0, 4);
+
+    if (loadedPhotos.length === 0) {
+      showToast({
+        title: 'No Images',
+        message: 'No images available for video generation.',
+        type: 'error'
+      });
+      return;
+    }
+
+    // Hide the NEW badge after first video generation attempt
+    setShowVideoNewBadge(false);
+
+    // Use custom prompts if provided, otherwise use settings defaults
+    const motionPrompt = customMotionPrompt || settings.videoPositivePrompt || '';
+    const negativePrompt = customNegativePrompt !== null ? customNegativePrompt : (settings.videoNegativePrompt || '');
+    const selectedEmoji = motionEmoji || null;
+
+    // Track that this emoji has been used for video generation
+    if (selectedEmoji) {
+      markMotionEmojiUsed(selectedEmoji);
+    }
+
+    // Show toast for batch generation
+    showToast({
+      title: '🎬 Batch Video Generation',
+      message: `Starting video generation for ${loadedPhotos.length} image${loadedPhotos.length > 1 ? 's' : ''}...`,
+      type: 'info',
+      timeout: 3000
+    });
+
+    // Generate videos for each photo
+    let successCount = 0;
+    let errorCount = 0;
+
+    for (let i = 0; i < loadedPhotos.length; i++) {
+      const photo = loadedPhotos[i];
+      const photoIndex = photos.findIndex(p => p.id === photo.id);
+
+      if (photoIndex === -1 || photo.generatingVideo) {
+        continue;
+      }
+
+      // Get the actual image dimensions by loading the image
+      const imageUrl = photo.enhancedImageUrl || photo.images?.[0] || photo.originalDataUrl;
+      if (!imageUrl) {
+        errorCount++;
+        continue;
+      }
+
+      const generatingPhotoId = photo.id;
+
+      // Load image to get actual dimensions
+      const img = new Image();
+      
+      img.onload = () => {
+        const actualWidth = img.naturalWidth || img.width;
+        const actualHeight = img.naturalHeight || img.height;
+        
+        generateVideo({
+          photo,
+          photoIndex: photoIndex,
+          subIndex: 0,
+          imageWidth: actualWidth,
+          imageHeight: actualHeight,
+          sogniClient,
+          setPhotos,
+          resolution: settings.videoResolution || '480p',
+          quality: settings.videoQuality || 'fast',
+          fps: settings.videoFramerate || 16,
+          duration: settings.videoDuration || 5,
+          positivePrompt: motionPrompt,
+          negativePrompt: negativePrompt,
+          motionEmoji: selectedEmoji,
+          tokenType: tokenType,
+          onComplete: (videoUrl) => {
+            successCount++;
+            // Play sonic logo before auto-play (respects sound settings)
+            playSonicLogo(settings.soundEnabled);
+            // Auto-play the generated video when completed
+            setPlayingGeneratedVideoIds(prev => new Set([...prev, generatingPhotoId]));
+            
+            if (successCount === loadedPhotos.length) {
+              const videoMessage = getRandomVideoMessage();
+              showToast({
+                title: videoMessage.title,
+                message: `All ${successCount} video${successCount > 1 ? 's' : ''} generated!`,
+                type: 'success',
+                timeout: 5000
+              });
+            }
+          },
+          onError: (error) => {
+            errorCount++;
+            if (errorCount === loadedPhotos.length) {
+              showToast({
+                title: 'Batch Video Failed',
+                message: 'All video generations failed. Please try again.',
+                type: 'error'
+              });
+            }
+          },
+          onCancel: () => {
+            // Handle cancellation if needed
+          },
+          onOutOfCredits: () => {
+            console.log('[VIDEO] Triggering out of credits popup from batch video generation');
+            if (onOutOfCredits) {
+              onOutOfCredits();
+            }
+          }
+        });
+      };
+      
+      img.onerror = () => {
+        // Fallback to generation target dimensions
+        const fallbackWidth = desiredWidth || 768;
+        const fallbackHeight = desiredHeight || 1024;
+        
+        generateVideo({
+          photo,
+          photoIndex: photoIndex,
+          subIndex: 0,
+          imageWidth: fallbackWidth,
+          imageHeight: fallbackHeight,
+          sogniClient,
+          setPhotos,
+          resolution: settings.videoResolution || '480p',
+          quality: settings.videoQuality || 'fast',
+          fps: settings.videoFramerate || 16,
+          duration: settings.videoDuration || 5,
+          positivePrompt: motionPrompt,
+          negativePrompt: negativePrompt,
+          motionEmoji: selectedEmoji,
+          tokenType: tokenType,
+          onComplete: (videoUrl) => {
+            successCount++;
+            playSonicLogo(settings.soundEnabled);
+            setPlayingGeneratedVideoIds(prev => new Set([...prev, generatingPhotoId]));
+            
+            if (successCount === loadedPhotos.length) {
+              const videoMessage = getRandomVideoMessage();
+              showToast({
+                title: videoMessage.title,
+                message: `All ${successCount} video${successCount > 1 ? 's' : ''} generated!`,
+                type: 'success',
+                timeout: 5000
+              });
+            }
+          },
+          onError: (error) => {
+            errorCount++;
+            if (errorCount === loadedPhotos.length) {
+              showToast({
+                title: 'Batch Video Failed',
+                message: 'All video generations failed. Please try again.',
+                type: 'error'
+              });
+            }
+          },
+          onCancel: () => {
+            // Handle cancellation if needed
+          },
+          onOutOfCredits: () => {
+            console.log('[VIDEO] Triggering out of credits popup from batch video generation (fallback)');
+            if (onOutOfCredits) {
+              onOutOfCredits();
+            }
+          }
+        });
+      };
+      
+      img.src = imageUrl;
+    }
+  }, [photos, sogniClient, setPhotos, settings.videoResolution, settings.videoQuality, settings.videoFramerate, settings.videoDuration, settings.videoPositivePrompt, settings.videoNegativePrompt, settings.soundEnabled, tokenType, desiredWidth, desiredHeight, showToast, onOutOfCredits, setPlayingGeneratedVideoIds]);
+
   // Handle video cancellation
   const handleCancelVideo = useCallback(() => {
     if (selectedPhotoIndex === null) return;
@@ -2103,6 +2335,135 @@ const PhotoGallery = ({
     }
   }, [tezdevTheme, aspectRatio]);
 
+  // Handle download all videos as ZIP
+  const handleDownloadAllVideos = useCallback(async () => {
+    if (isBulkDownloading) {
+      console.log('Bulk download already in progress');
+      return;
+    }
+
+    try {
+      setIsBulkDownloading(true);
+      setBulkDownloadProgress({ current: 0, total: 0, message: 'Preparing videos...' });
+
+      // Get the correct photos array based on mode
+      const currentPhotosArray = isPromptSelectorMode ? filteredPhotos : photos;
+
+      // Get photos with videos (up to 4, excluding hidden/discarded ones)
+      const photosWithVideos = currentPhotosArray.filter(
+        photo => !photo.hidden && !photo.loading && !photo.generating && !photo.error && photo.videoUrl && !photo.isOriginal
+      ).slice(0, 4);
+
+      if (photosWithVideos.length === 0) {
+        console.warn('No videos to download');
+        setBulkDownloadProgress({ current: 0, total: 0, message: 'No videos available to download' });
+        setTimeout(() => {
+          setIsBulkDownloading(false);
+        }, 2000);
+        return;
+      }
+
+      // Prepare videos array
+      const videosToDownload = [];
+      const filenameCount = {}; // Track how many times each base filename is used
+
+      for (let i = 0; i < photosWithVideos.length; i++) {
+        const photo = photosWithVideos[i];
+        setBulkDownloadProgress({ current: i, total: photosWithVideos.length, message: `Processing video ${i + 1} of ${photosWithVideos.length}...` });
+
+        // Get style display text
+        const styleDisplayText = getStyleDisplayText(photo);
+        const cleanStyleName = styleDisplayText ? styleDisplayText.toLowerCase().replace(/\s+/g, '-') : 'sogni';
+
+        // Get video metadata (use defaults if not stored)
+        const duration = photo.videoDuration || settings.videoDuration || 5;
+        const resolution = photo.videoResolution || settings.videoResolution || '480p';
+        const fps = photo.videoFramerate || settings.videoFramerate || 16;
+
+        // Include motion emoji in filename if available
+        const motionEmoji = photo.videoMotionEmoji || '';
+        const emojiPart = motionEmoji ? `-${motionEmoji}` : '';
+
+        // Build filename: sogni-photobooth-{style}-{emoji}-video_{duration}s_{resolution}_{fps}fps.mp4
+        const baseFilename = `sogni-photobooth-${cleanStyleName}${emojiPart}-video_${duration}s_${resolution}_${fps}fps.mp4`;
+
+        // Track duplicate filenames and append counter if needed
+        if (!filenameCount[baseFilename]) {
+          filenameCount[baseFilename] = 1;
+        } else {
+          filenameCount[baseFilename]++;
+        }
+
+        // Only add counter if there are duplicates
+        const filename = filenameCount[baseFilename] > 1
+          ? `sogni-photobooth-${cleanStyleName}${emojiPart}-video_${duration}s_${resolution}_${fps}fps-${filenameCount[baseFilename]}.mp4`
+          : baseFilename;
+
+        videosToDownload.push({
+          url: photo.videoUrl,
+          filename: filename,
+          photoIndex: currentPhotosArray.findIndex(p => p.id === photo.id)
+        });
+      }
+
+      if (videosToDownload.length === 0) {
+        console.warn('No videos prepared for download');
+        setBulkDownloadProgress({ current: 0, total: 0, message: 'No videos prepared for download' });
+        setTimeout(() => {
+          setIsBulkDownloading(false);
+        }, 2000);
+        return;
+      }
+
+      // Generate ZIP filename with timestamp
+      const timestamp = new Date().toISOString().split('T')[0];
+      const zipFilename = `sogni-photobooth-videos-${timestamp}.zip`;
+
+      // Download as ZIP with progress callback
+      const success = await downloadVideosAsZip(
+        videosToDownload,
+        zipFilename,
+        (current, total, message) => {
+          setBulkDownloadProgress({ current, total, message });
+        }
+      );
+
+      if (success) {
+        setBulkDownloadProgress({
+          current: videosToDownload.length,
+          total: videosToDownload.length,
+          message: 'Download complete!'
+        });
+
+        console.log(`Successfully downloaded ${videosToDownload.length} videos as ${zipFilename}`);
+      } else {
+        setBulkDownloadProgress({
+          current: 0,
+          total: 0,
+          message: 'Download failed. Please try again.'
+        });
+      }
+
+      // Reset after a delay
+      setTimeout(() => {
+        setIsBulkDownloading(false);
+        setBulkDownloadProgress({ current: 0, total: 0, message: '' });
+      }, 3000);
+
+    } catch (error) {
+      console.error('Error in bulk video download:', error);
+      setBulkDownloadProgress({
+        current: 0,
+        total: 0,
+        message: `Error: ${error.message}`
+      });
+      setTimeout(() => {
+        setIsBulkDownloading(false);
+        setBulkDownloadProgress({ current: 0, total: 0, message: '' });
+      }, 3000);
+    }
+  }, [photos, filteredPhotos, isPromptSelectorMode, isBulkDownloading, settings.videoDuration, settings.videoResolution, settings.videoFramerate, getStyleDisplayText, setIsBulkDownloading, setBulkDownloadProgress]);
+
   // Handle download all photos as ZIP - uses exact same logic as individual downloads
   const handleDownloadAll = useCallback(async (includeFrames = false) => {
     if (isBulkDownloading) {
@@ -2117,9 +2478,9 @@ const PhotoGallery = ({
       // Get the correct photos array based on mode
       const currentPhotosArray = isPromptSelectorMode ? filteredPhotos : photos;
 
-      // Count loaded photos
+      // Count loaded photos (excluding hidden/discarded ones)
       const loadedPhotos = currentPhotosArray.filter(
-        photo => !photo.loading && !photo.generating && !photo.error && photo.images && photo.images.length > 0
+        photo => !photo.hidden && !photo.loading && !photo.generating && !photo.error && photo.images && photo.images.length > 0
       );
 
       if (loadedPhotos.length === 0) {
@@ -2147,8 +2508,8 @@ const PhotoGallery = ({
       for (let i = 0; i < currentPhotosArray.length; i++) {
         const photo = currentPhotosArray[i];
 
-        // Skip photos that are still loading or have errors
-        if (photo.loading || photo.generating || photo.error || !photo.images || photo.images.length === 0) {
+        // Skip photos that are hidden, still loading, or have errors
+        if (photo.hidden || photo.loading || photo.generating || photo.error || !photo.images || photo.images.length === 0) {
           continue;
         }
 
@@ -3452,77 +3813,184 @@ const PhotoGallery = ({
         />
       )}
 
-      {/* Download All button - circular button to the left of More button */}
-      {!isPromptSelectorMode && selectedPhotoIndex === null && photos && photos.length > 0 && photos.every(p => !p.loading && !p.generating) && photos.filter(p => !p.error && p.images && p.images.length > 0).length > 0 && (
+      {/* Batch Action button - Dropdown Button Combo (Download/Video) - always show download, video only when up to 4 images */}
+      {!isPromptSelectorMode && selectedPhotoIndex === null && photos && photos.length > 0 && photos.filter(p => !p.hidden && !p.error && p.images && p.images.length > 0).length > 0 && (
         <div style={{ position: 'fixed', right: `${20 + (moreButtonWidth || 125) + 10}px`, bottom: '20px', zIndex: 10000000 }}>
-          <button
-            className="download-all-circular-btn"
-            onClick={(e) => {
-              e.stopPropagation();
-              setShowMoreDropdown(!showMoreDropdown);
-            }}
-            disabled={isBulkDownloading}
-            style={{
-              background: '#ff5252',
-              border: 'none',
-              color: 'white',
-              width: '46px',
-              height: '44px',
-              borderRadius: '50%',
-              cursor: isBulkDownloading ? 'not-allowed' : 'pointer',
-              opacity: isBulkDownloading ? 0.6 : 1,
-              fontSize: '18px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
+          <div 
+            className="batch-action-dropdown-container" 
+            style={{ 
+              position: 'relative',
+              background: 'linear-gradient(135deg, #ff5252, #e53935)',
+              borderRadius: '8px',
               boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-              transition: 'all 0.2s ease'
+              transition: 'all 0.2s ease',
+              display: 'inline-flex',
+              overflow: 'visible'
             }}
-            title="Download all images"
-            onMouseOver={(e) => {
+            onMouseEnter={(e) => {
               if (!isBulkDownloading) {
-                e.currentTarget.style.transform = 'scale(1.05)';
-                e.currentTarget.style.boxShadow = '0 6px 16px rgba(0,0,0,0.4)';
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.25)';
               }
             }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.transform = 'scale(1)';
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)';
               e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)';
             }}
           >
-            ⬇️
-          </button>
-              
-              {/* Dropdown menu as popup */}
-              {showMoreDropdown && !isBulkDownloading && (
+            <button
+              className="batch-action-button batch-action-button-main"
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                // Close mode selection dropdown when clicking main button
+                setShowBatchActionDropdown(false);
+                if (batchActionMode === 'download') {
+                  // Check if any photos have videos - if so, download videos as zip
+                  const currentPhotosArray = isPromptSelectorMode ? filteredPhotos : photos;
+                  const photosWithVideos = currentPhotosArray.filter(
+                    photo => !photo.hidden && !photo.loading && !photo.generating && !photo.error && photo.videoUrl && !photo.isOriginal
+                  ).slice(0, 4);
+
+                  if (photosWithVideos.length > 0) {
+                    // Download videos as zip
+                    handleDownloadAllVideos();
+                  } else {
+                    // Show download options dropdown for images
+                    setShowMoreDropdown(prev => !prev);
+                  }
+                } else if (batchActionMode === 'video') {
+                  // Check if we can use video mode (4 or fewer loaded photos)
+                  const currentPhotosArray = isPromptSelectorMode ? filteredPhotos : photos;
+                  const loadedPhotosCount = currentPhotosArray.filter(
+                    photo => !photo.hidden && !photo.loading && !photo.generating && !photo.error && photo.images && photo.images.length > 0 && !photo.isOriginal
+                  ).length;
+
+                  if (loadedPhotosCount > 4) {
+                    showToast({
+                      title: 'Too Many Images',
+                      message: 'Video mode is only available for 4 or fewer images.',
+                      type: 'info'
+                    });
+                    return;
+                  }
+
+                  // Show video dropdown to select emoji
+                  if (isAuthenticated) {
+                    setShowBatchVideoDropdown(prev => !prev);
+                  } else {
+                    showToast({
+                      title: 'Authentication Required',
+                      message: 'Please sign in to generate videos.',
+                      type: 'info'
+                    });
+                  }
+                }
+              }}
+              disabled={isBulkDownloading}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: 'white',
+                padding: '8px 16px',
+                paddingBottom: '10px',
+                borderRadius: '0',
+                cursor: isBulkDownloading ? 'not-allowed' : 'pointer',
+                opacity: isBulkDownloading ? 0.6 : 1,
+                fontSize: '16px',
+                fontWeight: '600',
+                fontFamily: '"Permanent Marker", cursive',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
+                transition: 'all 0.2s ease',
+                whiteSpace: 'nowrap',
+                pointerEvents: 'auto',
+                position: 'relative',
+                zIndex: 1,
+                minHeight: '44px'
+              }}
+              title={batchActionMode === 'video' ? 'Generate videos for all images' : 'Download all images'}
+            >
+              <span>{batchActionMode === 'video' ? '🎥' : '⬇️'}</span>
+              <span>{batchActionMode === 'video' ? 'Video' : 'Download'}</span>
+            </button>
+            <button
+              className="batch-action-button batch-action-button-dropdown"
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                // Close any open dropdowns (like download dropdown) when opening mode selection
+                setShowMoreDropdown(false);
+                setShowBatchActionDropdown(prev => !prev);
+              }}
+              disabled={isBulkDownloading}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                borderLeft: '1px solid rgba(255, 255, 255, 0.15)',
+                color: 'white',
+                padding: '8px 8px',
+                paddingBottom: '10px',
+                borderRadius: '0',
+                cursor: isBulkDownloading ? 'not-allowed' : 'pointer',
+                opacity: isBulkDownloading ? 0.6 : 1,
+                fontSize: '16px',
+                fontFamily: '"Permanent Marker", cursive',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'all 0.2s ease',
+                pointerEvents: 'auto',
+                position: 'relative',
+                zIndex: 1,
+                minHeight: '44px'
+              }}
+              title="Switch between Download and Video"
+            >
+              <span>▼</span>
+            </button>
+            
+            {/* Mode selection dropdown */}
+            {showBatchActionDropdown && !isBulkDownloading && (() => {
+              // Count loaded photos (excluding originals and hidden/discarded ones)
+              const currentPhotosArray = isPromptSelectorMode ? filteredPhotos : photos;
+              const loadedPhotosCount = currentPhotosArray.filter(
+                photo => !photo.hidden && !photo.loading && !photo.generating && !photo.error && photo.images && photo.images.length > 0 && !photo.isOriginal
+              ).length;
+              const canUseVideo = loadedPhotosCount > 0 && loadedPhotosCount <= 4;
+
+              return (
                 <div
-                  className="more-dropdown-menu"
+                  className="batch-action-mode-dropdown"
                   style={{
                     position: 'absolute',
-                    bottom: '60px',
+                    bottom: '50px',
                     right: '0',
                     background: 'rgba(255, 255, 255, 0.98)',
                     borderRadius: '8px',
                     boxShadow: '0 4px 16px rgba(0,0,0,0.2)',
                     overflow: 'hidden',
-                    minWidth: '200px',
-                    animation: 'fadeIn 0.2s ease-out'
+                    minWidth: '150px',
+                    animation: 'fadeIn 0.2s ease-out',
+                    zIndex: 10000001
                   }}
                 >
                   <button
-                    className="more-dropdown-option"
+                    className="batch-action-mode-option"
                     onClick={() => {
-                      handleDownloadAll(false);
-                      setShowMoreDropdown(false);
+                      setBatchActionMode('download');
+                      setShowBatchActionDropdown(false);
                     }}
                     style={{
                       width: '100%',
                       padding: '12px 16px',
                       border: 'none',
-                      background: 'transparent',
+                      background: batchActionMode === 'download' ? 'rgba(255, 82, 82, 0.1)' : 'transparent',
                       color: '#333',
                       fontSize: '14px',
-                      fontWeight: 'normal',
+                      fontWeight: batchActionMode === 'download' ? '600' : 'normal',
                       textAlign: 'left',
                       cursor: 'pointer',
                       transition: 'background 0.2s ease',
@@ -3530,39 +3998,132 @@ const PhotoGallery = ({
                       alignItems: 'center',
                       gap: '8px'
                     }}
-                    onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255, 82, 82, 0.1)'}
-                    onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
-                  >
-                    <span>⬇️</span> Download All Raw
-                  </button>
-                  <button
-                    className="more-dropdown-option"
-                    onClick={() => {
-                      handleDownloadAll(true);
-                      setShowMoreDropdown(false);
+                    onMouseOver={(e) => {
+                      if (batchActionMode !== 'download') {
+                        e.currentTarget.style.background = 'rgba(255, 82, 82, 0.1)';
+                      }
                     }}
-                    style={{
-                      width: '100%',
-                      padding: '12px 16px',
-                      border: 'none',
-                      background: 'transparent',
-                      color: '#333',
-                      fontSize: '14px',
-                      fontWeight: 'normal',
-                      textAlign: 'left',
-                      cursor: 'pointer',
-                      transition: 'background 0.2s ease',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px'
+                    onMouseOut={(e) => {
+                      if (batchActionMode !== 'download') {
+                        e.currentTarget.style.background = 'transparent';
+                      }
                     }}
-                    onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255, 82, 82, 0.1)'}
-                    onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
                   >
-                    <span>🖼️</span> Download All Framed
+                    <span>⬇️</span> Download
+                    {batchActionMode === 'download' && <span style={{ marginLeft: 'auto' }}>✓</span>}
                   </button>
+                  {canUseVideo && (
+                    <button
+                      className="batch-action-mode-option"
+                      onClick={() => {
+                        setBatchActionMode('video');
+                        setShowBatchActionDropdown(false);
+                      }}
+                      style={{
+                        width: '100%',
+                        padding: '12px 16px',
+                        border: 'none',
+                        background: batchActionMode === 'video' ? 'rgba(139, 92, 246, 0.1)' : 'transparent',
+                        color: '#333',
+                        fontSize: '14px',
+                        fontWeight: batchActionMode === 'video' ? '600' : 'normal',
+                        textAlign: 'left',
+                        cursor: 'pointer',
+                        transition: 'background 0.2s ease',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
+                      }}
+                      onMouseOver={(e) => {
+                        if (batchActionMode !== 'video') {
+                          e.currentTarget.style.background = 'rgba(139, 92, 246, 0.1)';
+                        }
+                      }}
+                      onMouseOut={(e) => {
+                        if (batchActionMode !== 'video') {
+                          e.currentTarget.style.background = 'transparent';
+                        }
+                      }}
+                    >
+                      <span>🎥</span> Video
+                      {batchActionMode === 'video' && <span style={{ marginLeft: 'auto' }}>✓</span>}
+                    </button>
+                  )}
                 </div>
-              )}
+              );
+            })()}
+
+            {/* Download options dropdown (when in download mode) */}
+            {showMoreDropdown && !isBulkDownloading && batchActionMode === 'download' && (
+              <div
+                className="more-dropdown-menu"
+                style={{
+                  position: 'absolute',
+                  bottom: '50px',
+                  right: '0',
+                  background: 'rgba(255, 255, 255, 0.98)',
+                  borderRadius: '8px',
+                  boxShadow: '0 4px 16px rgba(0,0,0,0.2)',
+                  overflow: 'hidden',
+                  minWidth: '200px',
+                  animation: 'fadeIn 0.2s ease-out',
+                  zIndex: 10000001
+                }}
+              >
+                <button
+                  className="more-dropdown-option"
+                  onClick={() => {
+                    handleDownloadAll(false);
+                    setShowMoreDropdown(false);
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '12px 16px',
+                    border: 'none',
+                    background: 'transparent',
+                    color: '#333',
+                    fontSize: '14px',
+                    fontWeight: 'normal',
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                    transition: 'background 0.2s ease',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}
+                  onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255, 82, 82, 0.1)'}
+                  onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
+                >
+                  <span>⬇️</span> Download All Raw
+                </button>
+                <button
+                  className="more-dropdown-option"
+                  onClick={() => {
+                    handleDownloadAll(true);
+                    setShowMoreDropdown(false);
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '12px 16px',
+                    border: 'none',
+                    background: 'transparent',
+                    color: '#333',
+                    fontSize: '14px',
+                    fontWeight: 'normal',
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                    transition: 'background 0.2s ease',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}
+                  onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255, 82, 82, 0.1)'}
+                  onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
+                >
+                  <span>🖼️</span> Download All Framed
+                </button>
+              </div>
+            )}
               
           {/* Progress indicator for downloads */}
           {isBulkDownloading && bulkDownloadProgress.message && (
@@ -3570,7 +4131,7 @@ const PhotoGallery = ({
               className="bulk-download-progress"
               style={{
                 position: 'absolute',
-                bottom: '60px',
+                bottom: '50px',
                 right: '0',
                 background: 'rgba(0, 0, 0, 0.85)',
                 color: 'white',
@@ -3581,7 +4142,8 @@ const PhotoGallery = ({
                 boxShadow: '0 2px 10px rgba(0,0,0,0.2)',
                 minWidth: '150px',
                 textAlign: 'right',
-                whiteSpace: 'nowrap'
+                whiteSpace: 'nowrap',
+                zIndex: 10000002
               }}
             >
               <div>{bulkDownloadProgress.message}</div>
@@ -3592,6 +4154,7 @@ const PhotoGallery = ({
               )}
             </div>
           )}
+          </div>
         </div>
       )}
       {/* More button - positioned on the right side - hidden in Sample Gallery mode */}
@@ -6540,13 +7103,16 @@ const PhotoGallery = ({
                     {/* Glowing animated border card */}
                     <div style={{
                       position: 'relative',
-                      background: 'linear-gradient(135deg, rgba(26, 26, 46, 0.95), rgba(40, 20, 60, 0.95))',
+                      background: 'linear-gradient(135deg, rgba(26, 26, 46, 0.75), rgba(40, 20, 60, 0.75))',
                       backdropFilter: 'blur(12px)',
                       borderRadius: '20px',
                       padding: '12px 18px',
                       boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)',
                       border: '2px solid transparent',
-                      backgroundClip: 'padding-box'
+                      backgroundClip: 'padding-box',
+                      minWidth: '240px',
+                      width: '240px',
+                      opacity: 0.9
                     }}>
                       {/* Animated gradient border overlay */}
                       <div style={{
@@ -6626,7 +7192,7 @@ const PhotoGallery = ({
                         ) : photo.videoStatus?.startsWith('Queue') || photo.videoStatus?.startsWith('Next') || photo.videoStatus?.startsWith('In line') ? (
                           <span style={{ animation: 'pulse 1s ease-in-out infinite' }}>📋 {photo.videoStatus}</span>
                         ) : (
-                          <span style={{ animation: 'pulse 1s ease-in-out infinite' }}>⏳ Finding worker...</span>
+                          <span style={{ animation: 'pulse 1s ease-in-out infinite' }}>⏳ Finding worker</span>
                         )}
                       </div>
                       
@@ -6649,9 +7215,9 @@ const PhotoGallery = ({
                             </span>
                           </>
                         ) : photo.videoStatus?.startsWith('Queue') || photo.videoStatus?.startsWith('Next') || photo.videoStatus?.startsWith('In line') ? (
-                          <span style={{ animation: 'twinkle 0.8s ease-in-out infinite' }}>In line...</span>
+                          <span style={{ animation: 'twinkle 0.8s ease-in-out infinite' }}>In line</span>
                         ) : (
-                          <span style={{ animation: 'twinkle 0.8s ease-in-out infinite' }}>✨ Starting...</span>
+                          <span style={{ animation: 'twinkle 0.8s ease-in-out infinite' }}>✨ Starting</span>
                         )}
                       </div>
                       <div style={{ fontSize: '10px', color: 'rgba(255, 255, 255, 0.6)' }}>
@@ -7890,6 +8456,197 @@ const PhotoGallery = ({
         document.body
       )}
 
+      {/* Batch Video Dropdown Portal - for batch video generation */}
+      {showBatchVideoDropdown && batchActionMode === 'video' && createPortal(
+        <div 
+          className="video-dropdown batch-video-dropdown"
+          style={{
+            position: 'fixed',
+            ...(window.innerWidth < 768 
+              ? { 
+                  top: '10px',
+                  bottom: '10px',
+                  height: 'auto'
+                }
+              : { 
+                  bottom: '60px',
+                  height: 'min(75vh, 650px)',
+                  maxHeight: 'calc(100vh - 80px)'
+                }
+            ),
+            left: '50%',
+            transform: 'translateX(-50%)',
+            background: '#ffeb3b',
+            borderRadius: '8px',
+            padding: '8px',
+            border: 'none',
+            width: 'min(95vw, 950px)',
+            display: 'flex',
+            flexDirection: 'column',
+            boxShadow: '0 20px 60px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.1) inset',
+            zIndex: 9999999,
+            animation: 'videoDropdownSlideUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)'
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Top right buttons container - Settings and Close */}
+          <div style={{ position: 'relative' }}>
+            {/* Settings cog icon - left of close button */}
+            <button
+              onClick={handleOpenVideoSettings}
+              title="Video Settings"
+              style={{
+                position: 'absolute',
+                top: '0px',
+                right: '36px',
+                width: '24px',
+                height: '24px',
+                borderRadius: '50%',
+                border: 'none',
+                background: 'rgba(0, 0, 0, 0.1)',
+                color: 'rgba(0, 0, 0, 0.5)',
+                fontSize: '12px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'all 0.2s ease',
+                zIndex: 1
+              }}
+              onMouseOver={e => {
+                e.currentTarget.style.background = 'rgba(0, 0, 0, 0.15)';
+                e.currentTarget.style.color = 'rgba(0, 0, 0, 0.8)';
+              }}
+              onMouseOut={e => {
+                e.currentTarget.style.background = 'rgba(0, 0, 0, 0.1)';
+                e.currentTarget.style.color = 'rgba(0, 0, 0, 0.5)';
+              }}
+            >
+              ⚙️
+            </button>
+            
+            {/* Close button - far right */}
+            <button
+              onClick={() => { setShowBatchVideoDropdown(false); setSelectedBatchMotionCategory(null); }}
+              title="Close"
+              style={{
+                position: 'absolute',
+                top: '0px',
+                right: '0px',
+                width: '28px',
+                height: '28px',
+                borderRadius: '50%',
+                border: 'none',
+                background: 'rgba(0, 0, 0, 0.6)',
+                color: '#fff',
+                fontSize: '18px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'all 0.2s ease',
+                zIndex: 1,
+                lineHeight: '1',
+                fontWeight: '300'
+              }}
+              onMouseOver={e => {
+                e.currentTarget.style.background = 'rgba(0, 0, 0, 0.8)';
+                e.currentTarget.style.transform = 'scale(1.1)';
+              }}
+              onMouseOut={e => {
+                e.currentTarget.style.background = 'rgba(0, 0, 0, 0.6)';
+                e.currentTarget.style.transform = 'scale(1)';
+              }}
+            >
+              ×
+            </button>
+          </div>
+          
+          <div style={{ padding: '10px 16px 8px', fontFamily: '"Permanent Marker", cursive', fontSize: '15px', fontWeight: '700', color: '#000', textAlign: 'center', borderBottom: '1px solid rgba(0, 0, 0, 0.15)' }}>
+            🎬 Choose a motion style for all images
+          </div>
+          {renderMotionPicker(selectedBatchMotionCategory, setSelectedBatchMotionCategory, handleBatchGenerateVideo, setShowBatchVideoDropdown, setShowBatchCustomVideoPromptPopup)}
+          
+          {/* Custom Prompt Button - Always visible below grid */}
+          <div style={{
+            padding: '10px',
+            borderTop: '1px solid rgba(0, 0, 0, 0.1)',
+            display: 'flex',
+            flexDirection: window.innerWidth < 768 ? 'column' : 'row',
+            alignItems: window.innerWidth < 768 ? 'stretch' : 'center',
+            justifyContent: window.innerWidth < 768 ? 'center' : 'flex-end',
+            gap: '12px',
+            flexShrink: 0
+          }}>
+            <div style={{
+              fontSize: '13px',
+              color: '#000',
+              fontWeight: '700',
+              letterSpacing: '0.3px',
+              textAlign: window.innerWidth < 768 ? 'center' : 'right',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: window.innerWidth < 768 ? 'center' : 'flex-end',
+              gap: '8px'
+            }}>
+              <span>Or create your own</span>
+              {window.innerWidth >= 768 && <span style={{ fontSize: '20px', fontWeight: '700' }}>→</span>}
+            </div>
+            {renderCustomButton(setShowBatchVideoDropdown, setShowBatchCustomVideoPromptPopup)}
+          </div>
+
+          {/* Pricing info below Custom button */}
+          {!batchVideoLoading && formatCost(batchVideoCostRaw, batchVideoUSD) ? (
+            <div style={{
+              padding: '8px 16px 12px 16px',
+              fontSize: '11px',
+              fontWeight: '700',
+              letterSpacing: '0.2px',
+              display: 'flex',
+              gap: '4px',
+              alignItems: 'center',
+              justifyContent: 'flex-end',
+              borderTop: '1px solid rgba(0, 0, 0, 0.15)',
+              color: '#000',
+              flexShrink: 0
+            }}>
+              <span style={{ fontWeight: '700' }}>
+                {(() => {
+                  const formatted = formatCost(batchVideoCostRaw, batchVideoUSD);
+                  const parts = formatted.split('(');
+                  return parts[0].trim();
+                })()}
+              </span>
+              {(() => {
+                const formatted = formatCost(batchVideoCostRaw, batchVideoUSD);
+                const usdMatch = formatted.match(/\((.*?)\)/);
+                if (usdMatch) {
+                  return (
+                    <span style={{ fontWeight: '400', opacity: 0.75, fontSize: '10px' }}>
+                      ≈ {usdMatch[1]}
+                    </span>
+                  );
+                }
+                return null;
+              })()}
+            </div>
+          ) : batchVideoLoading ? (
+            <div style={{
+              padding: '8px 16px 12px 16px',
+              fontSize: '11px',
+              fontWeight: '700',
+              textAlign: 'right',
+              borderTop: '1px solid rgba(0, 0, 0, 0.15)',
+              color: '#000',
+              flexShrink: 0
+            }}>
+              Calculating cost...
+            </div>
+          ) : null}
+        </div>,
+        document.body
+      )}
+
       {/* Custom Video Prompt Popup */}
       <CustomVideoPromptPopup
         visible={showCustomVideoPromptPopup}
@@ -7898,6 +8655,16 @@ const PhotoGallery = ({
           handleGenerateVideo(positivePrompt, negativePrompt);
         }}
         onClose={() => setShowCustomVideoPromptPopup(false)}
+      />
+
+      {/* Batch Custom Video Prompt Popup */}
+      <CustomVideoPromptPopup
+        visible={showBatchCustomVideoPromptPopup}
+        onGenerate={(positivePrompt, negativePrompt) => {
+          // Generate batch videos with custom prompts
+          handleBatchGenerateVideo(positivePrompt, negativePrompt);
+        }}
+        onClose={() => setShowBatchCustomVideoPromptPopup(false)}
       />
 
       {/* Custom Prompt Popup for Sample Gallery mode */}

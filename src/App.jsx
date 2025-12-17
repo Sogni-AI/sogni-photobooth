@@ -5392,7 +5392,7 @@ const App = () => {
                   ...updated[photoIndex],
                   generating: true,
                   loading: true,
-                  statusText: workerName ? `${workerName} initing model...` : 'Initializing model...',
+                  statusText: workerName ? `${workerName} initing model` : 'Initializing model...',
                   workerName: workerName || 'Worker',
                   jobId,
                   jobIndex,

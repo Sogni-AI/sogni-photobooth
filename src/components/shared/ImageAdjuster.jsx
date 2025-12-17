@@ -991,7 +991,10 @@ const ImageAdjuster = ({
                 onClick={() => setIsBatchDropdownOpen(!isBatchDropdownOpen)}
                 disabled={isProcessing}
                 aria-label="Select batch count"
-                style={isProcessing ? { opacity: 0.6, cursor: 'not-allowed' } : {}}
+                style={{
+                  ...(isProcessing ? { opacity: 0.6, cursor: 'not-allowed' } : {}),
+                  borderLeft: '1px solid rgba(255, 255, 255, 0.15)'
+                }}
               >
                 <span className="dropdown-caret">▼</span>
               </button>

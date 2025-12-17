@@ -1036,6 +1036,68 @@ html body .photo-action-buttons .action-button,
   transform: scale(0.95) !important;
 }
 
+/* Batch action dropdown container */
+.batch-action-dropdown-container {
+  position: relative;
+  display: inline-flex;
+  gap: 0;
+  overflow: visible;
+}
+
+.batch-action-button {
+  border: none;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.batch-action-button-main {
+  padding: 10px 16px;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.batch-action-button-dropdown {
+  padding: 10px 8px;
+  border-left: 1px solid rgba(255, 255, 255, 0.15);
+  font-size: 12px;
+  min-width: auto;
+  flex-shrink: 0;
+}
+
+.batch-action-button:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1) !important;
+}
+
+.batch-action-button:active:not(:disabled) {
+  background: rgba(255, 255, 255, 0.15) !important;
+}
+
+.batch-action-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Batch action mode dropdown */
+.batch-action-mode-dropdown {
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  animation: fadeIn 0.2s ease-out;
+}
+
+.batch-action-mode-option {
+  font-family: "Permanent Marker", cursive;
+  transition: background 0.2s ease;
+}
+
+.batch-action-mode-option:hover {
+  background: rgba(0, 0, 0, 0.05) !important;
+}
+
 /* More button dropdown caret styling */
 .more-dropdown-caret:hover:not(:disabled) {
   background: rgba(255, 82, 82, 0.9) !important;
