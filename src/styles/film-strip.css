@@ -575,12 +575,13 @@ body.has-selected-photo .film-frame.selected[data-enhancing="true"] .photo-label
 /* Back to Camera button - ensure it stays fixed */
 .corner-btn {
   position: fixed;
-  left: 20px;
-  bottom: 20px;
+  left: 12px;
+  bottom: 32px;
   background: linear-gradient(135deg, #ff5252, #e53935) !important;
   color: white;
   border: none;
   padding: 8px 16px;
+  padding-bottom: 10px;
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.15);
   cursor: pointer;
@@ -595,38 +596,37 @@ body.has-selected-photo .film-frame.selected[data-enhancing="true"] .photo-label
   font-size: 16px;
   z-index: 9999;
   transition: transform 0.2s, box-shadow 0.2s, opacity 0.3s;
-  padding-bottom: 10px;
   font-family: "Permanent Marker", cursive;
 }
 
 .corner-btn.photos-corner-btn {
   left: unset;
-  right: 20px;
+  right: 12px;
 }
 
 .corner-btn.continue-corner-btn {
   left: unset;
-  right: 20px;
+  right: 12px;
   background: linear-gradient(135deg, #ff5252, #e53935) !important;
 }
 
 /* When on intro screen, position Continue differently */
 .corner-btn.intro-continue-btn {
   position: fixed;
-  bottom: 20px;
-  right: 20px;
+  bottom: 32px;
+  right: 12px;
 }
 
 /* When Photos button is present on options screen, position Continue button to the left of it */
 .options-section .corner-btn.continue-corner-btn {
   position: fixed;
-  bottom: 20px;
-  right: 20px;
+  bottom: 32px;
+  right: 12px;
 }
 
 /* Adjust when both Continue and Photos buttons are visible */
 body:has(.photos-corner-btn) .options-section .corner-btn.continue-corner-btn {
-  right: calc(20px + 110px + 15px); /* 20px margin + ~110px Photos button width + 15px gap */
+  right: calc(12px + 90px + 12px); /* 12px margin + ~90px Photos button width + 12px gap */
 }
 
 
@@ -1040,7 +1040,7 @@ html body.has-selected-photo .film-strip-container.visible .film-frame.selected[
   /* Ensure consistent bottom padding on all mobile devices */
   .corner-btn.continue-corner-btn,
   .corner-btn.photos-corner-btn {
-    bottom: 20px !important;
+    bottom: 32px !important;
   }
 }
 
@@ -1156,8 +1156,8 @@ html body.has-selected-photo .film-strip-container.visible .film-frame.selected[
 /* Generate button for Style Explorer - generates fresh batch with current settings */
 .view-photos-btn {
   position: fixed;
-  bottom: 20px;
-  right: 20px;
+  bottom: 32px;
+  right: 12px;
   left: auto !important;
   z-index: 100;
   background: linear-gradient(135deg, #ff5e8a 0%, #ff3366 100%);
@@ -1180,19 +1180,21 @@ html body.has-selected-photo .film-strip-container.visible .film-frame.selected[
 /* Responsive styling for Generate button on mobile */
 @media (max-width: 768px), (orientation: portrait) and (max-device-width: 1024px) {
   .view-photos-btn {
-    right: 10px;
-    bottom: 10px;
+    right: 12px;
+    bottom: 32px;
   }
 }
 
 /* Specific adjustments for small screens in portrait mode like iPhone */
 @media (max-width: 420px) and (orientation: portrait) {
   .view-photos-btn {
-    padding: 8px 12px;
-    font-size: 12px;
-    right: 10px;
-    bottom: 10px;
-    border-radius: 16px;
+    padding: 8px 16px;
+    padding-bottom: 10px;
+    font-size: 16px;
+    right: 12px;
+    bottom: 32px;
+    border-radius: 8px;
+    min-height: 44px;
   }
 }
 

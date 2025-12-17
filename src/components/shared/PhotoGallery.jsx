@@ -902,9 +902,7 @@ const PhotoGallery = ({
   // State to track when to show the "more" button during generation
   const [showMoreButtonDuringGeneration, setShowMoreButtonDuringGeneration] = useState(false);
 
-  // State and ref to track More button width for positioning Download All button
-  const [moreButtonWidth, setMoreButtonWidth] = useState(0);
-  const moreButtonRef = useRef(null);
+  // Removed complex width measurement - using flexbox container instead
 
   // State to track concurrent refresh operations
   const [refreshingPhotos, setRefreshingPhotos] = useState(new Set());
@@ -1015,25 +1013,6 @@ const PhotoGallery = ({
     }
   }, [isPromptSelectorMode, initialSearchTerm]);
 
-  // Measure More button width for positioning Download All button
-  useEffect(() => {
-    const measureMoreButton = () => {
-      if (moreButtonRef.current) {
-        const width = moreButtonRef.current.offsetWidth;
-        setMoreButtonWidth(width);
-      }
-    };
-
-    measureMoreButton();
-
-    // Re-measure when content changes
-    const observer = new ResizeObserver(measureMoreButton);
-    if (moreButtonRef.current) {
-      observer.observe(moreButtonRef.current);
-    }
-
-    return () => observer.disconnect();
-  }, [isGenerating]);
 
   // Keep track of the previous photos array length to detect new batches (for legacy compatibility)
   const [, setPreviousPhotosLength] = useState(0);
@@ -3846,9 +3825,17 @@ const PhotoGallery = ({
         />
       )}
 
-      {/* Batch Action button - Dropdown Button Combo (Download/Video) - always show download, video only when up to 4 images */}
+      {/* Bottom right button container - holds both Download and New Batch buttons */}
       {!isPromptSelectorMode && selectedPhotoIndex === null && photos && photos.length > 0 && photos.filter(p => !p.hidden && !p.error && p.images && p.images.length > 0).length > 0 && (
-        <div style={{ position: 'fixed', right: `${20 + (moreButtonWidth || 125) + 10}px`, bottom: '20px', zIndex: 10000000 }}>
+        <div style={{ 
+          position: 'fixed', 
+          right: '12px', 
+          bottom: '32px', 
+          display: 'flex', 
+          gap: '8px', 
+          alignItems: 'center',
+          zIndex: 10000000 
+        }}>
           <div 
             className="batch-action-dropdown-container" 
             style={{ 
@@ -4188,30 +4175,39 @@ const PhotoGallery = ({
             </div>
           )}
           </div>
+
+          {/* New Batch button - inside the same container */}
+          {((!isGenerating && selectedPhotoIndex === null) || (isGenerating && showMoreButtonDuringGeneration && selectedPhotoIndex === null)) && (
+            <button
+              className="more-photos-btn"
+              onClick={handleMoreButtonClick}
+              disabled={!isGenerating && (!isSogniReady || !lastPhotoData.blob)}
+              style={{
+                background: 'linear-gradient(135deg, #ff5252, #e53935)',
+                color: 'white',
+                border: 'none',
+                padding: '8px 16px',
+                paddingBottom: '10px',
+                borderRadius: '8px',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                cursor: (!isGenerating && (!isSogniReady || !lastPhotoData.blob)) ? 'not-allowed' : 'pointer',
+                minHeight: '44px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontWeight: '600',
+                transition: 'all 0.2s ease',
+                whiteSpace: 'nowrap',
+                fontSize: '16px',
+                fontFamily: '"Permanent Marker", cursive',
+                opacity: (!isGenerating && (!isSogniReady || !lastPhotoData.blob)) ? 0.6 : 1,
+              }}
+              title={isGenerating ? 'Cancel current generation and start new batch' : 'Adjust and generate next batch'}
+            >
+              NEW BATCH
+            </button>
+          )}
         </div>
-      )}
-      {/* More button - positioned on the right side - hidden in Sample Gallery mode */}
-      {!isPromptSelectorMode && ((!isGenerating && selectedPhotoIndex === null) || (isGenerating && showMoreButtonDuringGeneration && selectedPhotoIndex === null)) && (
-        <button
-          ref={moreButtonRef}
-          className="more-photos-btn corner-btn"
-          onClick={handleMoreButtonClick}
-          disabled={!isGenerating && (!isSogniReady || !lastPhotoData.blob)}
-          style={{
-            position: 'fixed',
-            right: '20px',
-            bottom: '20px',
-            left: 'auto',
-            cursor: (!isGenerating && (!isSogniReady || !lastPhotoData.blob)) ? 'not-allowed' : 'pointer',
-            zIndex: 9999,
-            opacity: (!isGenerating && (!isSogniReady || !lastPhotoData.blob)) ? 0.6 : 1,
-            backgroundColor: isGenerating ? '#ff6b6b' : undefined,
-            borderColor: isGenerating ? '#ff6b6b' : undefined,
-          }}
-          title={isGenerating ? 'Cancel current generation and start new batch' : 'Adjust and generate next batch'}
-        >
-          {isGenerating ? 'CANCEL + NEW BATCH' : 'NEW BATCH'}
-        </button>
       )}
       {/* Continue button - only show in prompt selector mode - navigates back to menu */}
       {isPromptSelectorMode && handleBackToCamera && selectedPhotoIndex === null && (
@@ -4223,8 +4219,8 @@ const PhotoGallery = ({
           }}
           style={{
             position: 'fixed',
-            right: '20px',
-            bottom: '20px',
+            right: '12px',
+            bottom: '32px',
             left: 'auto',
             zIndex: 9999,
           }}

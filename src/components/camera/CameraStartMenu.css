@@ -450,10 +450,14 @@
 /* Splash return button - bottom left - matches corner-btn style */
 .splash-return-btn {
   position: fixed;
-  bottom: 20px;
-  left: 20px;
-  background: #ff5252;
+  bottom: 32px;
+  left: 12px;
+  background: linear-gradient(135deg, #ff5252, #e53935);
   color: white;
+  padding: 8px 16px;
+  padding-bottom: 10px;
+  min-height: 44px;
+  font-size: 16px;
   border: none;
   padding: 8px 16px;
   padding-bottom: 10px;
@@ -1211,10 +1215,12 @@ body:has(.camera-start-menu.phase-options .options-section.no-animations) .auth-
   }
 
   .splash-return-btn {
-    bottom: max(15px, calc(env(safe-area-inset-bottom) + 5px));
-    left: 15px;
-    padding: 8px 14px;
-    font-size: 0.9rem;
+    bottom: max(32px, calc(env(safe-area-inset-bottom) + 17px));
+    left: 12px;
+    padding: 8px 16px;
+    padding-bottom: 10px;
+    font-size: 16px;
+    min-height: 44px;
   }
 
   /* Add top margin to prevent title overlap with login component */
@@ -1504,10 +1510,12 @@ body:has(.camera-start-menu.phase-options .options-section.no-animations) .auth-
   }
 
   .splash-return-btn {
-    bottom: max(12px, calc(env(safe-area-inset-bottom) + 5px));
+    bottom: max(32px, calc(env(safe-area-inset-bottom) + 17px));
     left: 12px;
-    padding: 8px 14px;
-    font-size: 0.9rem;
+    padding: 8px 16px;
+    padding-bottom: 10px;
+    font-size: 16px;
+    min-height: 44px;
   }
 
   .polaroid-button {

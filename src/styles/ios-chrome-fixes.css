@@ -37,7 +37,7 @@
 
   /* Position the photos corner button properly in iOS */
   .photos-corner-btn {
-    bottom: max(20px, calc(env(safe-area-inset-bottom) + 5px)) !important;
+    bottom: max(32px, calc(env(safe-area-inset-bottom) + 17px)) !important;
   }
 
   /* Force media query to apply on iPhone devices in portrait mode */
