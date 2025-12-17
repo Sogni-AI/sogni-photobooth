@@ -866,6 +866,12 @@ const App = () => {
     localStorage.removeItem('sogni_blocked_prompts');
     console.log('🗑️ Cleared blocked prompts from localStorage');
 
+    // Reset theme group preferences to defaults
+    const defaultThemeState = getDefaultThemeGroupState();
+    saveThemeGroupPreferences(defaultThemeState);
+    setCurrentThemeState(defaultThemeState);
+    console.log('🎨 Reset theme group preferences to defaults');
+
     // Clear all photo states - UI will show Einstein fallback automatically
     setLastPhotoData({ blob: null, dataUrl: null });
     setLastAdjustedPhotoState(null);
