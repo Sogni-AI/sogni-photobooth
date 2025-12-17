@@ -53,183 +53,211 @@ const getRandomVideoMessage = () => {
   return VIDEO_READY_MESSAGES[Math.floor(Math.random() * VIDEO_READY_MESSAGES.length)];
 };
 
+// Track which motion emojis have been used for video generation
+const USED_MOTIONS_KEY = 'sogni_used_motion_emojis';
+
+const getUsedMotionEmojis = () => {
+  try {
+    const stored = localStorage.getItem(USED_MOTIONS_KEY);
+    return stored ? JSON.parse(stored) : [];
+  } catch {
+    return [];
+  }
+};
+
+const markMotionEmojiUsed = (emoji) => {
+  try {
+    const used = getUsedMotionEmojis();
+    if (!used.includes(emoji)) {
+      used.push(emoji);
+      localStorage.setItem(USED_MOTIONS_KEY, JSON.stringify(used));
+    }
+  } catch {
+    // Silently fail if localStorage is not available
+  }
+};
+
+const hasUsedMotionEmoji = (emoji) => {
+  return getUsedMotionEmojis().includes(emoji);
+};
+
 // Motion templates for video generation - 8 categories × 16 templates each = 128 total
 // Key I2V principles: Can only animate what EXISTS in the image - expressions, movements, camera, effects
 const MOTION_CATEGORIES = [
   {
-    name: 'Emotions',
-    emoji: '😊',
-    templates: [
-      { emoji: '😊', label: 'Smile', prompt: 'breaks into warm genuine smile, eyes crinkle with joy, cheeks rise' },
-      { emoji: '😂', label: 'Laugh', prompt: 'bursts into laughter, shoulders shake, eyes crinkle, head tips back' },
-      { emoji: '🤣', label: 'ROFL', prompt: 'laughs hysterically, falls over laughing, tears streaming, can barely breathe' },
-      { emoji: '😢', label: 'Cry', prompt: 'face crumples sadly, tears well up, lip quivers, sniffles' },
-      { emoji: '😳', label: 'Blush', prompt: 'cheeks flush bright red, face turns pink with embarrassment, shy smile' },
-      { emoji: '😡', label: 'Rage', prompt: 'face turns red with anger, steam shoots from ears, veins bulge, furious' },
-      { emoji: '🤬', label: 'Swearing', prompt: 'face contorts with anger, mouth moves rapidly, symbols appear, furious cursing' },
-      { emoji: '😱', label: 'Scream', prompt: 'mouth opens wide screaming, eyes bulge, head shakes with terror' },
-      { emoji: '🤯', label: 'Mind Blown', prompt: 'head explodes dramatically, brain bursts out, mind literally blown, pieces scatter' },
-      { emoji: '🤔', label: 'Think', prompt: 'eyebrows furrow, eyes look up thinking, hand touches chin' },
-      { emoji: '😍', label: 'Love', prompt: 'heart eyes appear, hearts float up from head, lovestruck dreamy expression' },
-      { emoji: '🥰', label: 'Adore', prompt: 'face softens lovingly, hearts surround, blushing cheeks, warm affection' },
-      { emoji: '😈', label: 'Devious', prompt: 'eyes narrow mischievously, slow sinister grin spreads across face' },
-      { emoji: '🤗', label: 'Hug', prompt: 'arms open wide for embrace, warm welcoming smile, wholesome happiness' },
-      { emoji: '😎', label: 'Cool', prompt: 'sunglasses appear, confident smirk, head tilts back slightly, too cool' },
-      { emoji: '😮', label: 'Gasp', prompt: 'mouth opens in surprise, eyes widen, sharp inhale, hand to chest' },
-    ]
-  },
-  {
-    name: 'Reactions',
-    emoji: '👀',
-    templates: [
-      { emoji: '😉', label: 'Wink', prompt: 'winks playfully, slight head tilt, charming smile spreads' },
-      { emoji: '🙄', label: 'Eye Roll', prompt: 'eyes roll back hard, head tilts with attitude, sighs dramatically' },
-      { emoji: '👀', label: 'Side Eye', prompt: 'eyes shift suspiciously to the side, eyebrow raises slowly' },
-      { emoji: '🫣', label: 'Peek', prompt: 'hands slowly part from face, one eye peeks through nervously' },
-      { emoji: '🤫', label: 'Shush', prompt: 'finger raises to lips, eyes widen, secretive expression' },
-      { emoji: '🤭', label: 'Gossip', prompt: 'hand covers mouth, eyes dart sideways, leans in secretively' },
-      { emoji: '👍', label: 'Nod Yes', prompt: 'head nods up and down agreeing, warm smile, eyes brighten' },
-      { emoji: '👎', label: 'Shake No', prompt: 'head shakes side to side disagreeing, slight frown, eyes narrow' },
-      { emoji: '👋', label: 'Wave', prompt: 'hand raises waving hello, friendly smile, head tilts warmly' },
-      { emoji: '💋', label: 'Kiss', prompt: 'puckers lips, blows kiss toward camera, winks flirtatiously' },
-      { emoji: '💅', label: 'Slay', prompt: 'chin raises confidently, eyes narrow fiercely, hair tosses back' },
-      { emoji: '🫡', label: 'Salute', prompt: 'hand snaps to forehead in salute, stands at attention, serious face' },
-      { emoji: '🫦', label: 'Lip Bite', prompt: 'teeth bite lower lip seductively, eyes smolder, flirty expression' },
-      { emoji: '👏', label: 'Clap', prompt: 'hands clap together enthusiastically, appreciative applause, nodding approval' },
-      { emoji: '🫵', label: 'Point', prompt: 'finger points directly at viewer, intense eye contact, calling you out' },
-      { emoji: '🙏', label: 'Prayer', prompt: 'hands press together in prayer, eyes close peacefully, serene namaste' },
-    ]
-  },
-  {
     name: 'Camera',
-    emoji: '🎬',
+    emoji: '🎥',
     templates: [
+      { emoji: '🔅', label: 'Blur', prompt: 'image goes soft and blurry, dreamy out of focus effect, hazy vision' },
+      { emoji: '🎥', label: 'Dolly', prompt: 'camera smoothly glides forward or backward, cinematic dolly movement' },
+      { emoji: '📸', label: 'Flash', prompt: 'bright camera flashes pop, paparazzi strobe lighting effect' },
+      { emoji: '🙃', label: 'Flip', prompt: 'entire view rotates upside down, world flips, disorienting inversion' },
+      { emoji: '🎯', label: 'Focus Pull', prompt: 'focus shifts dramatically from blurry to sharp, cinematic rack focus' },
+      { emoji: '📺', label: 'Glitch', prompt: 'digital glitch distortion, RGB split, screen tears and static interference' },
+      { emoji: '🔄', label: 'Look Around', prompt: 'head turns left then right curiously, eyes scan around, returns to center' },
+      { emoji: '🌀', label: 'Orbit', prompt: 'camera orbits smoothly around subject, cinematic rotation' },
+      { emoji: '↔️', label: 'Pan', prompt: 'camera pans slowly across scene, smooth horizontal motion' },
+      { emoji: '↕️', label: 'Tilt', prompt: 'camera tilts up or down smoothly, vertical panning motion' },
+      { emoji: '🤳', label: 'Selfie', prompt: 'arm extends holding phone, selfie pose, duck lips, finding the angle' },
+      { emoji: '🎬', label: 'Shake', prompt: 'camera shakes with impact, dramatic handheld movement' },
+      { emoji: '💡', label: 'Strobe', prompt: 'strobe light flashes rapidly, freeze frame snapshots, club lighting' },
+      { emoji: '🫨', label: 'Vibrate', prompt: 'rapid shaking vibration effect, buzzing tremor, phone vibration feel' },
       { emoji: '🔍', label: 'Zoom In', prompt: 'slow dramatic camera push in toward face, intense focus' },
       { emoji: '🔭', label: 'Zoom Out', prompt: 'camera slowly pulls back revealing scene, epic reveal' },
-      { emoji: '↔️', label: 'Pan', prompt: 'camera pans slowly across scene, smooth horizontal motion' },
-      { emoji: '🌀', label: 'Orbit', prompt: 'camera orbits smoothly around subject, cinematic rotation' },
-      { emoji: '🎬', label: 'Shake', prompt: 'camera shakes with impact, dramatic handheld movement' },
-      { emoji: '🔄', label: 'Look Around', prompt: 'head turns left then right curiously, eyes scan around, returns to center' },
-      { emoji: '📸', label: 'Flash', prompt: 'bright camera flashes pop, paparazzi strobe lighting effect' },
-      { emoji: '📺', label: 'Glitch', prompt: 'digital glitch distortion, RGB split, screen tears and static interference' },
-      { emoji: '⏱️', label: 'Slow Mo', prompt: 'everything moves in slow motion, dramatic time slowdown effect' },
-      { emoji: '🎯', label: 'Focus Pull', prompt: 'focus shifts dramatically from blurry to sharp, cinematic rack focus' },
-      { emoji: '💡', label: 'Strobe', prompt: 'strobe light flashes rapidly, freeze frame snapshots, club lighting' },
-      { emoji: '📐', label: 'Dutch Angle', prompt: 'camera tilts to dramatic angle, disorienting rotation effect' },
-      { emoji: '🎥', label: 'Dolly', prompt: 'camera smoothly glides forward or backward, cinematic dolly movement' },
-      { emoji: '🤳', label: 'Selfie', prompt: 'arm extends holding phone, selfie pose, duck lips, finding the angle' },
-      { emoji: '🙃', label: 'Flip', prompt: 'entire view rotates upside down, world flips, disorienting inversion' },
-      { emoji: '🫨', label: 'Vibrate', prompt: 'rapid shaking vibration effect, buzzing tremor, phone vibration feel' },
-    ]
-  },
-  {
-    name: 'Creatures',
-    emoji: '🧛',
-    templates: [
-      { emoji: '🧛', label: 'Vampire', prompt: 'fangs extend from mouth, eyes glow red, menacing expression, pale skin' },
-      { emoji: '🧟', label: 'Zombie', prompt: 'skin turns grey and rotting, eyes go white, zombie transformation, arms reach forward' },
-      { emoji: '🐺', label: 'Werewolf', prompt: 'fur sprouts across face, ears become pointed, fangs grow, eyes glow yellow, howling' },
-      { emoji: '👻', label: 'Ghost', prompt: 'body turns translucent and ghostly, fades partially, floats eerily' },
-      { emoji: '👽', label: 'Alien', prompt: 'eyes turn large and black, skin turns grey, alien transformation' },
-      { emoji: '👹', label: 'Demon', prompt: 'horns sprout from forehead, eyes glow, demonic transformation, snarling' },
-      { emoji: '🤖', label: 'Robot', prompt: 'skin turns metallic, robotic parts appear, mechanical transformation' },
-      { emoji: '💀', label: 'Skeleton', prompt: 'face transforms into skeleton skull, flesh fades away revealing bones' },
-      { emoji: '😇', label: 'Angel', prompt: 'glowing halo appears above head, wings unfold, divine light radiates' },
-      { emoji: '🦾', label: 'Cyborg', prompt: 'half face becomes robotic, glowing eye, metal plates appear, circuits visible' },
-      { emoji: '🤡', label: 'Clown', prompt: 'colorful clown makeup appears, red nose, wild hair, exaggerated smile' },
-      { emoji: '🥸', label: 'Disguise', prompt: 'fake glasses and mustache appear, going incognito, silly disguise' },
-      { emoji: '👮‍♀️', label: 'Police', prompt: 'police hat appears, badge flashes, stern authoritative expression, cop transformation' },
-      { emoji: '🥷', label: 'Ninja', prompt: 'ninja mask covers face, eyes narrow, stealthy pose, warrior stance' },
-      { emoji: '🐸', label: 'Frog', prompt: 'face turns green and amphibian, eyes bulge outward, tongue flicks out, ribbit' },
-      { emoji: '🤰', label: 'Pregnant', prompt: 'belly grows and expands rapidly, hand rests on stomach, glowing expectant' },
-    ]
-  },
-  {
-    name: 'Magic',
-    emoji: '✨',
-    templates: [
-      { emoji: '✨', label: 'Sparkle', prompt: 'magical sparkles float around, twinkling lights dance everywhere' },
-      { emoji: '🌟', label: 'Glow', prompt: 'soft ethereal light radiates outward, angelic glow effect' },
-      { emoji: '⭐', label: 'Stardust', prompt: 'glittering stardust swirls around, cosmic particles float, galaxy backdrop' },
-      { emoji: '💎', label: 'Crystal', prompt: 'crystalline structures grow and spread, diamond-like reflections, ice crystals' },
-      { emoji: '🔮', label: 'Crystal Ball', prompt: 'mystical glowing aura, magical energy swirls, fortune teller vibes' },
-      { emoji: '🌈', label: 'Rainbow', prompt: 'vibrant rainbow colors wash across, prismatic light beams everywhere' },
-      { emoji: '💜', label: 'Neon', prompt: 'vibrant neon lights pulse and glow, cyberpunk colors, synthwave aesthetic' },
-      { emoji: '💫', label: 'Supernova', prompt: 'blinding explosion of light and energy radiates outward, cosmic blast' },
-      { emoji: '👁️', label: 'Third Eye', prompt: 'glowing third eye opens on forehead, mystical energy radiates, enlightenment' },
-      { emoji: '🫧', label: 'Bubbles', prompt: 'iridescent soap bubbles float up and around, dreamy magical atmosphere' },
-      { emoji: '🌌', label: 'Aurora', prompt: 'northern lights dance across sky, colorful aurora borealis waves' },
-      { emoji: '🫥', label: 'Disappear', prompt: 'body fades to invisible, transparency spreads, vanishing into nothing' },
-      { emoji: '😶‍🌫️', label: 'Clouded', prompt: 'head surrounded by clouds, foggy mystical aura, dreamy haze envelops' },
-      { emoji: '🌬️', label: 'Blow', prompt: 'cheeks puff up, blows air outward, magical breath, wind streams from mouth' },
-      { emoji: '🙌', label: 'Praise', prompt: 'hands raise up glowing, rays of light beam down, blessed moment, hallelujah' },
-      { emoji: '✊', label: 'Power Up', prompt: 'fist clenches, energy surges, power aura builds, charging up strength' },
-    ]
-  },
-  {
-    name: 'Nature',
-    emoji: '🌪️',
-    templates: [
-      { emoji: '💨', label: 'Wind', prompt: 'hair blows wildly in strong wind, clothes whip around dramatically' },
-      { emoji: '❄️', label: 'Snow', prompt: 'snowflakes drift down, frost forms, breath becomes visible, shivering' },
-      { emoji: '🥶', label: 'Freeze', prompt: 'face turns blue, ice crystals form on skin, freezing solid, frost spreads' },
-      { emoji: '⚡', label: 'Lightning', prompt: 'lightning crackles around dramatically, electric energy surges' },
-      { emoji: '🌪️', label: 'Tornado', prompt: 'violent tornado swirls around, debris flies everywhere, intense destruction' },
-      { emoji: '🌊', label: 'Tsunami', prompt: 'massive wave crashes in from behind, water engulfs everything, underwater' },
-      { emoji: '🌺', label: 'Bloom', prompt: 'flowers bloom and grow around, petals open, nature flourishes' },
-      { emoji: '🦋', label: 'Butterfly', prompt: 'butterflies flutter around, land on face, magical nature effect' },
-      { emoji: '🌻', label: 'Sunflower', prompt: 'sunflowers grow and bloom around, petals unfold toward light, golden warmth' },
-      { emoji: '🌧️', label: 'Rain', prompt: 'rain pours down heavily, water droplets splash, getting soaked' },
-      { emoji: '🌫️', label: 'Fog', prompt: 'thick fog rolls in, mysterious mist surrounds, visibility fades' },
-      { emoji: '🌅', label: 'Sunrise', prompt: 'golden sunrise light washes over, warm rays beam, dawn breaks' },
-      { emoji: '🌿', label: 'Overgrown', prompt: 'vines and plants grow rapidly, nature takes over, jungle spreads' },
-      { emoji: '🐟', label: 'Underwater', prompt: 'bubbles rise up, hair floats weightlessly, underwater submersion effect' },
-      { emoji: '🏄‍♂️', label: 'Surfing', prompt: 'riding a wave, ocean spray, balanced surf pose, gnarly vibes' },
-      { emoji: '🤸‍♀️', label: 'Cartwheel', prompt: 'body flips in cartwheel motion, acrobatic spin, energetic tumble' },
     ]
   },
   {
     name: 'Chaos',
     emoji: '💥',
     templates: [
-      { emoji: '💥', label: 'Explode', prompt: 'head explodes dramatically, pieces scatter everywhere, total destruction' },
-      { emoji: '🔥', label: 'On Fire', prompt: 'flames engulf and spread across, fire burns intensely, everything ablaze' },
-      { emoji: '🌋', label: 'Lava', prompt: 'molten lava drips down, skin cracks revealing glowing magma underneath' },
-      { emoji: '🕳️', label: 'Black Hole', prompt: 'swirling black hole vortex forms behind, everything gets pulled toward it' },
-      { emoji: '☀️', label: 'Solar Flare', prompt: 'intense sun rays blast outward, blinding golden light, solar energy' },
-      { emoji: '🫠', label: 'Melt', prompt: 'face slowly melts downward like wax, features droop and ooze, liquifying' },
-      { emoji: '💧', label: 'Drip', prompt: 'face slowly drips and distorts downward, melting like liquid wax' },
-      { emoji: '🗿', label: 'Stone', prompt: 'skin turns to grey stone, cracking texture spreads, frozen as statue' },
-      { emoji: '💔', label: 'Shatter', prompt: 'face cracks like glass, pieces break apart, shattering into fragments' },
-      { emoji: '⚫', label: 'Disintegrate', prompt: 'body crumbles to dust, particles scatter in wind, fading away' },
-      { emoji: '🌍', label: 'Earthquake', prompt: 'everything shakes violently, ground cracks, destruction tremors' },
       { emoji: '🧪', label: 'Acid', prompt: 'acid drips and sizzles, corrosive burns spread, dissolving effect' },
-      { emoji: '💨', label: 'Vaporize', prompt: 'body turns to vapor, steam rises, evaporating into mist' },
+      { emoji: '🕳️', label: 'Black Hole', prompt: 'swirling black hole vortex forms behind, everything gets pulled toward it' },
+      { emoji: '☠️', label: 'Death', prompt: 'skull face transformation, eyes go hollow, grim reaper vibes, mortality' },
+      { emoji: '⚫', label: 'Disintegrate', prompt: 'body crumbles to dust, particles scatter in wind, fading away' },
+      { emoji: '💧', label: 'Drip', prompt: 'face slowly drips and distorts downward, melting like liquid wax' },
+      { emoji: '🌍', label: 'Earthquake', prompt: 'everything shakes violently, ground cracks, destruction tremors' },
+      { emoji: '💥', label: 'Explode', prompt: 'head explodes dramatically, pieces scatter everywhere, total destruction' },
       { emoji: '🌀', label: 'Implode', prompt: 'everything collapses inward, implosion effect, crushing force' },
+      { emoji: '🌋', label: 'Lava', prompt: 'molten lava drips down, skin cracks revealing glowing magma underneath' },
+      { emoji: '🫠', label: 'Melt', prompt: 'face slowly melts downward like wax, features droop and ooze, liquifying' },
+      { emoji: '🔥', label: 'On Fire', prompt: 'flames engulf and spread across, fire burns intensely, everything ablaze' },
       { emoji: '💩', label: 'Poop', prompt: 'poop emoji rains down chaotically, gross explosion, total mess' },
+      { emoji: '💔', label: 'Shatter', prompt: 'face cracks like glass, pieces break apart, shattering into fragments' },
+      { emoji: '☀️', label: 'Solar Flare', prompt: 'intense sun rays blast outward, blinding golden light, solar energy' },
+      { emoji: '🗿', label: 'Stone', prompt: 'skin turns to grey stone, cracking texture spreads, frozen as statue' },
+      { emoji: '💨', label: 'Vaporize', prompt: 'body turns to vapor, steam rises, evaporating into mist' },
+    ]
+  },
+  {
+    name: 'Disguise',
+    emoji: '🥸',
+    templates: [
+      { emoji: '👽', label: 'Alien', prompt: 'eyes turn large and black, skin turns grey, alien transformation' },
+      { emoji: '😇', label: 'Angel', prompt: 'glowing halo appears above head, wings unfold, divine light radiates' },
+      { emoji: '🤡', label: 'Clown', prompt: 'colorful clown makeup appears, red nose, wild hair, exaggerated smile' },
+      { emoji: '🦾', label: 'Cyborg', prompt: 'half face becomes robotic, glowing eye, metal plates appear, circuits visible' },
+      { emoji: '👹', label: 'Demon', prompt: 'horns sprout from forehead, eyes glow, demonic transformation, snarling' },
+      { emoji: '🥸', label: 'Disguise', prompt: 'fake glasses and mustache appear, going incognito, silly disguise' },
+      { emoji: '🐸', label: 'Frog', prompt: 'face turns green and amphibian, eyes bulge outward, tongue flicks out, ribbit' },
+      { emoji: '👻', label: 'Ghost', prompt: 'body turns translucent and ghostly, fades partially, floats eerily' },
+      { emoji: '🥷', label: 'Ninja', prompt: 'ninja mask covers face, eyes narrow, stealthy pose, warrior stance' },
+      { emoji: '👮‍♀️', label: 'Police', prompt: 'police hat appears, badge flashes, stern authoritative expression, cop transformation' },
+      { emoji: '🤰', label: 'Pregnant', prompt: 'belly grows and expands rapidly, hand rests on stomach, glowing expectant' },
+      { emoji: '🤖', label: 'Robot', prompt: 'skin turns metallic, robotic parts appear, mechanical transformation' },
+      { emoji: '💀', label: 'Skeleton', prompt: 'face transforms into skeleton skull, flesh fades away revealing bones' },
+      { emoji: '🧛', label: 'Vampire', prompt: 'fangs extend from mouth, eyes glow red, menacing expression, pale skin' },
+      { emoji: '🐺', label: 'Werewolf', prompt: 'fur sprouts across face, ears become pointed, fangs grow, eyes glow yellow, howling' },
+      { emoji: '🧟', label: 'Zombie', prompt: 'skin turns grey and rotting, eyes go white, zombie transformation, arms reach forward' },
+    ]
+  },
+  {
+    name: 'Emotions',
+    emoji: '😊',
+    templates: [
+      { emoji: '🥰', label: 'Adore', prompt: 'face softens lovingly, hearts surround, blushing cheeks, warm affection' },
+      { emoji: '😳', label: 'Blush', prompt: 'cheeks flush bright red, face turns pink with embarrassment, shy smile' },
+      { emoji: '😎', label: 'Cool', prompt: 'sunglasses appear, confident smirk, head tilts back slightly, too cool' },
+      { emoji: '😢', label: 'Cry', prompt: 'face crumples sadly, tears well up, lip quivers, sniffles' },
+      { emoji: '😈', label: 'Devious', prompt: 'eyes narrow mischievously, slow sinister grin spreads across face' },
       { emoji: '🤤', label: 'Drool', prompt: 'excessive drool pours from mouth, slobbering mess, dripping everywhere' },
+      { emoji: '😮', label: 'Gasp', prompt: 'mouth opens in surprise, eyes widen, sharp inhale, hand to chest' },
+      { emoji: '🤗', label: 'Hug', prompt: 'arms open wide for embrace, warm welcoming smile, wholesome happiness' },
+      { emoji: '😍', label: 'Love', prompt: 'heart eyes appear, hearts float up from head, lovestruck dreamy expression' },
+      { emoji: '🤯', label: 'Mind Blown', prompt: 'head explodes dramatically, brain bursts out, mind literally blown, pieces scatter' },
+      { emoji: '😡', label: 'Rage', prompt: 'face turns red with anger, steam shoots from ears, veins bulge, furious' },
+      { emoji: '🤣', label: 'ROFL', prompt: 'laughs hysterically, falls over laughing, tears streaming, can barely breathe' },
+      { emoji: '😱', label: 'Scream', prompt: 'mouth opens wide screaming, eyes bulge, head shakes with terror' },
+      { emoji: '😊', label: 'Smile', prompt: 'breaks into warm genuine smile, eyes crinkle with joy, cheeks rise' },
+      { emoji: '🤬', label: 'Swearing', prompt: 'face contorts with anger, mouth moves rapidly, symbols appear, furious cursing' },
+      { emoji: '🤔', label: 'Think', prompt: 'eyebrows furrow, eyes look up thinking, hand touches chin' },
+    ]
+  },
+  {
+    name: 'Magic',
+    emoji: '✨',
+    templates: [
+      { emoji: '🌌', label: 'Aurora', prompt: 'northern lights dance across sky, colorful aurora borealis waves' },
+      { emoji: '🌬️', label: 'Blow', prompt: 'cheeks puff up, blows air outward, magical breath, wind streams from mouth' },
+      { emoji: '🫧', label: 'Bubbles', prompt: 'iridescent soap bubbles float up and around, dreamy magical atmosphere' },
+      { emoji: '💎', label: 'Crystal', prompt: 'crystalline structures grow and spread, diamond-like reflections, ice crystals' },
+      { emoji: '🔮', label: 'Crystal Ball', prompt: 'mystical glowing aura, magical energy swirls, fortune teller vibes' },
+      { emoji: '🫥', label: 'Disappear', prompt: 'body fades to invisible, transparency spreads, vanishing into nothing' },
+      { emoji: '🌟', label: 'Glow', prompt: 'soft ethereal light radiates outward, angelic glow effect' },
+      { emoji: '🪄', label: 'Magic Wand', prompt: 'magic wand waves, sparkles trail behind, spell is cast, enchantment swirls' },
+      { emoji: '💜', label: 'Neon', prompt: 'vibrant neon lights pulse and glow, cyberpunk colors, synthwave aesthetic' },
+      { emoji: '✊', label: 'Power Up', prompt: 'fist clenches, energy surges, power aura builds, charging up strength' },
+      { emoji: '🙌', label: 'Praise', prompt: 'hands raise up glowing, rays of light beam down, blessed moment, hallelujah' },
+      { emoji: '🌈', label: 'Rainbow', prompt: 'vibrant rainbow colors wash across, prismatic light beams everywhere' },
+      { emoji: '✨', label: 'Sparkle', prompt: 'magical sparkles float around, twinkling lights dance everywhere' },
+      { emoji: '⭐', label: 'Stardust', prompt: 'glittering stardust swirls around, cosmic particles float, galaxy backdrop' },
+      { emoji: '💫', label: 'Supernova', prompt: 'blinding explosion of light and energy radiates outward, cosmic blast' },
+      { emoji: '👁️', label: 'Third Eye', prompt: 'glowing third eye opens on forehead, mystical energy radiates, enlightenment' },
+    ]
+  },
+  {
+    name: 'Nature',
+    emoji: '🌅',
+    templates: [
+      { emoji: '🌺', label: 'Bloom', prompt: 'flowers bloom and grow around, petals open, nature flourishes' },
+      { emoji: '🦋', label: 'Butterfly', prompt: 'butterflies flutter around, land on face, magical nature effect' },
+      { emoji: '🤸‍♀️', label: 'Cartwheel', prompt: 'body flips in cartwheel motion, acrobatic spin, energetic tumble' },
+      { emoji: '🌫️', label: 'Fog', prompt: 'thick fog rolls in, mysterious mist surrounds, visibility fades' },
+      { emoji: '🥶', label: 'Freeze', prompt: 'face turns blue, ice crystals form on skin, freezing solid, frost spreads' },
+      { emoji: '⚡', label: 'Lightning', prompt: 'lightning crackles around dramatically, electric energy surges' },
+      { emoji: '🌿', label: 'Overgrown', prompt: 'vines and plants grow rapidly, nature takes over, jungle spreads' },
+      { emoji: '🌧️', label: 'Rain', prompt: 'rain pours down heavily, water droplets splash, getting soaked' },
+      { emoji: '❄️', label: 'Snow', prompt: 'snowflakes drift down, frost forms, breath becomes visible, shivering' },
+      { emoji: '🌻', label: 'Sunflower', prompt: 'sunflowers grow and bloom around, petals unfold toward light, golden warmth' },
+      { emoji: '🌅', label: 'Sunrise', prompt: 'golden sunrise light washes over, warm rays beam, dawn breaks' },
+      { emoji: '🏄‍♂️', label: 'Surfing', prompt: 'riding a wave, ocean spray, balanced surf pose, gnarly vibes' },
+      { emoji: '🌪️', label: 'Tornado', prompt: 'violent tornado swirls around, debris flies everywhere, intense destruction' },
+      { emoji: '🌊', label: 'Tsunami', prompt: 'massive wave crashes in from behind, water engulfs everything, underwater' },
+      { emoji: '🐟', label: 'Underwater', prompt: 'bubbles rise up, hair floats weightlessly, underwater submersion effect' },
+      { emoji: '💨', label: 'Wind', prompt: 'hair blows wildly in strong wind, clothes whip around dramatically' },
     ]
   },
   {
     name: 'Party',
     emoji: '🎉',
     templates: [
+      { emoji: '🎸', label: 'Air Guitar', prompt: 'shreds invisible guitar, head bangs, rocks out intensely' },
       { emoji: '🥳', label: 'Celebrate', prompt: 'throws head back laughing, huge smile, eyes squeeze with joy' },
       { emoji: '🎊', label: 'Confetti', prompt: 'colorful confetti rains down everywhere, celebration explosion' },
-      { emoji: '💃', label: 'Groove', prompt: 'shoulders bounce to beat, head bobs rhythmically, feeling the music' },
-      { emoji: '🤟', label: 'Rock On', prompt: 'throws up rock horns, headbangs slightly, rocks out' },
       { emoji: '🪩', label: 'Disco', prompt: 'disco ball lights sweep across face, colorful reflections dance, party vibes' },
-      { emoji: '🎤', label: 'Karaoke', prompt: 'belts out song dramatically, head tilts back, passionate performance' },
-      { emoji: '🎸', label: 'Air Guitar', prompt: 'shreds invisible guitar, head bangs, rocks out intensely' },
-      { emoji: '🤪', label: 'Silly', prompt: 'eyes cross briefly, tongue pokes out, head wobbles playfully' },
       { emoji: '😵‍💫', label: 'Dizzy', prompt: 'eyes spiral dizzily, head wobbles, stars circle around head, disoriented' },
-      { emoji: '🍕', label: 'Pizza', prompt: 'pizza slices rain down from above, cheese stretches and drips, mouth opens wide' },
+      { emoji: '💃', label: 'Groove', prompt: 'shoulders bounce to beat, head bobs rhythmically, feeling the music' },
+      { emoji: '🎤', label: 'Karaoke', prompt: 'belts out song dramatically, head tilts back, passionate performance' },
+      { emoji: '🤑', label: 'Money', prompt: 'dollar signs in eyes, money rains down, cash flies everywhere, rich vibes' },
+      { emoji: '🎨', label: 'Paint Splash', prompt: 'colorful paint splatters across face, drips down, artistic explosion' },
       { emoji: '🥧', label: 'Pie Face', prompt: 'cream pie smashes into face, splat impact, whipped cream drips down' },
+      { emoji: '🍕', label: 'Pizza', prompt: 'pizza slices rain down from above, cheese stretches and drips, mouth opens wide' },
+      { emoji: '🤟', label: 'Rock On', prompt: 'throws up rock horns, headbangs slightly, rocks out' },
+      { emoji: '🤪', label: 'Silly', prompt: 'eyes cross briefly, tongue pokes out, head wobbles playfully' },
       { emoji: '🤧', label: 'Sneeze', prompt: 'face scrunches up, massive sneeze explodes out, dramatic achoo' },
       { emoji: '💦', label: 'Spit Take', prompt: 'liquid sprays out of mouth in shock, dramatic spit take reaction' },
-      { emoji: '🎨', label: 'Paint Splash', prompt: 'colorful paint splatters across face, drips down, artistic explosion' },
       { emoji: '😜', label: 'Wacky', prompt: 'tongue sticks out sideways, one eye winks, totally goofy face' },
-      { emoji: '🤑', label: 'Money', prompt: 'dollar signs in eyes, money rains down, cash flies everywhere, rich vibes' },
+    ]
+  },
+  {
+    name: 'Reactions',
+    emoji: '👀',
+    templates: [
+      { emoji: '👏', label: 'Clap', prompt: 'hands clap together enthusiastically, appreciative applause, nodding approval' },
+      { emoji: '🙄', label: 'Eye Roll', prompt: 'eyes roll back hard, head tilts with attitude, sighs dramatically' },
+      { emoji: '🤭', label: 'Gossip', prompt: 'hand covers mouth, eyes dart sideways, leans in secretively' },
+      { emoji: '💋', label: 'Kiss', prompt: 'puckers lips, blows kiss toward camera, winks flirtatiously' },
+      { emoji: '🫦', label: 'Lip Bite', prompt: 'teeth bite lower lip seductively, eyes smolder, flirty expression' },
+      { emoji: '👍', label: 'Nod Yes', prompt: 'head nods up and down agreeing, warm smile, eyes brighten' },
+      { emoji: '🫣', label: 'Peek', prompt: 'hands slowly part from face, one eye peeks through nervously' },
+      { emoji: '🫵', label: 'Point', prompt: 'finger points directly at viewer, intense eye contact, calling you out' },
+      { emoji: '🙏', label: 'Prayer', prompt: 'hands press together in prayer, eyes close peacefully, serene namaste' },
+      { emoji: '🫡', label: 'Salute', prompt: 'hand snaps to forehead in salute, stands at attention, serious face' },
+      { emoji: '👎', label: 'Shake No', prompt: 'head shakes side to side disagreeing, slight frown, eyes narrow' },
+      { emoji: '🤫', label: 'Shush', prompt: 'finger raises to lips, eyes widen, secretive expression' },
+      { emoji: '👀', label: 'Side Eye', prompt: 'eyes shift suspiciously to the side, eyebrow raises slowly' },
+      { emoji: '💅', label: 'Slay', prompt: 'chin raises confidently, eyes narrow fiercely, hair tosses back' },
+      { emoji: '👋', label: 'Wave', prompt: 'hand raises waving hello, friendly smile, head tilts warmly' },
+      { emoji: '😉', label: 'Wink', prompt: 'winks playfully, slight head tilt, charming smile spreads' },
     ]
   },
 ];
@@ -320,30 +348,24 @@ const renderCustomButton = (setShowVideoDropdown, setShowCustomVideoPromptPopup)
 
 // Calculate square-ish grid dimensions (same cols/rows or rows = cols + 1)
 // Now also considers available height to ensure no scrolling
-const getSquareGridDimensions = (itemCount, isMobile, maxRows = null) => {
-  // Start with square root for ideal square grid
-  let cols = Math.ceil(Math.sqrt(itemCount));
-  let rows = Math.ceil(itemCount / cols);
-  
-  // If max rows specified, increase columns to fit within max rows
-  if (maxRows && rows > maxRows) {
-    cols = Math.ceil(itemCount / maxRows);
-    rows = maxRows;
-  }
-  
-  // Ensure minimum columns for readability
-  const minCols = isMobile ? 3 : 4;
-  const finalCols = Math.max(cols, minCols);
-  return { cols: finalCols, rows: Math.ceil(itemCount / finalCols) };
-};
-
-// Polaroid mini-frame component - matches app's polaroid proportions (side:bottom = 1:3.5)
-// Based on --polaroid-side-border: 24px and --polaroid-bottom-border: 84px
-const renderPolaroidFrame = ({ emoji, label, onClick, index, rotation = 0, title = '' }) => {
+// Compact polaroid button - pixel-perfect polaroid proportions
+const renderCompactPolaroid = ({ emoji, label, onClick, index, rotation = 0, title = '', size = 'normal', showUsedIndicator = false }) => {
   const isMobile = window.innerWidth < 768;
-  // Scaled down proportions: 3px sides, 10px bottom (ratio ~3.3x, close to 3.5x)
-  const sideBorder = isMobile ? 2 : 3;
-  const bottomBorder = isMobile ? 8 : 10;
+  const isPortrait = window.innerHeight > window.innerWidth;
+  const isMobilePortrait = isMobile && isPortrait;
+  const isLarge = size === 'large';
+  
+  // Check if this emoji has been used before (only for non-category items)
+  const hasBeenUsed = showUsedIndicator && hasUsedMotionEmoji(emoji);
+  
+  // Polaroid frame dimensions - THICK borders for categories, normal for templates
+  // Tighter on mobile portrait to maximize polaroid size
+  const framePad = isLarge 
+    ? (isMobilePortrait ? 6 : (isMobile ? 10 : 14)) 
+    : (isMobilePortrait ? 3 : (isMobile ? 4 : 5));
+  const bottomPad = isLarge 
+    ? (isMobilePortrait ? 22 : (isMobile ? 32 : 42)) 
+    : (isMobilePortrait ? 14 : (isMobile ? 20 : 26));
   
   return (
     <button
@@ -353,151 +375,175 @@ const renderPolaroidFrame = ({ emoji, label, onClick, index, rotation = 0, title
       style={{
         background: '#ffffff',
         border: 'none',
-        borderRadius: '2px',
-        boxShadow: '0 1px 4px rgba(0,0,0,0.15), 0 1px 2px rgba(0,0,0,0.1)',
-        padding: `${sideBorder}px ${sideBorder}px ${bottomBorder}px ${sideBorder}px`,
+        borderRadius: '3px',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.22), 0 1px 3px rgba(0,0,0,0.12)',
         cursor: 'pointer',
-        textAlign: 'center',
-        transition: 'all 0.2s ease',
+        transition: 'all 0.15s ease',
         display: 'flex',
         flexDirection: 'column',
-        alignItems: 'stretch',
         overflow: 'hidden',
         position: 'relative',
         transform: `rotate(${rotation}deg)`,
-        animation: `polaroidDrop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) ${index * 0.025}s both`,
+        animation: `polaroidDrop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) ${index * 0.02}s both`,
+        boxSizing: 'border-box',
+        // Padding creates the white frame: equal on top/left/right, larger on bottom
+        padding: `${framePad}px ${framePad}px ${bottomPad}px ${framePad}px`,
+        // Fill grid cell
+        width: '100%',
+        height: '100%',
       }}
       onMouseOver={e => {
-        e.currentTarget.style.transform = `translateY(-2px) rotate(${rotation - 0.5}deg)`;
-        e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.2), 0 2px 4px rgba(0,0,0,0.1)';
+        e.currentTarget.style.transform = `translateY(-4px) rotate(${rotation - 0.5}deg) scale(1.03)`;
+        e.currentTarget.style.boxShadow = '0 8px 20px rgba(0,0,0,0.28), 0 4px 8px rgba(0,0,0,0.15)';
       }}
       onMouseOut={e => {
         e.currentTarget.style.transform = `rotate(${rotation}deg)`;
-        e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,0.15), 0 1px 2px rgba(0,0,0,0.1)';
+        e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.22), 0 1px 3px rgba(0,0,0,0.12)';
       }}
       onMouseDown={e => {
         e.currentTarget.style.transform = `scale(0.97) rotate(${rotation}deg)`;
       }}
       onMouseUp={e => {
-        e.currentTarget.style.transform = `translateY(-2px) rotate(${rotation - 0.5}deg)`;
+        e.currentTarget.style.transform = `translateY(-4px) rotate(${rotation - 0.5}deg) scale(1.03)`;
       }}
     >
-      {/* Photo area - square */}
+      {/* Photo area - fills remaining space after padding, with inner shadow */}
       <div style={{
-        aspectRatio: '1 / 1',
+        flex: '1 1 auto',
+        width: '100%',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: '#f0f0f0',
+        background: 'linear-gradient(135deg, #fafafa 0%, #eeeeee 100%)',
+        borderRadius: '1px',
+        minHeight: 0,
+        boxShadow: 'inset 0 0 6px 2px rgba(0, 0, 0, 0.08), inset 0 0 4px 1px rgba(180, 180, 180, 0.15)',
       }}>
         <span style={{ 
-          fontSize: isMobile ? 'clamp(16px, 4vmin, 24px)' : 'clamp(18px, 3.5vmin, 26px)', 
+          fontSize: isLarge 
+            ? (isMobilePortrait ? '32px' : (isMobile ? '42px' : '56px')) 
+            : (isMobilePortrait ? '20px' : (isMobile ? '28px' : '38px')),
           lineHeight: 1,
         }}>{emoji}</span>
       </div>
-      {/* Label in bottom white area */}
+      {/* Label in the thick bottom white area - vertically centered */}
       <div style={{
         position: 'absolute',
-        bottom: '1px',
-        left: 0,
-        right: 0,
+        bottom: 0,
+        left: framePad,
+        right: framePad,
+        height: bottomPad,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
         fontFamily: '"Permanent Marker", cursive',
-        fontSize: isMobile ? 'clamp(5px, 1vmin, 7px)' : 'clamp(6px, 1.2vmin, 8px)',
+        fontSize: isLarge 
+          ? (isMobilePortrait ? '10px' : (isMobile ? '13px' : '15px')) 
+          : (isMobilePortrait ? '8px' : (isMobile ? '10px' : '12px')),
         color: '#333',
         textAlign: 'center',
         lineHeight: 1,
         whiteSpace: 'nowrap',
         overflow: 'hidden',
         textOverflow: 'ellipsis',
-        padding: '0 1px',
       }}>{label}</div>
+      
+      {/* Used indicator checkmark - bottom right corner */}
+      {hasBeenUsed && (
+        <div style={{
+          position: 'absolute',
+          bottom: isMobilePortrait ? '2px' : '3px',
+          right: isMobilePortrait ? '2px' : '3px',
+          width: isMobilePortrait ? '12px' : '16px',
+          height: isMobilePortrait ? '12px' : '16px',
+          borderRadius: '50%',
+          background: '#4CAF50',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+          zIndex: 2,
+        }}>
+          <span style={{
+            color: '#fff',
+            fontSize: isMobilePortrait ? '8px' : '10px',
+            fontWeight: 'bold',
+            lineHeight: 1,
+          }}>✓</span>
+        </div>
+      )}
     </button>
   );
 };
 
-// Render category button using consistent polaroid frame
-const renderCategoryButton = (category, onClick, index) => {
-  return renderPolaroidFrame({
-    emoji: category.emoji,
-    label: category.name,
-    onClick,
-    index,
-    rotation: 0,
-    title: `${category.templates.length} effects`,
-  });
-};
-
-// Render the motion picker with category navigation and animations
+// Render the motion picker with category navigation
+// CRITICAL: Both views maintain same container size - categories use larger tiles
 const renderMotionPicker = (selectedCategory, setSelectedCategory, handleGenerateVideo, setShowVideoDropdown, setShowCustomVideoPromptPopup) => {
   const isMobile = window.innerWidth < 768;
+  const isPortrait = window.innerHeight > window.innerWidth;
+  const isMobilePortrait = isMobile && isPortrait;
   
-  // Inject keyframe animations for polaroid style
+  // Inject keyframe animations
   if (typeof document !== 'undefined' && !document.getElementById('polaroid-button-animations')) {
     const style = document.createElement('style');
     style.id = 'polaroid-button-animations';
     style.textContent = `
       @keyframes polaroidDrop {
-        0% { 
-          opacity: 0; 
-          transform: translateY(-30px) rotate(-8deg) scale(0.8); 
-        }
-        60% { 
-          opacity: 1; 
-          transform: translateY(5px) rotate(2deg) scale(1.02); 
-        }
-        100% { 
-          opacity: 1; 
-          transform: translateY(0) rotate(0deg) scale(1); 
-        }
+        0% { opacity: 0; transform: translateY(-15px) rotate(-4deg) scale(0.92); }
+        60% { opacity: 1; transform: translateY(2px) rotate(0.5deg) scale(1.01); }
+        100% { opacity: 1; transform: translateY(0) rotate(0deg) scale(1); }
       }
       @keyframes slideInFromRight {
-        0% { opacity: 0; transform: translateX(30px); }
-        100% { opacity: 1; transform: translateX(0); }
-      }
-      @keyframes slideInFromLeft {
-        0% { opacity: 0; transform: translateX(-30px); }
+        0% { opacity: 0; transform: translateX(15px); }
         100% { opacity: 1; transform: translateX(0); }
       }
       @keyframes fadeScaleIn {
-        0% { opacity: 0; transform: scale(0.9); }
+        0% { opacity: 0; transform: scale(0.96); }
         100% { opacity: 1; transform: scale(1); }
       }
     `;
     document.head.appendChild(style);
   }
   
-  // If no category selected, show category grid
+  // Grid config: 4 cols always
+  // Categories: 8 items = 4x2
+  // Templates: 16 items = 4x4
+  const cols = 4;
+  
+  // Category view: 8 items in 4x2 grid with larger tiles
   if (!selectedCategory) {
-    // 9 categories = 3x3 grid, fits perfectly
-    const catGrid = getSquareGridDimensions(MOTION_CATEGORIES.length, isMobile);
-    
     return (
       <div 
         key="categories"
         style={{
           display: 'grid',
-          gridTemplateColumns: `repeat(${catGrid.cols}, 1fr)`,
-          gridTemplateRows: `repeat(${catGrid.rows}, 1fr)`,
-          gap: isMobile ? '6px' : '8px',
-          padding: isMobile ? '8px' : '10px',
+          gridTemplateColumns: `repeat(${cols}, 1fr)`,
+          gridTemplateRows: 'repeat(2, 1fr)',
+          gap: isMobilePortrait ? '6px' : (isMobile ? '8px' : '12px'),
+          padding: isMobilePortrait ? '6px' : (isMobile ? '10px' : '14px'),
           flex: '1 1 auto',
           overflow: 'hidden',
           minHeight: 0,
-          alignContent: 'stretch',
-          animation: 'fadeScaleIn 0.3s ease-out',
+          animation: 'fadeScaleIn 0.2s ease-out',
         }}>
         {MOTION_CATEGORIES.map((category, index) => 
-          renderCategoryButton(category, () => setSelectedCategory(category.name), index)
+          renderCompactPolaroid({
+            emoji: category.emoji,
+            label: category.name,
+            onClick: () => setSelectedCategory(category.name),
+            index,
+            rotation: 0,
+            title: `${category.templates.length} effects`,
+            size: 'large',
+          })
         )}
       </div>
     );
   }
 
-  // Show templates for selected category
+  // Template view: 16 items in 4x4 grid
   const category = MOTION_CATEGORIES.find(c => c.name === selectedCategory);
   if (!category) return null;
-  
-  const templateGrid = getSquareGridDimensions(category.templates.length, isMobile);
 
   return (
     <div 
@@ -507,95 +553,90 @@ const renderMotionPicker = (selectedCategory, setSelectedCategory, handleGenerat
         flexDirection: 'column',
         flex: '1 1 auto',
         minHeight: 0,
-        animation: 'slideInFromRight 0.35s cubic-bezier(0.34, 1.56, 0.64, 1)',
+        animation: 'slideInFromRight 0.2s ease-out',
       }}>
-      {/* Back button and category header */}
+      {/* Compact back header */}
       <div style={{
         display: 'flex',
         alignItems: 'center',
-        gap: '10px',
-        padding: '8px 10px',
-        borderBottom: '1px solid rgba(0, 0, 0, 0.1)',
-        flexShrink: 0
+        gap: isMobilePortrait ? '6px' : '8px',
+        padding: isMobilePortrait ? '4px 8px' : (isMobile ? '6px 10px' : '8px 14px'),
+        borderBottom: '1px solid rgba(0,0,0,0.08)',
+        flexShrink: 0,
       }}>
         <button
           onClick={() => setSelectedCategory(null)}
           style={{
-            padding: '5px 10px',
+            padding: isMobilePortrait ? '3px 6px' : (isMobile ? '4px 8px' : '5px 10px'),
             background: '#333',
             border: 'none',
             boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
             color: '#fff',
             fontFamily: '"Permanent Marker", cursive',
-            fontSize: '11px',
-            fontWeight: '400',
+            fontSize: isMobilePortrait ? '9px' : (isMobile ? '10px' : '11px'),
             cursor: 'pointer',
             borderRadius: '4px',
             display: 'flex',
             alignItems: 'center',
-            gap: '4px',
-            transition: 'all 0.2s ease'
+            gap: '3px',
+            transition: 'all 0.15s ease'
           }}
-          onMouseOver={e => {
-            e.currentTarget.style.transform = 'translateX(-2px)';
-            e.currentTarget.style.background = '#444';
-          }}
-          onMouseOut={e => {
-            e.currentTarget.style.transform = 'translateX(0)';
-            e.currentTarget.style.background = '#333';
-          }}
+          onMouseOver={e => { e.currentTarget.style.background = '#444'; }}
+          onMouseOut={e => { e.currentTarget.style.background = '#333'; }}
         >
-          <span style={{ fontSize: '12px' }}>←</span>
+          <span>←</span>
           <span>Back</span>
         </button>
         <div style={{
           display: 'flex',
           alignItems: 'center',
-          gap: '6px',
+          gap: '4px',
           fontFamily: '"Permanent Marker", cursive',
-          fontSize: '14px',
-          fontWeight: '400',
+          fontSize: isMobilePortrait ? '11px' : (isMobile ? '12px' : '14px'),
           color: '#1a1a1a'
         }}>
-          <span style={{ fontSize: '18px' }}>{category.emoji}</span>
+          <span style={{ fontSize: isMobilePortrait ? '12px' : (isMobile ? '14px' : '16px') }}>{category.emoji}</span>
           <span>{category.name}</span>
         </div>
       </div>
       
-      {/* Templates grid - sized to fit without scrolling */}
+      {/* Templates 4x4 grid - square polaroids, centered */}
       <div 
         style={{
-          display: 'grid',
-          gridTemplateColumns: `repeat(${templateGrid.cols}, 1fr)`,
-          gridTemplateRows: `repeat(${Math.ceil(category.templates.length / templateGrid.cols)}, 1fr)`,
-          gap: isMobile ? '5px' : '6px',
-          padding: isMobile ? '8px' : '10px',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
           flex: '1 1 auto',
           overflow: 'hidden',
           minHeight: 0,
-          alignContent: 'stretch'
+          padding: isMobilePortrait ? '4px' : (isMobile ? '8px' : '12px'),
+        }}>
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: `repeat(${cols}, 1fr)`,
+          gridTemplateRows: 'repeat(4, 1fr)',
+          gap: isMobilePortrait ? '4px' : (isMobile ? '6px' : '10px'),
+          // Square grid: use height to determine size, center horizontally
+          height: '100%',
+          aspectRatio: '1 / 1',
+          maxWidth: '100%',
         }}>
         {category.templates.map((template, index) => 
-          renderPolaroidMotionButton(template, index, handleGenerateVideo, setShowVideoDropdown, setShowCustomVideoPromptPopup, category.name)
+          renderCompactPolaroid({
+            emoji: template.emoji,
+            label: template.label,
+            onClick: () => handleGenerateVideo(template.prompt, null, template.emoji),
+            index,
+            rotation: ((index % 5) - 2) * 0.4,
+            title: template.prompt,
+            size: 'normal',
+            showUsedIndicator: true,
+          })
         )}
+        </div>
       </div>
     </div>
   );
-};
-
-// Render motion button using consistent polaroid frame
-const renderPolaroidMotionButton = (template, index, handleGenerateVideo, setShowVideoDropdown, setShowCustomVideoPromptPopup, categoryName = '') => {
-  // Slight random rotation for organic scattered look
-  const rotation = ((index % 5) - 2) * 0.3;
-  
-  return renderPolaroidFrame({
-    emoji: template.emoji,
-    label: template.label,
-    onClick: () => handleGenerateVideo(template.prompt, null, template.emoji),
-    index,
-    rotation,
-    title: template.prompt,
-  });
 };
 
 // Memoized placeholder image component to prevent blob reloading
@@ -1552,6 +1593,11 @@ const PhotoGallery = ({
     const motionPrompt = customMotionPrompt || settings.videoPositivePrompt || '';
     const negativePrompt = customNegativePrompt !== null ? customNegativePrompt : (settings.videoNegativePrompt || '');
     const selectedEmoji = motionEmoji || null; // Store emoji if from template
+    
+    // Track that this emoji has been used for video generation
+    if (selectedEmoji) {
+      markMotionEmojiUsed(selectedEmoji);
+    }
     
     // Capture the photo index and ID for the onClick handler (don't rely on selectedPhotoIndex which may change)
     const generatingPhotoIndex = targetIndex;
@@ -4289,16 +4335,25 @@ const PhotoGallery = ({
                     className="video-dropdown"
                     style={{
                       position: 'fixed',
-                      ...(window.innerWidth < 768 
-                        ? { 
-                            top: '10px',
-                            bottom: '10px',
-                            height: 'auto'
+                      ...(selectedPhoto.generatingVideo
+                        ? {
+                            // Compact size when generating
+                            bottom: window.innerWidth < 768 ? 'auto' : '60px',
+                            top: window.innerWidth < 768 ? '10px' : 'auto',
+                            height: 'auto',
+                            maxHeight: window.innerWidth < 768 ? 'calc(100vh - 20px)' : 'none',
                           }
-                        : { 
-                            bottom: '80px',
-                            maxHeight: 'calc(100vh - 100px)'
-                          }
+                        : window.innerWidth < 768 
+                          ? { 
+                              top: '10px',
+                              bottom: '10px',
+                              height: 'auto'
+                            }
+                          : { 
+                              bottom: '60px',
+                              height: 'min(75vh, 650px)',
+                              maxHeight: 'calc(100vh - 80px)'
+                            }
                       ),
                       left: '50%',
                       transform: 'translateX(-50%)',
@@ -4307,7 +4362,7 @@ const PhotoGallery = ({
                       padding: '8px',
                       boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
                       border: 'none',
-                      width: selectedPhoto.generatingVideo ? 'min(90vw, 280px)' : 'min(95vw, 750px)',
+                      width: selectedPhoto.generatingVideo ? 'min(90vw, 280px)' : 'min(95vw, 950px)',
                       display: 'flex',
                       flexDirection: 'column',
                       boxShadow: '0 20px 60px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.1) inset',
@@ -4330,8 +4385,8 @@ const PhotoGallery = ({
                           height: '24px',
                           borderRadius: '50%',
                           border: 'none',
-                          background: 'rgba(255, 255, 255, 0.1)',
-                          color: 'rgba(255, 255, 255, 0.6)',
+                          background: 'rgba(0, 0, 0, 0.1)',
+                          color: 'rgba(0, 0, 0, 0.5)',
                           fontSize: '12px',
                           cursor: 'pointer',
                           display: 'flex',
@@ -4341,12 +4396,12 @@ const PhotoGallery = ({
                           zIndex: 1
                         }}
                         onMouseOver={e => {
-                          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
-                          e.currentTarget.style.color = 'white';
+                          e.currentTarget.style.background = 'rgba(0, 0, 0, 0.15)';
+                          e.currentTarget.style.color = 'rgba(0, 0, 0, 0.8)';
                         }}
                         onMouseOut={e => {
-                          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
-                          e.currentTarget.style.color = 'rgba(255, 255, 255, 0.6)';
+                          e.currentTarget.style.background = 'rgba(0, 0, 0, 0.1)';
+                          e.currentTarget.style.color = 'rgba(0, 0, 0, 0.5)';
                         }}
                       >
                         ⚙️
@@ -4364,8 +4419,8 @@ const PhotoGallery = ({
                           height: '28px',
                           borderRadius: '50%',
                           border: 'none',
-                          background: 'rgba(255, 255, 255, 0.1)',
-                          color: 'rgba(255, 255, 255, 0.8)',
+                          background: 'rgba(0, 0, 0, 0.6)',
+                          color: '#fff',
                           fontSize: '18px',
                           cursor: 'pointer',
                           display: 'flex',
@@ -4377,13 +4432,11 @@ const PhotoGallery = ({
                           fontWeight: '300'
                         }}
                         onMouseOver={e => {
-                          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
-                          e.currentTarget.style.color = 'white';
+                          e.currentTarget.style.background = 'rgba(0, 0, 0, 0.8)';
                           e.currentTarget.style.transform = 'scale(1.1)';
                         }}
                         onMouseOut={e => {
-                          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
-                          e.currentTarget.style.color = 'rgba(255, 255, 255, 0.8)';
+                          e.currentTarget.style.background = 'rgba(0, 0, 0, 0.6)';
                           e.currentTarget.style.transform = 'scale(1)';
                         }}
                       >
@@ -4397,8 +4450,8 @@ const PhotoGallery = ({
                         <div style={{
                           padding: '12px 16px',
                           fontSize: '13px',
-                          color: 'rgba(255, 255, 255, 0.7)',
-                          borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+                          color: 'rgba(0, 0, 0, 0.6)',
+                          borderBottom: '1px solid rgba(0, 0, 0, 0.1)',
                           textAlign: 'center'
                         }}>
                           Video generating...
@@ -4429,12 +4482,12 @@ const PhotoGallery = ({
                         <div style={{
                           padding: '10px 16px 6px 16px',
                           fontSize: '12px',
-                          fontWeight: '500',
-                          color: 'rgba(255, 255, 255, 0.8)',
+                          fontWeight: '700',
+                          color: '#000',
                           textAlign: 'center',
-                          borderBottom: '1px solid rgba(255, 255, 255, 0.1)'
+                          borderBottom: '1px solid rgba(0, 0, 0, 0.15)'
                         }}>
-                          ✨ Generate another motion
+                          🎬 Generate another motion
                         </div>
                         
                         {/* Motion Style Options - Organized by Category */}
@@ -4453,8 +4506,8 @@ const PhotoGallery = ({
                         }}>
                           <div style={{
                             fontSize: '13px',
-                            color: 'rgba(255, 255, 255, 0.6)',
-                            fontWeight: '500',
+                            color: '#000',
+                            fontWeight: '700',
                             letterSpacing: '0.3px',
                             textAlign: window.innerWidth < 768 ? 'center' : 'right',
                             display: 'flex',
@@ -4463,7 +4516,7 @@ const PhotoGallery = ({
                             gap: '8px'
                           }}>
                             <span>Or create your own</span>
-                            {window.innerWidth >= 768 && <span style={{ fontSize: '20px', opacity: 0.4 }}>→</span>}
+                            {window.innerWidth >= 768 && <span style={{ fontSize: '20px', fontWeight: '700' }}>→</span>}
                           </div>
                           {renderCustomButton(setShowVideoDropdown, setShowCustomVideoPromptPopup)}
                         </div>
@@ -4473,18 +4526,17 @@ const PhotoGallery = ({
                           <div style={{
                             padding: '8px 16px 12px 16px',
                             fontSize: '11px',
-                            fontWeight: '400',
-                            opacity: 0.85,
+                            fontWeight: '700',
                             letterSpacing: '0.2px',
                             display: 'flex',
                             gap: '4px',
                             alignItems: 'center',
                             justifyContent: 'flex-end',
-                            borderTop: '1px solid rgba(255, 255, 255, 0.1)',
-                            color: 'rgba(255, 255, 255, 0.8)',
+                            borderTop: '1px solid rgba(0, 0, 0, 0.15)',
+                            color: '#000',
                             flexShrink: 0
                           }}>
-                            <span style={{ fontWeight: '600', opacity: 1 }}>
+                            <span style={{ fontWeight: '700' }}>
                               {(() => {
                                 const formatted = formatCost(videoCostRaw, videoUSD);
                                 const parts = formatted.split('(');
@@ -4508,11 +4560,10 @@ const PhotoGallery = ({
                           <div style={{
                             padding: '8px 16px 12px 16px',
                             fontSize: '11px',
-                            opacity: 0.75,
-                            fontWeight: '400',
+                            fontWeight: '700',
                             textAlign: 'right',
-                            borderTop: '1px solid rgba(255, 255, 255, 0.1)',
-                            color: 'rgba(255, 255, 255, 0.7)',
+                            borderTop: '1px solid rgba(0, 0, 0, 0.15)',
+                            color: '#000',
                             flexShrink: 0
                           }}>
                             Calculating cost...
@@ -4533,13 +4584,13 @@ const PhotoGallery = ({
                           padding: '10px 16px 8px 16px',
                           fontFamily: '"Permanent Marker", cursive',
                           fontSize: '15px',
-                          fontWeight: '400',
-                          color: '#1a1a1a',
+                          fontWeight: '700',
+                          color: '#000',
                           textAlign: 'center',
-                          borderBottom: '1px solid rgba(0, 0, 0, 0.1)',
+                          borderBottom: '1px solid rgba(0, 0, 0, 0.15)',
                           flexShrink: 0
                         }}>
-                          ✨ Choose a motion style
+                          🎬 Choose a motion style
                         </div>
                         
                         {/* Motion Style Options - Organized by Category */}
@@ -4558,8 +4609,8 @@ const PhotoGallery = ({
                         }}>
                           <div style={{
                             fontSize: '13px',
-                            color: 'rgba(255, 255, 255, 0.6)',
-                            fontWeight: '500',
+                            color: '#000',
+                            fontWeight: '700',
                             letterSpacing: '0.3px',
                             textAlign: window.innerWidth < 768 ? 'center' : 'right',
                             display: 'flex',
@@ -4568,7 +4619,7 @@ const PhotoGallery = ({
                             gap: '8px'
                           }}>
                             <span>Or create your own</span>
-                            {window.innerWidth >= 768 && <span style={{ fontSize: '20px', opacity: 0.4 }}>→</span>}
+                            {window.innerWidth >= 768 && <span style={{ fontSize: '20px', fontWeight: '700' }}>→</span>}
                           </div>
                           {renderCustomButton(setShowVideoDropdown, setShowCustomVideoPromptPopup)}
                         </div>
@@ -4578,18 +4629,17 @@ const PhotoGallery = ({
                           <div style={{
                             padding: '8px 16px 12px 16px',
                             fontSize: '11px',
-                            fontWeight: '400',
-                            opacity: 0.85,
+                            fontWeight: '700',
                             letterSpacing: '0.2px',
                             display: 'flex',
                             gap: '4px',
                             alignItems: 'center',
                             justifyContent: 'flex-end',
-                            borderTop: '1px solid rgba(255, 255, 255, 0.1)',
-                            color: 'rgba(255, 255, 255, 0.8)',
+                            borderTop: '1px solid rgba(0, 0, 0, 0.15)',
+                            color: '#000',
                             flexShrink: 0
                           }}>
-                            <span style={{ fontWeight: '600', opacity: 1 }}>
+                            <span style={{ fontWeight: '700' }}>
                               {(() => {
                                 const formatted = formatCost(videoCostRaw, videoUSD);
                                 const parts = formatted.split('(');
@@ -4613,11 +4663,10 @@ const PhotoGallery = ({
                           <div style={{
                             padding: '8px 16px 12px 16px',
                             fontSize: '11px',
-                            opacity: 0.75,
-                            fontWeight: '400',
+                            fontWeight: '700',
                             textAlign: 'right',
-                            borderTop: '1px solid rgba(255, 255, 255, 0.1)',
-                            color: 'rgba(255, 255, 255, 0.7)',
+                            borderTop: '1px solid rgba(0, 0, 0, 0.15)',
+                            color: '#000',
                             flexShrink: 0
                           }}>
                             Calculating cost...
@@ -7788,17 +7837,25 @@ const PhotoGallery = ({
           className="video-dropdown"
           style={{
             position: 'fixed',
-            bottom: '80px',
-            maxHeight: 'calc(100vh - 100px)',
+            ...(window.innerWidth < 768 
+              ? { 
+                  top: '10px',
+                  bottom: '10px',
+                  height: 'auto'
+                }
+              : { 
+                  bottom: '60px',
+                  height: 'min(75vh, 650px)',
+                  maxHeight: 'calc(100vh - 80px)'
+                }
+            ),
             left: '50%',
             transform: 'translateX(-50%)',
-            background: 'linear-gradient(165deg, #f5ecd3 0%, #e8dfc5 50%, #ddd4b8 100%)',
-            backdropFilter: 'blur(10px)',
+            background: '#ffeb3b',
             borderRadius: '8px',
             padding: '8px',
-            boxShadow: '0 8px 32px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.4)',
-            border: '1px solid rgba(139, 119, 85, 0.3)',
-            width: 'min(95vw, 750px)',
+            border: 'none',
+            width: 'min(95vw, 950px)',
             display: 'flex',
             flexDirection: 'column',
             boxShadow: '0 20px 60px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.1) inset',
@@ -7822,8 +7879,8 @@ const PhotoGallery = ({
               onMouseOut={e => { e.currentTarget.style.background = 'rgba(0, 0, 0, 0.6)'; }}
             >×</button>
           </div>
-          <div style={{ padding: '10px 16px 8px', fontFamily: '"Permanent Marker", cursive', fontSize: '15px', fontWeight: '400', color: '#1a1a1a', textAlign: 'center', borderBottom: '1px solid rgba(0, 0, 0, 0.1)' }}>
-            ✨ Choose a motion style
+          <div style={{ padding: '10px 16px 8px', fontFamily: '"Permanent Marker", cursive', fontSize: '15px', fontWeight: '700', color: '#000', textAlign: 'center', borderBottom: '1px solid rgba(0, 0, 0, 0.15)' }}>
+            🎬 Choose a motion style
           </div>
           {renderMotionPicker(selectedMotionCategory, setSelectedMotionCategory, handleGenerateVideo, setShowVideoDropdown, setShowCustomVideoPromptPopup)}
           <div style={{ padding: '10px', borderTop: '1px solid rgba(0, 0, 0, 0.1)', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
