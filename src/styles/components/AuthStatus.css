@@ -59,3 +59,160 @@
   }
 }
 
+/* Cosmic Wallet Theme Animations */
+@keyframes floatParticles {
+  0% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0.3;
+  }
+  25% {
+    transform: translate(10px, -15px) scale(1.1);
+    opacity: 0.5;
+  }
+  50% {
+    transform: translate(-5px, -25px) scale(0.9);
+    opacity: 0.4;
+  }
+  75% {
+    transform: translate(15px, -10px) scale(1.05);
+    opacity: 0.5;
+  }
+  100% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0.3;
+  }
+}
+
+@keyframes driftCloud1 {
+  0% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0.15;
+  }
+  50% {
+    transform: translate(30px, 20px) scale(1.2);
+    opacity: 0.25;
+  }
+  100% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0.15;
+  }
+}
+
+@keyframes driftCloud2 {
+  0% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0.12;
+  }
+  50% {
+    transform: translate(-25px, 15px) scale(1.15);
+    opacity: 0.22;
+  }
+  100% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0.12;
+  }
+}
+
+@keyframes pulseGlow {
+  0%, 100% {
+    opacity: 0.4;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.1);
+  }
+}
+
+
+.cosmic-wallet-container {
+  position: relative;
+  overflow: hidden;
+  background: 
+    radial-gradient(ellipse at top left, rgba(102, 126, 234, 0.15) 0%, transparent 50%),
+    radial-gradient(ellipse at bottom right, rgba(118, 75, 162, 0.15) 0%, transparent 50%),
+    linear-gradient(135deg, #050810 0%, #0a0e1a 25%, #0f1419 50%, #0a0e1a 75%, #050810 100%);
+  border: 1px solid rgba(102, 126, 234, 0.4);
+}
+
+.cosmic-wallet-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: 
+    /* Floating particles - subtle stars */
+    radial-gradient(1px 1px at 15% 25%, rgba(255, 255, 255, 0.6), transparent),
+    radial-gradient(1px 1px at 35% 45%, rgba(255, 255, 255, 0.5), transparent),
+    radial-gradient(1px 1px at 55% 15%, rgba(255, 255, 255, 0.6), transparent),
+    radial-gradient(1px 1px at 75% 65%, rgba(255, 255, 255, 0.5), transparent),
+    radial-gradient(1px 1px at 25% 75%, rgba(255, 255, 255, 0.6), transparent),
+    radial-gradient(1px 1px at 85% 35%, rgba(255, 255, 255, 0.5), transparent),
+    radial-gradient(1px 1px at 45% 85%, rgba(255, 255, 255, 0.6), transparent),
+    radial-gradient(1px 1px at 65% 55%, rgba(255, 255, 255, 0.5), transparent),
+    radial-gradient(0.5px 0.5px at 10% 50%, rgba(255, 255, 255, 0.4), transparent),
+    radial-gradient(0.5px 0.5px at 90% 20%, rgba(255, 255, 255, 0.4), transparent),
+    radial-gradient(0.5px 0.5px at 50% 90%, rgba(255, 255, 255, 0.4), transparent),
+    radial-gradient(0.5px 0.5px at 30% 10%, rgba(255, 255, 255, 0.4), transparent),
+    radial-gradient(0.5px 0.5px at 70% 80%, rgba(255, 255, 255, 0.4), transparent),
+    radial-gradient(0.5px 0.5px at 5% 70%, rgba(255, 255, 255, 0.4), transparent),
+    radial-gradient(0.5px 0.5px at 95% 60%, rgba(255, 255, 255, 0.4), transparent),
+    radial-gradient(0.5px 0.5px at 20% 40%, rgba(255, 255, 255, 0.4), transparent),
+    radial-gradient(0.5px 0.5px at 80% 50%, rgba(255, 255, 255, 0.4), transparent),
+    radial-gradient(0.5px 0.5px at 40% 20%, rgba(255, 255, 255, 0.4), transparent),
+    radial-gradient(0.5px 0.5px at 60% 80%, rgba(255, 255, 255, 0.4), transparent);
+  background-size: 100% 100%;
+  background-position: 0% 0%;
+  animation: floatParticles 20s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.cosmic-wallet-container::after {
+  content: '';
+  position: absolute;
+  top: -20%;
+  left: -10%;
+  width: 150%;
+  height: 150%;
+  background: radial-gradient(ellipse at 30% 40%, rgba(102, 126, 234, 0.2) 0%, transparent 50%);
+  animation: driftCloud1 25s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Floating cosmic clouds */
+.cosmic-wallet-container .star-trail-1 {
+  position: absolute;
+  top: -15%;
+  right: -10%;
+  width: 140%;
+  height: 140%;
+  background: radial-gradient(ellipse at 70% 60%, rgba(118, 75, 162, 0.18) 0%, transparent 50%);
+  animation: driftCloud2 30s ease-in-out infinite;
+  animation-delay: 2s;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.cosmic-wallet-container .star-trail-2 {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 120%;
+  height: 120%;
+  background: radial-gradient(circle at center, rgba(0, 213, 255, 0.1) 0%, transparent 40%);
+  animation: pulseGlow 8s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.cosmic-wallet-content {
+  position: relative;
+  z-index: 1;
+}
+
+

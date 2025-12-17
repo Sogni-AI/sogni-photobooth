@@ -266,96 +266,302 @@ export const AuthStatus: React.FC<AuthStatusProps> = ({ onPurchaseClick, onSignu
       </div>
 
       {showUserMenu && (
-        <div style={{
-          position: 'absolute',
-          top: 'calc(100% + 4px)',
-          left: '0',
-          backgroundColor: '#2d3748',
-          borderRadius: '8px',
-          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-          zIndex: 1001,
-          padding: '8px',
-          minWidth: '200px'
-        }}>
+        <div 
+          className="cosmic-wallet-container"
+          style={{
+            position: 'absolute',
+            top: 'calc(100% + 4px)',
+            left: '0',
+            borderRadius: '8px',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+            zIndex: 1001,
+            padding: '8px',
+            minWidth: '200px'
+          }}
+        >
+          <div className="star-trail-1" />
+          <div className="star-trail-2" />
+          <div className="cosmic-wallet-content" style={{ position: 'relative', zIndex: 1 }}>
           {/* Payment Method Toggle - only show when NOT in demo mode */}
           {authMode !== 'demo' && balances && (
             <>
               <div style={{
                 padding: '8px 12px',
-                fontSize: '12px',
-                color: '#a0aec0',
-                fontWeight: '500',
-                letterSpacing: '0.05em'
-              }}>
-                Paying with:
-              </div>
-              <div style={{
+                fontSize: '13px',
+                color: '#ffffff',
+                fontWeight: '600',
+                letterSpacing: '0.02em',
                 display: 'flex',
-                marginBottom: '8px',
-                padding: '4px',
-                backgroundColor: '#1a1f2e',
-                borderRadius: '8px',
-                gap: '4px'
+                alignItems: 'center',
+                gap: '6px',
+                position: 'relative'
               }}>
+                <span>Paying with</span>
+                <a
+                  href="https://www.sogni.ai/assets"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    position: 'absolute',
+                    top: '4px',
+                    right: '8px',
+                    width: '20px',
+                    height: '20px',
+                    borderRadius: '50%',
+                    background: 'rgba(102, 126, 234, 0.3)',
+                    border: '1px solid rgba(102, 126, 234, 0.5)',
+                    color: '#ffffff',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '12px',
+                    fontWeight: '700',
+                    textDecoration: 'none',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    zIndex: 10
+                  }}
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.background = 'rgba(102, 126, 234, 0.6)';
+                    e.currentTarget.style.borderColor = 'rgba(102, 126, 234, 0.8)';
+                    e.currentTarget.style.transform = 'scale(1.1)';
+                    e.currentTarget.style.boxShadow = '0 0 10px rgba(102, 126, 234, 0.5)';
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.background = 'rgba(102, 126, 234, 0.3)';
+                    e.currentTarget.style.borderColor = 'rgba(102, 126, 234, 0.5)';
+                    e.currentTarget.style.transform = 'scale(1)';
+                    e.currentTarget.style.boxShadow = 'none';
+                  }}
+                  title="Learn about SOGNI Token vs Spark Points"
+                >
+                  ?
+                </a>
+              </div>
+              <div 
+                style={{
+                  display: 'flex',
+                  marginBottom: '8px',
+                  padding: '6px',
+                  borderRadius: '12px',
+                  gap: '6px',
+                  background: 'rgba(255, 255, 255, 0.03)',
+                  border: '1px solid rgba(102, 126, 234, 0.1)'
+                }}
+              >
                 <button
                   onClick={() => switchPaymentMethod('sogni')}
                   style={{
                     flex: 1,
-                    border: 'none',
-                    background: tokenType === 'sogni' ? '#00D5FF' : 'transparent',
-                    color: tokenType === 'sogni' ? '#0a0e1a' : '#6b7280',
+                    border: tokenType === 'sogni' ? '2px solid #00D5FF' : '2px solid transparent',
+                    background: tokenType === 'sogni' 
+                      ? 'linear-gradient(135deg, #00D5FF, #0099CC)' 
+                      : 'rgba(255, 255, 255, 0.05)',
+                    color: tokenType === 'sogni' ? '#0a0e1a' : 'rgba(255, 255, 255, 0.7)',
                     cursor: 'pointer',
-                    borderRadius: '6px',
+                    borderRadius: '10px',
                     padding: '12px 16px',
                     fontSize: '13px',
-                    fontWeight: tokenType === 'sogni' ? '600' : '500',
+                    fontWeight: tokenType === 'sogni' ? '700' : '500',
                     textAlign: 'center',
                     outline: 'none',
-                    transition: 'all 0.2s',
-                    whiteSpace: 'nowrap'
+                    transition: 'all 0.3s ease',
+                    whiteSpace: 'nowrap',
+                    boxShadow: tokenType === 'sogni' 
+                      ? '0 4px 15px rgba(0, 213, 255, 0.4), 0 0 0 1px rgba(0, 213, 255, 0.2)' 
+                      : 'none',
+                    transform: tokenType === 'sogni' ? 'scale(1.02)' : 'scale(1)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    position: 'relative',
+                    zIndex: 2,
+                    overflow: 'visible'
                   }}
                   onMouseOver={(e) => {
                     if (tokenType !== 'sogni') {
-                      e.currentTarget.style.color = '#9ca3af';
+                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                      e.currentTarget.style.color = 'rgba(255, 255, 255, 0.9)';
+                      e.currentTarget.style.transform = 'scale(1.02)';
+                      const svg = e.currentTarget.querySelector('svg');
+                      if (svg) {
+                        svg.style.opacity = '0.9';
+                        svg.style.transform = 'translateY(-50%) scale(1.15)';
+                      }
+                    } else {
+                      e.currentTarget.style.transform = 'scale(1.05)';
+                      e.currentTarget.style.boxShadow = '0 6px 20px rgba(0, 213, 255, 0.5), 0 0 0 1px rgba(0, 213, 255, 0.3)';
+                      const svg = e.currentTarget.querySelector('svg');
+                      if (svg) {
+                        svg.style.transform = 'translateY(-50%) scale(1.3)';
+                        svg.style.filter = 'drop-shadow(0 0 6px rgba(0, 213, 255, 0.8)) drop-shadow(0 2px 6px rgba(0, 0, 0, 0.4))';
+                      }
                     }
                   }}
                   onMouseOut={(e) => {
                     if (tokenType !== 'sogni') {
-                      e.currentTarget.style.color = '#6b7280';
+                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+                      e.currentTarget.style.color = 'rgba(255, 255, 255, 0.7)';
+                      e.currentTarget.style.transform = 'scale(1)';
+                      const svg = e.currentTarget.querySelector('svg');
+                      if (svg) {
+                        svg.style.opacity = '0.6';
+                        svg.style.transform = 'translateY(-50%) scale(1)';
+                      }
+                    } else {
+                      e.currentTarget.style.transform = 'scale(1.02)';
+                      e.currentTarget.style.boxShadow = '0 4px 15px rgba(0, 213, 255, 0.4), 0 0 0 1px rgba(0, 213, 255, 0.2)';
+                      const svg = e.currentTarget.querySelector('svg');
+                      if (svg) {
+                        svg.style.transform = 'translateY(-50%) scale(1.2)';
+                        svg.style.filter = 'drop-shadow(0 0 4px rgba(0, 213, 255, 0.6)) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3))';
+                      }
                     }
                   }}
                 >
-                  SOGNI Token
+                  <svg 
+                    xmlns="http://www.w3.org/2000/svg" 
+                    viewBox="0 0 120 110" 
+                    style={{ 
+                      width: '32px', 
+                      height: '32px', 
+                      fill: 'currentColor',
+                      display: 'block',
+                      flexShrink: 0,
+                      position: 'absolute',
+                      left: '-4px',
+                      top: '50%',
+                      transform: tokenType === 'sogni' 
+                        ? 'translateY(-50%) scale(1.2)' 
+                        : 'translateY(-50%) scale(1)',
+                      filter: tokenType === 'sogni' 
+                        ? 'drop-shadow(0 0 4px rgba(0, 213, 255, 0.6)) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3))' 
+                        : 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2))',
+                      transition: 'all 0.3s ease',
+                      opacity: tokenType === 'sogni' ? 1 : 0.6,
+                      zIndex: 1
+                    }}
+                  >
+                    <defs>
+                      <clipPath id="sogni-circle-clip">
+                        <circle cx="51" cy="51" r="50" />
+                      </clipPath>
+                    </defs>
+                    <g clipPath="url(#sogni-circle-clip)">
+                      <path d="M1 1h100v100H1z" style={{ opacity: 0.08 }} />
+                      <path d="M44.6 94.8h-1.9l-1.9 6.3h1.9l1.9-6.3zM92 94.8H47.2l-1.9 6.3H90l2-6.3zM58 88.5h-1.9l-1.8 6.3h1.9l1.8-6.3zM100.1 88.5H60l-1.8 6.3h40.1l1.8-6.3zM50.8 82.3h-1.7l-1.8 6.3H49l1.8-6.3z" />
+                      <path d="M100 82.3H52.8l-1.7 6.3h47.2l1.7-6.3z" />
+                      <path d="M68 82.3h-2l-2.1 6.3h2l2.1-6.3zM44.2 76h-1.7l-1.8 6.3h1.7l1.8-6.3zM94.4 76h-5.2L86 82.3h5.2l3.2-6.3z" />
+                      <path d="M86.8 76H46.6l-1.8 6.3h39l3-6.3z" />
+                      <path d="M72.7 69.8h46.2l-2 6.3H71.4l1.3-6.3zM69 69.8h1.7L69.3 76h-1.7l1.4-6.2zM111 63.5H63.3l-1.5 6.3h47.4l1.8-6.3zM61.3 63.5h-1.7l-1.5 6.3h1.7l1.5-6.3zM58 63.5h42l1-6.3H59.6L58 63.5zM54.3 63.5H56l1.5-6.3h-1.7l-1.5 6.3z" />
+                      <path d="M74.4 51h31.2l-1 6.3H74.1l.3-6.3zM70.7 51h1.7l-.4 6.3h-1.7l.4-6.3zM60 44.7h25.9l.7 6.3H61.5L60 44.7zM88 44.7h41.4l1.8 6.3H88.8l-.8-6.3zM56.3 44.7H58l1.5 6.3h-1.7l-1.5-6.3z" />
+                      <path d="M56.6 38.5h43.2l1.2 6.3H58l-1.4-6.3zM52.8 38.5h1.7l1.5 6.3h-1.7l-1.5-6.3zM72.8 32.2h31.8v6.3H73.3l-.5-6.3zM69 32.2h1.7l.5 6.3h-1.7l-.5-6.3z" />
+                      <path d="M44.6 26h43.2l3.3 6.3h-45L44.6 26zM90.2 26h43.1l1.8 6.3H93.6L90.2 26zM40.9 26h1.7l1.5 6.3h-1.7L40.9 26zM69.7 19.7h43.6L115 26H71.5l-1.8-6.3zM66.1 19.7h1.7l1.7 6.3h-1.7l-1.7-6.3z" />
+                      <path d="M51 13.5h39.2l1.7 6.3H52.3L51 13.5zM93 13.5h39.2l1.6 6.3h-39L93 13.5zM47.3 13.5H49l1.5 6.3h-1.7l-1.5-6.3zM64.3 7.2h45.4l1.8 6.3H68.2l-3.9-6.3z" />
+                      <path d="M60.1 7.2h2l3.8 6.3h-2l-3.8-6.3zM91.3 1h39.1l1.8 6.3H93L91.3 1z" />
+                      <path d="M44.6 1h43.2l1.8 6.3H46.1L44.6 1zM40.9 1h1.7L44 7.2h-1.7L40.9 1z" />
+                    </g>
+                  </svg>
+                  <span style={{ marginLeft: '24px' }}>SOGNI Token</span>
                 </button>
                 <button
                   onClick={() => switchPaymentMethod('spark')}
                   style={{
                     flex: 1,
-                    border: 'none',
-                    background: tokenType === 'spark' ? '#00D5FF' : 'transparent',
-                    color: tokenType === 'spark' ? '#0a0e1a' : '#6b7280',
+                    border: tokenType === 'spark' ? '2px solid #ff6b6b' : '2px solid transparent',
+                    background: tokenType === 'spark' 
+                      ? 'linear-gradient(135deg, #ff6b6b, #ffa502)' 
+                      : 'rgba(255, 255, 255, 0.05)',
+                    color: tokenType === 'spark' ? '#ffffff' : 'rgba(255, 255, 255, 0.7)',
                     cursor: 'pointer',
-                    borderRadius: '6px',
+                    borderRadius: '10px',
                     padding: '12px 16px',
                     fontSize: '13px',
-                    fontWeight: '600',
+                    fontWeight: tokenType === 'spark' ? '700' : '500',
                     textAlign: 'center',
                     outline: 'none',
-                    transition: 'all 0.2s',
-                    whiteSpace: 'nowrap'
+                    transition: 'all 0.3s ease',
+                    whiteSpace: 'nowrap',
+                    boxShadow: tokenType === 'spark' 
+                      ? '0 4px 15px rgba(255, 107, 107, 0.4), 0 0 0 1px rgba(255, 107, 107, 0.2)' 
+                      : 'none',
+                    transform: tokenType === 'spark' ? 'scale(1.02)' : 'scale(1)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    position: 'relative',
+                    overflow: 'visible',
+                    zIndex: 2
                   }}
                   onMouseOver={(e) => {
                     if (tokenType !== 'spark') {
-                      e.currentTarget.style.color = '#9ca3af';
+                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                      e.currentTarget.style.color = 'rgba(255, 255, 255, 0.9)';
+                      e.currentTarget.style.transform = 'scale(1.02)';
+                      const svg = e.currentTarget.querySelector('svg');
+                      if (svg) {
+                        svg.style.opacity = '0.9';
+                        svg.style.transform = 'translateY(-50%) scale(1.15) rotate(8deg)';
+                      }
+                    } else {
+                      e.currentTarget.style.transform = 'scale(1.05)';
+                      e.currentTarget.style.boxShadow = '0 6px 20px rgba(255, 107, 107, 0.5), 0 0 0 1px rgba(255, 107, 107, 0.3)';
+                      const svg = e.currentTarget.querySelector('svg');
+                      if (svg) {
+                        svg.style.transform = 'translateY(-50%) scale(1.3) rotate(8deg)';
+                        svg.style.filter = 'drop-shadow(0 0 8px rgba(255, 107, 107, 1)) drop-shadow(0 0 12px rgba(255, 165, 2, 0.6)) drop-shadow(0 2px 6px rgba(0, 0, 0, 0.4))';
+                      }
                     }
                   }}
                   onMouseOut={(e) => {
                     if (tokenType !== 'spark') {
-                      e.currentTarget.style.color = '#6b7280';
+                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+                      e.currentTarget.style.color = 'rgba(255, 255, 255, 0.7)';
+                      e.currentTarget.style.transform = 'scale(1)';
+                      const svg = e.currentTarget.querySelector('svg');
+                      if (svg) {
+                        svg.style.opacity = '0.6';
+                        svg.style.transform = 'translateY(-50%) scale(1) rotate(0deg)';
+                      }
+                    } else {
+                      e.currentTarget.style.transform = 'scale(1.02)';
+                      e.currentTarget.style.boxShadow = '0 4px 15px rgba(255, 107, 107, 0.4), 0 0 0 1px rgba(255, 107, 107, 0.2)';
+                      const svg = e.currentTarget.querySelector('svg');
+                      if (svg) {
+                        svg.style.transform = 'translateY(-50%) scale(1.2) rotate(5deg)';
+                        svg.style.filter = 'drop-shadow(0 0 6px rgba(255, 107, 107, 0.8)) drop-shadow(0 0 10px rgba(255, 165, 2, 0.4)) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3))';
+                      }
                     }
                   }}
                 >
-                  Spark Points
+                  <svg 
+                    xmlns="http://www.w3.org/2000/svg" 
+                    viewBox="0 0 17 16" 
+                    style={{ 
+                      width: '32px', 
+                      height: '32px', 
+                      fill: 'currentColor',
+                      display: 'block',
+                      flexShrink: 0,
+                      position: 'absolute',
+                      left: '-4px',
+                      top: '50%',
+                      transform: tokenType === 'spark' 
+                        ? 'translateY(-50%) scale(1.2) rotate(5deg)' 
+                        : 'translateY(-50%) scale(1) rotate(0deg)',
+                      filter: tokenType === 'spark' 
+                        ? 'drop-shadow(0 0 6px rgba(255, 107, 107, 0.8)) drop-shadow(0 0 10px rgba(255, 165, 2, 0.4)) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3))' 
+                        : 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2))',
+                      transition: 'all 0.3s ease',
+                      opacity: tokenType === 'spark' ? 1 : 0.6,
+                      zIndex: 1
+                    }}
+                  >
+                    <path d="M9.92301 1.1764C10.6242 0.251095 12.0169 0.251096 12.0445 1.1764L12.1576 4.97111C12.1663 5.26202 12.3269 5.49138 12.5973 5.59903L16.1244 7.0032C16.9845 7.34559 16.5082 8.65433 15.3989 8.99672L10.8495 10.4009C10.5008 10.5085 10.1732 10.7379 9.95276 11.0288L7.07732 14.8235C6.37616 15.7488 4.98344 15.7488 4.95585 14.8235L4.84273 11.0288C4.83406 10.7379 4.67346 10.5085 4.40305 10.4009L0.875887 8.99672C0.015819 8.65433 0.492163 7.34559 1.60147 7.0032L6.15079 5.59903C6.49955 5.49138 6.82712 5.26202 7.04756 4.97111L9.92301 1.1764Z" />
+                  </svg>
+                  <span style={{ marginLeft: '24px' }}>Spark Points</span>
                 </button>
               </div>
 
@@ -529,47 +735,52 @@ export const AuthStatus: React.FC<AuthStatusProps> = ({ onPurchaseClick, onSignu
                   )}
                 </div>
               </div>
-
-              <div style={{ 
-                height: '1px', 
-                background: '#4a5568', 
-                margin: '8px 0' 
-              }} />
             </>
           )}
 
-          {/* Logout Button */}
-          <button
-            onClick={() => { void handleLogout(); }}
-            disabled={isLoading}
-            style={{
-              width: '100%',
-              border: 'none',
-              background: '#718096',
-              color: 'white',
-              cursor: isLoading ? 'not-allowed' : 'pointer',
-              borderRadius: '6px',
-              padding: '8px 16px',
-              fontSize: '13px',
-              fontWeight: '500',
-              textAlign: 'center',
-              opacity: isLoading ? 0.5 : 1,
-              outline: 'none',
-              transition: 'all 0.2s'
-            }}
-            onMouseOver={(e) => {
-              if (!isLoading) {
-                e.currentTarget.style.background = '#4a5568';
-              }
-            }}
-            onMouseOut={(e) => {
-              if (!isLoading) {
-                e.currentTarget.style.background = '#718096';
-              }
-            }}
-          >
-            {isLoading ? 'Logging out...' : 'Logout'}
-          </button>
+          {/* Logout Button - Discrete */}
+          <div style={{
+            marginTop: '8px',
+            paddingTop: '8px',
+            borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+            textAlign: 'center'
+          }}>
+            <button
+              onClick={() => { void handleLogout(); }}
+              disabled={isLoading}
+              style={{
+                border: 'none',
+                background: 'transparent',
+                color: 'rgba(255, 255, 255, 0.4)',
+                cursor: isLoading ? 'not-allowed' : 'pointer',
+                borderRadius: '4px',
+                padding: '4px 8px',
+                fontSize: '11px',
+                fontWeight: '400',
+                textAlign: 'center',
+                opacity: isLoading ? 0.3 : 1,
+                outline: 'none',
+                transition: 'all 0.2s',
+                textDecoration: 'underline',
+                textDecorationColor: 'rgba(255, 255, 255, 0.2)'
+              }}
+              onMouseOver={(e) => {
+                if (!isLoading) {
+                  e.currentTarget.style.color = 'rgba(255, 255, 255, 0.6)';
+                  e.currentTarget.style.textDecorationColor = 'rgba(255, 255, 255, 0.4)';
+                }
+              }}
+              onMouseOut={(e) => {
+                if (!isLoading) {
+                  e.currentTarget.style.color = 'rgba(255, 255, 255, 0.4)';
+                  e.currentTarget.style.textDecorationColor = 'rgba(255, 255, 255, 0.2)';
+                }
+              }}
+            >
+              {isLoading ? 'Logging out...' : 'Logout'}
+            </button>
+          </div>
+          </div>
         </div>
       )}
 
