@@ -180,6 +180,10 @@ export const AuthStatus: React.FC<AuthStatusProps> = ({ onPurchaseClick, onSignu
 
   const handleClaimDailyBoost = () => {
     if (dailyBoostReward && canClaimDailyBoost) {
+      // Play flash sound when claiming Daily Boost
+      if (playRandomFlashSound) {
+        playRandomFlashSound();
+      }
       claimReward(dailyBoostReward.id);
     }
   };

@@ -227,19 +227,16 @@ const App = () => {
 
   useEffect(() => {
     const unlockAudio = () => {
+      // Play camera wind sound (shutter sound) unmuted on first click - discrete sound for warm-up
       if (shutterSoundReference.current) {
         const audio = shutterSoundReference.current;
-        audio.muted = true;
-        audio.play().then(() => {
-          audio.pause();
-          audio.currentTime = 0;
-          audio.muted = false; // Unmute for future real plays
-        }).catch(err => {
+        // Play unmuted so user hears the discrete camera wind sound
+        audio.play().catch(err => {
           console.warn('Failed to unlock shutter sound:', err);
         });
       }
     
-      // Unlock all flash sound audio elements in the pool
+      // Unlock all flash sound audio elements in the pool silently (muted)
       const pool = flashSoundPoolRef.current;
       if (!pool.unlocked) {
         pool.unlocked = true;
