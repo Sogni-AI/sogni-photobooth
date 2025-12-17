@@ -215,4 +215,254 @@
   z-index: 1;
 }
 
+/* Sparkler Effect for Spark Points Logo */
+@keyframes sparklerBurst {
+  0% {
+    transform: translate(0, 0) scale(0);
+    opacity: 0;
+  }
+  5% {
+    opacity: 1;
+    transform: translate(0, 0) scale(1.2);
+  }
+  15% {
+    opacity: 1;
+    transform: translate(calc(var(--sparkler-x) * 0.3), calc(var(--sparkler-y) * 0.3)) scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: translate(calc(var(--sparkler-x) * 0.7), calc(var(--sparkler-y) * 0.7)) scale(0.8);
+  }
+  100% {
+    transform: translate(var(--sparkler-x), var(--sparkler-y)) scale(0.3);
+    opacity: 0;
+  }
+}
+
+@keyframes sparklerFlicker {
+  0%, 100% {
+    opacity: 0;
+  }
+  10%, 20%, 30%, 40%, 50%, 60%, 70%, 80%, 90% {
+    opacity: 1;
+  }
+  15%, 25%, 35%, 45%, 55%, 65%, 75%, 85%, 95% {
+    opacity: 0.3;
+  }
+}
+
+.spark-logo-container {
+  position: relative;
+}
+
+.sparkler-particle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 3px;
+  height: 3px;
+  margin-top: -1.5px;
+  margin-left: -1.5px;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
+  background: radial-gradient(circle, #ffffff 0%, rgba(255, 255, 255, 0.8) 40%, transparent 100%);
+  box-shadow: 0 0 4px #ffffff, 0 0 8px rgba(255, 255, 255, 0.8), 0 0 12px rgba(255, 255, 255, 0.4);
+}
+
+.sparkler-particle-1 {
+  --sparkler-x: 18px;
+  --sparkler-y: -12px;
+  animation: sparklerBurst 0.8s ease-out infinite, sparklerFlicker 0.15s ease-in-out infinite;
+  animation-delay: 0s, 0s;
+}
+
+.sparkler-particle-2 {
+  --sparkler-x: 15px;
+  --sparkler-y: 15px;
+  animation: sparklerBurst 0.8s ease-out infinite, sparklerFlicker 0.15s ease-in-out infinite;
+  animation-delay: 0.3s, 0.05s;
+}
+
+.sparkler-particle-3 {
+  --sparkler-x: -15px;
+  --sparkler-y: 15px;
+  animation: sparklerBurst 0.8s ease-out infinite, sparklerFlicker 0.15s ease-in-out infinite;
+  animation-delay: 0.6s, 0.1s;
+}
+
+.sparkler-particle-4 {
+  --sparkler-x: -18px;
+  --sparkler-y: -12px;
+  animation: sparklerBurst 0.8s ease-out infinite, sparklerFlicker 0.15s ease-in-out infinite;
+  animation-delay: 0.9s, 0.15s;
+}
+
+.sparkler-particle-5 {
+  --sparkler-x: 0px;
+  --sparkler-y: -20px;
+  animation: sparklerBurst 0.8s ease-out infinite, sparklerFlicker 0.15s ease-in-out infinite;
+  animation-delay: 1.2s, 0.2s;
+}
+
+.sparkler-particle-6 {
+  --sparkler-x: 20px;
+  --sparkler-y: 0px;
+  animation: sparklerBurst 0.8s ease-out infinite, sparklerFlicker 0.15s ease-in-out infinite;
+  animation-delay: 1.5s, 0.25s;
+}
+
+.sparkler-particle-7 {
+  --sparkler-x: 0px;
+  --sparkler-y: 20px;
+  animation: sparklerBurst 0.8s ease-out infinite, sparklerFlicker 0.15s ease-in-out infinite;
+  animation-delay: 1.8s, 0.3s;
+}
+
+.sparkler-particle-8 {
+  --sparkler-x: -20px;
+  --sparkler-y: 0px;
+  animation: sparklerBurst 0.8s ease-out infinite, sparklerFlicker 0.15s ease-in-out infinite;
+  animation-delay: 2.1s, 0.35s;
+}
+
+.sparkler-particle-9 {
+  --sparkler-x: 12px;
+  --sparkler-y: -16px;
+  animation: sparklerBurst 0.8s ease-out infinite, sparklerFlicker 0.15s ease-in-out infinite;
+  animation-delay: 2.4s, 0.4s;
+}
+
+.sparkler-particle-10 {
+  --sparkler-x: 16px;
+  --sparkler-y: 12px;
+  animation: sparklerBurst 0.8s ease-out infinite, sparklerFlicker 0.15s ease-in-out infinite;
+  animation-delay: 2.7s, 0.45s;
+}
+
+.sparkler-particle-11 {
+  --sparkler-x: -12px;
+  --sparkler-y: 16px;
+  animation: sparklerBurst 0.8s ease-out infinite, sparklerFlicker 0.15s ease-in-out infinite;
+  animation-delay: 3s, 0.5s;
+}
+
+.sparkler-particle-12 {
+  --sparkler-x: -16px;
+  --sparkler-y: -16px;
+  animation: sparklerBurst 0.8s ease-out infinite, sparklerFlicker 0.15s ease-in-out infinite;
+  animation-delay: 3.3s, 0.55s;
+}
+
+/* SOGNI Token Particle Effect */
+@keyframes sogniParticle {
+  0% {
+    transform: translate(0, 0) scale(0);
+    opacity: 0;
+  }
+  5% {
+    opacity: 1;
+    transform: translate(0, 0) scale(1.2);
+  }
+  15% {
+    opacity: 1;
+    transform: translate(calc(var(--sogni-x) * 0.3), calc(var(--sogni-y) * 0.3)) scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: translate(calc(var(--sogni-x) * 0.7), calc(var(--sogni-y) * 0.7)) scale(0.8);
+  }
+  100% {
+    transform: translate(var(--sogni-x), var(--sogni-y)) scale(0.3);
+    opacity: 0;
+  }
+}
+
+@keyframes sogniFlicker {
+  0%, 100% {
+    opacity: 0;
+  }
+  10%, 20%, 30%, 40%, 50%, 60%, 70%, 80%, 90% {
+    opacity: 1;
+  }
+  15%, 25%, 35%, 45%, 55%, 65%, 75%, 85%, 95% {
+    opacity: 0.3;
+  }
+}
+
+.sogni-logo-container {
+  position: relative;
+}
+
+.sogni-particle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 3px;
+  height: 3px;
+  margin-top: -1.5px;
+  margin-left: -1.5px;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
+  background: radial-gradient(circle, #ffffff 0%, rgba(255, 255, 255, 0.8) 40%, transparent 100%);
+  box-shadow: 0 0 4px #ffffff, 0 0 8px rgba(255, 255, 255, 0.8), 0 0 12px rgba(255, 255, 255, 0.4);
+}
+
+.sogni-particle-1 {
+  --sogni-x: 20px;
+  --sogni-y: -16px;
+  animation: sogniParticle 0.8s ease-out infinite, sogniFlicker 0.15s ease-in-out infinite;
+  animation-delay: 0s, 0s;
+}
+
+.sogni-particle-2 {
+  --sogni-x: 18px;
+  --sogni-y: 18px;
+  animation: sogniParticle 0.8s ease-out infinite, sogniFlicker 0.15s ease-in-out infinite;
+  animation-delay: 0.3s, 0.05s;
+}
+
+.sogni-particle-3 {
+  --sogni-x: -18px;
+  --sogni-y: 18px;
+  animation: sogniParticle 0.8s ease-out infinite, sogniFlicker 0.15s ease-in-out infinite;
+  animation-delay: 0.6s, 0.1s;
+}
+
+.sogni-particle-4 {
+  --sogni-x: -20px;
+  --sogni-y: -16px;
+  animation: sogniParticle 0.8s ease-out infinite, sogniFlicker 0.15s ease-in-out infinite;
+  animation-delay: 0.9s, 0.15s;
+}
+
+.sogni-particle-5 {
+  --sogni-x: 0px;
+  --sogni-y: -24px;
+  animation: sogniParticle 0.8s ease-out infinite, sogniFlicker 0.15s ease-in-out infinite;
+  animation-delay: 1.2s, 0.2s;
+}
+
+.sogni-particle-6 {
+  --sogni-x: 24px;
+  --sogni-y: 0px;
+  animation: sogniParticle 0.8s ease-out infinite, sogniFlicker 0.15s ease-in-out infinite;
+  animation-delay: 1.5s, 0.25s;
+}
+
+.sogni-particle-7 {
+  --sogni-x: 0px;
+  --sogni-y: 24px;
+  animation: sogniParticle 0.8s ease-out infinite, sogniFlicker 0.15s ease-in-out infinite;
+  animation-delay: 1.8s, 0.3s;
+}
+
+.sogni-particle-8 {
+  --sogni-x: -24px;
+  --sogni-y: 0px;
+  animation: sogniParticle 0.8s ease-out infinite, sogniFlicker 0.15s ease-in-out infinite;
+  animation-delay: 2.1s, 0.35s;
+}
+
 

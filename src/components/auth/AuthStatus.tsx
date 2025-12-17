@@ -387,14 +387,14 @@ export const AuthStatus: React.FC<AuthStatusProps> = ({ onPurchaseClick, onSignu
                       const svg = e.currentTarget.querySelector('svg');
                       if (svg) {
                         svg.style.opacity = '0.9';
-                        svg.style.transform = 'translateY(-50%) scale(1.15)';
+                        svg.style.transform = 'scale(1.15)';
                       }
                     } else {
                       e.currentTarget.style.transform = 'scale(1.05)';
                       e.currentTarget.style.boxShadow = '0 6px 20px rgba(0, 213, 255, 0.5), 0 0 0 1px rgba(0, 213, 255, 0.3)';
                       const svg = e.currentTarget.querySelector('svg');
                       if (svg) {
-                        svg.style.transform = 'translateY(-50%) scale(1.3)';
+                        svg.style.transform = 'scale(1.3)';
                         svg.style.filter = 'drop-shadow(0 0 6px rgba(0, 213, 255, 0.8)) drop-shadow(0 2px 6px rgba(0, 0, 0, 0.4))';
                       }
                     }
@@ -407,42 +407,62 @@ export const AuthStatus: React.FC<AuthStatusProps> = ({ onPurchaseClick, onSignu
                       const svg = e.currentTarget.querySelector('svg');
                       if (svg) {
                         svg.style.opacity = '0.6';
-                        svg.style.transform = 'translateY(-50%) scale(1)';
+                        svg.style.transform = 'scale(1)';
                       }
                     } else {
                       e.currentTarget.style.transform = 'scale(1.02)';
                       e.currentTarget.style.boxShadow = '0 4px 15px rgba(0, 213, 255, 0.4), 0 0 0 1px rgba(0, 213, 255, 0.2)';
                       const svg = e.currentTarget.querySelector('svg');
                       if (svg) {
-                        svg.style.transform = 'translateY(-50%) scale(1.2)';
+                        svg.style.transform = 'scale(1.2)';
                         svg.style.filter = 'drop-shadow(0 0 4px rgba(0, 213, 255, 0.6)) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3))';
                       }
                     }
                   }}
                 >
-                  <svg 
-                    xmlns="http://www.w3.org/2000/svg" 
-                    viewBox="0 0 120 110" 
-                    style={{ 
-                      width: '32px', 
-                      height: '32px', 
-                      fill: 'currentColor',
-                      display: 'block',
-                      flexShrink: 0,
+                  <div 
+                    className={tokenType === 'sogni' ? 'sogni-logo-container active' : 'sogni-logo-container'}
+                    style={{
                       position: 'absolute',
                       left: '-4px',
                       top: '50%',
-                      transform: tokenType === 'sogni' 
-                        ? 'translateY(-50%) scale(1.2)' 
-                        : 'translateY(-50%) scale(1)',
-                      filter: tokenType === 'sogni' 
-                        ? 'drop-shadow(0 0 4px rgba(0, 213, 255, 0.6)) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3))' 
-                        : 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2))',
-                      transition: 'all 0.3s ease',
-                      opacity: tokenType === 'sogni' ? 1 : 0.6,
+                      transform: 'translateY(-50%)',
+                      width: '32px',
+                      height: '32px',
                       zIndex: 1
                     }}
                   >
+                    {tokenType === 'sogni' && (
+                      <>
+                        <div className="sogni-particle sogni-particle-1" />
+                        <div className="sogni-particle sogni-particle-2" />
+                        <div className="sogni-particle sogni-particle-3" />
+                        <div className="sogni-particle sogni-particle-4" />
+                        <div className="sogni-particle sogni-particle-5" />
+                        <div className="sogni-particle sogni-particle-6" />
+                        <div className="sogni-particle sogni-particle-7" />
+                        <div className="sogni-particle sogni-particle-8" />
+                      </>
+                    )}
+                    <svg 
+                      xmlns="http://www.w3.org/2000/svg" 
+                      viewBox="0 0 120 110" 
+                      style={{ 
+                        width: '32px', 
+                        height: '32px', 
+                        fill: 'currentColor',
+                        display: 'block',
+                        flexShrink: 0,
+                        transform: tokenType === 'sogni' 
+                          ? 'scale(1.2)' 
+                          : 'scale(1)',
+                        filter: tokenType === 'sogni' 
+                          ? 'drop-shadow(0 0 4px rgba(0, 213, 255, 0.6)) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3))' 
+                          : 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2))',
+                        transition: 'all 0.3s ease',
+                        opacity: tokenType === 'sogni' ? 1 : 0.6
+                      }}
+                    >
                     <defs>
                       <clipPath id="sogni-circle-clip">
                         <circle cx="51" cy="51" r="50" />
@@ -462,7 +482,8 @@ export const AuthStatus: React.FC<AuthStatusProps> = ({ onPurchaseClick, onSignu
                       <path d="M60.1 7.2h2l3.8 6.3h-2l-3.8-6.3zM91.3 1h39.1l1.8 6.3H93L91.3 1z" />
                       <path d="M44.6 1h43.2l1.8 6.3H46.1L44.6 1zM40.9 1h1.7L44 7.2h-1.7L40.9 1z" />
                     </g>
-                  </svg>
+                    </svg>
+                  </div>
                   <span style={{ marginLeft: '24px' }}>SOGNI Token</span>
                 </button>
                 <button
@@ -503,14 +524,14 @@ export const AuthStatus: React.FC<AuthStatusProps> = ({ onPurchaseClick, onSignu
                       const svg = e.currentTarget.querySelector('svg');
                       if (svg) {
                         svg.style.opacity = '0.9';
-                        svg.style.transform = 'translateY(-50%) scale(1.15) rotate(8deg)';
+                        svg.style.transform = 'scale(1.15) rotate(8deg)';
                       }
                     } else {
                       e.currentTarget.style.transform = 'scale(1.05)';
                       e.currentTarget.style.boxShadow = '0 6px 20px rgba(255, 107, 107, 0.5), 0 0 0 1px rgba(255, 107, 107, 0.3)';
                       const svg = e.currentTarget.querySelector('svg');
                       if (svg) {
-                        svg.style.transform = 'translateY(-50%) scale(1.3) rotate(8deg)';
+                        svg.style.transform = 'scale(1.3) rotate(8deg)';
                         svg.style.filter = 'drop-shadow(0 0 8px rgba(255, 107, 107, 1)) drop-shadow(0 0 12px rgba(255, 165, 2, 0.6)) drop-shadow(0 2px 6px rgba(0, 0, 0, 0.4))';
                       }
                     }
@@ -523,44 +544,69 @@ export const AuthStatus: React.FC<AuthStatusProps> = ({ onPurchaseClick, onSignu
                       const svg = e.currentTarget.querySelector('svg');
                       if (svg) {
                         svg.style.opacity = '0.6';
-                        svg.style.transform = 'translateY(-50%) scale(1) rotate(0deg)';
+                        svg.style.transform = 'scale(1) rotate(0deg)';
                       }
                     } else {
                       e.currentTarget.style.transform = 'scale(1.02)';
                       e.currentTarget.style.boxShadow = '0 4px 15px rgba(255, 107, 107, 0.4), 0 0 0 1px rgba(255, 107, 107, 0.2)';
                       const svg = e.currentTarget.querySelector('svg');
                       if (svg) {
-                        svg.style.transform = 'translateY(-50%) scale(1.2) rotate(5deg)';
+                        svg.style.transform = 'scale(1.2) rotate(5deg)';
                         svg.style.filter = 'drop-shadow(0 0 6px rgba(255, 107, 107, 0.8)) drop-shadow(0 0 10px rgba(255, 165, 2, 0.4)) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3))';
                       }
                     }
                   }}
                 >
-                  <svg 
-                    xmlns="http://www.w3.org/2000/svg" 
-                    viewBox="0 0 17 16" 
-                    style={{ 
-                      width: '32px', 
-                      height: '32px', 
-                      fill: 'currentColor',
-                      display: 'block',
-                      flexShrink: 0,
+                  <div 
+                    className={tokenType === 'spark' ? 'spark-logo-container active' : 'spark-logo-container'}
+                    style={{
                       position: 'absolute',
                       left: '-4px',
                       top: '50%',
-                      transform: tokenType === 'spark' 
-                        ? 'translateY(-50%) scale(1.2) rotate(5deg)' 
-                        : 'translateY(-50%) scale(1) rotate(0deg)',
-                      filter: tokenType === 'spark' 
-                        ? 'drop-shadow(0 0 6px rgba(255, 107, 107, 0.8)) drop-shadow(0 0 10px rgba(255, 165, 2, 0.4)) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3))' 
-                        : 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2))',
-                      transition: 'all 0.3s ease',
-                      opacity: tokenType === 'spark' ? 1 : 0.6,
+                      transform: 'translateY(-50%)',
+                      width: '32px',
+                      height: '32px',
                       zIndex: 1
                     }}
                   >
+                    {tokenType === 'spark' && (
+                      <>
+                        <div className="sparkler-particle sparkler-particle-1" />
+                        <div className="sparkler-particle sparkler-particle-2" />
+                        <div className="sparkler-particle sparkler-particle-3" />
+                        <div className="sparkler-particle sparkler-particle-4" />
+                        <div className="sparkler-particle sparkler-particle-5" />
+                        <div className="sparkler-particle sparkler-particle-6" />
+                        <div className="sparkler-particle sparkler-particle-7" />
+                        <div className="sparkler-particle sparkler-particle-8" />
+                        <div className="sparkler-particle sparkler-particle-9" />
+                        <div className="sparkler-particle sparkler-particle-10" />
+                        <div className="sparkler-particle sparkler-particle-11" />
+                        <div className="sparkler-particle sparkler-particle-12" />
+                      </>
+                    )}
+                    <svg 
+                      xmlns="http://www.w3.org/2000/svg" 
+                      viewBox="0 0 17 16" 
+                      style={{ 
+                        width: '32px', 
+                        height: '32px', 
+                        fill: 'currentColor',
+                        display: 'block',
+                        flexShrink: 0,
+                        transform: tokenType === 'spark' 
+                          ? 'scale(1.2) rotate(5deg)' 
+                          : 'scale(1) rotate(0deg)',
+                        filter: tokenType === 'spark' 
+                          ? 'drop-shadow(0 0 6px rgba(255, 107, 107, 0.8)) drop-shadow(0 0 10px rgba(255, 165, 2, 0.4)) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3))' 
+                          : 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2))',
+                        transition: 'all 0.3s ease',
+                        opacity: tokenType === 'spark' ? 1 : 0.6
+                      }}
+                    >
                     <path d="M9.92301 1.1764C10.6242 0.251095 12.0169 0.251096 12.0445 1.1764L12.1576 4.97111C12.1663 5.26202 12.3269 5.49138 12.5973 5.59903L16.1244 7.0032C16.9845 7.34559 16.5082 8.65433 15.3989 8.99672L10.8495 10.4009C10.5008 10.5085 10.1732 10.7379 9.95276 11.0288L7.07732 14.8235C6.37616 15.7488 4.98344 15.7488 4.95585 14.8235L4.84273 11.0288C4.83406 10.7379 4.67346 10.5085 4.40305 10.4009L0.875887 8.99672C0.015819 8.65433 0.492163 7.34559 1.60147 7.0032L6.15079 5.59903C6.49955 5.49138 6.82712 5.26202 7.04756 4.97111L9.92301 1.1764Z" />
-                  </svg>
+                    </svg>
+                  </div>
                   <span style={{ marginLeft: '24px' }}>Spark Points</span>
                 </button>
               </div>
