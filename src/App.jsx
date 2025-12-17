@@ -9238,6 +9238,7 @@ const App = () => {
               onPurchaseClick={authState.isAuthenticated && authState.authMode === 'frontend' ? () => setShowStripePurchase(true) : undefined}
               onSignupComplete={triggerSignupCelebration}
               textColor={showStartMenu ? "#000000" : "#ffffff"}
+              playRandomFlashSound={playRandomFlashSound}
             />
           </div>
         )}

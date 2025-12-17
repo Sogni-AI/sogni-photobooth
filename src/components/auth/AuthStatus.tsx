@@ -22,9 +22,10 @@ interface AuthStatusProps {
   onPurchaseClick?: () => void;
   onSignupComplete?: () => void;
   textColor?: string;
+  playRandomFlashSound?: () => void;
 }
 
-export const AuthStatus: React.FC<AuthStatusProps> = ({ onPurchaseClick, onSignupComplete, textColor = '#ffffff' }) => {
+export const AuthStatus: React.FC<AuthStatusProps> = ({ onPurchaseClick, onSignupComplete, textColor = '#ffffff', playRandomFlashSound }) => {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [loginModalMode, setLoginModalMode] = useState<LoginModalMode>('login');
@@ -350,7 +351,12 @@ export const AuthStatus: React.FC<AuthStatusProps> = ({ onPurchaseClick, onSignu
                 }}
               >
                 <button
-                  onClick={() => switchPaymentMethod('sogni')}
+                  onClick={() => {
+                    if (tokenType !== 'sogni' && playRandomFlashSound) {
+                      playRandomFlashSound();
+                    }
+                    switchPaymentMethod('sogni');
+                  }}
                   style={{
                     flex: 1,
                     border: tokenType === 'sogni' ? '2px solid #00D5FF' : '2px solid transparent',
@@ -487,7 +493,12 @@ export const AuthStatus: React.FC<AuthStatusProps> = ({ onPurchaseClick, onSignu
                   <span style={{ marginLeft: '24px' }}>SOGNI Token</span>
                 </button>
                 <button
-                  onClick={() => switchPaymentMethod('spark')}
+                  onClick={() => {
+                    if (tokenType !== 'spark' && playRandomFlashSound) {
+                      playRandomFlashSound();
+                    }
+                    switchPaymentMethod('spark');
+                  }}
                   style={{
                     flex: 1,
                     border: tokenType === 'spark' ? '2px solid #ff6b6b' : '2px solid transparent',
