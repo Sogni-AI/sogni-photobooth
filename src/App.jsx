@@ -30,6 +30,7 @@ import { trackShareWithStyle } from './services/analyticsService';
 import { CUSTOM_PROMPT_IMAGE_KEY } from './components/shared/CustomPromptPopup';
 import urls from './config/urls';
 import clickSound from './click.mp3';
+import cameraWindSound from './camera-wind.mp3';
 import { warmUpAudio } from './utils/sonicLogos';
 import flash1Sound from './flash1.mp3';
 import flash2Sound from './flash2.mp3';
@@ -167,6 +168,7 @@ const App = () => {
   const videoReference = useRef(null);
   const canvasReference = useRef(null);
   const shutterSoundReference = useRef(null);
+  const rewindSoundReference = useRef(null);
   // const helloSoundReference = useRef(null);
   const slothicornReference = useRef(null);
   const soundPlayedForPhotos = useRef(new Set()); // Track which photo IDs have already played sound
@@ -227,16 +229,32 @@ const App = () => {
 
   useEffect(() => {
     const unlockAudio = () => {
-      // Play camera wind sound (shutter sound) unmuted on first click - discrete sound for warm-up
+      // Play rewind sound (camera wind sound) unmuted on first tap - only audible sound for warm-up
+      if (rewindSoundReference.current) {
+        const audio = rewindSoundReference.current;
+        // Play unmuted so user hears the rewind sound
+        audio.play().catch(err => {
+          console.warn('Failed to unlock rewind sound:', err);
+        });
+      }
+    
+      // Unlock shutter sound silently (muted) during user gesture
+      // This ensures it can play reliably when capture button is clicked
       if (shutterSoundReference.current) {
         const audio = shutterSoundReference.current;
-        // Play unmuted so user hears the discrete camera wind sound
-        audio.play().catch(err => {
+        audio.muted = true;
+        audio.play().then(() => {
+          audio.pause();
+          audio.currentTime = 0;
+          audio.muted = false;
+        }).catch(err => {
           console.warn('Failed to unlock shutter sound:', err);
         });
       }
     
-      // Unlock all flash sound audio elements in the pool silently (muted)
+      // Unlock all flash sound audio elements in the pool silently (muted) during user gesture
+      // This is critical: flash sounds play when images finish loading (no user gesture),
+      // so they must be pre-unlocked during the first tap to work on iOS
       const pool = flashSoundPoolRef.current;
       if (!pool.unlocked) {
         pool.unlocked = true;
@@ -317,6 +335,9 @@ const App = () => {
     }
     
     const pool = flashSoundPoolRef.current;
+    
+    // Flash sounds are pre-unlocked during first tap (in unlockAudio)
+    // This ensures they can play when images finish loading without a user gesture
     
     // Randomly select one of the 6 flash sounds
     const randomIndex = Math.floor(Math.random() * 6);
@@ -9628,6 +9649,12 @@ const App = () => {
         {/* Camera shutter sound */}
         <audio ref={shutterSoundReference} preload="auto">
           <source src={clickSound} type="audio/mpeg" />
+          Your browser does not support the audio element.
+        </audio>
+
+        {/* Rewind sound (camera wind) - played on first tap */}
+        <audio ref={rewindSoundReference} preload="auto">
+          <source src={cameraWindSound} type="audio/mpeg" />
           Your browser does not support the audio element.
         </audio>
 
