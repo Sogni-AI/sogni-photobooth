@@ -118,6 +118,8 @@ export function useVideoCostEstimation(params: VideoCostEstimationParams): Video
       setCostInUSD(null);
       setError(null);
       setLoading(false);
+      // Reset the params ref when disabled so it will refetch when enabled again
+      lastParamsRef.current = '';
       return;
     }
 
@@ -134,6 +136,7 @@ export function useVideoCostEstimation(params: VideoCostEstimationParams): Video
 
     // Create a stable params hash to avoid re-fetching with same params
     // Include photoId to bust cache when switching photos
+    // Include enabled to bust cache when dropdown opens/closes
     const paramsHash = JSON.stringify({
       tokenType,
       modelId: qualityConfig.model,
@@ -143,7 +146,8 @@ export function useVideoCostEstimation(params: VideoCostEstimationParams): Video
       fps,
       steps: qualityConfig.steps,
       photoId,
-      jobCount
+      jobCount,
+      enabled
     });
 
     if (paramsHash === lastParamsRef.current) {

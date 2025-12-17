@@ -81,7 +81,7 @@ const hasUsedMotionEmoji = (emoji) => {
   return getUsedMotionEmojis().includes(emoji);
 };
 
-// Motion templates for video generation - 8 categories × 16 templates each = 128 total
+// Motion templates for video generation - 8 categories × 20 templates each = 160 total
 // Key I2V principles: Can only animate what EXISTS in the image - expressions, movements, camera, effects
 const MOTION_CATEGORIES = [
   {
@@ -104,6 +104,10 @@ const MOTION_CATEGORIES = [
       { emoji: '🫨', label: 'Vibrate', prompt: 'rapid shaking vibration effect, buzzing tremor, phone vibration feel' },
       { emoji: '🔍', label: 'Zoom In', prompt: 'slow dramatic camera push in toward face, intense focus' },
       { emoji: '🔭', label: 'Zoom Out', prompt: 'camera slowly pulls back revealing scene, epic reveal' },
+      { emoji: '🐠', label: 'Fisheye', prompt: 'extreme wide angle fisheye distortion, bulging curved edges, dramatic perspective' },
+      { emoji: '⏱️', label: 'Time-lapse', prompt: 'rapid time-lapse effect, clouds race by, shadows move quickly, sped up time' },
+      { emoji: '📹', label: 'Tracking', prompt: 'camera tracks subject smoothly, following movement, steady cam glide' },
+      { emoji: '📱', label: 'Split Screen', prompt: 'screen splits into multiple views, multi-angle perspective, divided frames' },
     ]
   },
   {
@@ -124,8 +128,12 @@ const MOTION_CATEGORIES = [
       { emoji: '💩', label: 'Poop', prompt: 'poop emoji rains down chaotically, gross explosion, total mess' },
       { emoji: '💔', label: 'Shatter', prompt: 'face cracks like glass, pieces break apart, shattering into fragments' },
       { emoji: '☀️', label: 'Solar Flare', prompt: 'intense sun rays blast outward, blinding golden light, solar energy' },
-      { emoji: '🗿', label: 'Stone', prompt: 'skin turns to grey stone, cracking texture spreads, frozen as statue' },
+      { emoji: '🔌', label: 'Electrocute', prompt: 'electric shock jolts through body, sparks fly, hair stands on end, electrical surge' },
       { emoji: '💨', label: 'Vaporize', prompt: 'body turns to vapor, steam rises, evaporating into mist' },
+      { emoji: '🗜️', label: 'Crush', prompt: 'everything gets compressed and crushed, walls close in, crushing pressure' },
+      { emoji: '💣', label: 'Bomb', prompt: 'bomb explodes dramatically, massive blast, shockwave radiates outward, explosive destruction' },
+      { emoji: '🎮', label: 'Pixelate', prompt: 'image pixelates and breaks apart, digital degradation, retro game effect' },
+      { emoji: '🌪️', label: 'Torn', prompt: 'face tears apart like paper, ripping effect, torn edges, splitting apart' },
     ]
   },
   {
@@ -148,6 +156,10 @@ const MOTION_CATEGORIES = [
       { emoji: '🧛', label: 'Vampire', prompt: 'fangs extend from mouth, eyes glow red, menacing expression, pale skin' },
       { emoji: '🐺', label: 'Werewolf', prompt: 'fur sprouts across face, ears become pointed, fangs grow, eyes glow yellow, howling' },
       { emoji: '🧟', label: 'Zombie', prompt: 'skin turns grey and rotting, eyes go white, zombie transformation, arms reach forward' },
+      { emoji: '🧙', label: 'Mummy', prompt: 'bandages wrap around face, ancient mummy transformation, wrapped in cloth' },
+      { emoji: '🏴‍☠️', label: 'Pirate', prompt: 'pirate hat appears, eye patch covers one eye, beard grows, swashbuckling transformation' },
+      { emoji: '🦸', label: 'Superhero', prompt: 'cape flows behind, mask appears, heroic pose, superpowers activate, saving the day' },
+      { emoji: '🧙‍♂️', label: 'Wizard', prompt: 'pointed wizard hat appears, beard grows long, staff materializes, magical transformation' },
     ]
   },
   {
@@ -170,6 +182,10 @@ const MOTION_CATEGORIES = [
       { emoji: '😊', label: 'Smile', prompt: 'breaks into warm genuine smile, eyes crinkle with joy, cheeks rise' },
       { emoji: '🤬', label: 'Swearing', prompt: 'face contorts with anger, mouth moves rapidly, symbols appear, furious cursing' },
       { emoji: '🤔', label: 'Think', prompt: 'eyebrows furrow, eyes look up thinking, hand touches chin' },
+      { emoji: '😰', label: 'Anxious', prompt: 'face shows worry, sweat beads form, nervous expression, tense and uneasy' },
+      { emoji: '😕', label: 'Confused', prompt: 'head tilts sideways, eyebrows raise, puzzled expression, questioning look' },
+      { emoji: '😤', label: 'Proud', prompt: 'chest puffs out, chin raises confidently, proud smile, accomplished expression' },
+      { emoji: '😴', label: 'Sleepy', prompt: 'eyes droop heavily, yawns widely, head nods, falling asleep, drowsy' },
     ]
   },
   {
@@ -192,6 +208,10 @@ const MOTION_CATEGORIES = [
       { emoji: '⭐', label: 'Stardust', prompt: 'glittering stardust swirls around, cosmic particles float, galaxy backdrop' },
       { emoji: '💫', label: 'Supernova', prompt: 'blinding explosion of light and energy radiates outward, cosmic blast' },
       { emoji: '👁️', label: 'Third Eye', prompt: 'glowing third eye opens on forehead, mystical energy radiates, enlightenment' },
+      { emoji: '🧚', label: 'Enchant', prompt: 'magical sparkles surround, enchanting aura glows, spellbinding transformation' },
+      { emoji: '🕴️', label: 'Levitate', prompt: 'body floats upward, defying gravity, hovering in air, mystical levitation' },
+      { emoji: '🚪', label: 'Portal', prompt: 'mystical portal opens behind, swirling vortex appears, magical gateway' },
+      { emoji: '🌐', label: 'Teleport', prompt: 'body fades and reappears, teleportation effect, instant transportation, magical blink' },
     ]
   },
   {
@@ -214,6 +234,10 @@ const MOTION_CATEGORIES = [
       { emoji: '🌊', label: 'Tsunami', prompt: 'massive wave crashes in from behind, water engulfs everything, underwater' },
       { emoji: '🐟', label: 'Underwater', prompt: 'bubbles rise up, hair floats weightlessly, underwater submersion effect' },
       { emoji: '💨', label: 'Wind', prompt: 'hair blows wildly in strong wind, clothes whip around dramatically' },
+      { emoji: '🏜️', label: 'Dust Storm', prompt: 'dust storm swirls around, sand and debris fly everywhere, visibility drops, windy chaos' },
+      { emoji: '🍃', label: 'Leaves', prompt: 'autumn leaves swirl and fall around, colorful foliage dances in wind, leaf storm' },
+      { emoji: '🌙', label: 'Moonbeam', prompt: 'moonbeam shines down from above, silvery light sweeps across face, mystical lunar glow' },
+      { emoji: '🌇', label: 'Sunset Glow', prompt: 'warm sunset light sweeps across face, golden hour rays beam, vibrant colors wash over' },
     ]
   },
   {
@@ -236,6 +260,10 @@ const MOTION_CATEGORIES = [
       { emoji: '🤧', label: 'Sneeze', prompt: 'face scrunches up, massive sneeze explodes out, dramatic achoo' },
       { emoji: '💦', label: 'Spit Take', prompt: 'liquid sprays out of mouth in shock, dramatic spit take reaction' },
       { emoji: '😜', label: 'Wacky', prompt: 'tongue sticks out sideways, one eye winks, totally goofy face' },
+      { emoji: '🎈', label: 'Balloon', prompt: 'colorful balloons float up around, party balloons bounce, celebration balloons' },
+      { emoji: '🍾', label: 'Champagne', prompt: 'champagne cork pops, bubbly sprays everywhere, celebration toast, festive fizz' },
+      { emoji: '🕺', label: 'Dance', prompt: 'body moves in dance rhythm, grooving to music, dancing moves, party dancing' },
+      { emoji: '🎩', label: 'Party Hat', prompt: 'party hat appears on head, confetti streams, festive celebration, birthday vibes' },
     ]
   },
   {
@@ -258,6 +286,10 @@ const MOTION_CATEGORIES = [
       { emoji: '💅', label: 'Slay', prompt: 'chin raises confidently, eyes narrow fiercely, hair tosses back' },
       { emoji: '👋', label: 'Wave', prompt: 'hand raises waving hello, friendly smile, head tilts warmly' },
       { emoji: '😉', label: 'Wink', prompt: 'winks playfully, slight head tilt, charming smile spreads' },
+      { emoji: '🤦', label: 'Facepalm', prompt: 'hand slaps forehead in disbelief, exasperated expression, why did I do that' },
+      { emoji: '👊', label: 'Fist Bump', prompt: 'fist extends for bump, friendly gesture, cool greeting, fist meets fist' },
+      { emoji: '✋', label: 'High Five', prompt: 'hand raises for high five, celebratory slap, enthusiastic greeting, success moment' },
+      { emoji: '👌', label: 'OK', prompt: 'hand forms OK sign, approving gesture, everything is good, positive signal' },
     ]
   },
 ];
@@ -507,9 +539,10 @@ const renderMotionPicker = (selectedCategory, setSelectedCategory, handleGenerat
   
   // Grid config: mobile portrait uses 2 cols for categories, otherwise 4 cols
   // Categories: 8 items = 2x4 on mobile portrait, 4x2 otherwise
-  // Templates: 16 items = 4x4
+  // Templates: 20 items = 5x4 on desktop (landscape), 4x5 on mobile portrait
   const categoryCols = isMobilePortrait ? 2 : 4;
-  const templateCols = 4;
+  const templateCols = isMobilePortrait ? 4 : 5;
+  const templateRows = isMobilePortrait ? 5 : 4;
   
   // Category view: 8 items in 2x4 grid on mobile portrait, 4x2 otherwise
   if (!selectedCategory) {
@@ -542,7 +575,7 @@ const renderMotionPicker = (selectedCategory, setSelectedCategory, handleGenerat
     );
   }
 
-  // Template view: 16 items in 4x4 grid
+  // Template view: 20 items in 5x4 grid (desktop) or 4x5 grid (mobile portrait)
   const category = MOTION_CATEGORIES.find(c => c.name === selectedCategory);
   if (!category) return null;
 
@@ -601,7 +634,7 @@ const renderMotionPicker = (selectedCategory, setSelectedCategory, handleGenerat
         </div>
       </div>
       
-      {/* Templates 4x4 grid - square polaroids, centered */}
+      {/* Templates 5x4 grid (desktop) or 4x5 grid (mobile portrait) - square polaroids, centered */}
       <div 
         style={{
           display: 'flex',
@@ -615,11 +648,11 @@ const renderMotionPicker = (selectedCategory, setSelectedCategory, handleGenerat
         <div style={{
           display: 'grid',
           gridTemplateColumns: `repeat(${templateCols}, 1fr)`,
-          gridTemplateRows: 'repeat(4, 1fr)',
+          gridTemplateRows: `repeat(${templateRows}, 1fr)`,
           gap: isMobilePortrait ? '10px' : (isMobile ? '6px' : '10px'),
-          // Square grid: use height to determine size, center horizontally
+          // Responsive grid: 5x4 on desktop (landscape), 4x5 on mobile portrait
           height: '100%',
-          aspectRatio: '1 / 1',
+          aspectRatio: isMobilePortrait ? '4 / 5' : '5 / 4',
           maxWidth: '100%',
         }}>
         {category.templates.map((template, index) => 
