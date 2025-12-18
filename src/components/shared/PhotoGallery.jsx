@@ -1210,14 +1210,26 @@ const PhotoGallery = ({
 
     // Show the tip if we have completed photos and nothing is currently generating
     if (hasCompletedPhoto && !hasGeneratingPhoto && !showBatchVideoTip) {
-      // Delay showing the tip by 2 seconds after completion for dramatic effect
-      const timer = setTimeout(() => {
+      // Delay showing the tip by 2 seconds after completion
+      const showTimer = setTimeout(() => {
         setShowBatchVideoTip(true);
       }, 2000);
 
-      return () => clearTimeout(timer);
+      return () => clearTimeout(showTimer);
     }
   }, [photos, showBatchVideoTip]);
+
+  // Auto-dismiss batch video tip after 2.5 seconds
+  useEffect(() => {
+    if (showBatchVideoTip) {
+      const dismissTimer = setTimeout(() => {
+        setShowBatchVideoTip(false);
+        markBatchVideoTipShown();
+      }, 2500);
+
+      return () => clearTimeout(dismissTimer);
+    }
+  }, [showBatchVideoTip]);
 
   // Clear framed image cache when aspect ratio changes
   useEffect(() => {
@@ -4224,7 +4236,7 @@ const PhotoGallery = ({
             </div>
           )}
 
-          {/* Funky batch video mode tutorial tip - shown once after first render */}
+          {/* Batch video mode tutorial tip - shown once after first render */}
           {showBatchVideoTip && !isBulkDownloading && (
             <div
               className="batch-video-tip-tooltip"
@@ -4232,23 +4244,20 @@ const PhotoGallery = ({
                 position: 'absolute',
                 bottom: '65px',
                 right: '0',
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)',
+                background: 'rgba(102, 126, 234, 0.95)',
                 color: 'white',
-                padding: '14px 18px',
-                borderRadius: '16px',
-                fontSize: '15px',
-                fontWeight: '700',
-                fontFamily: '"Permanent Marker", cursive',
-                boxShadow: '0 8px 24px rgba(102, 126, 234, 0.5), 0 0 0 3px rgba(255, 255, 255, 0.3)',
-                minWidth: '200px',
-                maxWidth: '280px',
+                padding: '12px 16px',
+                borderRadius: '8px',
+                fontSize: '14px',
+                fontWeight: '600',
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)',
+                minWidth: '180px',
+                maxWidth: '250px',
                 textAlign: 'center',
                 whiteSpace: 'normal',
                 zIndex: 10000003,
-                animation: 'bounceInScale 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55), wiggle 2s ease-in-out infinite, rainbow-pulse 3s ease-in-out infinite',
-                cursor: 'pointer',
-                transform: 'rotate(-2deg)',
-                border: '2px solid rgba(255, 255, 255, 0.5)'
+                animation: 'fadeInUp 0.3s ease-out',
+                cursor: 'pointer'
               }}
               onClick={() => {
                 setShowBatchVideoTip(false);
@@ -4261,50 +4270,24 @@ const PhotoGallery = ({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: '8px',
-                marginBottom: '6px'
+                gap: '8px'
               }}>
-                <span style={{ fontSize: '24px', animation: 'spin 3s linear infinite' }}>🎥</span>
-                <span style={{ fontSize: '20px', animation: 'pulse 1.5s ease-in-out infinite' }}>✨</span>
+                <span style={{ fontSize: '18px' }}>💡</span>
+                <span style={{ lineHeight: '1.3' }}>
+                  Switch to batch video mode here!
+                </span>
               </div>
-              <div style={{ lineHeight: '1.3', textShadow: '0 2px 4px rgba(0,0,0,0.3)' }}>
-                Switch to batch video mode here!
-              </div>
-              {/* Funky arrow pointer */}
+              {/* Arrow pointer */}
               <div style={{
                 position: 'absolute',
-                bottom: '-20px',
-                right: '20px',
+                bottom: '-8px',
+                right: '24px',
                 width: '0',
                 height: '0',
-                borderLeft: '12px solid transparent',
-                borderRight: '12px solid transparent',
-                borderTop: '20px solid #f093fb',
-                filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.2))',
-                animation: 'bounce 1s ease-in-out infinite'
+                borderLeft: '8px solid transparent',
+                borderRight: '8px solid transparent',
+                borderTop: '8px solid rgba(102, 126, 234, 0.95)'
               }} />
-              {/* Sparkle decorations */}
-              <span style={{
-                position: 'absolute',
-                top: '-8px',
-                left: '10px',
-                fontSize: '20px',
-                animation: 'twinkle 1.5s ease-in-out infinite'
-              }}>⭐</span>
-              <span style={{
-                position: 'absolute',
-                top: '-5px',
-                right: '15px',
-                fontSize: '16px',
-                animation: 'twinkle 1.5s ease-in-out infinite 0.5s'
-              }}>💫</span>
-              <span style={{
-                position: 'absolute',
-                bottom: '5px',
-                left: '-8px',
-                fontSize: '18px',
-                animation: 'twinkle 1.5s ease-in-out infinite 1s'
-              }}>✨</span>
             </div>
           )}
           </div>

@@ -1168,46 +1168,30 @@ html body.has-selected-photo .film-strip-container.visible .film-frame.selected[
 
 /* Generate button for Style Explorer - generates fresh batch with current settings */
 .view-photos-btn {
-  position: fixed;
-  bottom: 32px;
-  right: 32px;
-  left: auto !important;
-  z-index: 100;
-  background: linear-gradient(135deg, #ff5e8a 0%, #ff3366 100%);
-  gap: 8px;
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
-  transition: transform 0.2s, box-shadow 0.2s;
+  /* Inherit all styling from corner-btn, just override what's needed */
+  background: linear-gradient(135deg, #ff5252, #e53935) !important;
 }
 
 .view-photos-btn:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
-  background: linear-gradient(135deg, #ff7aa1 0%, #ff4b78 100%);
+  transform: scale(1.05) !important;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4) !important;
 }
 
 .view-photos-btn:active {
-  transform: translateY(1px);
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  transform: scale(0.98) !important;
 }
 
-/* Responsive styling for Generate button on mobile */
+/* Responsive styling for View Photos button on mobile */
 @media (max-width: 768px), (orientation: portrait) and (max-device-width: 1024px) {
   .view-photos-btn {
-    right: 12px !important;
-    bottom: 32px;
+    right: 8px !important; /* Match grid padding */
   }
 }
 
-/* Specific adjustments for small screens in portrait mode like iPhone */
+/* Specific adjustments for small screens in portrait mode */
 @media (max-width: 420px) and (orientation: portrait) {
   .view-photos-btn {
-    padding: 8px 16px;
-    padding-bottom: 10px;
-    font-size: 16px;
-    right: 12px;
-    bottom: 32px;
-    border-radius: 8px;
-    min-height: 44px;
+    right: 8px !important; /* Match grid padding */
   }
 }
 
