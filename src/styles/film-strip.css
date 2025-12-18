@@ -1036,6 +1036,10 @@ html body.has-selected-photo .film-strip-container.visible .film-frame.selected[
   .corner-btn {
     z-index: 998 !important;
     left: 8px !important; /* Match grid padding */
+    min-height: 40px !important;
+    padding: 6px 14px !important;
+    padding-bottom: 8px !important;
+    font-size: 15px !important;
   }
 
   .corner-btn.photos-corner-btn,
