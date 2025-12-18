@@ -42,6 +42,14 @@
 
   /* Force media query to apply on iPhone devices in portrait mode */
   @media (orientation: portrait) {
+    /* Fix all corner button sizes on iOS - matches Android behavior */
+    .corner-btn {
+      font-size: 15px !important;
+      padding: 6px 14px !important;
+      padding-bottom: 8px !important;
+      min-height: 40px !important;
+    }
+
     /* Add specific style for CameraStartMenu on iOS */
     .camera-start-menu .start-menu-content {
       width: 95% !important;
