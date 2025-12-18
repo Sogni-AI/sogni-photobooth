@@ -1170,6 +1170,9 @@ html body.has-selected-photo .film-strip-container.visible .film-frame.selected[
 .view-photos-btn {
   /* Inherit all styling from corner-btn, just override what's needed */
   background: linear-gradient(135deg, #ff5252, #e53935) !important;
+  /* Position on right like photos-corner-btn */
+  left: unset !important;
+  right: 32px !important;
 }
 
 .view-photos-btn:hover {
