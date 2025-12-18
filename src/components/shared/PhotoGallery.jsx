@@ -1219,13 +1219,13 @@ const PhotoGallery = ({
     }
   }, [photos, showBatchVideoTip]);
 
-  // Auto-dismiss batch video tip after 2.5 seconds
+  // Auto-dismiss batch video tip after 4 seconds
   useEffect(() => {
     if (showBatchVideoTip) {
       const dismissTimer = setTimeout(() => {
         setShowBatchVideoTip(false);
         markBatchVideoTipShown();
-      }, 2500);
+      }, 4000);
 
       return () => clearTimeout(dismissTimer);
     }
