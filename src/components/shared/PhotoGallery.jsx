@@ -996,6 +996,35 @@ const PhotoGallery = ({
     }
   }, [activeVideoPhotoId, selectedPhotoIndex]);
 
+  // Monitor video ETAs to detect when they're stuck at 1 second (for flashing animation)
+  useEffect(() => {
+    const etaCheckInterval = setInterval(() => {
+      const newStuckETAs = new Set();
+
+      photos.forEach((photo, index) => {
+        if (photo.generatingVideo && photo.videoETA === 1) {
+          // Check if ETA has been at 1 second for a while
+          // If videoElapsed is greater than a reasonable threshold, consider it stuck
+          if (photo.videoElapsed && photo.videoElapsed > 10) {
+            newStuckETAs.add(photo.id || index);
+          }
+        }
+      });
+
+      // Only update state if the set has changed
+      setStuckVideoETAs(prev => {
+        const prevArray = Array.from(prev).sort();
+        const newArray = Array.from(newStuckETAs).sort();
+        if (JSON.stringify(prevArray) !== JSON.stringify(newArray)) {
+          return newStuckETAs;
+        }
+        return prev;
+      });
+    }, 1000); // Check every second
+
+    return () => clearInterval(etaCheckInterval);
+  }, [photos]);
+
   // Update theme group state when initialThemeGroupState prop changes
   useEffect(() => {
     if (isPromptSelectorMode && initialThemeGroupState) {
@@ -3882,12 +3911,12 @@ const PhotoGallery = ({
                 background: 'transparent',
                 border: 'none',
                 color: 'white',
-                padding: '8px 16px',
-                paddingBottom: '10px',
+                padding: '6px 14px',
+                paddingBottom: '8px',
                 borderRadius: '0',
                 cursor: isBulkDownloading ? 'not-allowed' : 'pointer',
                 opacity: isBulkDownloading ? 0.6 : 1,
-                fontSize: '16px',
+                fontSize: '15px',
                 fontWeight: '600',
                 fontFamily: '"Permanent Marker", cursive',
                 display: 'flex',
@@ -3899,7 +3928,7 @@ const PhotoGallery = ({
                 pointerEvents: 'auto',
                 position: 'relative',
                 zIndex: 1,
-                minHeight: '44px'
+                minHeight: '40px'
               }}
               title={batchActionMode === 'video' ? 'Generate videos for all images' : 'Download all images'}
             >
@@ -4156,19 +4185,19 @@ const PhotoGallery = ({
                 background: 'linear-gradient(135deg, #ff5252, #e53935)',
                 color: 'white',
                 border: 'none',
-                padding: '8px 16px',
-                paddingBottom: '10px',
+                padding: '6px 14px',
+                paddingBottom: '8px',
                 borderRadius: '8px',
                 boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
                 cursor: (!isGenerating && (!isSogniReady || !lastPhotoData.blob)) ? 'not-allowed' : 'pointer',
-                minHeight: '44px',
+                minHeight: '40px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 fontWeight: '600',
                 transition: 'all 0.2s ease',
                 whiteSpace: 'nowrap',
-                fontSize: '16px',
+                fontSize: '15px',
                 fontFamily: '"Permanent Marker", cursive',
                 opacity: (!isGenerating && (!isSogniReady || !lastPhotoData.blob)) ? 0.6 : 1,
               }}
@@ -7149,12 +7178,14 @@ const PhotoGallery = ({
                       </div>
                       
                       {/* ETA - Larger and more prominent */}
-                      <div style={{ 
-                        fontSize: '16px', 
+                      <div style={{
+                        fontSize: '16px',
                         fontWeight: '700',
                         color: '#fff',
                         marginBottom: '2px',
-                        textShadow: '0 1px 3px rgba(0,0,0,0.5)'
+                        textShadow: '0 1px 3px rgba(0,0,0,0.5)',
+                        // Add blink animation when ETA is stuck at 1 second
+                        animation: stuckVideoETAs.has(photo.id || index) ? 'blink 1s ease-in-out infinite' : 'none'
                       }}>
                         {photo.videoETA !== undefined && photo.videoETA > 0 ? (
                           <>
