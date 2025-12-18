@@ -35,16 +35,16 @@ const WinterEventNotification = ({ onNavigate }) => {
     return () => clearTimeout(showTimer);
   }, []);
 
-  // Auto-expand after 3 seconds of showing snowflake
-  useEffect(() => {
-    if (!isVisible || isExpanded) return;
-
-    const expandTimer = setTimeout(() => {
-      setIsExpanded(true);
-    }, 3000);
-
-    return () => clearTimeout(expandTimer);
-  }, [isVisible, isExpanded]);
+  // Note: Auto-expand removed - user must click to expand
+  // useEffect(() => {
+  //   if (!isVisible || isExpanded) return;
+  //
+  //   const expandTimer = setTimeout(() => {
+  //     setIsExpanded(true);
+  //   }, 3000);
+  //
+  //   return () => clearTimeout(expandTimer);
+  // }, [isVisible, isExpanded]);
 
   const handleDismiss = (e) => {
     e.stopPropagation();

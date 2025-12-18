@@ -135,12 +135,12 @@
 }
 
 .winter-bubble-text {
-  display: inline;
+  display: none; /* Hide text on all devices, show emoji instead */
 }
 
 .winter-bubble-emoji {
-  display: none;
-  margin-left: 4px;
+  display: inline !important; /* Show emoji on all devices */
+  margin-left: 0;
 }
 
 @keyframes snowflakeBounce {
@@ -308,18 +308,10 @@ body:has(.promo-modal-overlay) .winter-snowflake-notification {
     opacity: 1;
   }
 
-  /* Mobile: hide text, show emoji */
+  /* Mobile: smaller bubble */
   .winter-bubble {
     font-size: 0.9rem;
     padding: 4px 8px;
-  }
-
-  .winter-bubble-text {
-    display: none;
-  }
-
-  .winter-bubble-emoji {
-    display: inline !important;
   }
 
   /* Reposition speech bubble arrow to point upward */
