@@ -972,6 +972,9 @@ const PhotoGallery = ({
   // State to track if user wants fullscreen mode in Style Explorer
   const [wantsFullscreen, setWantsFullscreen] = useState(false);
   
+  // State to track photos with stuck video ETAs (for flashing animation)
+  const [stuckVideoETAs, setStuckVideoETAs] = useState(new Set());
+  
   // Helper function to check if a prompt has a video easter egg
   const hasVideoEasterEgg = useCallback((promptKey) => {
     // Check if the promptKey exists in the videos category in prompts.json
