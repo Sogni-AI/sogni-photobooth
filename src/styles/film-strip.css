@@ -937,7 +937,7 @@ html body.has-selected-photo .film-strip-container.visible .film-frame.selected[
 
 
 /* Add responsive styles for selected photo view on mobile/portrait */
-@media (max-width: 768px), (orientation: portrait) and (max-device-width: 1024px) {
+@media (max-width: 769px), (orientation: portrait) and (max-device-width: 1024px) {
   body .film-frame.selected.loaded,
   body .film-frame.selected,
   .film-frame.selected {
