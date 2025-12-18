@@ -880,10 +880,10 @@ const PhotoGallery = ({
     photoId: selectedPhotoIndex
   });
 
-  // Batch video cost estimation - for up to 4 images (excluding hidden/discarded ones)
+  // Batch video cost estimation - for all batch images (excluding hidden/discarded ones)
   const loadedPhotosCount = photos.filter(
     photo => !photo.hidden && !photo.loading && !photo.generating && !photo.error && photo.images && photo.images.length > 0 && !photo.isOriginal
-  ).slice(0, 4).length;
+  ).length;
   
   const { loading: batchVideoLoading, cost: batchVideoCostRaw, costInUSD: batchVideoUSD } = useVideoCostEstimation({
     imageWidth: desiredWidth || 768,
@@ -1175,21 +1175,6 @@ const PhotoGallery = ({
     });
     setFramedImageUrls({});
   }, [settings.sogniWatermark, settings.sogniWatermarkSize, settings.sogniWatermarkMargin, settings.qrCodeUrl]);
-  
-  // Reset batchActionMode to 'download' if video mode is selected but there are more than 4 loaded photos
-  // Note: This effect runs before filteredPhotos is defined, so we use photos directly
-  useEffect(() => {
-    if (batchActionMode === 'video' && photos) {
-      // Count loaded photos (excluding originals, loading, generating, errors)
-      const loadedPhotosCount = photos.filter(
-        photo => !photo.hidden && !photo.loading && !photo.generating && !photo.error && photo.images && photo.images.length > 0 && !photo.isOriginal
-      ).length;
-
-      if (loadedPhotosCount > 4) {
-        setBatchActionMode('download');
-      }
-    }
-  }, [batchActionMode, photos]);
   
   // Effect to handle the 5-second timeout for showing the "more" button during generation
   useEffect(() => {
@@ -1836,7 +1821,7 @@ const PhotoGallery = ({
     img.src = imageUrl;
   }, [videoTargetPhotoIndex, selectedPhotoIndex, selectedSubIndex, desiredWidth, desiredHeight, sogniClient, setPhotos, settings.videoResolution, settings.videoQuality, photos, showToast]);
 
-  // Handle batch video generation for all images (up to 4)
+  // Handle batch video generation for all images
   const handleBatchGenerateVideo = useCallback(async (customMotionPrompt = null, customNegativePrompt = null, motionEmoji = null) => {
     setShowBatchVideoDropdown(false);
     setSelectedMotionCategory(null);
@@ -1844,10 +1829,10 @@ const PhotoGallery = ({
     // Pre-warm audio for iOS
     warmUpAudio();
 
-    // Get all loaded photos (up to 4, excluding hidden/discarded ones)
+    // Get all loaded photos (excluding hidden/discarded ones)
     const loadedPhotos = photos.filter(
       photo => !photo.hidden && !photo.loading && !photo.generating && !photo.error && photo.images && photo.images.length > 0 && !photo.isOriginal
-    ).slice(0, 4);
+    );
 
     if (loadedPhotos.length === 0) {
       showToast({
@@ -2361,10 +2346,10 @@ const PhotoGallery = ({
       // Get the correct photos array based on mode
       const currentPhotosArray = isPromptSelectorMode ? filteredPhotos : photos;
 
-      // Get photos with videos (up to 4, excluding hidden/discarded ones)
+      // Get photos with videos (excluding hidden/discarded ones)
       const photosWithVideos = currentPhotosArray.filter(
         photo => !photo.hidden && !photo.loading && !photo.generating && !photo.error && photo.videoUrl && !photo.isOriginal
-      ).slice(0, 4);
+      );
 
       if (photosWithVideos.length === 0) {
         console.warn('No videos to download');
@@ -3870,7 +3855,7 @@ const PhotoGallery = ({
                   const currentPhotosArray = isPromptSelectorMode ? filteredPhotos : photos;
                   const photosWithVideos = currentPhotosArray.filter(
                     photo => !photo.hidden && !photo.loading && !photo.generating && !photo.error && photo.videoUrl && !photo.isOriginal
-                  ).slice(0, 4);
+                  );
 
                   if (photosWithVideos.length > 0) {
                     // Download videos as zip
@@ -3880,21 +3865,6 @@ const PhotoGallery = ({
                     setShowMoreDropdown(prev => !prev);
                   }
                 } else if (batchActionMode === 'video') {
-                  // Check if we can use video mode (4 or fewer loaded photos)
-                  const currentPhotosArray = isPromptSelectorMode ? filteredPhotos : photos;
-                  const loadedPhotosCount = currentPhotosArray.filter(
-                    photo => !photo.hidden && !photo.loading && !photo.generating && !photo.error && photo.images && photo.images.length > 0 && !photo.isOriginal
-                  ).length;
-
-                  if (loadedPhotosCount > 4) {
-                    showToast({
-                      title: 'Too Many Images',
-                      message: 'Video mode is only available for 4 or fewer images.',
-                      type: 'info'
-                    });
-                    return;
-                  }
-
                   // Show video dropdown to select emoji
                   if (isAuthenticated) {
                     setShowBatchVideoDropdown(prev => !prev);
@@ -3934,7 +3904,7 @@ const PhotoGallery = ({
               title={batchActionMode === 'video' ? 'Generate videos for all images' : 'Download all images'}
             >
               <span>{batchActionMode === 'video' ? '🎥' : '⬇️'}</span>
-              <span>{batchActionMode === 'video' ? 'Video' : 'Download'}</span>
+              <span>{batchActionMode === 'video' ? '' : ''}</span>
             </button>
             <button
               className="batch-action-button batch-action-button-dropdown"
@@ -3979,7 +3949,7 @@ const PhotoGallery = ({
               const loadedPhotosCount = currentPhotosArray.filter(
                 photo => !photo.hidden && !photo.loading && !photo.generating && !photo.error && photo.images && photo.images.length > 0 && !photo.isOriginal
               ).length;
-              const canUseVideo = loadedPhotosCount > 0 && loadedPhotosCount <= 4;
+              const canUseVideo = loadedPhotosCount > 0;
 
               return (
                 <div
