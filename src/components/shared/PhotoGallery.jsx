@@ -7088,7 +7088,7 @@ const PhotoGallery = ({
                   <div
                     style={{
                       position: 'absolute',
-                      bottom: '16px',
+                      bottom: '8px',
                       left: '50%',
                       transform: 'translateX(-50%)',
                       display: 'flex',
@@ -7099,128 +7099,93 @@ const PhotoGallery = ({
                       textAlign: 'center'
                     }}
                   >
-                    {/* Glowing animated border card */}
+                    {/* Compact glowing card */}
                     <div style={{
                       position: 'relative',
-                      background: 'linear-gradient(135deg, rgba(26, 26, 46, 0.75), rgba(40, 20, 60, 0.75))',
-                      backdropFilter: 'blur(12px)',
-                      borderRadius: '20px',
-                      padding: '12px 18px',
-                      boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)',
-                      border: '2px solid transparent',
-                      backgroundClip: 'padding-box',
-                      minWidth: '240px',
-                      width: '240px',
-                      opacity: 0.9
+                      background: 'rgba(20, 20, 35, 0.85)',
+                      backdropFilter: 'blur(10px)',
+                      borderRadius: '12px',
+                      padding: '6px 10px',
+                      boxShadow: '0 2px 12px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 107, 107, 0.3)',
+                      minWidth: '140px',
+                      maxWidth: '160px'
                     }}>
-                      {/* Animated gradient border overlay */}
+                      {/* Subtle animated glow */}
                       <div style={{
                         position: 'absolute',
-                        top: -2,
-                        left: -2,
-                        right: -2,
-                        bottom: -2,
-                        borderRadius: '22px',
-                        background: 'linear-gradient(45deg, #ff6b6b, #ffa502, #ff6b6b, #ffa502)',
-                        backgroundSize: '400% 400%',
-                        animation: 'gradient-rotate 3s ease infinite',
-                        zIndex: -1,
-                        opacity: 0.8
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        borderRadius: '12px',
+                        background: 'linear-gradient(135deg, rgba(255, 107, 107, 0.15), rgba(255, 165, 2, 0.15))',
+                        animation: 'pulse 2s ease-in-out infinite',
+                        pointerEvents: 'none'
                       }} />
                       
-                      {/* Header with camera icon */}
+                      {/* Compact header */}
                       <div style={{
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        gap: '6px',
-                        marginBottom: '6px'
+                        gap: '4px',
+                        marginBottom: '3px',
+                        position: 'relative'
                       }}>
                         <span style={{ 
-                          fontSize: '20px',
-                          filter: 'sepia(1) saturate(5) hue-rotate(-10deg) drop-shadow(0 0 6px rgba(255, 165, 2, 0.8))',
-                          animation: 'pulse 1.5s ease-in-out infinite'
+                          fontSize: '14px',
+                          filter: 'drop-shadow(0 0 4px rgba(255, 165, 2, 0.6))'
                         }}>
                           🎥
                         </span>
                         <span style={{ 
-                          fontSize: '14px', 
-                          fontWeight: 'bold',
-                          background: 'linear-gradient(135deg, #ff6b6b, #ffa502, #ffeb3b, #ff6b6b)',
-                          backgroundSize: '300% auto',
-                          backgroundClip: 'text',
-                          WebkitBackgroundClip: 'text',
-                          WebkitTextFillColor: 'transparent',
-                          animation: 'shimmer 2s linear infinite',
-                          textShadow: '0 0 20px rgba(255, 165, 2, 0.5)'
+                          fontSize: '11px', 
+                          fontWeight: '600',
+                          color: '#ffa502',
+                          letterSpacing: '0.3px'
                         }}>
-                          Generating Video
+                          Generating
                         </span>
                       </div>
                       
-                      {/* Worker name with glow */}
+                      {/* ETA - Larger and more prominent */}
                       <div style={{ 
-                        fontSize: '12px', 
-                        color: 'rgba(255, 255, 255, 0.9)', 
-                        marginBottom: '8px'
-                      }}>
-                        {photo.videoStatus === 'Initializing Model' ? (
-                          <>
-                            <span style={{ animation: 'spin 1.5s linear infinite' }}>⚙️</span>
-                            {' '}
-                            <span style={{
-                              color: '#ffb74d',
-                              fontWeight: '600',
-                              textShadow: '0 0 10px rgba(255, 183, 77, 0.6)'
-                            }}>
-                              {photo.videoWorkerName ? `${photo.videoWorkerName} - ` : ''}Initializing Model...
-                            </span>
-                          </>
-                        ) : photo.videoWorkerName ? (
-                          <>
-                            <span style={{ animation: 'pulse 0.5s ease-in-out infinite' }}>⚡</span>
-                            {' '}
-                            <span style={{ 
-                              color: '#4fc3f7', 
-                              fontWeight: '600',
-                              textShadow: '0 0 10px rgba(79, 195, 247, 0.6)'
-                            }}>
-                              {photo.videoWorkerName}
-                            </span>
-                          </>
-                        ) : photo.videoStatus?.startsWith('Queue') || photo.videoStatus?.startsWith('Next') || photo.videoStatus?.startsWith('In line') ? (
-                          <span style={{ animation: 'pulse 1s ease-in-out infinite' }}>📋 {photo.videoStatus}</span>
-                        ) : (
-                          <span style={{ animation: 'pulse 1s ease-in-out infinite' }}>⏳ Finding worker</span>
-                        )}
-                      </div>
-                      
-                      {/* ETA with animated background */}
-                      <div style={{ 
-                        fontSize: '18px', 
+                        fontSize: '16px', 
                         fontWeight: '700',
-                        padding: '6px 12px',
-                        borderRadius: '10px',
-                        background: 'rgba(255, 255, 255, 0.1)',
-                        marginBottom: '4px'
+                        color: '#fff',
+                        marginBottom: '2px',
+                        textShadow: '0 1px 3px rgba(0,0,0,0.5)'
                       }}>
                         {photo.videoETA !== undefined && photo.videoETA > 0 ? (
                           <>
-                            <span style={{ animation: 'pulse 1s ease-in-out infinite' }}>⏱️</span>
-                            <span style={{ 
-                              animation: photo.videoETA <= 1 ? 'blink 0.8s ease-in-out infinite' : 'none'
-                            }}>
-                              {' '}{formatVideoDuration(photo.videoETA)}
-                            </span>
+                            <span style={{ fontSize: '12px', marginRight: '2px' }}>⏱️</span>
+                            {formatVideoDuration(photo.videoETA)}
                           </>
                         ) : photo.videoStatus?.startsWith('Queue') || photo.videoStatus?.startsWith('Next') || photo.videoStatus?.startsWith('In line') ? (
-                          <span style={{ animation: 'twinkle 0.8s ease-in-out infinite' }}>In line</span>
+                          <span style={{ fontSize: '12px' }}>In line...</span>
                         ) : (
-                          <span style={{ animation: 'twinkle 0.8s ease-in-out infinite' }}>✨ Starting</span>
+                          <span style={{ fontSize: '12px' }}>Starting...</span>
                         )}
                       </div>
-                      <div style={{ fontSize: '10px', color: 'rgba(255, 255, 255, 0.6)' }}>
-                        {formatVideoDuration(photo.videoElapsed || 0)} elapsed
+                      
+                      {/* Worker info - smaller and condensed */}
+                      <div style={{ 
+                        fontSize: '9px', 
+                        color: 'rgba(255, 255, 255, 0.7)',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        maxWidth: '140px'
+                      }}>
+                        {photo.videoStatus === 'Initializing Model' ? (
+                          'Initializing...'
+                        ) : photo.videoWorkerName ? (
+                          `${photo.videoWorkerName} • ${formatVideoDuration(photo.videoElapsed || 0)}`
+                        ) : photo.videoStatus?.startsWith('Queue') || photo.videoStatus?.startsWith('Next') || photo.videoStatus?.startsWith('In line') ? (
+                          photo.videoStatus
+                        ) : (
+                          `${formatVideoDuration(photo.videoElapsed || 0)} elapsed`
+                        )}
                       </div>
                     </div>
                   </div>
