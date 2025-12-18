@@ -580,12 +580,22 @@ export async function generateVideo(options: GenerateVideoOptions): Promise<void
 
     // Job event handler
     const jobEventHandler = (event: any) => {
+      // Log ALL video job events for debugging
+      console.log(`[VIDEO] 🎬 Job event received:`, {
+        type: event.type,
+        projectId: event.projectId,
+        expectedProjectId: project.id,
+        workerName: event.workerName,
+        queuePosition: event.queuePosition
+      });
+
       if (event.projectId !== project.id) return;
 
       switch (event.type) {
         case 'initiating':
           // Worker assigned, model being initialized - show clear status to user
           // This is the 'initiatingModel' event from the SDK indicating model is loading
+          console.log(`[VIDEO] 🔧 INITIATING MODEL event - Worker: ${event.workerName || 'unknown'}`);
           setPhotos(prev => {
             const updated = [...prev];
             if (!updated[photoIndex]) return prev;
@@ -598,7 +608,7 @@ export async function generateVideo(options: GenerateVideoOptions): Promise<void
           });
           // Update activity time to prevent timeout during model initialization
           activeProject.lastActivityTime = Date.now();
-          console.log(`[VIDEO] Model initializing on worker: ${event.workerName || 'unknown'} for project ${project.id}`);
+          console.log(`[VIDEO] ✅ Model initialization status updated in UI`);
           break;
 
         case 'queued':
