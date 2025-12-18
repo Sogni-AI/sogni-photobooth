@@ -123,12 +123,6 @@
     .film-strip-container.has-selected .back-to-camera-btn {
       display: none !important;
     }
-    
-    /* Fix Back To Menu button positioning for iOS bottom bar */
-    .back-to-menu-btn {
-      bottom: max(15px, calc(env(safe-area-inset-bottom) + 5px)) !important;
-      left: 15px !important;
-    }
   }
 }
 
