@@ -1239,9 +1239,11 @@ body:has(.camera-start-menu.phase-options .options-section.no-animations) .auth-
   }
 
   .corner-btn {
-    font-size: 16px !important;
-    min-height: 44px !important;
-    max-height: 44px !important;
+    font-size: 15px !important;
+    min-height: 40px !important;
+    max-height: 40px !important;
+    padding: 6px 14px !important;
+    padding-bottom: 8px !important;
   }
 
   /* Stack polaroids like iPad - first one alone, then two side by side */
@@ -1601,9 +1603,11 @@ body:has(.camera-start-menu.phase-options .options-section.no-animations) .auth-
   }
 
   .corner-btn {
-    font-size: 16px !important;
-    min-height: 44px !important;
-    max-height: 44px !important;
+    font-size: 15px !important;
+    min-height: 40px !important;
+    max-height: 40px !important;
+    padding: 6px 14px !important;
+    padding-bottom: 8px !important;
   }
 
   .polaroid-options-container {
