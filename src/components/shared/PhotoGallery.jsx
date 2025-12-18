@@ -4333,13 +4333,6 @@ const PhotoGallery = ({
             // Navigate back to menu
             handleBackToCamera();
           }}
-          style={{
-            position: 'fixed',
-            right: '32px',
-            bottom: '32px',
-            left: 'auto',
-            zIndex: 9999,
-          }}
           title="Return to main menu"
         >
           <span className="view-photos-label">

@@ -75,6 +75,16 @@
       display: block !important;
     }
     
+    /* Ensure view-photos-btn matches corner-btn sizing on iOS */
+    .view-photos-btn {
+      font-size: 15px !important;
+      padding: 6px 14px !important;
+      padding-bottom: 8px !important;
+      min-height: 40px !important;
+      right: 8px !important;
+      bottom: 32px !important;
+    }
+    
     /* Fix for selected photo view in portrait - DO NOT override main styles */
     .film-frame.selected {
       /* Let the main film-strip.css handle positioning and transform */
