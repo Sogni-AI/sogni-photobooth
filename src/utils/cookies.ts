@@ -318,11 +318,30 @@ export function clearSessionSettings(): void {
   }
 }
 
+// Batch video mode tip tracking utilities
+export function hasSeenBatchVideoTip(): boolean {
+  try {
+    return localStorage.getItem('sogni_batch_video_tip_shown') === 'true';
+  } catch (e) {
+    console.warn('Error checking batch video tip status:', e);
+    return false;
+  }
+}
+
+export function markBatchVideoTipShown(): void {
+  try {
+    localStorage.setItem('sogni_batch_video_tip_shown', 'true');
+    console.log('✅ Marked batch video tip as shown');
+  } catch (e) {
+    console.warn('Error marking batch video tip as shown:', e);
+  }
+}
+
 // Utility function to clean up corrupted localStorage values
 export function cleanupCorruptedSettings(): void {
   try {
     const keysToCheck = [];
-    
+
     // Get all localStorage keys that start with 'sogni_'
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
@@ -330,7 +349,7 @@ export function cleanupCorruptedSettings(): void {
         keysToCheck.push(key);
       }
     }
-    
+
     let cleanedCount = 0;
     keysToCheck.forEach(key => {
       try {
@@ -350,7 +369,7 @@ export function cleanupCorruptedSettings(): void {
         console.log(`Cleaned corrupted setting: ${key}`);
       }
     });
-    
+
     if (cleanedCount > 0) {
       console.log(`Cleaned up ${cleanedCount} corrupted localStorage settings`);
     }

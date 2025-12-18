@@ -11,7 +11,7 @@ import { downloadImageMobile, enableMobileImageDownload } from '../../utils/mobi
 import { isMobile, styleIdToDisplay } from '../../utils/index';
 import promptsDataRaw from '../../prompts.json';
 import { THEME_GROUPS, getDefaultThemeGroupState, getEnabledPrompts } from '../../constants/themeGroups';
-import { getThemeGroupPreferences, saveThemeGroupPreferences, getFavoriteImages, toggleFavoriteImage, saveFavoriteImages, getBlockedPrompts, blockPrompt } from '../../utils/cookies';
+import { getThemeGroupPreferences, saveThemeGroupPreferences, getFavoriteImages, toggleFavoriteImage, saveFavoriteImages, getBlockedPrompts, blockPrompt, hasSeenBatchVideoTip, markBatchVideoTipShown } from '../../utils/cookies';
 import { getAttributionText } from '../../config/ugcAttributions';
 import { isFluxKontextModel, SAMPLE_GALLERY_CONFIG, getQRWatermarkConfig } from '../../constants/settings';
 import { themeConfigService } from '../../services/themeConfig';
@@ -1060,7 +1060,10 @@ const PhotoGallery = ({
 
   // State for Download All button dropdown
   const [showMoreDropdown, setShowMoreDropdown] = useState(false);
-  
+
+  // State for batch video mode tutorial tip
+  const [showBatchVideoTip, setShowBatchVideoTip] = useState(false);
+
   // State for gallery submission
   const [showGalleryConfirm, setShowGalleryConfirm] = useState(false);
   const [gallerySubmissionPending, setGallerySubmissionPending] = useState(false);
@@ -1086,13 +1089,17 @@ const PhotoGallery = ({
       if (showBatchVideoDropdown && !e.target.closest('.batch-action-button') && !e.target.closest('.batch-video-dropdown')) {
         setShowBatchVideoDropdown(false);
       }
+      if (showBatchVideoTip && !e.target.closest('.batch-video-tip-tooltip')) {
+        setShowBatchVideoTip(false);
+        markBatchVideoTipShown();
+      }
     };
-    
-    if (showMoreDropdown || showBatchActionDropdown || showBatchVideoDropdown) {
+
+    if (showMoreDropdown || showBatchActionDropdown || showBatchVideoDropdown || showBatchVideoTip) {
       document.addEventListener('click', handleClickOutside);
       return () => document.removeEventListener('click', handleClickOutside);
     }
-  }, [showMoreDropdown, showBatchActionDropdown, showBatchVideoDropdown]);
+  }, [showMoreDropdown, showBatchActionDropdown, showBatchVideoDropdown, showBatchVideoTip]);
   
   // Refs for dropdown animation buttons to prevent re-triggering animations
   const enhanceButton1Ref = useRef(null);
@@ -1185,6 +1192,32 @@ const PhotoGallery = ({
     });
     setFramedImageUrls({});
   }, [tezdevTheme]);
+
+  // Show batch video tip after first render completion (once in a lifetime)
+  useEffect(() => {
+    // Only show if user hasn't seen it before
+    if (hasSeenBatchVideoTip()) {
+      return;
+    }
+
+    // Check if we have at least one completed photo (not generating, not loading, has images)
+    const hasCompletedPhoto = photos.some(
+      photo => !photo.hidden && !photo.loading && !photo.generating && !photo.error && photo.images && photo.images.length > 0 && !photo.isOriginal
+    );
+
+    // Check if any photos are currently generating
+    const hasGeneratingPhoto = photos.some(photo => photo.generating);
+
+    // Show the tip if we have completed photos and nothing is currently generating
+    if (hasCompletedPhoto && !hasGeneratingPhoto && !showBatchVideoTip) {
+      // Delay showing the tip by 2 seconds after completion for dramatic effect
+      const timer = setTimeout(() => {
+        setShowBatchVideoTip(true);
+      }, 2000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [photos, showBatchVideoTip]);
 
   // Clear framed image cache when aspect ratio changes
   useEffect(() => {
@@ -3999,6 +4032,20 @@ const PhotoGallery = ({
                     zIndex: 10000001
                   }}
                 >
+                  {/* Header */}
+                  <div style={{
+                    padding: '10px 16px',
+                    background: 'rgba(255, 82, 82, 0.08)',
+                    borderBottom: '1px solid rgba(0, 0, 0, 0.08)',
+                    fontFamily: '"Permanent Marker", cursive',
+                    fontSize: '13px',
+                    fontWeight: '600',
+                    color: '#555',
+                    textAlign: 'center',
+                    letterSpacing: '0.5px'
+                  }}>
+                    Batch Action
+                  </div>
                   <button
                     className="batch-action-mode-option"
                     onClick={() => {
@@ -4170,10 +4217,94 @@ const PhotoGallery = ({
             >
               <div>{bulkDownloadProgress.message}</div>
               {bulkDownloadProgress.total > 0 && (
-                <div style={{ marginTop: '4px', fontSize: '11px', opacity: 0.9 }}>
-                  {bulkDownloadProgress.current} / {bulkDownloadProgress.total}
+                <div style={{ marginTop: '4px' }}>
+                  {bulkDownloadProgress.current}/{bulkDownloadProgress.total}
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Funky batch video mode tutorial tip - shown once after first render */}
+          {showBatchVideoTip && !isBulkDownloading && (
+            <div
+              className="batch-video-tip-tooltip"
+              style={{
+                position: 'absolute',
+                bottom: '65px',
+                right: '0',
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)',
+                color: 'white',
+                padding: '14px 18px',
+                borderRadius: '16px',
+                fontSize: '15px',
+                fontWeight: '700',
+                fontFamily: '"Permanent Marker", cursive',
+                boxShadow: '0 8px 24px rgba(102, 126, 234, 0.5), 0 0 0 3px rgba(255, 255, 255, 0.3)',
+                minWidth: '200px',
+                maxWidth: '280px',
+                textAlign: 'center',
+                whiteSpace: 'normal',
+                zIndex: 10000003,
+                animation: 'bounceInScale 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55), wiggle 2s ease-in-out infinite, rainbow-pulse 3s ease-in-out infinite',
+                cursor: 'pointer',
+                transform: 'rotate(-2deg)',
+                border: '2px solid rgba(255, 255, 255, 0.5)'
+              }}
+              onClick={() => {
+                setShowBatchVideoTip(false);
+                markBatchVideoTipShown();
+                // Also open the dropdown to show the video mode
+                setShowBatchActionDropdown(true);
+              }}
+            >
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                marginBottom: '6px'
+              }}>
+                <span style={{ fontSize: '24px', animation: 'spin 3s linear infinite' }}>🎥</span>
+                <span style={{ fontSize: '20px', animation: 'pulse 1.5s ease-in-out infinite' }}>✨</span>
+              </div>
+              <div style={{ lineHeight: '1.3', textShadow: '0 2px 4px rgba(0,0,0,0.3)' }}>
+                Switch to batch video mode here!
+              </div>
+              {/* Funky arrow pointer */}
+              <div style={{
+                position: 'absolute',
+                bottom: '-20px',
+                right: '20px',
+                width: '0',
+                height: '0',
+                borderLeft: '12px solid transparent',
+                borderRight: '12px solid transparent',
+                borderTop: '20px solid #f093fb',
+                filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.2))',
+                animation: 'bounce 1s ease-in-out infinite'
+              }} />
+              {/* Sparkle decorations */}
+              <span style={{
+                position: 'absolute',
+                top: '-8px',
+                left: '10px',
+                fontSize: '20px',
+                animation: 'twinkle 1.5s ease-in-out infinite'
+              }}>⭐</span>
+              <span style={{
+                position: 'absolute',
+                top: '-5px',
+                right: '15px',
+                fontSize: '16px',
+                animation: 'twinkle 1.5s ease-in-out infinite 0.5s'
+              }}>💫</span>
+              <span style={{
+                position: 'absolute',
+                bottom: '5px',
+                left: '-8px',
+                fontSize: '18px',
+                animation: 'twinkle 1.5s ease-in-out infinite 1s'
+              }}>✨</span>
             </div>
           )}
           </div>
