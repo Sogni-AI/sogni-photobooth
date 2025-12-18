@@ -92,10 +92,10 @@
 
   /* Fix corner button text sizes */
   .corner-btn {
-    font-size: 16px !important;
-    padding: 8px 16px !important;
-    padding-bottom: 10px !important;
-    min-height: 44px !important;
+    font-size: 15px !important;
+    padding: 6px 14px !important;
+    padding-bottom: 8px !important;
+    min-height: 40px !important;
   }
 
   /* Normalize input and textarea font sizes */
@@ -219,10 +219,10 @@
   .corner-btn.continue-corner-btn,
   .corner-btn.photos-corner-btn,
   .corner-btn.intro-continue-btn {
-    font-size: 16px !important;
-    padding: 8px 16px !important;
-    padding-bottom: 10px !important;
-    min-height: 44px !important;
+    font-size: 15px !important;
+    padding: 6px 14px !important;
+    padding-bottom: 8px !important;
+    min-height: 40px !important;
   }
 
   /* Settings buttons for smaller screens */
