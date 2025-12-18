@@ -1037,12 +1037,23 @@ html body.has-selected-photo .film-strip-container.visible .film-frame.selected[
     z-index: 998 !important;
     left: 12px !important;
   }
-  
+
   .corner-btn.photos-corner-btn,
-  .corner-btn.continue-corner-btn,
   .corner-btn.intro-continue-btn {
     right: 12px !important;
+    left: unset !important;
     bottom: 32px !important;
+  }
+
+  .corner-btn.continue-corner-btn {
+    right: 12px !important;
+    left: unset !important;
+    bottom: 32px !important;
+  }
+
+  /* When both Continue and Photos buttons are visible on options screen, position Continue to the left of Photos */
+  body:has(.photos-corner-btn) .options-section .corner-btn.continue-corner-btn {
+    right: calc(12px + 110px + 12px) !important; /* 12px margin + ~110px Photos button width + 12px gap */
   }
 }
 
