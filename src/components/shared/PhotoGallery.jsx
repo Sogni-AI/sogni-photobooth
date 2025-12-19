@@ -980,6 +980,28 @@ const PhotoGallery = ({
   // Store ready-to-share transition video blob (for iOS share sheet after async concat)
   const [readyTransitionVideo, setReadyTransitionVideo] = useState(null);
   
+  // Music modal state for adding audio to transition videos
+  const [showMusicModal, setShowMusicModal] = useState(false);
+  const [musicFile, setMusicFile] = useState(null);
+  const [musicStartOffset, setMusicStartOffset] = useState(0);
+  const [pendingVideoDownload, setPendingVideoDownload] = useState(null);
+  const [audioWaveform, setAudioWaveform] = useState(null);
+  const [audioDuration, setAudioDuration] = useState(0);
+  const [isPlayingPreview, setIsPlayingPreview] = useState(false);
+  const [previewPlayhead, setPreviewPlayhead] = useState(0);
+  const [isDraggingWaveform, setIsDraggingWaveform] = useState(false);
+  const [dragStartX, setDragStartX] = useState(0);
+  const [dragStartOffset, setDragStartOffset] = useState(0);
+  // Applied music for inline playback (set when user confirms in modal)
+  const [appliedMusic, setAppliedMusic] = useState(null); // { file, startOffset, audioUrl }
+  const [isInlineAudioMuted, setIsInlineAudioMuted] = useState(false);
+  const musicFileInputRef = useRef(null);
+  const waveformCanvasRef = useRef(null);
+  const audioPreviewRef = useRef(null);
+  const audioContextRef = useRef(null);
+  const playbackAnimationRef = useRef(null);
+  const inlineAudioRef = useRef(null); // For playing music with transition videos
+  
   // State to track if user wants fullscreen mode in Style Explorer
   const [wantsFullscreen, setWantsFullscreen] = useState(false);
   
@@ -2140,6 +2162,15 @@ const PhotoGallery = ({
       photo => !photo.hidden && !photo.loading && !photo.generating && !photo.error && photo.images && photo.images.length > 0 && !photo.isOriginal
     );
 
+    // Debug: Log all photos and which ones are included
+    console.log('[Transition] Total photos in state:', photos.length);
+    console.log('[Transition] Photos breakdown:');
+    photos.forEach((photo, idx) => {
+      const excluded = photo.hidden || photo.loading || photo.generating || photo.error || !photo.images || photo.images.length === 0 || photo.isOriginal;
+      console.log(`  [${idx}] id=${photo.id}, hidden=${photo.hidden}, loading=${photo.loading}, generating=${photo.generating}, error=${!!photo.error}, hasImages=${!!photo.images && photo.images.length > 0}, isOriginal=${photo.isOriginal}, EXCLUDED=${excluded}`);
+    });
+    console.log('[Transition] Loaded photos for transition:', loadedPhotos.length, loadedPhotos.map(p => p.id));
+
     if (loadedPhotos.length === 0) {
       showToast({
         title: 'No Images',
@@ -2154,6 +2185,16 @@ const PhotoGallery = ({
     setTransitionVideoQueue(loadedPhotos.map(p => p.id));
     setAllTransitionVideosComplete(false);  // Reset sync mode for new batch
     setCurrentVideoIndexByPhoto({});  // Reset video indices
+    
+    // Clean up music state for new batch
+    if (appliedMusic?.audioUrl) {
+      URL.revokeObjectURL(appliedMusic.audioUrl);
+    }
+    setAppliedMusic(null);
+    setIsInlineAudioMuted(false);
+    if (inlineAudioRef.current) {
+      inlineAudioRef.current.pause();
+    }
 
     // Hide the NEW badge after first video generation attempt
     setShowVideoNewBadge(false);
@@ -2177,20 +2218,46 @@ const PhotoGallery = ({
     for (let i = 0; i < loadedPhotos.length; i++) {
       const photo = loadedPhotos[i];
       const photoIndex = photos.findIndex(p => p.id === photo.id);
+      
+      // IMPORTANT: Get the CURRENT photo from state, not the captured loadedPhotos
+      // This ensures we have the latest state after any refreshes
+      const currentPhoto = photoIndex !== -1 ? photos[photoIndex] : null;
 
-      if (photoIndex === -1 || photo.generatingVideo) {
+      console.log(`[Transition] Processing photo ${i + 1}/${loadedPhotos.length}: id=${photo.id}, photoIndex=${photoIndex}`);
+      console.log(`[Transition]   - loadedPhoto state: generatingVideo=${photo.generatingVideo}, hasImages=${!!photo.images?.length}`);
+      console.log(`[Transition]   - currentPhoto state: generatingVideo=${currentPhoto?.generatingVideo}, hasImages=${!!currentPhoto?.images?.length}, loading=${currentPhoto?.loading}, generating=${currentPhoto?.generating}`);
+
+      if (photoIndex === -1 || !currentPhoto) {
+        console.warn(`[Transition] Photo ${photo.id} not found in photos array! Skipping.`);
+        continue;
+      }
+      
+      // Check CURRENT photo state (not captured loadedPhotos)
+      if (currentPhoto.generatingVideo) {
+        console.log(`[Transition] Photo ${photo.id} already generating video. Skipping.`);
+        continue;
+      }
+      
+      // Also check if the current photo is still loading/generating (from a refresh)
+      if (currentPhoto.loading || currentPhoto.generating) {
+        console.log(`[Transition] Photo ${photo.id} still loading/generating. Skipping.`);
         continue;
       }
 
-      // Get current image (START of transition)
-      const currentImageUrl = photo.enhancedImageUrl || photo.images?.[0] || photo.originalDataUrl;
+      // Get current image from CURRENT photo state (START of transition)
+      const currentImageUrl = currentPhoto.enhancedImageUrl || currentPhoto.images?.[0] || currentPhoto.originalDataUrl;
       
       // Get next image in batch (END of transition) - circular: last image uses first image
-      const nextPhotoIndex = (i + 1) % loadedPhotos.length;
-      const nextPhoto = loadedPhotos[nextPhotoIndex];
+      const nextLoadedPhotoIndex = (i + 1) % loadedPhotos.length;
+      const nextLoadedPhoto = loadedPhotos[nextLoadedPhotoIndex];
+      const nextPhotoStateIndex = photos.findIndex(p => p.id === nextLoadedPhoto.id);
+      const nextPhoto = nextPhotoStateIndex !== -1 ? photos[nextPhotoStateIndex] : nextLoadedPhoto;
       const nextImageUrl = nextPhoto.enhancedImageUrl || nextPhoto.images?.[0] || nextPhoto.originalDataUrl;
       
+      console.log(`[Transition] Photo ${i}: currentImageUrl=${currentImageUrl?.substring(0, 50)}..., nextImageUrl=${nextImageUrl?.substring(0, 50)}...`);
+      
       if (!currentImageUrl || !nextImageUrl) {
+        console.error(`[Transition] Missing image URL for photo ${i}. currentImageUrl=${!!currentImageUrl}, nextImageUrl=${!!nextImageUrl}`);
         errorCount++;
         continue;
       }
@@ -2198,24 +2265,115 @@ const PhotoGallery = ({
       const generatingPhotoId = photo.id;
 
       // Load both images to get their data
+      // Uses canvas approach to handle CORS issues with S3 URLs
       const loadImageAsBuffer = async (url) => {
         return new Promise((resolve, reject) => {
           const img = new Image();
+          // Set crossOrigin for S3/HTTPS URLs to enable canvas extraction
+          if (url.startsWith('http')) {
+            img.crossOrigin = 'anonymous';
+          }
+          
           img.onload = async () => {
+            const width = img.naturalWidth || img.width;
+            const height = img.naturalHeight || img.height;
+            
             try {
-              const response = await fetch(url);
-              if (!response.ok) {
-                throw new Error(`Failed to fetch image: ${response.status}`);
+              // First try fetch for blob URLs (faster and more reliable)
+              if (url.startsWith('blob:')) {
+                const response = await fetch(url);
+                if (response.ok) {
+                  const imageBlob = await response.blob();
+                  const arrayBuffer = await imageBlob.arrayBuffer();
+                  const imageBuffer = new Uint8Array(arrayBuffer);
+                  resolve({ buffer: imageBuffer, width, height });
+                  return;
+                }
               }
-              const imageBlob = await response.blob();
-              const arrayBuffer = await imageBlob.arrayBuffer();
-              const imageBuffer = new Uint8Array(arrayBuffer);
-              resolve({ buffer: imageBuffer, width: img.naturalWidth || img.width, height: img.naturalHeight || img.height });
+              
+              // For HTTPS URLs or if fetch fails, use canvas approach
+              const canvas = document.createElement('canvas');
+              canvas.width = width;
+              canvas.height = height;
+              const ctx = canvas.getContext('2d');
+              ctx.drawImage(img, 0, 0);
+              
+              // Convert canvas to blob
+              canvas.toBlob((blob) => {
+                if (blob) {
+                  blob.arrayBuffer().then(arrayBuffer => {
+                    const imageBuffer = new Uint8Array(arrayBuffer);
+                    resolve({ buffer: imageBuffer, width, height });
+                  }).catch(reject);
+                } else {
+                  reject(new Error('Failed to convert canvas to blob'));
+                }
+              }, 'image/png');
+              
             } catch (error) {
-              reject(error);
+              // If canvas is tainted (CORS), try to use canvas anyway
+              console.warn('[Transition] Image load via fetch failed, trying canvas:', error.message);
+              try {
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0);
+                
+                canvas.toBlob((blob) => {
+                  if (blob) {
+                    blob.arrayBuffer().then(arrayBuffer => {
+                      const imageBuffer = new Uint8Array(arrayBuffer);
+                      resolve({ buffer: imageBuffer, width, height });
+                    }).catch(reject);
+                  } else {
+                    reject(new Error('Failed to convert canvas to blob - canvas may be tainted'));
+                  }
+                }, 'image/png');
+              } catch (canvasError) {
+                reject(new Error(`Canvas tainted by cross-origin data: ${canvasError.message}`));
+              }
             }
           };
-          img.onerror = () => reject(new Error('Failed to load image'));
+          
+          img.onerror = () => {
+            // If crossOrigin fails, try without it (image will display but canvas will be tainted)
+            if (img.crossOrigin) {
+              console.warn('[Transition] Image failed with crossOrigin, retrying without...');
+              const retryImg = new Image();
+              retryImg.onload = () => {
+                const width = retryImg.naturalWidth || retryImg.width;
+                const height = retryImg.naturalHeight || retryImg.height;
+                
+                // Try canvas extraction (will likely fail due to taint, but worth trying)
+                try {
+                  const canvas = document.createElement('canvas');
+                  canvas.width = width;
+                  canvas.height = height;
+                  const ctx = canvas.getContext('2d');
+                  ctx.drawImage(retryImg, 0, 0);
+                  
+                  canvas.toBlob((blob) => {
+                    if (blob) {
+                      blob.arrayBuffer().then(arrayBuffer => {
+                        const imageBuffer = new Uint8Array(arrayBuffer);
+                        resolve({ buffer: imageBuffer, width, height });
+                      }).catch(() => reject(new Error('Failed to load image due to CORS restrictions')));
+                    } else {
+                      reject(new Error('Failed to load image due to CORS restrictions'));
+                    }
+                  }, 'image/png');
+                } catch {
+                  reject(new Error('Failed to load image due to CORS restrictions'));
+                }
+              };
+              retryImg.onerror = () => reject(new Error('Failed to load image'));
+              retryImg.src = url;
+            } else {
+              reject(new Error('Failed to load image'));
+            }
+          };
+          
           img.src = url;
         });
       };
@@ -2232,7 +2390,7 @@ const PhotoGallery = ({
         const actualHeight = currentImage.height;
 
         generateVideo({
-          photo,
+          photo: currentPhoto, // Use current photo from state, not captured loadedPhotos
           photoIndex: photoIndex,
           subIndex: 0,
           imageWidth: actualWidth,
@@ -2263,11 +2421,13 @@ const PhotoGallery = ({
             // Start playing this video immediately
             setPlayingGeneratedVideoIds(prev => new Set([...prev, photo.id]));
             
-            // When ALL transition videos are complete, switch to sync mode
-            if (successCount === loadedPhotos.length) {
+            // When ALL transition videos are complete (success or fail), switch to sync mode
+            const totalProcessed = successCount + errorCount;
+            if (totalProcessed === loadedPhotos.length) {
               // Short delay to let the last video start, then sync everyone to video 0
               setTimeout(() => {
                 // Enable sync mode - all polaroids will now advance together
+                console.log(`[Transition] All videos processed! ${successCount} success, ${errorCount} failed. Enabling Add Music button`);
                 setAllTransitionVideosComplete(true);
                 
                 // Reset all polaroids to start at video index 0 for synchronized looping
@@ -2277,18 +2437,48 @@ const PhotoGallery = ({
                 });
                 setCurrentVideoIndexByPhoto(syncedIndices);
                 
-                const videoMessage = getRandomVideoMessage();
-                showToast({
-                  title: videoMessage.title,
-                  message: `All ${successCount} transition video${successCount > 1 ? 's' : ''} generated! Playing in sync...`,
-                  type: 'success',
-                  timeout: 5000
-                });
+                if (successCount > 0) {
+                  const videoMessage = getRandomVideoMessage();
+                  showToast({
+                    title: videoMessage.title,
+                    message: errorCount > 0 
+                      ? `${successCount} of ${loadedPhotos.length} transition videos generated. Playing in sync...`
+                      : `All ${successCount} transition video${successCount > 1 ? 's' : ''} generated! Playing in sync...`,
+                    type: errorCount > 0 ? 'info' : 'success',
+                    timeout: 5000
+                  });
+                }
               }, 500);
             }
           },
           onError: (error) => {
             errorCount++;
+            const totalProcessed = successCount + errorCount;
+            
+            // When ALL transition videos are processed (success or fail), enable Add Music
+            if (totalProcessed === loadedPhotos.length) {
+              setTimeout(() => {
+                console.log(`[Transition] All videos processed! ${successCount} success, ${errorCount} failed. Enabling Add Music button`);
+                setAllTransitionVideosComplete(true);
+                
+                // Reset all polaroids to start at video index 0 for synchronized looping (for any that succeeded)
+                const syncedIndices = {};
+                loadedPhotos.forEach((p) => {
+                  syncedIndices[p.id] = 0;
+                });
+                setCurrentVideoIndexByPhoto(syncedIndices);
+                
+                if (successCount > 0) {
+                  showToast({
+                    title: 'Partial Success',
+                    message: `${successCount} of ${loadedPhotos.length} transition videos generated. Playing in sync...`,
+                    type: 'info',
+                    timeout: 5000
+                  });
+                }
+              }, 500);
+            }
+            
             if (errorCount === loadedPhotos.length) {
               showToast({
                 title: 'Batch Transition Video Failed',
@@ -2821,9 +3011,441 @@ const PhotoGallery = ({
     }
   }, [readyTransitionVideo]);
 
-  // Handle download transition video as one seamless concatenated video
-  const handleDownloadTransitionVideo = useCallback(async () => {
+  // Handle music file selection and generate waveform
+  const handleMusicFileSelect = useCallback(async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    // Check if it's an M4A file
+    if (!file.name.toLowerCase().endsWith('.m4a')) {
+      showToast({
+        title: 'Invalid Format',
+        message: 'Please select an M4A audio file. MP3 and other formats are not yet supported.',
+        type: 'error'
+      });
+      return;
+    }
+    
+    setMusicFile(file);
+    setAudioWaveform(null);
+    setMusicStartOffset(0);
+    
+    try {
+      // Create audio context if needed
+      if (!audioContextRef.current) {
+        audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      
+      // Decode audio file
+      const arrayBuffer = await file.arrayBuffer();
+      const audioBuffer = await audioContextRef.current.decodeAudioData(arrayBuffer.slice(0));
+      
+      // Get duration
+      setAudioDuration(audioBuffer.duration);
+      
+      // Generate waveform data (downsample to ~200 points for visualization)
+      const channelData = audioBuffer.getChannelData(0); // Use first channel
+      const samples = 200;
+      const blockSize = Math.floor(channelData.length / samples);
+      const waveformData = [];
+      
+      for (let i = 0; i < samples; i++) {
+        const start = i * blockSize;
+        let sum = 0;
+        for (let j = 0; j < blockSize; j++) {
+          sum += Math.abs(channelData[start + j] || 0);
+        }
+        waveformData.push(sum / blockSize);
+      }
+      
+      // Normalize to 0-1 range
+      const max = Math.max(...waveformData);
+      const normalizedWaveform = waveformData.map(v => v / (max || 1));
+      
+      setAudioWaveform(normalizedWaveform);
+      
+      // Create object URL for audio preview
+      if (audioPreviewRef.current) {
+        URL.revokeObjectURL(audioPreviewRef.current.src);
+      }
+      const audioUrl = URL.createObjectURL(file);
+      if (audioPreviewRef.current) {
+        audioPreviewRef.current.src = audioUrl;
+      }
+      
+    } catch (error) {
+      console.error('Failed to decode audio:', error);
+      showToast({
+        title: 'Audio Error',
+        message: 'Failed to decode audio file. Please try a different file.',
+        type: 'error'
+      });
+      setMusicFile(null);
+    }
+  }, [showToast]);
+
+  // Draw waveform on canvas
+  const drawWaveform = useCallback(() => {
+    const canvas = waveformCanvasRef.current;
+    if (!canvas || !audioWaveform) return;
+    
+    const ctx = canvas.getContext('2d');
+    const width = canvas.width;
+    const height = canvas.height;
+    const barWidth = width / audioWaveform.length;
+    
+    // Clear canvas
+    ctx.clearRect(0, 0, width, height);
+    
+    // Calculate video duration for the selection indicator
+    const orderedVideos = transitionVideoQueue
+      .map(photoId => photos.find(p => p.id === photoId))
+      .filter(photo => photo && photo.videoUrl);
+    const videoDuration = orderedVideos.length * 3; // Assuming 3 seconds per video
+    
+    // Draw selection range indicator
+    if (audioDuration > 0) {
+      const startX = (musicStartOffset / audioDuration) * width;
+      const endOffset = Math.min(musicStartOffset + videoDuration, audioDuration);
+      const selectionWidth = ((endOffset - musicStartOffset) / audioDuration) * width;
+      
+      ctx.fillStyle = 'rgba(255, 107, 107, 0.2)';
+      ctx.fillRect(startX, 0, selectionWidth, height);
+      
+      // Draw selection border
+      ctx.strokeStyle = 'rgba(255, 107, 107, 0.8)';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(startX, 0, selectionWidth, height);
+    }
+    
+    // Draw waveform bars
+    audioWaveform.forEach((value, i) => {
+      const barHeight = value * (height - 4);
+      const x = i * barWidth;
+      const y = (height - barHeight) / 2;
+      
+      // Color based on whether it's in selection
+      const barTime = (i / audioWaveform.length) * audioDuration;
+      const isInSelection = barTime >= musicStartOffset && barTime < musicStartOffset + videoDuration;
+      
+      ctx.fillStyle = isInSelection ? '#ff6b6b' : 'rgba(255, 255, 255, 0.4)';
+      ctx.fillRect(x + 1, y, barWidth - 2, barHeight);
+    });
+    
+    // Draw playhead if playing
+    if (isPlayingPreview && audioPreviewRef.current) {
+      const playheadX = (previewPlayhead / audioDuration) * width;
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(playheadX, 0);
+      ctx.lineTo(playheadX, height);
+      ctx.stroke();
+    }
+    
+    // Draw start position marker
+    const startMarkerX = (musicStartOffset / audioDuration) * width;
+    ctx.strokeStyle = '#ff6b6b';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(startMarkerX, 0);
+    ctx.lineTo(startMarkerX, height);
+    ctx.stroke();
+    
+    // Draw marker handle
+    ctx.fillStyle = '#ff6b6b';
+    ctx.beginPath();
+    ctx.moveTo(startMarkerX - 6, 0);
+    ctx.lineTo(startMarkerX + 6, 0);
+    ctx.lineTo(startMarkerX, 10);
+    ctx.closePath();
+    ctx.fill();
+  }, [audioWaveform, musicStartOffset, audioDuration, isPlayingPreview, previewPlayhead, transitionVideoQueue, photos]);
+
+  // Update waveform when data changes or modal opens
+  useEffect(() => {
+    if (showMusicModal && audioWaveform) {
+      // Use requestAnimationFrame for smooth updates during playback
+      const frame = requestAnimationFrame(() => {
+        drawWaveform();
+      });
+      return () => cancelAnimationFrame(frame);
+    }
+  }, [drawWaveform, showMusicModal, audioWaveform, musicStartOffset, isPlayingPreview, previewPlayhead]);
+
+  // Calculate video duration for selection width
+  const getVideoDuration = useCallback(() => {
+    const orderedVideos = transitionVideoQueue
+      .map(photoId => photos.find(p => p.id === photoId))
+      .filter(photo => photo && photo.videoUrl);
+    return orderedVideos.length * 3; // 3 seconds per video
+  }, [transitionVideoQueue, photos]);
+
+  // Handle waveform interaction - click to set position OR drag to move selection
+  const handleWaveformMouseDown = useCallback((e) => {
+    const canvas = waveformCanvasRef.current;
+    if (!canvas || audioDuration === 0) return;
+    
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const clickPosition = x / rect.width;
+    const clickTime = clickPosition * audioDuration;
+    
+    const videoDuration = getVideoDuration();
+    const selectionEnd = musicStartOffset + videoDuration;
+    
+    // Check if click is inside the current selection
+    const isInsideSelection = clickTime >= musicStartOffset && clickTime <= selectionEnd;
+    
+    if (isInsideSelection) {
+      // Start drag mode
+      setIsDraggingWaveform(true);
+      setDragStartX(x);
+      setDragStartOffset(musicStartOffset);
+    } else {
+      // Click outside - jump to new position
+      const maxOffset = Math.max(0, audioDuration - videoDuration);
+      const newOffset = Math.max(0, Math.min(clickTime, maxOffset));
+      setMusicStartOffset(newOffset);
+    }
+    
+    e.preventDefault();
+  }, [audioDuration, musicStartOffset, getVideoDuration]);
+
+  const handleWaveformMouseMove = useCallback((e) => {
+    if (!isDraggingWaveform) return;
+    
+    const canvas = waveformCanvasRef.current;
+    if (!canvas || audioDuration === 0) return;
+    
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const deltaX = x - dragStartX;
+    const deltaTime = (deltaX / rect.width) * audioDuration;
+    
+    const videoDuration = getVideoDuration();
+    const maxOffset = Math.max(0, audioDuration - videoDuration);
+    const newOffset = Math.max(0, Math.min(dragStartOffset + deltaTime, maxOffset));
+    
+    setMusicStartOffset(newOffset);
+  }, [isDraggingWaveform, dragStartX, dragStartOffset, audioDuration, getVideoDuration]);
+
+  const handleWaveformMouseUp = useCallback(() => {
+    setIsDraggingWaveform(false);
+  }, []);
+
+  // Add global mouse listeners for drag
+  useEffect(() => {
+    if (isDraggingWaveform) {
+      const handleGlobalMouseMove = (e) => handleWaveformMouseMove(e);
+      const handleGlobalMouseUp = () => handleWaveformMouseUp();
+      
+      window.addEventListener('mousemove', handleGlobalMouseMove);
+      window.addEventListener('mouseup', handleGlobalMouseUp);
+      
+      return () => {
+        window.removeEventListener('mousemove', handleGlobalMouseMove);
+        window.removeEventListener('mouseup', handleGlobalMouseUp);
+      };
+    }
+  }, [isDraggingWaveform, handleWaveformMouseMove, handleWaveformMouseUp]);
+
+  // Restart playback from new position when offset changes during playback
+  useEffect(() => {
+    if (isPlayingPreview && audioPreviewRef.current) {
+      audioPreviewRef.current.currentTime = musicStartOffset;
+    }
+  }, [musicStartOffset, isPlayingPreview]);
+
+  // Apply music for inline playback
+  const handleApplyMusic = useCallback(() => {
+    if (musicFile) {
+      const audioUrl = URL.createObjectURL(musicFile);
+      setAppliedMusic({
+        file: musicFile,
+        startOffset: musicStartOffset,
+        audioUrl
+      });
+      setShowMusicModal(false);
+      // Stop preview if playing
+      if (audioPreviewRef.current) {
+        audioPreviewRef.current.pause();
+      }
+      setIsPlayingPreview(false);
+    }
+  }, [musicFile, musicStartOffset]);
+
+  // Remove applied music
+  const handleRemoveMusic = useCallback(() => {
+    if (appliedMusic?.audioUrl) {
+      URL.revokeObjectURL(appliedMusic.audioUrl);
+    }
+    setAppliedMusic(null);
+    if (inlineAudioRef.current) {
+      inlineAudioRef.current.pause();
+    }
+  }, [appliedMusic]);
+
+  // Track the first photo's video index for audio sync (to avoid reacting to all photo changes)
+  const firstPhotoId = photos[0]?.id;
+  const firstPhotoVideoIndex = firstPhotoId ? (currentVideoIndexByPhoto[firstPhotoId] ?? 0) : 0;
+  const prevVideoIndexRef = useRef(firstPhotoVideoIndex);
+  const audioReadyRef = useRef(false); // Track if audio is seekable
+
+  // Initialize inline audio when appliedMusic changes
+  useEffect(() => {
+    const audio = inlineAudioRef.current;
+    if (!audio || !appliedMusic || !allTransitionVideosComplete) {
+      audioReadyRef.current = false;
+      return;
+    }
+    
+    // If source changed, we need to wait for it to be ready
+    if (audio.src !== appliedMusic.audioUrl) {
+      audioReadyRef.current = false;
+      audio.src = appliedMusic.audioUrl;
+      
+      const handleCanPlay = () => {
+        audioReadyRef.current = true;
+        // Now we can safely seek to the start offset
+        audio.currentTime = appliedMusic.startOffset;
+        if (!isInlineAudioMuted) {
+          audio.play().catch(() => {});
+        }
+      };
+      
+      audio.addEventListener('canplay', handleCanPlay, { once: true });
+      return () => audio.removeEventListener('canplay', handleCanPlay);
+    }
+  }, [appliedMusic, allTransitionVideosComplete, isInlineAudioMuted]);
+
+  // Sync inline audio with transition video playback - only react to first photo's index changes
+  useEffect(() => {
+    const audio = inlineAudioRef.current;
+    if (!audio || !appliedMusic || !allTransitionVideosComplete || !audioReadyRef.current) return;
+    
+    // Only take action if the video index actually changed
+    const indexChanged = prevVideoIndexRef.current !== firstPhotoVideoIndex;
+    prevVideoIndexRef.current = firstPhotoVideoIndex;
+    
+    // When videos loop back to beginning, restart the audio from the start offset
+    if (indexChanged && firstPhotoVideoIndex === 0) {
+      audio.currentTime = appliedMusic.startOffset;
+    }
+    
+    // Ensure audio is playing (only call play if paused to avoid interruption)
+    if (audio.paused && !isInlineAudioMuted) {
+      audio.play().catch(() => {});
+    }
+  }, [appliedMusic, allTransitionVideosComplete, firstPhotoVideoIndex, isInlineAudioMuted]);
+
+  // Toggle audio preview playback
+  const toggleAudioPreview = useCallback(async () => {
+    const audio = audioPreviewRef.current;
+    if (!audio) {
+      console.warn('[Audio Preview] No audio element ref');
+      return;
+    }
+    
+    // Ensure audio has a source
+    if (!audio.src && musicFile) {
+      audio.src = URL.createObjectURL(musicFile);
+    }
+    
+    if (isPlayingPreview) {
+      audio.pause();
+      setIsPlayingPreview(false);
+      if (playbackAnimationRef.current) {
+        cancelAnimationFrame(playbackAnimationRef.current);
+      }
+    } else {
+      try {
+        audio.currentTime = musicStartOffset;
+        await audio.play();
+        setIsPlayingPreview(true);
+        
+        // Update playhead position during playback
+        const updatePlayhead = () => {
+          if (audio.paused) {
+            setIsPlayingPreview(false);
+            return;
+          }
+          setPreviewPlayhead(audio.currentTime);
+          playbackAnimationRef.current = requestAnimationFrame(updatePlayhead);
+        };
+        updatePlayhead();
+      } catch (err) {
+        console.error('[Audio Preview] Failed to play:', err);
+      }
+    }
+  }, [isPlayingPreview, musicStartOffset, musicFile]);
+
+  // Cleanup audio preview on modal close
+  useEffect(() => {
+    if (!showMusicModal) {
+      if (audioPreviewRef.current) {
+        audioPreviewRef.current.pause();
+      }
+      setIsPlayingPreview(false);
+      if (playbackAnimationRef.current) {
+        cancelAnimationFrame(playbackAnimationRef.current);
+      }
+    }
+  }, [showMusicModal]);
+
+  // Regenerate waveform when modal opens with existing file but no waveform
+  useEffect(() => {
+    if (showMusicModal && musicFile && !audioWaveform) {
+      // Regenerate waveform for existing file
+      (async () => {
+        try {
+          if (!audioContextRef.current) {
+            audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
+          }
+          
+          const arrayBuffer = await musicFile.arrayBuffer();
+          const audioBuffer = await audioContextRef.current.decodeAudioData(arrayBuffer.slice(0));
+          
+          setAudioDuration(audioBuffer.duration);
+          
+          const channelData = audioBuffer.getChannelData(0);
+          const samples = 200;
+          const blockSize = Math.floor(channelData.length / samples);
+          const waveformData = [];
+          
+          for (let i = 0; i < samples; i++) {
+            const start = i * blockSize;
+            let sum = 0;
+            for (let j = 0; j < blockSize; j++) {
+              sum += Math.abs(channelData[start + j] || 0);
+            }
+            waveformData.push(sum / blockSize);
+          }
+          
+          const max = Math.max(...waveformData);
+          const normalizedWaveform = waveformData.map(v => v / (max || 1));
+          
+          setAudioWaveform(normalizedWaveform);
+          
+          // Set audio src for preview
+          if (audioPreviewRef.current) {
+            audioPreviewRef.current.src = URL.createObjectURL(musicFile);
+          }
+        } catch (error) {
+          console.error('Failed to regenerate waveform:', error);
+        }
+      })();
+    }
+  }, [showMusicModal, musicFile, audioWaveform]);
+
+  // Proceed with download (with or without music)
+  const handleProceedDownload = useCallback(async (includeMusic) => {
+    setShowMusicModal(false);
+    
     if (isBulkDownloading) return;
+
+    const startTime = performance.now();
+    console.log('[Transition Video] Starting creation process...', { includeMusic });
 
     try {
       setIsBulkDownloading(true);
@@ -2847,16 +3469,41 @@ const PhotoGallery = ({
         return;
       }
 
-      // Concatenate videos into one seamless video
+      console.log(`[Transition Video] Processing ${orderedVideos.length} videos`);
+
+      // Prepare audio options if music is applied
+      let audioOptions = null;
+      if (includeMusic && appliedMusic?.file) {
+        try {
+          const audioBuffer = await appliedMusic.file.arrayBuffer();
+          audioOptions = {
+            buffer: audioBuffer,
+            startOffset: appliedMusic.startOffset || 0
+          };
+          console.log(`[Transition Video] Audio prepared: ${(audioBuffer.byteLength / 1024 / 1024).toFixed(2)}MB, offset: ${appliedMusic.startOffset}s`);
+        } catch (audioError) {
+          console.error('Failed to read audio file:', audioError);
+          // Continue without audio
+        }
+      }
+
+      // Concatenate videos into one seamless video (with optional audio)
       const concatenatedBlob = await concatenateVideos(
         orderedVideos,
         (current, total, message) => {
           setBulkDownloadProgress({ current, total, message });
-        }
+        },
+        audioOptions
       );
 
+      const elapsedMs = performance.now() - startTime;
+      const elapsedSec = (elapsedMs / 1000).toFixed(2);
+      console.log(`[Transition Video] ✅ Complete! ${orderedVideos.length} videos → ${(concatenatedBlob.size / 1024 / 1024).toFixed(2)}MB in ${elapsedSec}s`);
+
       const timestamp = new Date().toISOString().split('T')[0];
-      const filename = `sogni-photobooth-transition-${timestamp}.mp4`;
+      const filename = includeMusic && appliedMusic 
+        ? `sogni-photobooth-transition-${timestamp}-with-music.mp4`
+        : `sogni-photobooth-transition-${timestamp}.mp4`;
       
       // On mobile, store blob for user to trigger share (user gesture required)
       const isMobileDevice = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || 
@@ -2896,7 +3543,8 @@ const PhotoGallery = ({
       }, 3000);
 
     } catch (error) {
-      console.error('Error downloading transition video:', error);
+      const elapsedMs = performance.now() - startTime;
+      console.error(`[Transition Video] ❌ Failed after ${(elapsedMs / 1000).toFixed(2)}s:`, error);
       setBulkDownloadProgress({
         current: 0,
         total: 0,
@@ -2914,7 +3562,29 @@ const PhotoGallery = ({
         setBulkDownloadProgress({ current: 0, total: 0, message: '' });
       }, 3000);
     }
-  }, [transitionVideoQueue, photos, isBulkDownloading, setIsBulkDownloading, setBulkDownloadProgress, showToast]);
+  }, [transitionVideoQueue, photos, isBulkDownloading, setIsBulkDownloading, setBulkDownloadProgress, showToast, appliedMusic]);
+
+  // Download transition video (uses appliedMusic if set)
+  const handleDownloadTransitionVideo = useCallback(() => {
+    if (isBulkDownloading) return;
+    
+    // Get videos to check if there are any
+    const orderedVideos = transitionVideoQueue
+      .map(photoId => photos.find(p => p.id === photoId))
+      .filter(photo => photo && photo.videoUrl);
+    
+    if (orderedVideos.length === 0) {
+      showToast({
+        title: 'No Videos',
+        message: 'No transition videos available to download.',
+        type: 'info'
+      });
+      return;
+    }
+    
+    // Directly proceed with download, using appliedMusic if available
+    handleProceedDownload(!!appliedMusic);
+  }, [isBulkDownloading, transitionVideoQueue, photos, showToast, appliedMusic, handleProceedDownload]);
 
   // Handle download all photos as ZIP - uses exact same logic as individual downloads
   const handleDownloadAll = useCallback(async (includeFrames = false) => {
@@ -4540,6 +5210,16 @@ const PhotoGallery = ({
                           setTransitionVideoQueue([]);
                           setCurrentVideoIndexByPhoto({});
                           setAllTransitionVideosComplete(false);
+                          
+                          // Clean up music state when leaving transition mode
+                          if (appliedMusic?.audioUrl) {
+                            URL.revokeObjectURL(appliedMusic.audioUrl);
+                          }
+                          setAppliedMusic(null);
+                          setIsInlineAudioMuted(false);
+                          if (inlineAudioRef.current) {
+                            inlineAudioRef.current.pause();
+                          }
                           
                           // Auto-execute video action if switching from another mode
                           if (batchActionMode !== 'video') {
@@ -9398,6 +10078,415 @@ const PhotoGallery = ({
         imageUrl={selectedPhotoIndex !== null && photos[selectedPhotoIndex] && photos[selectedPhotoIndex].images ? photos[selectedPhotoIndex].images[selectedSubIndex || 0] : null}
         videoUrl={selectedPhotoIndex !== null && photos[selectedPhotoIndex] ? photos[selectedPhotoIndex].videoUrl : null}
       />
+
+      {/* Music Modal for Transition Video Download (Beta) */}
+      {/* Inline audio element for transition video music playback */}
+      {appliedMusic && isTransitionMode && allTransitionVideosComplete && (
+        <audio
+          ref={inlineAudioRef}
+          src={appliedMusic.audioUrl}
+          loop
+          muted={isInlineAudioMuted}
+          style={{ display: 'none' }}
+        />
+      )}
+
+      {/* Add Music Button - Desktop only, shown when in transition mode with completed videos */}
+      {isTransitionMode && allTransitionVideosComplete && createPortal(
+        <div
+          style={{
+            position: 'fixed',
+            bottom: '100px',
+            right: '20px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            zIndex: 1000
+          }}
+        >
+          {/* Mute toggle - only show when music is applied */}
+          {appliedMusic && (
+            <button
+              onClick={() => setIsInlineAudioMuted(prev => !prev)}
+              style={{
+                padding: '12px',
+                backgroundColor: isInlineAudioMuted ? 'rgba(255, 82, 82, 0.8)' : '#1a1a2e',
+                border: '2px solid rgba(255, 255, 255, 0.2)',
+                borderRadius: '50%',
+                color: '#fff',
+                cursor: 'pointer',
+                fontSize: '16px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
+                transition: 'all 0.2s ease',
+                width: '44px',
+                height: '44px'
+              }}
+              title={isInlineAudioMuted ? 'Unmute audio preview' : 'Mute audio preview'}
+            >
+              {isInlineAudioMuted ? '🔇' : '🔊'}
+            </button>
+          )}
+          
+          {/* Main Add Music button */}
+          <button
+            onClick={() => setShowMusicModal(true)}
+            style={{
+              padding: '12px 20px',
+              backgroundColor: appliedMusic ? '#4CAF50' : '#1a1a2e',
+              border: appliedMusic ? '2px solid #4CAF50' : '2px solid rgba(255, 255, 255, 0.2)',
+              borderRadius: '30px',
+              color: '#fff',
+              cursor: 'pointer',
+              fontSize: '14px',
+              fontWeight: '600',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
+              transition: 'all 0.2s ease'
+            }}
+            title={appliedMusic ? 'Change music track' : 'Add music to transition video'}
+          >
+            🎵 {appliedMusic ? 'Music Added' : 'Add Music'}
+            {appliedMusic && (
+              <span style={{
+                fontSize: '10px',
+                backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                padding: '2px 6px',
+                borderRadius: '10px'
+              }}>
+                ✓
+              </span>
+            )}
+          </button>
+        </div>,
+        document.body
+      )}
+
+      {showMusicModal && createPortal(
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10000,
+            padding: '20px'
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowMusicModal(false);
+              // Keep file and waveform for next time, just stop preview
+              setIsPlayingPreview(false);
+              if (audioPreviewRef.current) {
+                audioPreviewRef.current.pause();
+              }
+            }
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: '#1a1a2e',
+              borderRadius: '16px',
+              padding: '24px',
+              maxWidth: '400px',
+              width: '100%',
+              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)',
+              border: '1px solid rgba(255, 255, 255, 0.1)'
+            }}
+          >
+            <h3 style={{
+              margin: '0 0 8px 0',
+              color: '#fff',
+              fontSize: '20px',
+              fontWeight: '600',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}>
+              🎵 Add Music Track
+              <span style={{
+                fontSize: '10px',
+                backgroundColor: '#ff6b6b',
+                color: '#fff',
+                padding: '2px 6px',
+                borderRadius: '4px',
+                fontWeight: '500'
+              }}>BETA</span>
+            </h3>
+            <p style={{
+              margin: '0 0 20px 0',
+              color: 'rgba(255, 255, 255, 0.6)',
+              fontSize: '14px'
+            }}>
+              Add a music track to your transition video
+            </p>
+
+            {/* File Upload */}
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{
+                display: 'block',
+                color: 'rgba(255, 255, 255, 0.8)',
+                fontSize: '13px',
+                marginBottom: '8px'
+              }}>
+                Audio File (M4A only)
+              </label>
+              <input
+                ref={musicFileInputRef}
+                type="file"
+                accept=".m4a,audio/mp4,audio/x-m4a"
+                onChange={handleMusicFileSelect}
+                style={{ display: 'none' }}
+              />
+              <button
+                onClick={() => musicFileInputRef.current?.click()}
+                style={{
+                  width: '100%',
+                  padding: '12px 16px',
+                  backgroundColor: musicFile ? 'rgba(76, 175, 80, 0.2)' : 'rgba(255, 255, 255, 0.1)',
+                  border: musicFile ? '1px solid rgba(76, 175, 80, 0.5)' : '1px dashed rgba(255, 255, 255, 0.3)',
+                  borderRadius: '8px',
+                  color: '#fff',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  textAlign: 'center',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                {musicFile ? `✅ ${musicFile.name}` : '📁 Choose M4A File'}
+              </button>
+              {!musicFile && (
+                <p style={{
+                  margin: '8px 0 0 0',
+                  color: 'rgba(255, 255, 255, 0.4)',
+                  fontSize: '11px'
+                }}>
+                  Tip: Convert MP3 to M4A using iTunes or online converters
+                </p>
+              )}
+            </div>
+
+            {/* Waveform Visualization */}
+            {musicFile && audioWaveform && (
+              <div style={{ marginBottom: '16px' }}>
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginBottom: '8px'
+                }}>
+                  <label style={{
+                    color: 'rgba(255, 255, 255, 0.8)',
+                    fontSize: '13px'
+                  }}>
+                    Select Start Position
+                  </label>
+                  <button
+                    onClick={toggleAudioPreview}
+                    style={{
+                      padding: '4px 12px',
+                      backgroundColor: isPlayingPreview ? '#ff6b6b' : 'rgba(255, 255, 255, 0.1)',
+                      border: 'none',
+                      borderRadius: '4px',
+                      color: '#fff',
+                      cursor: 'pointer',
+                      fontSize: '12px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}
+                  >
+                    {isPlayingPreview ? '⏸ Pause' : '▶ Preview'}
+                  </button>
+                </div>
+                
+                {/* Canvas for waveform */}
+                <div
+                  style={{
+                    position: 'relative',
+                    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+                    borderRadius: '8px',
+                    overflow: 'hidden',
+                    cursor: isDraggingWaveform ? 'grabbing' : 'crosshair',
+                    userSelect: 'none'
+                  }}
+                  onMouseDown={handleWaveformMouseDown}
+                >
+                  <canvas
+                    ref={waveformCanvasRef}
+                    width={352}
+                    height={80}
+                    style={{
+                      display: 'block',
+                      width: '100%',
+                      height: '80px',
+                      pointerEvents: 'none'
+                    }}
+                  />
+                </div>
+                
+                {/* Time indicators */}
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  marginTop: '4px',
+                  fontSize: '11px',
+                  color: 'rgba(255, 255, 255, 0.5)'
+                }}>
+                  <span>0:00</span>
+                  <span style={{ color: '#ff6b6b' }}>
+                    Start: {Math.floor(musicStartOffset / 60)}:{(musicStartOffset % 60).toFixed(1).padStart(4, '0')}
+                  </span>
+                  <span>
+                    {Math.floor(audioDuration / 60)}:{Math.floor(audioDuration % 60).toString().padStart(2, '0')}
+                  </span>
+                </div>
+                
+                <p style={{
+                  margin: '8px 0 0 0',
+                  color: 'rgba(255, 255, 255, 0.4)',
+                  fontSize: '11px',
+                  textAlign: 'center'
+                }}>
+                  Click to set position • Drag red area to move selection
+                </p>
+                
+                {/* Hidden audio element for preview */}
+                <audio
+                  ref={audioPreviewRef}
+                  style={{ display: 'none' }}
+                  onEnded={() => setIsPlayingPreview(false)}
+                />
+              </div>
+            )}
+
+            {/* Manual offset input as fallback */}
+            {musicFile && !audioWaveform && (
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{
+                  display: 'block',
+                  color: 'rgba(255, 255, 255, 0.8)',
+                  fontSize: '13px',
+                  marginBottom: '8px'
+                }}>
+                  Start Offset (seconds)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.5"
+                  value={musicStartOffset}
+                  onChange={(e) => setMusicStartOffset(parseFloat(e.target.value) || 0)}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    borderRadius: '8px',
+                    color: '#fff',
+                    fontSize: '14px',
+                    boxSizing: 'border-box'
+                  }}
+                  placeholder="0"
+                />
+                <p style={{
+                  margin: '8px 0 0 0',
+                  color: 'rgba(255, 255, 255, 0.4)',
+                  fontSize: '11px'
+                }}>
+                  Loading waveform...
+                </p>
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            <div style={{
+              display: 'flex',
+              gap: '12px',
+              marginTop: '20px'
+            }}>
+              <button
+                onClick={() => {
+                  setShowMusicModal(false);
+                  // Keep file and waveform for next time, just stop preview
+                  setIsPlayingPreview(false);
+                  if (audioPreviewRef.current) {
+                    audioPreviewRef.current.pause();
+                  }
+                }}
+                style={{
+                  flex: 1,
+                  padding: '12px 16px',
+                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  borderRadius: '8px',
+                  color: '#fff',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                Cancel
+              </button>
+              {appliedMusic && (
+                <button
+                  onClick={() => {
+                    handleRemoveMusic();
+                    setShowMusicModal(false);
+                    setIsPlayingPreview(false);
+                    if (audioPreviewRef.current) {
+                      audioPreviewRef.current.pause();
+                    }
+                  }}
+                  style={{
+                    flex: 1,
+                    padding: '12px 16px',
+                    backgroundColor: 'rgba(255, 82, 82, 0.2)',
+                    border: '1px solid rgba(255, 82, 82, 0.5)',
+                    borderRadius: '8px',
+                    color: '#ff5252',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  Remove Music
+                </button>
+              )}
+              <button
+                onClick={handleApplyMusic}
+                disabled={!musicFile}
+                style={{
+                  flex: 1,
+                  padding: '12px 16px',
+                  backgroundColor: musicFile ? '#4CAF50' : 'rgba(255, 255, 255, 0.05)',
+                  border: 'none',
+                  borderRadius: '8px',
+                  color: musicFile ? '#fff' : 'rgba(255, 255, 255, 0.3)',
+                  cursor: musicFile ? 'pointer' : 'not-allowed',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                {appliedMusic ? 'Update' : 'Apply'}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 };

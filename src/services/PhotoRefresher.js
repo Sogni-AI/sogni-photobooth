@@ -419,10 +419,35 @@ export const refreshPhoto = async (options) => {
         // Clear timeout
         clearTimeout(timeoutId);
         
-        // Preload the refreshed image
+        // Convert S3 URL to blob URL to avoid CORS issues with video generation
+        const convertToBlobUrl = async (url) => {
+          try {
+            const response = await fetch(url);
+            if (response.ok) {
+              const blob = await response.blob();
+              return URL.createObjectURL(blob);
+            }
+          } catch (e) {
+            console.warn('[REFRESH] Could not convert to blob URL, using original:', e.message);
+          }
+          return url; // Fallback to original URL
+        };
+        
+        // Preload the refreshed image and convert to blob URL
         const preloadImage = new Image();
-        preloadImage.onload = () => {
+        preloadImage.crossOrigin = 'anonymous';
+        preloadImage.onload = async () => {
           console.log(`[REFRESH] Refreshed image preloaded successfully`);
+          
+          // Try to convert S3 URL to blob URL for better CORS compatibility
+          let finalImageUrl = job.resultUrl;
+          if (job.resultUrl.startsWith('http') && !job.resultUrl.startsWith('blob:')) {
+            console.log('[REFRESH] Converting S3 URL to blob URL...');
+            finalImageUrl = await convertToBlobUrl(job.resultUrl);
+            if (finalImageUrl !== job.resultUrl) {
+              console.log('[REFRESH] Successfully converted to blob URL');
+            }
+          }
           
           setPhotos(prev => {
             const updated = [...prev];
@@ -450,7 +475,7 @@ export const refreshPhoto = async (options) => {
               ...current,
               loading: false,
               generating: false,
-              images: [job.resultUrl],
+              images: [finalImageUrl], // Use blob URL for better CORS compatibility
               newlyArrived: true,
               progress: 100,
               statusText, // Set statusText to style name (like "SUMI DRAGON")
