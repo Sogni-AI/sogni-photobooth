@@ -1,6 +1,6 @@
 {
   "name": "sogni-photobooth-app",
-  "version": "1.1.7",
+  "version": "1.1.8",
   "private": true,
   "type": "module",
   "scripts": {
@@ -30,6 +30,8 @@
     "precommit": "npm run validate:useeffect"
   },
   "dependencies": {
+    "@ffmpeg/ffmpeg": "^0.12.15",
+    "@ffmpeg/util": "^0.12.2",
     "@sogni-ai/sogni-client": "^4.0.0-alpha.27",
     "@types/qrcode": "^1.5.5",
     "@types/uuid": "^10.0.0",
@@ -39,6 +41,7 @@
     "cookie-session": "^2.1.0",
     "framer-motion": "^12.9.2",
     "jszip": "^3.10.1",
+    "mp4box": "^2.3.0",
     "prop-types": "^15.8.1",
     "qrcode": "^1.5.4",
     "react": "^18.2.0",

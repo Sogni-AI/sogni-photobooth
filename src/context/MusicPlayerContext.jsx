@@ -328,8 +328,8 @@ export const MusicPlayerProvider = ({ children }) => {
 
   return (
     <MusicPlayerContext.Provider value={value}>
-      {/* Global audio element */}
-      <audio ref={audioRef} src={currentTrack.url} preload="metadata" />
+      {/* Global audio element - only render when enabled to avoid preloading when not in use */}
+      {isEnabled && <audio ref={audioRef} src={currentTrack.url} preload="metadata" />}
       {children}
     </MusicPlayerContext.Provider>
   );

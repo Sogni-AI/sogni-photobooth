@@ -50,9 +50,13 @@ export default defineConfig(({ mode }) => {
         allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "X-Client-App-ID"]
       },
       // Allow iframe embedding for browser extension
+      // Add COOP/COEP headers for SharedArrayBuffer support (required for FFmpeg.wasm on mobile)
+      // Using 'credentialless' instead of 'require-corp' to allow external resources like R2
       headers: {
         'X-Frame-Options': 'ALLOWALL',
-        'Content-Security-Policy': "frame-ancestors *;"
+        'Content-Security-Policy': "frame-ancestors *;",
+        'Cross-Origin-Opener-Policy': 'same-origin',
+        'Cross-Origin-Embedder-Policy': 'credentialless'
       },
       proxy: {
         // Proxy API requests to the backend server

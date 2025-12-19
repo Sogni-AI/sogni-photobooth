@@ -202,17 +202,17 @@ export async function generateVideo(options: GenerateVideoOptions): Promise<void
     if (customReferenceImage) {
       imageBuffer = customReferenceImage;
     } else {
-      const imageUrl = photo.enhancedImageUrl || photo.images?.[subIndex] || photo.originalDataUrl;
-      if (!imageUrl) {
-        throw new Error('No image URL found');
-      }
+    const imageUrl = photo.enhancedImageUrl || photo.images?.[subIndex] || photo.originalDataUrl;
+    if (!imageUrl) {
+      throw new Error('No image URL found');
+    }
 
-      const response = await fetch(imageUrl);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch image: ${response.status}`);
-      }
-      const imageBlob = await response.blob();
-      const arrayBuffer = await imageBlob.arrayBuffer();
+    const response = await fetch(imageUrl);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch image: ${response.status}`);
+    }
+    const imageBlob = await response.blob();
+    const arrayBuffer = await imageBlob.arrayBuffer();
       imageBuffer = new Uint8Array(arrayBuffer);
     }
 
@@ -303,7 +303,6 @@ export async function generateVideo(options: GenerateVideoOptions): Promise<void
     let project;
     try {
       project = await sogniClient.projects.create(createParams);
-      console.log(`[VIDEO] Project created successfully: ${project.id}`);
     } catch (createError) {
       console.error(`[VIDEO] Project creation failed:`, createError);
       
@@ -435,10 +434,7 @@ export async function generateVideo(options: GenerateVideoOptions): Promise<void
     // Centralized error handler to avoid duplicate error messages
     const handleProjectError = (error: any, source: string) => {
       // Prevent duplicate handling
-      if (activeProject.isCompleted) {
-        console.log(`[VIDEO] Ignoring duplicate ${source} event for already completed project ${project.id}`);
-        return;
-      }
+      if (activeProject.isCompleted) return;
       activeProject.isCompleted = true;
       
       // Check for insufficient funds error
@@ -553,66 +549,39 @@ export async function generateVideo(options: GenerateVideoOptions): Promise<void
     const baseTimeoutMs = timeoutMinutes[quality] * 60 * 1000;
     const inactivityTimeoutMs = 120 * 1000; // 120 seconds of no activity
     
-    console.log(`[VIDEO] Setting ${timeoutMinutes[quality]}-minute base timeout for ${quality} quality video`);
-    console.log(`[VIDEO] Will also timeout after 120s of inactivity (no jobETA updates)`);
-
     // Initialize last activity time
     activeProject.lastActivityTime = Date.now();
 
     // Base timeout - triggers if job exceeds the quality-based timeout
     activeProject.timeoutId = setTimeout(() => {
-      if (activeProject.isCompleted) {
-        console.log(`[VIDEO] Base timeout reached but project ${project.id} already completed, ignoring`);
-        return;
-      }
+      if (activeProject.isCompleted) return;
       
       // Check if we've received recent activity
       const timeSinceLastActivity = Date.now() - (activeProject.lastActivityTime || 0);
-      const minutesSinceActivity = Math.floor(timeSinceLastActivity / 60000);
+      if (timeSinceLastActivity < inactivityTimeoutMs) return;
       
-      if (timeSinceLastActivity < inactivityTimeoutMs) {
-        console.log(`[VIDEO] Base timeout reached but job is still active (last update ${minutesSinceActivity}m ago), not timing out`);
-        return;
-      }
-      
-      console.log(`[VIDEO] Base timeout reached and no activity for ${minutesSinceActivity} minutes, timing out`);
       handleProjectError(new Error('Video generation timed out'), 'timeout');
     }, baseTimeoutMs);
 
     // Activity check interval - runs every 30 seconds to check for inactivity
     activeProject.activityCheckInterval = setInterval(() => {
-      if (activeProject.isCompleted) {
-        return;
-      }
+      if (activeProject.isCompleted) return;
       
       const timeSinceLastActivity = Date.now() - (activeProject.lastActivityTime || Date.now());
       
       // If no activity for 120 seconds and we're past the base timeout, trigger timeout
       if (timeSinceLastActivity > inactivityTimeoutMs && Date.now() - (activeProject.startTime || Date.now()) > baseTimeoutMs) {
-        const minutesSinceActivity = Math.floor(timeSinceLastActivity / 60000);
-        console.log(`[VIDEO] No jobETA updates for ${minutesSinceActivity} minutes, timing out project ${project.id}`);
         handleProjectError(new Error('Video generation timed out - no activity'), 'inactivity timeout');
       }
     }, 30000); // Check every 30 seconds
 
     // Job event handler
     const jobEventHandler = (event: any) => {
-      // Log ALL video job events for debugging
-      console.log(`[VIDEO] 🎬 Job event received:`, {
-        type: event.type,
-        projectId: event.projectId,
-        expectedProjectId: project.id,
-        workerName: event.workerName,
-        queuePosition: event.queuePosition
-      });
-
       if (event.projectId !== project.id) return;
 
       switch (event.type) {
         case 'initiating':
           // Worker assigned, model being initialized - show clear status to user
-          // This is the 'initiatingModel' event from the SDK indicating model is loading
-          console.log(`[VIDEO] 🔧 INITIATING MODEL event - Worker: ${event.workerName || 'unknown'}`);
           setPhotos(prev => {
             const updated = [...prev];
             if (!updated[photoIndex]) return prev;
@@ -625,7 +594,6 @@ export async function generateVideo(options: GenerateVideoOptions): Promise<void
           });
           // Update activity time to prevent timeout during model initialization
           activeProject.lastActivityTime = Date.now();
-          console.log(`[VIDEO] ✅ Model initialization status updated in UI`);
           break;
 
         case 'queued':
@@ -710,28 +678,8 @@ export async function generateVideo(options: GenerateVideoOptions): Promise<void
 
         case 'jobETA':
           // Update last activity time to prevent inactivity timeout
-          const now = Date.now();
-          
-          // Calculate elapsed time from when job actually started processing (not when request was made)
-          let totalElapsed = 0;
-          let elapsedDisplay = 'waiting';
-          if (activeProject.startTime) {
-            totalElapsed = Math.floor((now - activeProject.startTime) / 1000);
-            const minutes = Math.floor(totalElapsed / 60);
-            const seconds = totalElapsed % 60;
-            elapsedDisplay = `${minutes}m ${seconds}s`;
-          }
-          
-          const timeSinceLastETA = activeProject.lastActivityTime 
-            ? Math.floor((now - activeProject.lastActivityTime) / 1000)
-            : 0;
-          
-          activeProject.lastActivityTime = now;
+          activeProject.lastActivityTime = Date.now();
           activeProject.lastETA = event.etaSeconds;
-          
-          // Log with timestamp, elapsed time since processing started, and time since last ETA
-          const timestamp = new Date().toISOString();
-          console.log(`[VIDEO][${timestamp}] ETA: ${event.etaSeconds}s | Elapsed: ${elapsedDisplay} | Gap: ${timeSinceLastETA}s | Project: ${project.id}`);
           
           setPhotos(prev => {
             const updated = [...prev];
