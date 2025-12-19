@@ -861,7 +861,7 @@ const PhotoGallery = ({
   const videoTargetPhoto = videoTargetPhotoIndex !== null ? photos[videoTargetPhotoIndex] : selectedPhoto;
 
   // State for batch action mode (Download or Video) - declared early for use in hooks
-  const [batchActionMode, setBatchActionMode] = useState('download'); // 'download' or 'video'
+  const [batchActionMode, setBatchActionMode] = useState('download'); // 'download', 'video', or 'transition'
   const [showBatchActionDropdown, setShowBatchActionDropdown] = useState(false);
   const [showBatchVideoDropdown, setShowBatchVideoDropdown] = useState(false);
   const [showBatchCustomVideoPromptPopup, setShowBatchCustomVideoPromptPopup] = useState(false);
@@ -968,6 +968,12 @@ const PhotoGallery = ({
   // State for AI-generated video playback (separate from easter egg videos)
   // Use a Set to allow multiple videos to play simultaneously (since videos are muted)
   const [playingGeneratedVideoIds, setPlayingGeneratedVideoIds] = useState(new Set());
+  
+  // State for transition video mode - tracks if we're in transition batch mode and the photo order
+  const [transitionVideoQueue, setTransitionVideoQueue] = useState([]);
+  const [isTransitionMode, setIsTransitionMode] = useState(false);
+  // Track which video each polaroid is currently playing (index into transitionVideoQueue)
+  const [currentVideoIndexByPhoto, setCurrentVideoIndexByPhoto] = useState({});
   
   // State to track if user wants fullscreen mode in Style Explorer
   const [wantsFullscreen, setWantsFullscreen] = useState(false);
@@ -2085,6 +2091,186 @@ const PhotoGallery = ({
       img.src = imageUrl;
     }
   }, [photos, sogniClient, setPhotos, settings.videoResolution, settings.videoQuality, settings.videoFramerate, settings.videoDuration, settings.videoPositivePrompt, settings.videoNegativePrompt, settings.soundEnabled, tokenType, desiredWidth, desiredHeight, showToast, onOutOfCredits, setPlayingGeneratedVideoIds]);
+
+  // Handle batch transition video generation - transitions each image to the next in sequence (circular)
+  const handleBatchGenerateTransitionVideo = useCallback(async () => {
+    setShowBatchVideoDropdown(false);
+    setSelectedMotionCategory(null);
+
+    // Pre-warm audio for iOS
+    warmUpAudio();
+
+    // Get all loaded photos (excluding hidden/discarded ones)
+    const loadedPhotos = photos.filter(
+      photo => !photo.hidden && !photo.loading && !photo.generating && !photo.error && photo.images && photo.images.length > 0 && !photo.isOriginal
+    );
+
+    if (loadedPhotos.length === 0) {
+      showToast({
+        title: 'No Images',
+        message: 'No images available for transition video generation.',
+        type: 'error'
+      });
+      return;
+    }
+
+    // Set transition mode and store the queue of photo IDs in order
+    setIsTransitionMode(true);
+    setTransitionVideoQueue(loadedPhotos.map(p => p.id));
+
+    // Hide the NEW badge after first video generation attempt
+    setShowVideoNewBadge(false);
+
+    // Use fixed transition prompt
+    const motionPrompt = 'Transition the subject from start image to last image in a slick and fun way';
+    const negativePrompt = settings.videoNegativePrompt || '';
+
+    // Show toast for batch generation
+    showToast({
+      title: '🔀 Batch Transition Video',
+      message: `Starting transition video generation for ${loadedPhotos.length} image${loadedPhotos.length > 1 ? 's' : ''}...`,
+      type: 'info',
+      timeout: 3000
+    });
+
+    // Generate transition videos for each photo
+    let successCount = 0;
+    let errorCount = 0;
+
+    for (let i = 0; i < loadedPhotos.length; i++) {
+      const photo = loadedPhotos[i];
+      const photoIndex = photos.findIndex(p => p.id === photo.id);
+
+      if (photoIndex === -1 || photo.generatingVideo) {
+        continue;
+      }
+
+      // Get current image (START of transition)
+      const currentImageUrl = photo.enhancedImageUrl || photo.images?.[0] || photo.originalDataUrl;
+      
+      // Get next image in batch (END of transition) - circular: last image uses first image
+      const nextPhotoIndex = (i + 1) % loadedPhotos.length;
+      const nextPhoto = loadedPhotos[nextPhotoIndex];
+      const nextImageUrl = nextPhoto.enhancedImageUrl || nextPhoto.images?.[0] || nextPhoto.originalDataUrl;
+      
+      if (!currentImageUrl || !nextImageUrl) {
+        errorCount++;
+        continue;
+      }
+
+      const generatingPhotoId = photo.id;
+
+      // Load both images to get their data
+      const loadImageAsBuffer = async (url) => {
+        return new Promise((resolve, reject) => {
+          const img = new Image();
+          img.onload = async () => {
+            try {
+              const response = await fetch(url);
+              if (!response.ok) {
+                throw new Error(`Failed to fetch image: ${response.status}`);
+              }
+              const imageBlob = await response.blob();
+              const arrayBuffer = await imageBlob.arrayBuffer();
+              const imageBuffer = new Uint8Array(arrayBuffer);
+              resolve({ buffer: imageBuffer, width: img.naturalWidth || img.width, height: img.naturalHeight || img.height });
+            } catch (error) {
+              reject(error);
+            }
+          };
+          img.onerror = () => reject(new Error('Failed to load image'));
+          img.src = url;
+        });
+      };
+
+      try {
+        // Load both images
+        const [currentImage, nextImage] = await Promise.all([
+          loadImageAsBuffer(currentImageUrl),
+          loadImageAsBuffer(nextImageUrl)
+        ]);
+
+        // Use the current image dimensions for the video
+        const actualWidth = currentImage.width;
+        const actualHeight = currentImage.height;
+
+        generateVideo({
+          photo,
+          photoIndex: photoIndex,
+          subIndex: 0,
+          imageWidth: actualWidth,
+          imageHeight: actualHeight,
+          sogniClient,
+          setPhotos,
+          resolution: settings.videoResolution || '480p',
+          quality: settings.videoQuality || 'fast',
+          fps: settings.videoFramerate || 16,
+          duration: settings.videoDuration || 5,
+          positivePrompt: motionPrompt,
+          negativePrompt: negativePrompt,
+          tokenType: tokenType,
+          referenceImage: currentImage.buffer,
+          referenceImageEnd: nextImage.buffer,
+          onComplete: (videoUrl) => {
+            successCount++;
+            
+            // When all transition videos are complete, start playing all of them
+            if (successCount === loadedPhotos.length) {
+              // Play sonic logo before auto-play (respects sound settings)
+              playSonicLogo(settings.soundEnabled);
+              
+              // Initialize each polaroid to start at its offset index (polaroid 0 starts at video 0, polaroid 1 at video 1, etc.)
+              const initialIndices = {};
+              loadedPhotos.forEach((photo, idx) => {
+                initialIndices[photo.id] = idx % loadedPhotos.length;
+              });
+              setCurrentVideoIndexByPhoto(initialIndices);
+              
+              // Start playing all videos (each polaroid plays its own video)
+              setPlayingGeneratedVideoIds(new Set(loadedPhotos.map(p => p.id)));
+              
+              const videoMessage = getRandomVideoMessage();
+              showToast({
+                title: videoMessage.title,
+                message: `All ${successCount} transition video${successCount > 1 ? 's' : ''} generated! Playing sequence...`,
+                type: 'success',
+                timeout: 5000
+              });
+            }
+          },
+          onError: (error) => {
+            errorCount++;
+            if (errorCount === loadedPhotos.length) {
+              showToast({
+                title: 'Batch Transition Video Failed',
+                message: 'All transition video generations failed. Please try again.',
+                type: 'error'
+              });
+            }
+          },
+          onCancel: () => {
+            // Handle cancellation if needed
+          },
+          onOutOfCredits: () => {
+            console.log('[VIDEO] Triggering out of credits popup from batch transition video generation');
+            if (onOutOfCredits) {
+              onOutOfCredits();
+            }
+          }
+        });
+      } catch (error) {
+        console.error('[TRANSITION VIDEO] Failed to load images:', error);
+        errorCount++;
+        if (errorCount === loadedPhotos.length) {
+          showToast({
+            title: 'Batch Transition Video Failed',
+            message: 'Failed to load images for transition video generation.',
+            type: 'error'
+          });
+        }
+      }
+    }
+  }, [photos, sogniClient, setPhotos, settings.videoResolution, settings.videoQuality, settings.videoFramerate, settings.videoDuration, settings.videoNegativePrompt, settings.soundEnabled, tokenType, desiredWidth, desiredHeight, showToast, onOutOfCredits, setPlayingGeneratedVideoIds]);
 
   // Handle video cancellation
   const handleCancelVideo = useCallback(() => {
@@ -3952,6 +4138,17 @@ const PhotoGallery = ({
                       type: 'info'
                     });
                   }
+                } else if (batchActionMode === 'transition') {
+                  // Directly generate transition videos without showing dropdown
+                  if (isAuthenticated) {
+                    handleBatchGenerateTransitionVideo();
+                  } else {
+                    showToast({
+                      title: 'Authentication Required',
+                      message: 'Please sign in to generate transition videos.',
+                      type: 'info'
+                    });
+                  }
                 }
               }}
               disabled={isBulkDownloading}
@@ -3978,10 +4175,28 @@ const PhotoGallery = ({
                 zIndex: 1,
                 minHeight: '40px'
               }}
-              title={batchActionMode === 'video' ? 'Generate videos for all images' : 'Download all images'}
+              title={
+                batchActionMode === 'video' 
+                  ? 'Generate videos for all images' 
+                  : batchActionMode === 'transition'
+                  ? 'Generate transition videos for all images'
+                  : 'Download all images'
+              }
             >
-              <span>{batchActionMode === 'video' ? '🎥' : '⬇️'}</span>
-              <span>{batchActionMode === 'video' ? '' : ''}</span>
+              <span>
+                {batchActionMode === 'video' 
+                  ? '🎥' 
+                  : batchActionMode === 'transition'
+                  ? '🔀'
+                  : '⬇️'}
+              </span>
+              <span>
+                {batchActionMode === 'video' 
+                  ? '' 
+                  : batchActionMode === 'transition'
+                  ? ''
+                  : ''}
+              </span>
             </button>
             <button
               className="batch-action-button batch-action-button-dropdown"
@@ -4063,6 +4278,10 @@ const PhotoGallery = ({
                     onClick={() => {
                       setBatchActionMode('download');
                       setShowBatchActionDropdown(false);
+                      // Reset transition mode when switching away
+                      setIsTransitionMode(false);
+                      setTransitionVideoQueue([]);
+                      setCurrentVideoIndexByPhoto({});
                     }}
                     style={{
                       width: '100%',
@@ -4094,41 +4313,82 @@ const PhotoGallery = ({
                     {batchActionMode === 'download' && <span style={{ marginLeft: 'auto' }}>✓</span>}
                   </button>
                   {canUseVideo && (
-                    <button
-                      className="batch-action-mode-option"
-                      onClick={() => {
-                        setBatchActionMode('video');
-                        setShowBatchActionDropdown(false);
-                      }}
-                      style={{
-                        width: '100%',
-                        padding: '12px 16px',
-                        border: 'none',
-                        background: batchActionMode === 'video' ? 'rgba(139, 92, 246, 0.1)' : 'transparent',
-                        color: '#333',
-                        fontSize: '14px',
-                        fontWeight: batchActionMode === 'video' ? '600' : 'normal',
-                        textAlign: 'left',
-                        cursor: 'pointer',
-                        transition: 'background 0.2s ease',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px'
-                      }}
-                      onMouseOver={(e) => {
-                        if (batchActionMode !== 'video') {
-                          e.currentTarget.style.background = 'rgba(139, 92, 246, 0.1)';
-                        }
-                      }}
-                      onMouseOut={(e) => {
-                        if (batchActionMode !== 'video') {
-                          e.currentTarget.style.background = 'transparent';
-                        }
-                      }}
-                    >
-                      <span>🎥</span> Video
-                      {batchActionMode === 'video' && <span style={{ marginLeft: 'auto' }}>✓</span>}
-                    </button>
+                    <>
+                      <button
+                        className="batch-action-mode-option"
+                        onClick={() => {
+                          setBatchActionMode('video');
+                          setShowBatchActionDropdown(false);
+                          // Reset transition mode when switching away
+                          setIsTransitionMode(false);
+                          setTransitionVideoQueue([]);
+                          setCurrentVideoIndexByPhoto({});
+                        }}
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          border: 'none',
+                          background: batchActionMode === 'video' ? 'rgba(139, 92, 246, 0.1)' : 'transparent',
+                          color: '#333',
+                          fontSize: '14px',
+                          fontWeight: batchActionMode === 'video' ? '600' : 'normal',
+                          textAlign: 'left',
+                          cursor: 'pointer',
+                          transition: 'background 0.2s ease',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px'
+                        }}
+                        onMouseOver={(e) => {
+                          if (batchActionMode !== 'video') {
+                            e.currentTarget.style.background = 'rgba(139, 92, 246, 0.1)';
+                          }
+                        }}
+                        onMouseOut={(e) => {
+                          if (batchActionMode !== 'video') {
+                            e.currentTarget.style.background = 'transparent';
+                          }
+                        }}
+                      >
+                        <span>🎥💫</span> Motion Video
+                        {batchActionMode === 'video' && <span style={{ marginLeft: 'auto' }}>✓</span>}
+                      </button>
+                      <button
+                        className="batch-action-mode-option"
+                        onClick={() => {
+                          setBatchActionMode('transition');
+                          setShowBatchActionDropdown(false);
+                        }}
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          border: 'none',
+                          background: batchActionMode === 'transition' ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
+                          color: '#333',
+                          fontSize: '14px',
+                          fontWeight: batchActionMode === 'transition' ? '600' : 'normal',
+                          textAlign: 'left',
+                          cursor: 'pointer',
+                          transition: 'background 0.2s ease',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px'
+                        }}
+                        onMouseOver={(e) => {
+                          if (batchActionMode !== 'transition') {
+                            e.currentTarget.style.background = 'rgba(59, 130, 246, 0.1)';
+                          }
+                        }}
+                        onMouseOut={(e) => {
+                          if (batchActionMode !== 'transition') {
+                            e.currentTarget.style.background = 'transparent';
+                          }
+                        }}
+                      >
+                        <span>🔀</span> Transition Video
+                        {batchActionMode === 'transition' && <span style={{ marginLeft: 'auto' }}>✓</span>}
+                      </button>
+                    </>
                   )}
                 </div>
               );
@@ -7202,25 +7462,66 @@ const PhotoGallery = ({
                 )}
 
                 {/* AI-Generated Video Overlay - Show when generated video is playing */}
-                {photo.videoUrl && !photo.generatingVideo && playingGeneratedVideoIds.has(photo.id) && (
-                  <video
-                    src={photo.videoUrl}
-                    autoPlay
-                    loop
-                    muted
-                    playsInline
-                    style={{
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      width: '100%',
-                      height: '100%',
-                      objectFit: 'cover',
-                      zIndex: 5,
-                      pointerEvents: 'none'
-                    }}
-                  />
-                )}
+                {photo.videoUrl && !photo.generatingVideo && playingGeneratedVideoIds.has(photo.id) && (() => {
+                  // In transition mode, play the video from the queue at the current index for this photo
+                  if (isTransitionMode && transitionVideoQueue.length > 0) {
+                    const currentVideoIndex = currentVideoIndexByPhoto[photo.id] ?? 0;
+                    const videoPhotoId = transitionVideoQueue[currentVideoIndex];
+                    const videoPhoto = photos.find(p => p.id === videoPhotoId);
+                    const videoUrl = videoPhoto?.videoUrl;
+                    
+                    if (!videoUrl) return null;
+                    
+                    return (
+                      <video
+                        key={`${photo.id}-${currentVideoIndex}`}
+                        src={videoUrl}
+                        autoPlay
+                        loop={false}
+                        muted
+                        playsInline
+                        onEnded={() => {
+                          // Advance to next video in the queue for this polaroid
+                          setCurrentVideoIndexByPhoto(prev => ({
+                            ...prev,
+                            [photo.id]: (prev[photo.id] + 1) % transitionVideoQueue.length
+                          }));
+                        }}
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'cover',
+                          zIndex: 5,
+                          pointerEvents: 'none'
+                        }}
+                      />
+                    );
+                  }
+                  
+                  // Normal mode - just play the photo's own video
+                  return (
+                    <video
+                      src={photo.videoUrl}
+                      autoPlay
+                      loop={true}
+                      muted
+                      playsInline
+                      style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                        zIndex: 5,
+                        pointerEvents: 'none'
+                      }}
+                    />
+                  );
+                })()}
 
                 {/* Video generation progress overlay - displays worker, ETA and elapsed time */}
                 {photo.generatingVideo && (
@@ -8766,7 +9067,7 @@ const PhotoGallery = ({
       <CustomVideoPromptPopup
         visible={showBatchCustomVideoPromptPopup}
         onGenerate={(positivePrompt, negativePrompt) => {
-          // Generate batch videos with custom prompts
+          // Generate batch videos with custom prompts (only for motion video mode)
           handleBatchGenerateVideo(positivePrompt, negativePrompt);
         }}
         onClose={() => setShowBatchCustomVideoPromptPopup(false)}

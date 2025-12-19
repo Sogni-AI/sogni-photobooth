@@ -55,6 +55,8 @@ interface GenerateVideoOptions {
   negativePrompt?: string;
   motionEmoji?: string;
   tokenType?: 'spark' | 'sogni';
+  referenceImage?: Uint8Array;
+  referenceImageEnd?: Uint8Array;
   onComplete?: (videoUrl: string) => void;
   onError?: (error: Error) => void;
   onCancel?: () => void;
@@ -135,6 +137,8 @@ export async function generateVideo(options: GenerateVideoOptions): Promise<void
     negativePrompt = '',
     motionEmoji,
     tokenType = 'spark',
+    referenceImage: customReferenceImage,
+    referenceImageEnd,
     onComplete,
     onError,
     onOutOfCredits
@@ -192,18 +196,25 @@ export async function generateVideo(options: GenerateVideoOptions): Promise<void
   const scaled = scaleToResolution(WIDTH, HEIGHT, resolution);
 
   try {
-    const imageUrl = photo.enhancedImageUrl || photo.images?.[subIndex] || photo.originalDataUrl;
-    if (!imageUrl) {
-      throw new Error('No image URL found');
-    }
+    // Use custom reference image if provided, otherwise fetch from photo
+    let imageBuffer: Uint8Array;
+    
+    if (customReferenceImage) {
+      imageBuffer = customReferenceImage;
+    } else {
+      const imageUrl = photo.enhancedImageUrl || photo.images?.[subIndex] || photo.originalDataUrl;
+      if (!imageUrl) {
+        throw new Error('No image URL found');
+      }
 
-    const response = await fetch(imageUrl);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch image: ${response.status}`);
+      const response = await fetch(imageUrl);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch image: ${response.status}`);
+      }
+      const imageBlob = await response.blob();
+      const arrayBuffer = await imageBlob.arrayBuffer();
+      imageBuffer = new Uint8Array(arrayBuffer);
     }
-    const imageBlob = await response.blob();
-    const arrayBuffer = await imageBlob.arrayBuffer();
-    const imageBuffer = new Uint8Array(arrayBuffer);
 
     const qualityConfig = VIDEO_QUALITY_PRESETS[quality];
     if (!qualityConfig) {
@@ -254,6 +265,7 @@ export async function generateVideo(options: GenerateVideoOptions): Promise<void
       width: scaled.width,
       height: scaled.height,
       referenceImage: imageBuffer,
+      ...(referenceImageEnd && { referenceImageEnd }),
       // Frame count calculated from duration and fps
       frames: frames,
       fps: fps,
@@ -280,6 +292,11 @@ export async function generateVideo(options: GenerateVideoOptions): Promise<void
     console.log('📝 Prompts:');
     console.log(`   Positive: ${positivePrompt || '(none)'}`);
     console.log(`   Negative: ${negativePrompt || '(none)'}`);
+    if (referenceImageEnd) {
+      console.log('');
+      console.log('🔀 Transition Mode:');
+      console.log(`   Using referenceImageEnd (size: ${referenceImageEnd.length} bytes)`);
+    }
     console.groupEnd();
     
     // Create project with proper error handling
