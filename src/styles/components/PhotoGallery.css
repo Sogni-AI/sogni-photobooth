@@ -1731,8 +1731,35 @@ html body .photo-action-buttons .action-button,
     opacity: 1;
   }
   50% {
-    opacity: 0.3;
+    opacity: 0.2;
   }
+}
+
+@-webkit-keyframes blink {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.2;
+  }
+}
+
+/* Ensure video ETA blink animation works on mobile - force animation to work */
+/* Target the video ETA display element specifically */
+.video-eta-stuck {
+  animation: blink 2s ease-in-out infinite !important;
+  -webkit-animation: blink 2s ease-in-out infinite !important;
+  animation-name: blink !important;
+  -webkit-animation-name: blink !important;
+  animation-duration: 2s !important;
+  -webkit-animation-duration: 2s !important;
+  animation-timing-function: ease-in-out !important;
+  -webkit-animation-timing-function: ease-in-out !important;
+  animation-iteration-count: infinite !important;
+  -webkit-animation-iteration-count: infinite !important;
+  animation-play-state: running !important;
+  -webkit-animation-play-state: running !important;
+  will-change: opacity !important;
 }
 
 .video-new-badge {

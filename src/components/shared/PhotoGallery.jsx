@@ -18,6 +18,7 @@ import { themeConfigService } from '../../services/themeConfig';
 import { useApp } from '../../context/AppContext';
 import { trackDownloadWithStyle } from '../../services/analyticsService';
 import { downloadImagesAsZip, downloadVideosAsZip } from '../../utils/bulkDownload';
+import { concatenateVideos } from '../../utils/videoConcatenation';
 import { isWebShareSupported } from '../../services/WebShare';
 import CustomPromptPopup from './CustomPromptPopup';
 import ShareMenu from './ShareMenu';
@@ -974,12 +975,18 @@ const PhotoGallery = ({
   const [isTransitionMode, setIsTransitionMode] = useState(false);
   // Track which video each polaroid is currently playing (index into transitionVideoQueue)
   const [currentVideoIndexByPhoto, setCurrentVideoIndexByPhoto] = useState({});
+  // Track if all transition videos have finished generating (for sync mode)
+  const [allTransitionVideosComplete, setAllTransitionVideosComplete] = useState(false);
+  // Store ready-to-share transition video blob (for iOS share sheet after async concat)
+  const [readyTransitionVideo, setReadyTransitionVideo] = useState(null);
   
   // State to track if user wants fullscreen mode in Style Explorer
   const [wantsFullscreen, setWantsFullscreen] = useState(false);
   
   // State to track photos with stuck video ETAs (for flashing animation)
   const [stuckVideoETAs, setStuckVideoETAs] = useState(new Set());
+  // Track when each photo's ETA first became stuck at 1 second
+  const stuckEtaStartTimeRef = useRef(new Map());
   
   // Helper function to check if a prompt has a video easter egg
   const hasVideoEasterEgg = useCallback((promptKey) => {
@@ -1009,14 +1016,42 @@ const PhotoGallery = ({
   useEffect(() => {
     const etaCheckInterval = setInterval(() => {
       const newStuckETAs = new Set();
+      const now = Date.now();
 
       photos.forEach((photo, index) => {
-        if (photo.generatingVideo && photo.videoETA === 1) {
-          // Check if ETA has been at 1 second for a while
-          // If videoElapsed is greater than a reasonable threshold, consider it stuck
-          if (photo.videoElapsed && photo.videoElapsed > 10) {
-            newStuckETAs.add(photo.id || index);
+        const photoKey = photo.id || index;
+        
+        if (photo.generatingVideo) {
+          // Check if ETA is stuck at 1 second (0:01) or 0 seconds (0:00)
+          const isStuckAtOneSecond = photo.videoETA === 1;
+          const isStuckAtZero = photo.videoETA === 0;
+          
+          if (isStuckAtOneSecond || isStuckAtZero) {
+            // Track when the ETA first became stuck
+            if (!stuckEtaStartTimeRef.current.has(photoKey)) {
+              stuckEtaStartTimeRef.current.set(photoKey, now);
+            }
+            
+            // Check if it's been stuck for more than 2 seconds
+            const stuckStartTime = stuckEtaStartTimeRef.current.get(photoKey);
+            const stuckDuration = (now - stuckStartTime) / 1000; // Convert to seconds
+            
+            if (stuckDuration >= 2) {
+              newStuckETAs.add(photoKey);
+              // Debug logging (remove after testing)
+              if (!stuckVideoETAs.has(photoKey)) {
+                console.log(`[Video ETA] Photo ${photoKey} ETA stuck at ${photo.videoETA} for ${stuckDuration.toFixed(1)}s - enabling flash`);
+              }
+            }
+          } else {
+            // ETA is no longer stuck, clear the tracking
+            if (stuckEtaStartTimeRef.current.has(photoKey)) {
+              stuckEtaStartTimeRef.current.delete(photoKey);
+            }
           }
+        } else {
+          // Video is no longer generating, clear the tracking
+          stuckEtaStartTimeRef.current.delete(photoKey);
         }
       });
 
@@ -1029,7 +1064,7 @@ const PhotoGallery = ({
         }
         return prev;
       });
-    }, 1000); // Check every second
+    }, 500); // Check every 500ms for more responsive updates
 
     return () => clearInterval(etaCheckInterval);
   }, [photos]);
@@ -2117,6 +2152,8 @@ const PhotoGallery = ({
     // Set transition mode and store the queue of photo IDs in order
     setIsTransitionMode(true);
     setTransitionVideoQueue(loadedPhotos.map(p => p.id));
+    setAllTransitionVideosComplete(false);  // Reset sync mode for new batch
+    setCurrentVideoIndexByPhoto({});  // Reset video indices
 
     // Hide the NEW badge after first video generation attempt
     setShowVideoNewBadge(false);
@@ -2214,28 +2251,40 @@ const PhotoGallery = ({
           onComplete: (videoUrl) => {
             successCount++;
             
-            // When all transition videos are complete, start playing all of them
+            // Play sonic logo and auto-play this video immediately as it completes
+            playSonicLogo(settings.soundEnabled);
+            
+            // Set this polaroid to play its own video (index matches its position in queue)
+            setCurrentVideoIndexByPhoto(prev => ({
+              ...prev,
+              [photo.id]: i  // Play this polaroid's own video
+            }));
+            
+            // Start playing this video immediately
+            setPlayingGeneratedVideoIds(prev => new Set([...prev, photo.id]));
+            
+            // When ALL transition videos are complete, switch to sync mode
             if (successCount === loadedPhotos.length) {
-              // Play sonic logo before auto-play (respects sound settings)
-              playSonicLogo(settings.soundEnabled);
-              
-              // Initialize each polaroid to start at its offset index (polaroid 0 starts at video 0, polaroid 1 at video 1, etc.)
-              const initialIndices = {};
-              loadedPhotos.forEach((photo, idx) => {
-                initialIndices[photo.id] = idx % loadedPhotos.length;
-              });
-              setCurrentVideoIndexByPhoto(initialIndices);
-              
-              // Start playing all videos (each polaroid plays its own video)
-              setPlayingGeneratedVideoIds(new Set(loadedPhotos.map(p => p.id)));
-              
-              const videoMessage = getRandomVideoMessage();
-              showToast({
-                title: videoMessage.title,
-                message: `All ${successCount} transition video${successCount > 1 ? 's' : ''} generated! Playing sequence...`,
-                type: 'success',
-                timeout: 5000
-              });
+              // Short delay to let the last video start, then sync everyone to video 0
+              setTimeout(() => {
+                // Enable sync mode - all polaroids will now advance together
+                setAllTransitionVideosComplete(true);
+                
+                // Reset all polaroids to start at video index 0 for synchronized looping
+                const syncedIndices = {};
+                loadedPhotos.forEach((p) => {
+                  syncedIndices[p.id] = 0;
+                });
+                setCurrentVideoIndexByPhoto(syncedIndices);
+                
+                const videoMessage = getRandomVideoMessage();
+                showToast({
+                  title: videoMessage.title,
+                  message: `All ${successCount} transition video${successCount > 1 ? 's' : ''} generated! Playing in sync...`,
+                  type: 'success',
+                  timeout: 5000
+                });
+              }, 500);
             }
           },
           onError: (error) => {
@@ -2723,6 +2772,149 @@ const PhotoGallery = ({
       }, 3000);
     }
   }, [photos, filteredPhotos, isPromptSelectorMode, isBulkDownloading, settings.videoDuration, settings.videoResolution, settings.videoFramerate, getStyleDisplayText, setIsBulkDownloading, setBulkDownloadProgress]);
+
+  // Handle sharing the ready transition video (called from button click to preserve user gesture)
+  const handleShareTransitionVideo = useCallback(async () => {
+    if (!readyTransitionVideo) return;
+    
+    const { blob, filename } = readyTransitionVideo;
+    
+    try {
+      const file = new File([blob], filename, { type: 'video/mp4' });
+      await navigator.share({
+        files: [file],
+        title: 'My Sogni Photobooth Video',
+        text: 'Check out my transition video from Sogni AI Photobooth!'
+      });
+      
+      // Success - clear the ready video
+      setReadyTransitionVideo(null);
+      setBulkDownloadProgress({ current: 0, total: 0, message: '' });
+      setIsBulkDownloading(false);
+    } catch (shareError) {
+      // If user cancelled, that's fine
+      if (shareError instanceof Error && 
+          (shareError.name === 'AbortError' ||
+           shareError.message.includes('abort') ||
+           shareError.message.includes('cancel') ||
+           shareError.message.includes('dismissed'))) {
+        setReadyTransitionVideo(null);
+        setBulkDownloadProgress({ current: 0, total: 0, message: '' });
+        setIsBulkDownloading(false);
+        return;
+      }
+      
+      // For other errors, fall back to download
+      const blobUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = filename;
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+      
+      setReadyTransitionVideo(null);
+      setBulkDownloadProgress({ current: 0, total: 0, message: '' });
+      setIsBulkDownloading(false);
+    }
+  }, [readyTransitionVideo]);
+
+  // Handle download transition video as one seamless concatenated video
+  const handleDownloadTransitionVideo = useCallback(async () => {
+    if (isBulkDownloading) return;
+
+    try {
+      setIsBulkDownloading(true);
+      setReadyTransitionVideo(null); // Clear any previous ready video
+      setBulkDownloadProgress({ current: 0, total: 0, message: 'Preparing transition video...' });
+
+      // Get videos in the correct order from the transition queue
+      const orderedVideos = transitionVideoQueue
+        .map(photoId => photos.find(p => p.id === photoId))
+        .filter(photo => photo && photo.videoUrl)
+        .map((photo, index) => ({
+          url: photo.videoUrl,
+          filename: `transition-${index + 1}.mp4`
+        }));
+
+      if (orderedVideos.length === 0) {
+        setBulkDownloadProgress({ current: 0, total: 0, message: 'No videos available' });
+        setTimeout(() => {
+          setIsBulkDownloading(false);
+        }, 2000);
+        return;
+      }
+
+      // Concatenate videos into one seamless video
+      const concatenatedBlob = await concatenateVideos(
+        orderedVideos,
+        (current, total, message) => {
+          setBulkDownloadProgress({ current, total, message });
+        }
+      );
+
+      const timestamp = new Date().toISOString().split('T')[0];
+      const filename = `sogni-photobooth-transition-${timestamp}.mp4`;
+      
+      // On mobile, store blob for user to trigger share (user gesture required)
+      const isMobileDevice = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || 
+                             (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      
+      if (isMobileDevice && navigator.share) {
+        // Store blob for share button (preserves user gesture requirement)
+        setReadyTransitionVideo({ blob: concatenatedBlob, filename });
+        setBulkDownloadProgress({
+          current: orderedVideos.length,
+          total: orderedVideos.length,
+          message: 'Ready! Tap to save video'
+        });
+      } else {
+        // Desktop - download immediately
+        const blobUrl = URL.createObjectURL(concatenatedBlob);
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = filename;
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+        
+        setBulkDownloadProgress({
+          current: orderedVideos.length,
+          total: orderedVideos.length,
+          message: 'Download complete!'
+        });
+      }
+
+      // Reset after a delay
+      setTimeout(() => {
+        setIsBulkDownloading(false);
+        setBulkDownloadProgress({ current: 0, total: 0, message: '' });
+      }, 3000);
+
+    } catch (error) {
+      console.error('Error downloading transition video:', error);
+      setBulkDownloadProgress({
+        current: 0,
+        total: 0,
+        message: `Error: ${error.message}`
+      });
+      
+      showToast({
+        title: 'Download Failed',
+        message: 'Failed to combine transition videos. Please try downloading individual videos instead.',
+        type: 'error'
+      });
+
+      setTimeout(() => {
+        setIsBulkDownloading(false);
+        setBulkDownloadProgress({ current: 0, total: 0, message: '' });
+      }, 3000);
+    }
+  }, [transitionVideoQueue, photos, isBulkDownloading, setIsBulkDownloading, setBulkDownloadProgress, showToast]);
 
   // Handle download all photos as ZIP - uses exact same logic as individual downloads
   const handleDownloadAll = useCallback(async (includeFrames = false) => {
@@ -4121,8 +4313,13 @@ const PhotoGallery = ({
                   );
 
                   if (photosWithVideos.length > 0) {
-                    // Download videos as zip
-                    handleDownloadAllVideos();
+                    // Check if these are transition videos - if so, concatenate instead of zipping
+                    if (isTransitionMode && transitionVideoQueue.length > 0) {
+                      handleDownloadTransitionVideo();
+                    } else {
+                      // Normal video batch: download as zip
+                      handleDownloadAllVideos();
+                    }
                   } else {
                     // Show download options dropdown for images
                     setShowMoreDropdown(prev => !prev);
@@ -4278,10 +4475,29 @@ const PhotoGallery = ({
                     onClick={() => {
                       setBatchActionMode('download');
                       setShowBatchActionDropdown(false);
-                      // Reset transition mode when switching away
-                      setIsTransitionMode(false);
-                      setTransitionVideoQueue([]);
-                      setCurrentVideoIndexByPhoto({});
+                      // DON'T reset transition mode - we need to remember it for download
+                      
+                      // Auto-execute download action if switching from another mode
+                      if (batchActionMode !== 'download') {
+                        // Check if any photos have videos - if so, download videos
+                        const currentPhotosArray = isPromptSelectorMode ? filteredPhotos : photos;
+                        const photosWithVideos = currentPhotosArray.filter(
+                          photo => !photo.hidden && !photo.loading && !photo.generating && !photo.error && photo.videoUrl && !photo.isOriginal
+                        );
+
+                        if (photosWithVideos.length > 0) {
+                          // Check if these are transition videos - if so, concatenate instead of zipping
+                          if (isTransitionMode && transitionVideoQueue.length > 0) {
+                            handleDownloadTransitionVideo();
+                          } else {
+                            // Normal video batch: download as zip
+                            handleDownloadAllVideos();
+                          }
+                        } else {
+                          // Show download options dropdown for images
+                          setShowMoreDropdown(true);
+                        }
+                      }
                     }}
                     style={{
                       width: '100%',
@@ -4323,6 +4539,21 @@ const PhotoGallery = ({
                           setIsTransitionMode(false);
                           setTransitionVideoQueue([]);
                           setCurrentVideoIndexByPhoto({});
+                          setAllTransitionVideosComplete(false);
+                          
+                          // Auto-execute video action if switching from another mode
+                          if (batchActionMode !== 'video') {
+                            // Show video dropdown to select emoji
+                            if (isAuthenticated) {
+                              setShowBatchVideoDropdown(true);
+                            } else {
+                              showToast({
+                                title: 'Authentication Required',
+                                message: 'Please sign in to generate videos.',
+                                type: 'info'
+                              });
+                            }
+                          }
                         }}
                         style={{
                           width: '100%',
@@ -4358,6 +4589,19 @@ const PhotoGallery = ({
                         onClick={() => {
                           setBatchActionMode('transition');
                           setShowBatchActionDropdown(false);
+                          
+                          // Auto-execute transition video generation if switching from another mode
+                          if (batchActionMode !== 'transition') {
+                            if (isAuthenticated) {
+                              handleBatchGenerateTransitionVideo();
+                            } else {
+                              showToast({
+                                title: 'Authentication Required',
+                                message: 'Please sign in to generate transition videos.',
+                                type: 'info'
+                              });
+                            }
+                          }
                         }}
                         style={{
                           width: '100%',
@@ -4467,7 +4711,7 @@ const PhotoGallery = ({
             )}
               
           {/* Progress indicator for downloads */}
-          {isBulkDownloading && bulkDownloadProgress.message && (
+          {(isBulkDownloading || readyTransitionVideo) && bulkDownloadProgress.message && (
             <div
               className="bulk-download-progress"
               style={{
@@ -4488,10 +4732,30 @@ const PhotoGallery = ({
               }}
             >
               <div>{bulkDownloadProgress.message}</div>
-              {bulkDownloadProgress.total > 0 && (
+              {bulkDownloadProgress.total > 0 && !readyTransitionVideo && (
                 <div style={{ marginTop: '4px' }}>
                   {bulkDownloadProgress.current}/{bulkDownloadProgress.total}
                 </div>
+              )}
+              {readyTransitionVideo && (
+                <button
+                  onClick={handleShareTransitionVideo}
+                  style={{
+                    marginTop: '8px',
+                    background: 'rgba(102, 126, 234, 1)',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    padding: '8px 16px',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    width: '100%',
+                    fontFamily: '"Permanent Marker", cursive'
+                  }}
+                >
+                  📱 Save Video
+                </button>
               )}
             </div>
           )}
@@ -7463,42 +7727,73 @@ const PhotoGallery = ({
 
                 {/* AI-Generated Video Overlay - Show when generated video is playing */}
                 {photo.videoUrl && !photo.generatingVideo && playingGeneratedVideoIds.has(photo.id) && (() => {
-                  // In transition mode, play the video from the queue at the current index for this photo
+                  // In transition mode, pre-render ALL videos and show/hide them to avoid loading delays on mobile
                   if (isTransitionMode && transitionVideoQueue.length > 0) {
                     const currentVideoIndex = currentVideoIndexByPhoto[photo.id] ?? 0;
-                    const videoPhotoId = transitionVideoQueue[currentVideoIndex];
-                    const videoPhoto = photos.find(p => p.id === videoPhotoId);
-                    const videoUrl = videoPhoto?.videoUrl;
+                    const shouldLoop = !allTransitionVideosComplete;
                     
-                    if (!videoUrl) return null;
-                    
-                    return (
-                      <video
-                        key={`${photo.id}-${currentVideoIndex}`}
-                        src={videoUrl}
-                        autoPlay
-                        loop={false}
-                        muted
-                        playsInline
-                        onEnded={() => {
-                          // Advance to next video in the queue for this polaroid
-                          setCurrentVideoIndexByPhoto(prev => ({
-                            ...prev,
-                            [photo.id]: (prev[photo.id] + 1) % transitionVideoQueue.length
-                          }));
-                        }}
-                        style={{
-                          position: 'absolute',
-                          top: 0,
-                          left: 0,
-                          width: '100%',
-                          height: '100%',
-                          objectFit: 'cover',
-                          zIndex: 5,
-                          pointerEvents: 'none'
-                        }}
-                      />
-                    );
+                    // Pre-render all videos in the queue, show only the current one
+                    return transitionVideoQueue.map((videoPhotoId, videoIndex) => {
+                      const videoPhoto = photos.find(p => p.id === videoPhotoId);
+                      const videoUrl = videoPhoto?.videoUrl;
+                      
+                      if (!videoUrl) return null;
+                      
+                      const isCurrentVideo = videoIndex === currentVideoIndex;
+                      
+                      return (
+                        <video
+                          key={`${photo.id}-video-${videoIndex}`}
+                          src={videoUrl}
+                          autoPlay
+                          loop={shouldLoop}
+                          muted
+                          playsInline
+                          preload="auto"
+                          data-is-current={isCurrentVideo}
+                          ref={(el) => {
+                            // Control play/pause based on visibility
+                            if (el) {
+                              const wasCurrent = el.dataset.wasCurrent === 'true';
+                              if (isCurrentVideo && !wasCurrent) {
+                                // Transitioning TO this video - reset and play
+                                el.currentTime = 0;
+                                el.play().catch(() => {});
+                                el.dataset.wasCurrent = 'true';
+                              } else if (!isCurrentVideo && wasCurrent) {
+                                // Transitioning AWAY from this video - pause
+                                el.pause();
+                                el.dataset.wasCurrent = 'false';
+                              } else if (isCurrentVideo && el.paused) {
+                                // Ensure current video is playing
+                                el.play().catch(() => {});
+                              }
+                            }
+                          }}
+                          onEnded={() => {
+                            // Only advance if this is the current video and all videos are complete
+                            if (isCurrentVideo && allTransitionVideosComplete) {
+                              setCurrentVideoIndexByPhoto(prev => ({
+                                ...prev,
+                                [photo.id]: (prev[photo.id] + 1) % transitionVideoQueue.length
+                              }));
+                            }
+                          }}
+                          style={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover',
+                            zIndex: 5,
+                            pointerEvents: 'none',
+                            opacity: isCurrentVideo ? 1 : 0,
+                            visibility: isCurrentVideo ? 'visible' : 'hidden'
+                          }}
+                        />
+                      );
+                    });
                   }
                   
                   // Normal mode - just play the photo's own video
@@ -7589,15 +7884,28 @@ const PhotoGallery = ({
                       </div>
                       
                       {/* ETA - Larger and more prominent */}
-                      <div style={{
-                        fontSize: '16px',
-                        fontWeight: '700',
-                        color: '#fff',
-                        marginBottom: '2px',
-                        textShadow: '0 1px 3px rgba(0,0,0,0.5)',
-                        // Add blink animation when ETA is stuck at 1 second
-                        animation: stuckVideoETAs.has(photo.id || index) ? 'blink 1s ease-in-out infinite' : 'none'
-                      }}>
+                      <div 
+                        className={stuckVideoETAs.has(photo.id || index) ? 'video-eta-stuck' : ''}
+                        style={{
+                          fontSize: '16px',
+                          fontWeight: '700',
+                          color: '#fff',
+                          marginBottom: '2px',
+                          textShadow: '0 1px 3px rgba(0,0,0,0.5)',
+                          // Add blink animation when ETA is stuck at 1 second or 0 seconds
+                          // Use class-based approach for better mobile compatibility
+                          ...(stuckVideoETAs.has(photo.id || index) ? {
+                            animationName: 'blink',
+                            animationDuration: '2s',
+                            animationTimingFunction: 'ease-in-out',
+                            animationIterationCount: 'infinite',
+                            WebkitAnimationName: 'blink',
+                            WebkitAnimationDuration: '2s',
+                            WebkitAnimationTimingFunction: 'ease-in-out',
+                            WebkitAnimationIterationCount: 'infinite'
+                          } : {})
+                        }}
+                      >
                         {photo.videoETA !== undefined && photo.videoETA > 0 ? (
                           <>
                             <span style={{ fontSize: '12px', marginRight: '2px' }}>⏱️</span>

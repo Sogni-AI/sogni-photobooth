@@ -4818,10 +4818,18 @@ const App = () => {
       setLastPhotoData({ blob: photoBlob, dataUrl, sourceType });
       const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
       // Get theme-filtered prompts for random selection
+      // Read latest theme state from localStorage to avoid stale closure values
       const getFilteredPromptsForRandom = () => {
         // For Flux models, use all available prompts without theme filtering
         const isFluxKontext = isFluxKontextModel(selectedModel);
-        return isFluxKontext ? stylePrompts : getEnabledPrompts(currentThemeState, stylePrompts);
+        if (isFluxKontext) {
+          return stylePrompts;
+        }
+        // Read latest theme preferences from localStorage to ensure we use the most current settings
+        const saved = getThemeGroupPreferences();
+        const defaultState = getDefaultThemeGroupState();
+        const latestThemeState = { ...defaultState, ...saved };
+        return getEnabledPrompts(latestThemeState, stylePrompts);
       };
 
       // Get blocked prompts from localStorage to filter them out
@@ -4863,7 +4871,11 @@ const App = () => {
         finalPositivePrompt = getRandomMixPrompts(numImages, filteredPrompts); 
       } else if (selectedStyle === 'oneOfEach') {
         // Use one prompt from each enabled theme group in order
-        finalPositivePrompt = getOneOfEachPrompts(currentThemeState, stylePrompts, numImages);
+        // Read latest theme state from localStorage to avoid stale closure values
+        const saved = getThemeGroupPreferences();
+        const defaultState = getDefaultThemeGroupState();
+        const latestThemeState = { ...defaultState, ...saved };
+        finalPositivePrompt = getOneOfEachPrompts(latestThemeState, stylePrompts, numImages);
       } else {
         // Use the selected style prompt, but skip if it's blocked
         if (blockedPrompts.includes(selectedStyle)) {
