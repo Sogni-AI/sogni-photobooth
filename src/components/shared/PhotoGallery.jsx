@@ -3445,16 +3445,16 @@ const PhotoGallery = ({
     ctx.fill();
   }, [audioWaveform, musicStartOffset, audioDuration, isPlayingPreview, previewPlayhead, transitionVideoQueue, photos]);
 
-  // Update waveform when data changes or modal opens
+  // Update waveform when data changes or modal/popup opens
   useEffect(() => {
-    if (showMusicModal && audioWaveform) {
+    if ((showMusicModal || showTransitionVideoPopup) && audioWaveform) {
       // Use requestAnimationFrame for smooth updates during playback
       const frame = requestAnimationFrame(() => {
         drawWaveform();
       });
       return () => cancelAnimationFrame(frame);
     }
-  }, [drawWaveform, showMusicModal, audioWaveform, musicStartOffset, isPlayingPreview, previewPlayhead]);
+  }, [drawWaveform, showMusicModal, showTransitionVideoPopup, audioWaveform, musicStartOffset, isPlayingPreview, previewPlayhead]);
 
   // Calculate video duration for selection width
   const getVideoDuration = useCallback(() => {
@@ -3701,9 +3701,9 @@ const PhotoGallery = ({
     }
   }, [isPlayingPreview, musicStartOffset, musicFile, getVideoDuration]);
 
-  // Cleanup audio preview on modal close
+  // Cleanup audio preview on modal/popup close
   useEffect(() => {
-    if (!showMusicModal) {
+    if (!showMusicModal && !showTransitionVideoPopup) {
       if (audioPreviewRef.current) {
         audioPreviewRef.current.pause();
       }
@@ -3712,11 +3712,11 @@ const PhotoGallery = ({
         cancelAnimationFrame(playbackAnimationRef.current);
       }
     }
-  }, [showMusicModal]);
+  }, [showMusicModal, showTransitionVideoPopup]);
 
-  // Regenerate waveform when modal opens with existing file but no waveform
+  // Regenerate waveform when modal/popup opens with existing file but no waveform
   useEffect(() => {
-    if (showMusicModal && musicFile && !audioWaveform) {
+    if ((showMusicModal || showTransitionVideoPopup) && musicFile && !audioWaveform) {
       // Skip waveform regeneration for presets (they have placeholder waveforms set in handlePresetSelect)
       // and the file is empty, so decoding would fail
       if (musicFile.isPreset) {
@@ -3780,7 +3780,7 @@ const PhotoGallery = ({
         }
       })();
     }
-  }, [showMusicModal, musicFile, audioWaveform, selectedPresetId]);
+  }, [showMusicModal, showTransitionVideoPopup, musicFile, audioWaveform, selectedPresetId]);
 
   // Proceed with download (with or without music)
   const handleProceedDownload = useCallback(async (includeMusic) => {
@@ -10246,6 +10246,22 @@ const PhotoGallery = ({
       </div>
       )}
 
+      {/* Hidden file input for music upload - always rendered so it's available to both popups */}
+      <input
+        ref={musicFileInputRef}
+        type="file"
+        accept=".m4a,.mp3,audio/mp4,audio/x-m4a,audio/mpeg,audio/mp3"
+        onChange={handleMusicFileSelect}
+        style={{ display: 'none' }}
+      />
+      
+      {/* Hidden audio element for preview playback */}
+      <audio
+        ref={audioPreviewRef}
+        style={{ display: 'none' }}
+        onEnded={() => setIsPlayingPreview(false)}
+      />
+
       {/* Video Intro Popup - Shows on first Video button click */}
       <VideoIntroPopup
         visible={showVideoIntroPopup}
@@ -10971,457 +10987,38 @@ const PhotoGallery = ({
         />
       )}
 
-      {/* Add Music Button - shown when in transition mode with completed videos */}
-      {isTransitionMode && allTransitionVideosComplete && createPortal(
+      {/* Mute toggle - shown when in transition mode with completed videos and music applied */}
+      {isTransitionMode && allTransitionVideosComplete && appliedMusic && createPortal(
         <div
           style={{
             position: 'fixed',
             bottom: '100px',
             right: '20px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            zIndex: 1000 // Low z-index to stay below batch action dropdown
+            zIndex: 1000
           }}
         >
-          {/* Mute toggle - only show when music is applied */}
-          {appliedMusic && (
-            <button
-              onClick={() => setIsInlineAudioMuted(prev => !prev)}
-              style={{
-                padding: '12px',
-                backgroundColor: isInlineAudioMuted ? 'rgba(255, 82, 82, 0.8)' : '#1a1a2e',
-                border: '2px solid rgba(255, 255, 255, 0.2)',
-                borderRadius: '50%',
-                color: '#fff',
-                cursor: 'pointer',
-                fontSize: '16px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
-                transition: 'all 0.2s ease',
-                width: '44px',
-                height: '44px'
-              }}
-              title={isInlineAudioMuted ? 'Unmute audio preview' : 'Mute audio preview'}
-            >
-              {isInlineAudioMuted ? '🔇' : '🔊'}
-            </button>
-          )}
-          
-          {/* Main Add Music button */}
           <button
-            onClick={() => setShowMusicModal(true)}
+            onClick={() => setIsInlineAudioMuted(prev => !prev)}
             style={{
-              padding: '12px 20px',
-              backgroundColor: appliedMusic ? '#4CAF50' : '#1a1a2e',
-              border: appliedMusic ? '2px solid #4CAF50' : '2px solid rgba(255, 255, 255, 0.2)',
-              borderRadius: '30px',
+              padding: '12px',
+              backgroundColor: isInlineAudioMuted ? 'rgba(255, 82, 82, 0.8)' : '#1a1a2e',
+              border: '2px solid rgba(255, 255, 255, 0.2)',
+              borderRadius: '50%',
               color: '#fff',
               cursor: 'pointer',
-              fontSize: '14px',
-              fontWeight: '600',
+              fontSize: '16px',
               display: 'flex',
               alignItems: 'center',
-              gap: '8px',
+              justifyContent: 'center',
               boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
-              transition: 'all 0.2s ease'
+              transition: 'all 0.2s ease',
+              width: '44px',
+              height: '44px'
             }}
-            title={appliedMusic ? 'Change music track' : 'Add music to transition video'}
+            title={isInlineAudioMuted ? 'Unmute audio' : 'Mute audio'}
           >
-            🎵 {appliedMusic ? 'Music Added' : 'Add Music'}
-            {appliedMusic && (
-              <span style={{
-                fontSize: '10px',
-                backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                padding: '2px 6px',
-                borderRadius: '10px'
-              }}>
-                ✓
-              </span>
-            )}
+            {isInlineAudioMuted ? '🔇' : '🔊'}
           </button>
-        </div>,
-        document.body
-      )}
-
-      {showMusicModal && createPortal(
-        <div
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.8)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 10000,
-            padding: '20px'
-          }}
-          onClick={(e) => {
-            if (e.target === e.currentTarget) {
-              setShowMusicModal(false);
-              // Keep file and waveform for next time, just stop preview
-              setIsPlayingPreview(false);
-              if (audioPreviewRef.current) {
-                audioPreviewRef.current.pause();
-              }
-            }
-          }}
-        >
-          <div
-            style={{
-              backgroundColor: '#1a1a2e',
-              borderRadius: '16px',
-              padding: '24px',
-              maxWidth: '400px',
-              width: '100%',
-              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)',
-              border: '1px solid rgba(255, 255, 255, 0.1)'
-            }}
-          >
-            <h3 style={{
-              margin: '0 0 8px 0',
-              color: '#fff',
-              fontSize: '20px',
-              fontWeight: '600',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px'
-            }}>
-              🎵 Add Music Track
-              <span style={{
-                fontSize: '10px',
-                backgroundColor: '#ff6b6b',
-                color: '#fff',
-                padding: '2px 6px',
-                borderRadius: '4px',
-                fontWeight: '500'
-              }}>BETA</span>
-            </h3>
-            <p style={{
-              margin: '0 0 20px 0',
-              color: 'rgba(255, 255, 255, 0.6)',
-              fontSize: '14px'
-            }}>
-              Add a music track to your transition video
-            </p>
-
-            {/* Preset Music Selection - Dropdown */}
-            <div style={{ marginBottom: '16px' }}>
-              <label style={{
-                display: 'block',
-                color: 'rgba(255, 255, 255, 0.8)',
-                fontSize: '13px',
-                marginBottom: '8px'
-              }}>
-                🎶 Choose a Track
-              </label>
-              <select
-                value={selectedPresetId || ''}
-                onChange={(e) => {
-                  const preset = TRANSITION_MUSIC_PRESETS.find(p => p.id === e.target.value);
-                  if (preset) {
-                    handlePresetSelect(preset);
-                  }
-                }}
-                disabled={isLoadingPreset}
-                style={{
-                  width: '100%',
-                  padding: '12px 16px',
-                  backgroundColor: selectedPresetId ? 'rgba(76, 175, 80, 0.2)' : 'rgba(30, 30, 40, 0.9)',
-                  border: selectedPresetId ? '1px solid rgba(76, 175, 80, 0.5)' : '1px solid rgba(255, 255, 255, 0.2)',
-                  borderRadius: '8px',
-                  color: '#fff',
-                  cursor: isLoadingPreset ? 'wait' : 'pointer',
-                  fontSize: '14px',
-                  appearance: 'none',
-                  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23fff' d='M6 8L1 3h10z'/%3E%3C/svg%3E")`,
-                  backgroundRepeat: 'no-repeat',
-                  backgroundPosition: 'right 12px center',
-                  paddingRight: '36px'
-                }}
-              >
-                <option value="" style={{ backgroundColor: '#1e1e28', color: '#fff' }}>
-                  {isLoadingPreset ? '⏳ Loading...' : '🎵 Select a preset track...'}
-                </option>
-                {TRANSITION_MUSIC_PRESETS.map((preset) => (
-                  <option 
-                    key={preset.id} 
-                    value={preset.id}
-                    style={{ backgroundColor: '#1e1e28', color: '#fff' }}
-                  >
-                    {preset.title} • {preset.duration}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Divider */}
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              margin: '16px 0',
-              color: 'rgba(255, 255, 255, 0.4)',
-              fontSize: '12px'
-            }}>
-              <div style={{ flex: 1, height: '1px', backgroundColor: 'rgba(255, 255, 255, 0.1)' }} />
-              <span>or upload your own</span>
-              <div style={{ flex: 1, height: '1px', backgroundColor: 'rgba(255, 255, 255, 0.1)' }} />
-            </div>
-
-            {/* Custom File Upload */}
-            <div style={{ marginBottom: '16px' }}>
-              <input
-                ref={musicFileInputRef}
-                type="file"
-                accept=".m4a,.mp3,audio/mp4,audio/x-m4a,audio/mpeg,audio/mp3"
-                onChange={handleCustomFileSelect}
-                style={{ display: 'none' }}
-              />
-              <button
-                onClick={() => {
-                  setSelectedPresetId(null);
-                  musicFileInputRef.current?.click();
-                }}
-                style={{
-                  width: '100%',
-                  padding: '12px 16px',
-                  backgroundColor: musicFile && !selectedPresetId ? 'rgba(76, 175, 80, 0.2)' : 'rgba(255, 255, 255, 0.05)',
-                  border: musicFile && !selectedPresetId ? '1px solid rgba(76, 175, 80, 0.5)' : '1px dashed rgba(255, 255, 255, 0.2)',
-                  borderRadius: '8px',
-                  color: '#fff',
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  textAlign: 'center',
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                {musicFile && !selectedPresetId ? `✅ ${musicFile.name}` : '📁 Upload MP3 or M4A File'}
-              </button>
-              <p style={{
-                margin: '8px 0 0 0',
-                color: 'rgba(255, 255, 255, 0.4)',
-                fontSize: '11px',
-                textAlign: 'center'
-              }}>
-                MP3 files will be automatically converted to M4A
-              </p>
-            </div>
-
-            {/* Waveform Visualization */}
-            {musicFile && audioWaveform && (
-              <div style={{ marginBottom: '16px' }}>
-                <div style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  marginBottom: '8px'
-                }}>
-                  <label style={{
-                    color: 'rgba(255, 255, 255, 0.8)',
-                    fontSize: '13px'
-                  }}>
-                    Select Start Position
-                  </label>
-                  <button
-                    onClick={toggleAudioPreview}
-                    style={{
-                      padding: '4px 12px',
-                      backgroundColor: isPlayingPreview ? '#ff6b6b' : 'rgba(255, 255, 255, 0.1)',
-                      border: 'none',
-                      borderRadius: '4px',
-                      color: '#fff',
-                      cursor: 'pointer',
-                      fontSize: '12px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px'
-                    }}
-                  >
-                    {isPlayingPreview ? '⏸ Pause' : '▶ Preview'}
-                  </button>
-                </div>
-                
-                {/* Canvas for waveform */}
-                <div
-                  style={{
-                    position: 'relative',
-                    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-                    borderRadius: '8px',
-                    overflow: 'hidden',
-                    cursor: isDraggingWaveform ? 'grabbing' : 'crosshair',
-                    userSelect: 'none'
-                  }}
-                  onMouseDown={handleWaveformMouseDown}
-                >
-                  <canvas
-                    ref={waveformCanvasRef}
-                    width={352}
-                    height={80}
-                    style={{
-                      display: 'block',
-                      width: '100%',
-                      height: '80px',
-                      pointerEvents: 'none'
-                    }}
-                  />
-                </div>
-                
-                {/* Time indicators */}
-                <div style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  marginTop: '4px',
-                  fontSize: '11px',
-                  color: 'rgba(255, 255, 255, 0.5)'
-                }}>
-                  <span>0:00</span>
-                  <span style={{ color: '#ff6b6b' }}>
-                    Start: {Math.floor(musicStartOffset / 60)}:{(musicStartOffset % 60).toFixed(1).padStart(4, '0')}
-                  </span>
-                  <span>
-                    {Math.floor(audioDuration / 60)}:{Math.floor(audioDuration % 60).toString().padStart(2, '0')}
-                  </span>
-                </div>
-                
-                <p style={{
-                  margin: '8px 0 0 0',
-                  color: 'rgba(255, 255, 255, 0.4)',
-                  fontSize: '11px',
-                  textAlign: 'center'
-                }}>
-                  Click to set position • Drag red area to move selection
-                </p>
-                
-                {/* Hidden audio element for preview */}
-                <audio
-                  ref={audioPreviewRef}
-                  style={{ display: 'none' }}
-                  onEnded={() => setIsPlayingPreview(false)}
-                />
-              </div>
-            )}
-
-            {/* Manual offset input as fallback */}
-            {musicFile && !audioWaveform && (
-              <div style={{ marginBottom: '20px' }}>
-                <label style={{
-                  display: 'block',
-                  color: 'rgba(255, 255, 255, 0.8)',
-                  fontSize: '13px',
-                  marginBottom: '8px'
-                }}>
-                  Start Offset (seconds)
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.5"
-                  value={musicStartOffset}
-                  onChange={(e) => setMusicStartOffset(parseFloat(e.target.value) || 0)}
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                    border: '1px solid rgba(255, 255, 255, 0.2)',
-                    borderRadius: '8px',
-                    color: '#fff',
-                    fontSize: '14px',
-                    boxSizing: 'border-box'
-                  }}
-                  placeholder="0"
-                />
-                <p style={{
-                  margin: '8px 0 0 0',
-                  color: 'rgba(255, 255, 255, 0.4)',
-                  fontSize: '11px'
-                }}>
-                  Loading waveform...
-                </p>
-              </div>
-            )}
-
-            {/* Action Buttons */}
-            <div style={{
-              display: 'flex',
-              gap: '12px',
-              marginTop: '20px'
-            }}>
-              <button
-                onClick={() => {
-                  setShowMusicModal(false);
-                  // Keep file and waveform for next time, just stop preview
-                  setIsPlayingPreview(false);
-                  if (audioPreviewRef.current) {
-                    audioPreviewRef.current.pause();
-                  }
-                }}
-                style={{
-                  flex: 1,
-                  padding: '12px 16px',
-                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
-                  borderRadius: '8px',
-                  color: '#fff',
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                Cancel
-              </button>
-              {appliedMusic && (
-                <button
-                  onClick={() => {
-                    handleRemoveMusic();
-                    setShowMusicModal(false);
-                    setIsPlayingPreview(false);
-                    if (audioPreviewRef.current) {
-                      audioPreviewRef.current.pause();
-                    }
-                  }}
-                  style={{
-                    flex: 1,
-                    padding: '12px 16px',
-                    backgroundColor: 'rgba(255, 82, 82, 0.2)',
-                    border: '1px solid rgba(255, 82, 82, 0.5)',
-                    borderRadius: '8px',
-                    color: '#ff5252',
-                    cursor: 'pointer',
-                    fontSize: '14px',
-                    fontWeight: '500',
-                    transition: 'all 0.2s ease'
-                  }}
-                >
-                  Remove Music
-                </button>
-              )}
-              <button
-                onClick={handleApplyMusic}
-                disabled={!musicFile}
-                style={{
-                  flex: 1,
-                  padding: '12px 16px',
-                  backgroundColor: musicFile ? '#4CAF50' : 'rgba(255, 255, 255, 0.05)',
-                  border: 'none',
-                  borderRadius: '8px',
-                  color: musicFile ? '#fff' : 'rgba(255, 255, 255, 0.3)',
-                  cursor: musicFile ? 'pointer' : 'not-allowed',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                {appliedMusic ? 'Update' : 'Apply'}
-              </button>
-            </div>
-          </div>
         </div>,
         document.body
       )}
