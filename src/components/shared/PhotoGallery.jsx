@@ -10229,7 +10229,7 @@ const PhotoGallery = ({
         <div
           style={{
             position: 'fixed',
-            bottom: '160px',
+            bottom: '100px',
             right: '20px',
             display: 'flex',
             alignItems: 'center',
