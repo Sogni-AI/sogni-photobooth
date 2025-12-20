@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useApp } from '../../context/AppContext';
 import { AspectRatioOption, TezDevTheme, OutputFormat, Settings } from '../../types/index';
-import { isFluxKontextModel, getModelRanges, getModelDefaults } from '../../constants/settings';
+import { isFluxKontextModel, getModelRanges, getModelDefaults, DEFAULT_SETTINGS } from '../../constants/settings';
 import { VideoQualityPreset, VideoResolution } from '../../constants/videoSettings';
 import { themeConfigService } from '../../services/themeConfig';
 import { sanitizeUrl, getUrlValidationError } from '../../utils/urlValidation';
@@ -1406,7 +1406,7 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
                 <div className="control-option" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '8px' }}>
                   <label className="control-label">Transition Video Prompt:</label>
                   <textarea
-                    value={settings.videoTransitionPrompt || ''}
+                    value={settings.videoTransitionPrompt ?? DEFAULT_SETTINGS.videoTransitionPrompt ?? ''}
                     onChange={(e) => updateSetting('videoTransitionPrompt', e.target.value)}
                     placeholder="Prompt for transition videos between images..."
                     rows={4}
