@@ -13,7 +13,7 @@ import promptsDataRaw from '../../prompts.json';
 import { THEME_GROUPS, getDefaultThemeGroupState, getEnabledPrompts } from '../../constants/themeGroups';
 import { getThemeGroupPreferences, saveThemeGroupPreferences, getFavoriteImages, toggleFavoriteImage, saveFavoriteImages, getBlockedPrompts, blockPrompt, hasSeenBatchVideoTip, markBatchVideoTipShown } from '../../utils/cookies';
 import { getAttributionText } from '../../config/ugcAttributions';
-import { isFluxKontextModel, SAMPLE_GALLERY_CONFIG, getQRWatermarkConfig } from '../../constants/settings';
+import { isFluxKontextModel, SAMPLE_GALLERY_CONFIG, getQRWatermarkConfig, DEFAULT_SETTINGS } from '../../constants/settings';
 import { themeConfigService } from '../../services/themeConfig';
 import { useApp } from '../../context/AppContext';
 import { trackDownloadWithStyle } from '../../services/analyticsService';
@@ -2257,9 +2257,8 @@ const PhotoGallery = ({
     // Hide the NEW badge after first video generation attempt
     setShowVideoNewBadge(false);
 
-    // Use transition prompt from settings (with default fallback)
-    const defaultTransitionPrompt = 'Cinematic transition shot that connects the starting frame reference image to the ending frame reference image. Preserve the same subject identity and facial structure. Use a premium artistic transition or transformation, dynamic subject action plus a subject action that passes close to the lens to create brief natural occlusion, then reveal cleanly into the ending scene. Camera motion: smooth dolly push with parallax, or a pan that resolves into the new scene, or a short orbit arc around the subject. Creative transition action near lens. During the occlusion, allow wardrobe and environment to morph smoothly; keep the final reveal sharp, stable, and cinematic with restrained optical character, subtle anamorphic flare, fine film grain, controlled contrast';
-    const motionPrompt = settings.videoTransitionPrompt || defaultTransitionPrompt;
+    // Use transition prompt from settings (with default fallback from DEFAULT_SETTINGS)
+    const motionPrompt = settings.videoTransitionPrompt || DEFAULT_SETTINGS.videoTransitionPrompt;
     const negativePrompt = settings.videoNegativePrompt || '';
 
     // Show toast for batch generation
@@ -10235,7 +10234,7 @@ const PhotoGallery = ({
             display: 'flex',
             alignItems: 'center',
             gap: '8px',
-            zIndex: 10000010
+            zIndex: 99990 // Below settings modal (99999) but above most UI elements
           }}
         >
           {/* Mute toggle - only show when music is applied */}
