@@ -85,6 +85,7 @@ const transcodeToM4A = (inputPath, outputPath) => {
   return new Promise((resolve, reject) => {
     // FFmpeg command: convert to AAC in M4A container
     // -i: input file
+    // -vn: disable video (important for audio-only processing)
     // -c:a aac: use AAC codec
     // -b:a 192k: 192kbps bitrate (good quality)
     // -ar 44100: 44.1kHz sample rate
@@ -93,6 +94,7 @@ const transcodeToM4A = (inputPath, outputPath) => {
     // -y: overwrite output
     const args = [
       '-i', inputPath,
+      '-vn',              // Disable video processing
       '-c:a', 'aac',
       '-b:a', '192k',
       '-ar', '44100',
