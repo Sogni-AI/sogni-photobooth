@@ -977,6 +977,8 @@ const PhotoGallery = ({
   const [currentVideoIndexByPhoto, setCurrentVideoIndexByPhoto] = useState({});
   // Track if all transition videos have finished generating (for sync mode)
   const [allTransitionVideosComplete, setAllTransitionVideosComplete] = useState(false);
+  // Counter to force all videos to reset to beginning when sync starts
+  const [syncResetCounter, setSyncResetCounter] = useState(0);
   // Store ready-to-share transition video blob (for iOS share sheet after async concat)
   const [readyTransitionVideo, setReadyTransitionVideo] = useState(null);
   
@@ -2456,6 +2458,9 @@ const PhotoGallery = ({
             syncedIndices[p.id] = 0;
           });
           setCurrentVideoIndexByPhoto(syncedIndices);
+          
+          // Increment sync counter to force all videos to reset their currentTime
+          setSyncResetCounter(prev => prev + 1);
           
           if (successCount > 0 && errorCount === 0) {
             const videoMessage = getRandomVideoMessage();
@@ -8564,11 +8569,21 @@ const PhotoGallery = ({
                           playsInline
                           preload="auto"
                           data-is-current={isCurrentVideo}
+                          data-sync-counter={syncResetCounter}
                           ref={(el) => {
                             // Control play/pause based on visibility
                             if (el) {
                               const wasCurrent = el.dataset.wasCurrent === 'true';
-                              if (isCurrentVideo && !wasCurrent) {
+                              const lastSyncCounter = parseInt(el.dataset.lastSyncCounter || '0', 10);
+                              const syncJustChanged = lastSyncCounter !== syncResetCounter;
+                              
+                              if (syncJustChanged && isCurrentVideo) {
+                                // Sync mode just started - reset ALL current videos to beginning
+                                el.currentTime = 0;
+                                el.play().catch(() => {});
+                                el.dataset.wasCurrent = 'true';
+                                el.dataset.lastSyncCounter = String(syncResetCounter);
+                              } else if (isCurrentVideo && !wasCurrent) {
                                 // Transitioning TO this video - reset and play
                                 el.currentTime = 0;
                                 el.play().catch(() => {});
@@ -8580,6 +8595,11 @@ const PhotoGallery = ({
                               } else if (isCurrentVideo && el.paused) {
                                 // Ensure current video is playing
                                 el.play().catch(() => {});
+                              }
+                              
+                              // Update sync counter tracking
+                              if (lastSyncCounter !== syncResetCounter) {
+                                el.dataset.lastSyncCounter = String(syncResetCounter);
                               }
                             }
                           }}
