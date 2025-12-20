@@ -10442,10 +10442,9 @@ const PhotoGallery = ({
 
               {/* Music Section - Compact */}
               <div style={{
-                backgroundColor: 'rgba(255, 255, 255, 0.5)',
+                backgroundColor: 'rgba(0, 0, 0, 0.08)',
                 borderRadius: '8px',
-                padding: '10px 12px',
-                border: '1px solid rgba(0, 0, 0, 0.1)'
+                padding: '10px 12px'
               }}>
                 <div style={{
                   display: 'flex',
@@ -10487,12 +10486,13 @@ const PhotoGallery = ({
                   style={{
                     width: '100%',
                     padding: '8px 10px',
-                    backgroundColor: selectedPresetId ? 'rgba(76, 175, 80, 0.2)' : 'rgba(255, 255, 255, 0.8)',
-                    border: selectedPresetId ? '1px solid rgba(76, 175, 80, 0.5)' : '1px solid rgba(0, 0, 0, 0.15)',
+                    backgroundColor: selectedPresetId ? 'rgba(76, 175, 80, 0.3)' : 'rgba(255, 255, 255, 0.95)',
+                    border: selectedPresetId ? '2px solid rgba(76, 175, 80, 0.6)' : '1px solid rgba(0, 0, 0, 0.2)',
                     borderRadius: '6px',
                     color: '#000',
                     cursor: isLoadingPreset ? 'wait' : 'pointer',
                     fontSize: '12px',
+                    fontWeight: '500',
                     appearance: 'none',
                     backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23000' d='M6 8L1 3h10z'/%3E%3C/svg%3E")`,
                     backgroundRepeat: 'no-repeat',
@@ -10517,12 +10517,12 @@ const PhotoGallery = ({
                   alignItems: 'center',
                   gap: '6px',
                   margin: '6px 0',
-                  color: 'rgba(0, 0, 0, 0.3)',
+                  color: 'rgba(0, 0, 0, 0.5)',
                   fontSize: '10px'
                 }}>
-                  <div style={{ flex: 1, height: '1px', backgroundColor: 'rgba(0, 0, 0, 0.1)' }} />
+                  <div style={{ flex: 1, height: '1px', backgroundColor: 'rgba(0, 0, 0, 0.2)' }} />
                   <span>or</span>
-                  <div style={{ flex: 1, height: '1px', backgroundColor: 'rgba(0, 0, 0, 0.1)' }} />
+                  <div style={{ flex: 1, height: '1px', backgroundColor: 'rgba(0, 0, 0, 0.2)' }} />
                 </div>
 
                 {/* Custom file upload button */}
@@ -10534,12 +10534,13 @@ const PhotoGallery = ({
                   style={{
                     width: '100%',
                     padding: '8px 10px',
-                    backgroundColor: musicFile && !selectedPresetId ? 'rgba(76, 175, 80, 0.2)' : 'rgba(255, 255, 255, 0.6)',
-                    border: musicFile && !selectedPresetId ? '1px solid rgba(76, 175, 80, 0.5)' : '1px dashed rgba(0, 0, 0, 0.2)',
+                    backgroundColor: musicFile && !selectedPresetId ? 'rgba(76, 175, 80, 0.3)' : 'rgba(255, 255, 255, 0.95)',
+                    border: musicFile && !selectedPresetId ? '2px solid rgba(76, 175, 80, 0.6)' : '1px dashed rgba(0, 0, 0, 0.35)',
                     borderRadius: '6px',
                     color: '#000',
                     cursor: 'pointer',
                     fontSize: '12px',
+                    fontWeight: '500',
                     textAlign: 'center'
                   }}
                 >
