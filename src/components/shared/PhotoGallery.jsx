@@ -10478,8 +10478,8 @@ const PhotoGallery = ({
         />
       )}
 
-      {/* Add Music Button - shown when in transition mode with completed videos, hidden when batch menu is open */}
-      {isTransitionMode && allTransitionVideosComplete && !batchActionMode && createPortal(
+      {/* Add Music Button - shown when in transition mode with completed videos */}
+      {isTransitionMode && allTransitionVideosComplete && createPortal(
         <div
           style={{
             position: 'fixed',
@@ -10488,7 +10488,7 @@ const PhotoGallery = ({
             display: 'flex',
             alignItems: 'center',
             gap: '8px',
-            zIndex: 99990 // Below settings modal (99999) but above most UI elements
+            zIndex: 1000 // Low z-index to stay below batch action dropdown
           }}
         >
           {/* Mute toggle - only show when music is applied */}
