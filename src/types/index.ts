@@ -134,4 +134,5 @@ export interface Settings {
   videoDuration?: 3 | 5 | 7;
   videoPositivePrompt?: string;
   videoNegativePrompt?: string;
+  videoTransitionPrompt?: string;
 } 

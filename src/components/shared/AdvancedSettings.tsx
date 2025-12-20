@@ -1401,6 +1401,32 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
                 <div className="control-description" style={{ marginTop: '-8px', marginBottom: '12px', marginLeft: '8px' }}>
                   Optional - things to avoid in the video
                 </div>
+
+                {/* Video Transition Prompt */}
+                <div className="control-option" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '8px' }}>
+                  <label className="control-label">Transition Video Prompt:</label>
+                  <textarea
+                    value={settings.videoTransitionPrompt || ''}
+                    onChange={(e) => updateSetting('videoTransitionPrompt', e.target.value)}
+                    placeholder="Prompt for transition videos between images..."
+                    rows={4}
+                    style={{
+                      width: '100%',
+                      padding: '8px 12px',
+                      borderRadius: '6px',
+                      border: '1px solid rgba(255, 255, 255, 0.2)',
+                      background: 'rgba(0, 0, 0, 0.3)',
+                      color: 'white',
+                      fontSize: '13px',
+                      resize: 'vertical',
+                      minHeight: '80px',
+                      fontFamily: 'inherit'
+                    }}
+                  />
+                </div>
+                <div className="control-description" style={{ marginTop: '-8px', marginBottom: '12px', marginLeft: '8px' }}>
+                  Prompt used for batch transition videos (connecting images in sequence)
+                </div>
               </div>
             )}
           </div>

@@ -2257,8 +2257,9 @@ const PhotoGallery = ({
     // Hide the NEW badge after first video generation attempt
     setShowVideoNewBadge(false);
 
-    // Use fixed transition prompt
-    const motionPrompt = 'Cinematic transition shot that connects the starting frame reference image to the ending frame reference image. Preserve the same subject identity and facial structure. Use a premium artistic transition or transformation: dynamic camera zoom plus a subject action that passes close to the lens to create brief natural occlusion, then reveal cleanly into the ending scene. Camera motion: smooth dolly push with parallax, or a pan that resolves into the new scene, or a short orbit arc around the subject. Creative transition action near lens. During the occlusion, allow wardrobe and environment to morph smoothly; keep the final reveal sharp, stable, and cinematic with restrained optical character, subtle anamorphic flare, fine film grain, controlled contrast';
+    // Use transition prompt from settings (with default fallback)
+    const defaultTransitionPrompt = 'Cinematic transition shot that connects the starting frame reference image to the ending frame reference image. Preserve the same subject identity and facial structure. Use a premium artistic transition or transformation, dynamic subject action plus a subject action that passes close to the lens to create brief natural occlusion, then reveal cleanly into the ending scene. Camera motion: smooth dolly push with parallax, or a pan that resolves into the new scene, or a short orbit arc around the subject. Creative transition action near lens. During the occlusion, allow wardrobe and environment to morph smoothly; keep the final reveal sharp, stable, and cinematic with restrained optical character, subtle anamorphic flare, fine film grain, controlled contrast';
+    const motionPrompt = settings.videoTransitionPrompt || defaultTransitionPrompt;
     const negativePrompt = settings.videoNegativePrompt || '';
 
     // Show toast for batch generation
