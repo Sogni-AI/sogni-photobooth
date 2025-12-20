@@ -3381,10 +3381,11 @@ const PhotoGallery = ({
     ctx.clearRect(0, 0, width, height);
     
     // Calculate video duration for the selection indicator
-    const orderedVideos = transitionVideoQueue
-      .map(photoId => photos.find(p => p.id === photoId))
-      .filter(photo => photo && photo.videoUrl);
-    const videoDuration = orderedVideos.length * 3; // Assuming 3 seconds per video
+    // Use loadedPhotosCount * videoDuration setting (works before AND after generation)
+    const currentLoadedCount = photos.filter(
+      photo => !photo.hidden && !photo.loading && !photo.generating && !photo.error && photo.images && photo.images.length > 0 && !photo.isOriginal
+    ).length;
+    const videoDuration = currentLoadedCount * (settings.videoDuration || 5);
     
     // Draw selection range indicator
     if (audioDuration > 0) {
@@ -3443,7 +3444,7 @@ const PhotoGallery = ({
     ctx.lineTo(startMarkerX, 10);
     ctx.closePath();
     ctx.fill();
-  }, [audioWaveform, musicStartOffset, audioDuration, isPlayingPreview, previewPlayhead, transitionVideoQueue, photos]);
+  }, [audioWaveform, musicStartOffset, audioDuration, isPlayingPreview, previewPlayhead, photos, settings.videoDuration]);
 
   // Update waveform when data changes or modal/popup opens
   useEffect(() => {
@@ -3458,11 +3459,12 @@ const PhotoGallery = ({
 
   // Calculate video duration for selection width
   const getVideoDuration = useCallback(() => {
-    const orderedVideos = transitionVideoQueue
-      .map(photoId => photos.find(p => p.id === photoId))
-      .filter(photo => photo && photo.videoUrl);
-    return orderedVideos.length * 3; // 3 seconds per video
-  }, [transitionVideoQueue, photos]);
+    // Use loadedPhotosCount * videoDuration setting (works before AND after generation)
+    const currentLoadedCount = photos.filter(
+      photo => !photo.hidden && !photo.loading && !photo.generating && !photo.error && photo.images && photo.images.length > 0 && !photo.isOriginal
+    ).length;
+    return currentLoadedCount * (settings.videoDuration || 5);
+  }, [photos, settings.videoDuration]);
 
   // Handle waveform interaction - click to set position OR drag to move selection
   const handleWaveformMouseDown = useCallback((e) => {
