@@ -10359,9 +10359,31 @@ const PhotoGallery = ({
                     <span style={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: '12px' }}>
                       Calculating...
                     </span>
+                  ) : formatCost(transitionVideoCostRaw, transitionVideoUSD) ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ color: '#fff', fontSize: '16px', fontWeight: '700' }}>
+                        {(() => {
+                          const formatted = formatCost(transitionVideoCostRaw, transitionVideoUSD);
+                          const parts = formatted.split('(');
+                          return parts[0].trim();
+                        })()}
+                      </span>
+                      {(() => {
+                        const formatted = formatCost(transitionVideoCostRaw, transitionVideoUSD);
+                        const usdMatch = formatted.match(/\((.*?)\)/);
+                        if (usdMatch) {
+                          return (
+                            <span style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '12px', fontWeight: '400' }}>
+                              ≈ {usdMatch[1]}
+                            </span>
+                          );
+                        }
+                        return null;
+                      })()}
+                    </div>
                   ) : (
-                    <span style={{ color: '#fff', fontSize: '16px', fontWeight: '600' }}>
-                      {formatCost(transitionVideoCostRaw, transitionVideoUSD) || 'N/A'}
+                    <span style={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: '12px' }}>
+                      N/A
                     </span>
                   )}
                 </div>
