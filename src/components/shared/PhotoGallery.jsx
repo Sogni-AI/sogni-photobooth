@@ -5607,7 +5607,7 @@ const PhotoGallery = ({
                       }
                     }}
                   >
-                    <span>⬇️</span> Download
+                    <span>⬇️</span> Download All
                     {batchActionMode === 'download' && <span style={{ marginLeft: 'auto' }}>✓</span>}
                   </button>
                   {canUseVideo && (
@@ -10311,7 +10311,7 @@ const PhotoGallery = ({
               maxWidth: '420px',
               width: '100%',
               boxShadow: '0 20px 60px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.1) inset',
-              animation: 'videoDropdownSlideUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)'
+              animation: 'popupFadeIn 0.25s ease-out'
             }}
             onClick={(e) => e.stopPropagation()}
           >
