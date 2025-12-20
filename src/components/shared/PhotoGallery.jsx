@@ -10331,16 +10331,28 @@ const PhotoGallery = ({
                 onClick={() => {
                   setShowTransitionVideoPopup(false);
                   handleShowControlOverlay();
-                  // Scroll to video section
+                  // Expand video section and scroll to it after a short delay
                   setTimeout(() => {
                     const videoSection = document.getElementById('video-settings-section');
                     if (videoSection) {
+                      // Click on the toggle to expand if not already expanded
                       const toggle = videoSection.querySelector('.advanced-toggle-subtle');
                       if (toggle) {
                         const isExpanded = toggle.getAttribute('aria-expanded') === 'true';
-                        if (!isExpanded) toggle.click();
+                        if (!isExpanded) {
+                          toggle.click();
+                        }
                       }
-                      videoSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                      // Give a bit more time for expansion animation, then scroll
+                      setTimeout(() => {
+                        videoSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        // Add highlight animation
+                        videoSection.classList.add('video-settings-highlight');
+                        // Remove highlight after animation completes
+                        setTimeout(() => {
+                          videoSection.classList.remove('video-settings-highlight');
+                        }, 2000);
+                      }, 150);
                     }
                   }, 100);
                 }}
@@ -10961,36 +10973,41 @@ const PhotoGallery = ({
           {!batchVideoLoading && formatCost(batchVideoCostRaw, batchVideoUSD) ? (
             <div style={{
               padding: '8px 16px 12px 16px',
-              fontSize: '11px',
-              fontWeight: '700',
-              letterSpacing: '0.2px',
-              display: 'flex',
-              gap: '4px',
-              alignItems: 'center',
-              justifyContent: 'flex-end',
               borderTop: '1px solid rgba(0, 0, 0, 0.15)',
               color: '#000',
               flexShrink: 0
             }}>
-              <span style={{ fontWeight: '700' }}>
-                {(() => {
-                  const formatted = formatCost(batchVideoCostRaw, batchVideoUSD);
-                  const parts = formatted.split('(');
-                  return parts[0].trim();
-                })()}
-              </span>
-              {(() => {
-                const formatted = formatCost(batchVideoCostRaw, batchVideoUSD);
-                const usdMatch = formatted.match(/\((.*?)\)/);
-                if (usdMatch) {
-                  return (
-                    <span style={{ fontWeight: '400', opacity: 0.75, fontSize: '10px' }}>
-                      ≈ {usdMatch[1]}
-                    </span>
-                  );
-                }
-                return null;
-              })()}
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: '4px'
+              }}>
+                <span style={{ fontSize: '10px', fontWeight: '500', opacity: 0.6 }}>
+                  📹 {loadedPhotosCount} videos • 📐 {settings.videoResolution || '480p'} • ⏱️ {settings.videoDuration || 5}s
+                </span>
+                <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                  <span style={{ fontSize: '11px', fontWeight: '700' }}>
+                    {(() => {
+                      const formatted = formatCost(batchVideoCostRaw, batchVideoUSD);
+                      const parts = formatted.split('(');
+                      return parts[0].trim();
+                    })()}
+                  </span>
+                  {(() => {
+                    const formatted = formatCost(batchVideoCostRaw, batchVideoUSD);
+                    const usdMatch = formatted.match(/\((.*?)\)/);
+                    if (usdMatch) {
+                      return (
+                        <span style={{ fontWeight: '400', opacity: 0.75, fontSize: '10px' }}>
+                          ≈ {usdMatch[1]}
+                        </span>
+                      );
+                    }
+                    return null;
+                  })()}
+                </div>
+              </div>
             </div>
           ) : batchVideoLoading ? (
             <div style={{
