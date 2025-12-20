@@ -8955,10 +8955,15 @@ const PhotoGallery = ({
                           data-sync-counter={syncResetCounter}
                           ref={(el) => {
                             // Control play/pause based on visibility
+                            // Key insight: Keep next video PLAYING but underneath to prevent flicker
                             if (el) {
                               const wasCurrent = el.dataset.wasCurrent === 'true';
                               const lastSyncCounter = parseInt(el.dataset.lastSyncCounter || '0', 10);
                               const syncJustChanged = lastSyncCounter !== syncResetCounter;
+                              const nextVideoIndex = (currentVideoIndex + 1) % transitionVideoQueue.length;
+                              const isNextVideo = videoIndex === nextVideoIndex;
+                              const prevVideoIndex = (currentVideoIndex - 1 + transitionVideoQueue.length) % transitionVideoQueue.length;
+                              const isPrevVideo = videoIndex === prevVideoIndex;
                               
                               if (syncJustChanged && isCurrentVideo) {
                                 // Sync mode just started - reset ALL current videos to beginning
@@ -8968,10 +8973,11 @@ const PhotoGallery = ({
                                 el.dataset.wasCurrent = 'true';
                                 el.dataset.lastSyncCounter = String(syncResetCounter);
                               } else if (isCurrentVideo && !wasCurrent) {
-                                // Transitioning TO this video - reset and play
-                                el.currentTime = 0;
-                                el.loop = shouldLoop;
-                                el.play().catch(() => {});
+                                // Transitioning TO this video - it should already be playing from being "next"
+                                // Just make sure it's playing
+                                if (el.paused) {
+                                  el.play().catch(() => {});
+                                }
                                 el.dataset.wasCurrent = 'true';
                               } else if (!isCurrentVideo && wasCurrent) {
                                 // Transitioning AWAY from this video - pause and reset for next time
@@ -8983,14 +8989,24 @@ const PhotoGallery = ({
                                 el.loop = shouldLoop;
                                 el.play().catch(() => {});
                               } else if (isNextVideo && !isCurrentVideo) {
-                                // Pre-load next video - keep it paused at start, ready to play
-                                if (el.currentTime !== 0) {
+                                // CRITICAL: Keep next video PLAYING (not just loaded) so it's ready
+                                // It will be underneath the current video (lower z-index)
+                                // This prevents flicker because video is already rendering frames
+                                if (el.currentTime > 0.5 || el.paused) {
                                   el.currentTime = 0;
+                                  el.play().catch(() => {});
                                 }
-                                el.pause();
-                              } else if (!isCurrentVideo && !isNextVideo && !el.paused) {
-                                // Pause any other videos to save resources
-                                el.pause();
+                              } else if (isPrevVideo && !isCurrentVideo) {
+                                // Previous video - pause but keep ready
+                                if (!el.paused) {
+                                  el.pause();
+                                }
+                                el.currentTime = 0;
+                              } else if (!isCurrentVideo && !isNextVideo && !isPrevVideo) {
+                                // Other videos - pause to save resources
+                                if (!el.paused) {
+                                  el.pause();
+                                }
                               }
                               
                               // Update sync counter tracking
@@ -9015,10 +9031,20 @@ const PhotoGallery = ({
                             width: '100%',
                             height: '100%',
                             objectFit: 'cover',
-                            // Current video on top (z-index 10), all others at z-index 5
-                            // All videos stay at opacity 1 to prevent flickering during transitions
-                            zIndex: isCurrentVideo ? 10 : 5,
+                            // Seamless video transitions using z-index layering
+                            // Current video on top (z-index 10), next video ready underneath (z-index 8)
+                            // Previous video stays briefly visible during transition (z-index 6)
+                            zIndex: (() => {
+                              if (isCurrentVideo) return 10;
+                              const nextVideoIndex = (currentVideoIndex + 1) % transitionVideoQueue.length;
+                              if (videoIndex === nextVideoIndex) return 8; // Next video ready underneath
+                              const prevVideoIndex = (currentVideoIndex - 1 + transitionVideoQueue.length) % transitionVideoQueue.length;
+                              if (videoIndex === prevVideoIndex) return 6; // Previous video fading out
+                              return 4; // Other videos at bottom
+                            })(),
                             pointerEvents: 'none',
+                            // ALL videos stay at opacity 1 to prevent flicker
+                            // We rely on z-index for layering, not opacity
                             opacity: 1
                           }}
                         />
