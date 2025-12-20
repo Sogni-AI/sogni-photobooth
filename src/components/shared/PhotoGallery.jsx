@@ -1768,11 +1768,19 @@ const PhotoGallery = ({
     setShowVideoDropdown(true);
   }, []);
 
-  // Handle opening video settings
+  // Handle opening video settings - works from both Motion and Transition video popups
   const handleOpenVideoSettings = useCallback(() => {
+    // Close any video popups that might be open
     setShowVideoDropdown(false);
+    setShowTransitionVideoPopup(false);
+    // Stop audio preview if playing
+    setIsPlayingPreview(false);
+    if (audioPreviewRef.current) {
+      audioPreviewRef.current.pause();
+    }
+    // Open the settings overlay
     handleShowControlOverlay();
-    // Expand video section and scroll to it after a short delay
+    // Expand video section and scroll to it after overlay animation completes
     setTimeout(() => {
       const videoSection = document.getElementById('video-settings-section');
       if (videoSection) {
@@ -1795,7 +1803,7 @@ const PhotoGallery = ({
           }, 2000);
         }, 150);
       }
-    }, 200);
+    }, 300);
   }, [handleShowControlOverlay]);
 
   // Handle video generation
@@ -10330,25 +10338,7 @@ const PhotoGallery = ({
               <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                 {/* Settings Cog */}
                 <button
-                  onClick={() => {
-                    setShowTransitionVideoPopup(false);
-                    handleShowControlOverlay();
-                    setTimeout(() => {
-                      const videoSection = document.getElementById('video-settings-section');
-                      if (videoSection) {
-                        const toggle = videoSection.querySelector('.advanced-toggle-subtle');
-                        if (toggle) {
-                          const isExpanded = toggle.getAttribute('aria-expanded') === 'true';
-                          if (!isExpanded) toggle.click();
-                        }
-                        setTimeout(() => {
-                          videoSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                          videoSection.classList.add('video-settings-highlight');
-                          setTimeout(() => videoSection.classList.remove('video-settings-highlight'), 2000);
-                        }, 150);
-                      }
-                    }, 100);
-                  }}
+                  onClick={handleOpenVideoSettings}
                   title="Video Settings"
                   style={{
                     background: 'rgba(0, 0, 0, 0.1)',
