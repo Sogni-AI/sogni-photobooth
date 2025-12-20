@@ -789,7 +789,8 @@ const PhotoGallery = ({
   // New props for vibe selector widget
   updateStyle = null, // Function to update selected style
   switchToModel = null, // Function to switch AI model
-  onNavigateToVibeExplorer = null // Function to navigate to full vibe explorer
+  onNavigateToVibeExplorer = null, // Function to navigate to full vibe explorer
+  onRegisterVideoIntroTrigger = null // Callback to register function that triggers video intro popup
 }) => {
   // Get settings from context
   const { settings, updateSetting } = useApp();
@@ -997,6 +998,16 @@ const PhotoGallery = ({
   const [syncResetCounter, setSyncResetCounter] = useState(0);
   // Store ready-to-share transition video blob (for iOS share sheet after async concat)
   const [readyTransitionVideo, setReadyTransitionVideo] = useState(null);
+  
+  // State for stitched video overlay
+  const [showStitchedVideoOverlay, setShowStitchedVideoOverlay] = useState(false);
+  const [stitchedVideoUrl, setStitchedVideoUrl] = useState(null);
+  const [isGeneratingStitchedVideo, setIsGeneratingStitchedVideo] = useState(false);
+  const [showDownloadTip, setShowDownloadTip] = useState(false);
+  
+  // Refs to store functions so they're accessible in closures
+  const generateStitchedVideoRef = useRef(null);
+  const handleProceedDownloadRef = useRef(null);
   
   // Music modal state for adding audio to transition videos
   const [showMusicModal, setShowMusicModal] = useState(false);
@@ -1748,12 +1759,7 @@ const PhotoGallery = ({
 
   // Handle Video button click
   const handleVideoButtonClick = useCallback(() => {
-    // Check if user has seen the intro popup
-    if (!hasSeenVideoIntro()) {
-      setShowVideoIntroPopup(true);
-      return;
-    }
-    // Otherwise show the video dropdown
+    // Show the video dropdown directly (no longer checking for intro popup)
     setShowVideoDropdown(prev => !prev);
   }, []);
 
@@ -1768,6 +1774,20 @@ const PhotoGallery = ({
     setShowVideoIntroPopup(false);
     setShowVideoDropdown(true);
   }, []);
+
+  // Register trigger function with parent component (App.jsx)
+  useEffect(() => {
+    if (onRegisterVideoIntroTrigger) {
+      // Function that can be called from parent to trigger video intro popup
+      const triggerVideoIntro = () => {
+        // Only show if user hasn't seen it before
+        if (!hasSeenVideoIntro()) {
+          setShowVideoIntroPopup(true);
+        }
+      };
+      onRegisterVideoIntroTrigger(triggerVideoIntro);
+    }
+  }, [onRegisterVideoIntroTrigger]);
 
   // Handle opening video settings - works from both Motion and Transition video popups
   const handleOpenVideoSettings = useCallback(() => {
@@ -2246,6 +2266,42 @@ const PhotoGallery = ({
     }
   }, [photos, sogniClient, setPhotos, settings.videoResolution, settings.videoQuality, settings.videoFramerate, settings.videoDuration, settings.videoPositivePrompt, settings.videoNegativePrompt, settings.soundEnabled, tokenType, desiredWidth, desiredHeight, showToast, onOutOfCredits, setPlayingGeneratedVideoIds]);
 
+  // Helper function to generate and show stitched video in overlay
+  const generateAndShowStitchedVideo = useCallback(async () => {
+    setIsGeneratingStitchedVideo(true);
+    try {
+      // Use appliedMusic if available (set when videos complete if music was captured)
+      // Access handleProceedDownload via ref to avoid hoisting issues
+      if (!handleProceedDownloadRef.current) {
+        throw new Error('handleProceedDownload not available');
+      }
+      const concatenatedBlob = await handleProceedDownloadRef.current(!!appliedMusic?.file, true);
+      
+      if (concatenatedBlob) {
+        const blobUrl = URL.createObjectURL(concatenatedBlob);
+        setStitchedVideoUrl(blobUrl);
+        setShowStitchedVideoOverlay(true);
+        // Switch bulk action button back to download mode
+        setBatchActionMode('download');
+        // Don't show tip yet - will show when user closes the overlay
+      }
+      setIsGeneratingStitchedVideo(false);
+    } catch (error) {
+      console.error('[Stitched Video] Failed to generate:', error);
+      showToast({
+        title: 'Failed',
+        message: 'Failed to generate stitched video. Please try again.',
+        type: 'error'
+      });
+      setIsGeneratingStitchedVideo(false);
+    }
+  }, [appliedMusic, showToast]);
+  
+  // Store the function in a ref so it's accessible in closures
+  useEffect(() => {
+    generateStitchedVideoRef.current = generateAndShowStitchedVideo;
+  }, [generateAndShowStitchedVideo]);
+
   // Handle batch transition video generation - transitions each image to the next in sequence (circular)
   const handleBatchGenerateTransitionVideo = useCallback(async (skipConfirmation = false) => {
     // Check if there's an existing transition video that hasn't been downloaded
@@ -2514,35 +2570,41 @@ const PhotoGallery = ({
           // Increment sync counter to force all videos to reset their currentTime
           setSyncResetCounter(prev => prev + 1);
           
-          // Apply captured music settings if music was selected before generation
-          console.log(`[Transition] Checking captured music: file=${!!capturedMusicFile}, isPreset=${capturedMusicFile?.isPreset}, presetUrl=${capturedMusicFile?.presetUrl}`);
+          // Set appliedMusic if music was captured (for use in stitched video)
+          // But don't auto-play it - user will see it in the stitched video overlay
           if (capturedMusicFile && successCount > 0) {
             const audioUrl = (capturedMusicFile.isPreset && capturedMusicFile.presetUrl) 
               ? capturedMusicFile.presetUrl 
               : URL.createObjectURL(capturedMusicFile);
             
-            console.log(`[Transition] Applying music: audioUrl=${audioUrl}, offset=${capturedMusicStartOffset}s`);
             setAppliedMusic({
               file: capturedMusicFile,
               startOffset: capturedMusicStartOffset,
               audioUrl
             });
-          } else {
-            console.log(`[Transition] No music to apply: capturedMusicFile=${!!capturedMusicFile}, successCount=${successCount}`);
           }
           
           if (successCount > 0 && errorCount === 0) {
             const videoMessage = getRandomVideoMessage();
             showToast({
               title: videoMessage.title,
-              message: `All ${successCount} transition video${successCount > 1 ? 's' : ''} generated! Playing in sync...`,
+              message: `All ${successCount} transition video${successCount > 1 ? 's' : ''} generated! Tap to view stitched video.`,
               type: 'success',
-              timeout: 5000
+              timeout: 0,
+              autoClose: false,
+              onClick: () => {
+                // Generate stitched video and show in overlay
+                if (generateStitchedVideoRef.current) {
+                  generateStitchedVideoRef.current();
+                } else {
+                  console.error('[Toast] generateStitchedVideoRef.current is not available');
+                }
+              }
             });
           } else if (successCount > 0) {
             showToast({
               title: 'Partial Success',
-              message: `${successCount} of ${loadedPhotos.length} transition videos generated. Playing in sync...`,
+              message: `${successCount} of ${loadedPhotos.length} transition videos generated.`,
               type: 'info',
               timeout: 5000
             });
@@ -3629,99 +3691,8 @@ const PhotoGallery = ({
   const audioReadyRef = useRef(false); // Track if audio is seekable
   const lastAppliedMusicUrlRef = useRef(null); // Track last processed audio URL
 
-  // Initialize inline audio when appliedMusic changes
-  useEffect(() => {
-    const audio = inlineAudioRef.current;
-    if (!audio || !appliedMusic || !allTransitionVideosComplete) {
-      audioReadyRef.current = false;
-      lastAppliedMusicUrlRef.current = null;
-      return;
-    }
-    
-    // Check if this is a new audio source we haven't processed yet
-    const isNewSource = lastAppliedMusicUrlRef.current !== appliedMusic.audioUrl;
-    
-    if (isNewSource) {
-      audioReadyRef.current = false;
-      lastAppliedMusicUrlRef.current = appliedMusic.audioUrl;
-      
-      // Check if we're on iOS/mobile where autoplay is restricted
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
-        (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-      
-      const handleCanPlay = () => {
-        audioReadyRef.current = true;
-        // Now we can safely seek to the start offset
-        audio.currentTime = appliedMusic.startOffset;
-        
-        if (isIOS || isMobile) {
-          // On iOS/mobile, autoplay is blocked - show persistent toast to start playback
-          // The toast click will be the user gesture needed to start audio
-          audio.muted = true;
-          audio.pause(); // Pause audio until user taps
-          setIsInlineAudioMuted(true);
-          
-          // Pause all videos until user taps to play
-          // Videos will resume when user taps the toast
-          
-          showToast({
-            title: '🎬 Transition Ready!',
-            message: '👆 Tap here to play with music',
-            type: 'success',
-            autoClose: false, // Don't auto-dismiss - wait for user tap
-            onClick: () => {
-              // This click is a user gesture - we can now play audio!
-              const audioEl = inlineAudioRef.current;
-              if (audioEl) {
-                audioEl.muted = false;
-                audioEl.currentTime = appliedMusic.startOffset;
-                audioEl.play().catch(() => {});
-                setIsInlineAudioMuted(false);
-              }
-            }
-          });
-        } else if (!isInlineAudioMuted) {
-          // Desktop - try to autoplay
-          audio.play().catch(() => {
-            // If autoplay fails on desktop too, mute and notify
-            audio.muted = true;
-            setIsInlineAudioMuted(true);
-          });
-        }
-      };
-      
-      // Check if already ready (audio element might have loaded via JSX src)
-      if (audio.readyState >= 3) {
-        // HAVE_FUTURE_DATA or HAVE_ENOUGH_DATA - already ready to play
-        handleCanPlay();
-      } else {
-        audio.addEventListener('canplay', handleCanPlay, { once: true });
-        return () => audio.removeEventListener('canplay', handleCanPlay);
-      }
-    }
-  }, [appliedMusic, allTransitionVideosComplete, isInlineAudioMuted, showToast]);
-
-  // Sync inline audio with transition video playback - only react to first photo's index changes
-  useEffect(() => {
-    const audio = inlineAudioRef.current;
-    if (!audio || !appliedMusic || !allTransitionVideosComplete || !audioReadyRef.current) return;
-    
-    // Only take action if the video index actually changed
-    const indexChanged = prevVideoIndexRef.current !== firstPhotoVideoIndex;
-    prevVideoIndexRef.current = firstPhotoVideoIndex;
-    
-    // When videos loop back to beginning, restart the audio from the start offset
-    if (indexChanged && firstPhotoVideoIndex === 0) {
-      audio.currentTime = appliedMusic.startOffset;
-    }
-    
-    // Only try to play if not muted (user has already interacted on iOS)
-    // On iOS, play() will fail without user gesture, so we rely on the mute button
-    if (audio.paused && !isInlineAudioMuted && !audio.muted) {
-      audio.play().catch(() => {});
-    }
-  }, [appliedMusic, allTransitionVideosComplete, firstPhotoVideoIndex, isInlineAudioMuted]);
+  // DO NOT auto-play audio - audio should ONLY play in the stitched video overlay where it's embedded
+  // These useEffects are disabled - audio will only be heard in the final stitched video
 
   // Keep refs in sync with music state for animation frame access and transition video generation
   useEffect(() => {
@@ -3874,7 +3845,8 @@ const PhotoGallery = ({
   }, [showMusicModal, showTransitionVideoPopup, musicFile, audioWaveform, selectedPresetId]);
 
   // Proceed with download (with or without music)
-  const handleProceedDownload = useCallback(async (includeMusic) => {
+  // If returnBlob is true, returns the blob instead of downloading
+  const handleProceedDownload = useCallback(async (includeMusic, returnBlob = false) => {
     setShowMusicModal(false);
     
     if (isBulkDownloading) return;
@@ -3990,6 +3962,13 @@ const PhotoGallery = ({
       const elapsedSec = (elapsedMs / 1000).toFixed(2);
       console.log(`[Transition Video] ✅ Complete! ${orderedVideos.length} videos → ${(concatenatedBlob.size / 1024 / 1024).toFixed(2)}MB in ${elapsedSec}s`);
 
+      // If returnBlob is true, just return the blob without downloading
+      if (returnBlob) {
+        setIsBulkDownloading(false);
+        setBulkDownloadProgress({ current: 0, total: 0, message: '' });
+        return concatenatedBlob;
+      }
+
       const timestamp = new Date().toISOString().split('T')[0];
       const filename = includeMusic && appliedMusic 
         ? `sogni-photobooth-transition-${timestamp}-with-music.mp4`
@@ -4056,6 +4035,11 @@ const PhotoGallery = ({
       }, 3000);
     }
   }, [transitionVideoQueue, photos, isBulkDownloading, setIsBulkDownloading, setBulkDownloadProgress, showToast, appliedMusic]);
+  
+  // Store handleProceedDownload in ref so it's accessible in closures (avoids hoisting issues)
+  useEffect(() => {
+    handleProceedDownloadRef.current = handleProceedDownload;
+  }, [handleProceedDownload]);
 
   // Download transition video (uses appliedMusic if set)
   const handleDownloadTransitionVideo = useCallback(() => {
@@ -4077,7 +4061,7 @@ const PhotoGallery = ({
     
     // Directly proceed with download, using appliedMusic if available
     console.log(`[Transition Download] appliedMusic=${!!appliedMusic}, file=${!!appliedMusic?.file}, isPreset=${appliedMusic?.file?.isPreset}, presetUrl=${appliedMusic?.file?.presetUrl}`);
-    handleProceedDownload(!!appliedMusic);
+    handleProceedDownload(!!appliedMusic?.file);
   }, [isBulkDownloading, transitionVideoQueue, photos, showToast, appliedMusic, handleProceedDownload]);
 
   // Handle download all photos as ZIP - uses exact same logic as individual downloads
@@ -5469,6 +5453,10 @@ const PhotoGallery = ({
                 e.stopPropagation();
                 // Close mode selection dropdown when clicking main button
                 setShowBatchActionDropdown(false);
+                // Hide download tip when button is clicked
+                if (showDownloadTip) {
+                  setShowDownloadTip(false);
+                }
                 if (batchActionMode === 'download') {
                   // Check if any photos have videos - if so, download videos as zip
                   const currentPhotosArray = isPromptSelectorMode ? filteredPhotos : photos;
@@ -5544,6 +5532,43 @@ const PhotoGallery = ({
                   : 'Download all images'
               }
             >
+              {showDownloadTip && batchActionMode === 'download' && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    bottom: '100%',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    marginBottom: '8px',
+                    padding: '8px 12px',
+                    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+                    color: '#fff',
+                    borderRadius: '8px',
+                    fontSize: '13px',
+                    fontWeight: '500',
+                    whiteSpace: 'nowrap',
+                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+                    zIndex: 10000,
+                    pointerEvents: 'none',
+                    animation: 'fadeIn 0.3s ease-out'
+                  }}
+                >
+                  Click here to download your video! ⬇️
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: '100%',
+                      left: '50%',
+                      transform: 'translateX(-50%)',
+                      width: 0,
+                      height: 0,
+                      borderLeft: '6px solid transparent',
+                      borderRight: '6px solid transparent',
+                      borderTop: '6px solid rgba(0, 0, 0, 0.9)'
+                    }}
+                  />
+                </div>
+              )}
               <span>
                 {batchActionMode === 'video' 
                   ? '🎥' 
@@ -5718,8 +5743,11 @@ const PhotoGallery = ({
                           // Auto-execute video action if switching from another mode
                           if (batchActionMode !== 'video') {
                             // Show video dropdown to select emoji
+                            // Use setTimeout to avoid click outside handler closing it immediately
                             if (isAuthenticated) {
-                              setShowBatchVideoDropdown(true);
+                              setTimeout(() => {
+                                setShowBatchVideoDropdown(true);
+                              }, 10);
                             } else {
                               showToast({
                                 title: 'Authentication Required',
@@ -8913,182 +8941,26 @@ const PhotoGallery = ({
                 )}
 
                 {/* AI-Generated Video Overlay - Show when generated video is playing */}
-                {photo.videoUrl && !photo.generatingVideo && playingGeneratedVideoIds.has(photo.id) && (() => {
-                  // In transition mode, pre-render ALL videos and show/hide them to avoid loading delays on mobile
-                  if (isTransitionMode && transitionVideoQueue.length > 0) {
-                    // When all videos complete, only the FIRST photo shows the full sequence
-                    // Other photos play their own single video in a simple loop when clicked
-                    const isFirstTransitionPhoto = transitionVideoQueue[0] === photo.id;
-                    if (allTransitionVideosComplete && !isFirstTransitionPhoto) {
-                      // Not the first photo - play this photo's own video in simple loop mode
-                      return (
-                        <video
-                          key={`${photo.id}-single-video`}
-                          src={photo.videoUrl}
-                          autoPlay
-                          loop={true}
-                          muted
-                          playsInline
-                          style={{
-                            position: 'absolute',
-                            top: 0,
-                            left: 0,
-                            width: '100%',
-                            height: '100%',
-                            objectFit: 'cover',
-                            zIndex: 5,
-                            pointerEvents: 'none'
-                          }}
-                        />
-                      );
-                    }
-                    
-                    const currentVideoIndex = currentVideoIndexByPhoto[photo.id] ?? 0;
-                    const shouldLoop = !allTransitionVideosComplete;
-                    
-                    // Pre-render all videos in the queue, show only the current one
-                    return transitionVideoQueue.map((videoPhotoId, videoIndex) => {
-                      const videoPhoto = photos.find(p => p.id === videoPhotoId);
-                      const videoUrl = videoPhoto?.videoUrl;
-                      
-                      if (!videoUrl) return null;
-                      
-                      const isCurrentVideo = videoIndex === currentVideoIndex;
-                      const nextVideoIndex = (currentVideoIndex + 1) % transitionVideoQueue.length;
-                      const isNextVideo = videoIndex === nextVideoIndex;
-                      // Previous video (the one that just finished) - keep visible briefly during transition
-                      const prevVideoIndex = (currentVideoIndex - 1 + transitionVideoQueue.length) % transitionVideoQueue.length;
-                      const isPrevVideo = videoIndex === prevVideoIndex;
-                      
-                      return (
-                        <video
-                          key={`${photo.id}-video-${videoIndex}`}
-                          src={videoUrl}
-                          muted
-                          playsInline
-                          preload="auto"
-                          data-is-current={isCurrentVideo}
-                          data-sync-counter={syncResetCounter}
-                          ref={(el) => {
-                            // Control play/pause based on visibility
-                            // Key insight: Keep next video PLAYING but underneath to prevent flicker
-                            if (el) {
-                              const wasCurrent = el.dataset.wasCurrent === 'true';
-                              const lastSyncCounter = parseInt(el.dataset.lastSyncCounter || '0', 10);
-                              const syncJustChanged = lastSyncCounter !== syncResetCounter;
-                              const nextVideoIndex = (currentVideoIndex + 1) % transitionVideoQueue.length;
-                              const isNextVideo = videoIndex === nextVideoIndex;
-                              const prevVideoIndex = (currentVideoIndex - 1 + transitionVideoQueue.length) % transitionVideoQueue.length;
-                              const isPrevVideo = videoIndex === prevVideoIndex;
-                              
-                              if (syncJustChanged && isCurrentVideo) {
-                                // Sync mode just started - reset ALL current videos to beginning
-                                el.currentTime = 0;
-                                el.loop = shouldLoop;
-                                el.play().catch(() => {});
-                                el.dataset.wasCurrent = 'true';
-                                el.dataset.lastSyncCounter = String(syncResetCounter);
-                              } else if (isCurrentVideo && !wasCurrent) {
-                                // Transitioning TO this video - it should already be playing from being "next"
-                                // Just make sure it's playing
-                                if (el.paused) {
-                                  el.play().catch(() => {});
-                                }
-                                el.dataset.wasCurrent = 'true';
-                              } else if (!isCurrentVideo && wasCurrent) {
-                                // Transitioning AWAY from this video - pause and reset for next time
-                                el.pause();
-                                el.currentTime = 0;
-                                el.dataset.wasCurrent = 'false';
-                              } else if (isCurrentVideo && el.paused) {
-                                // Ensure current video is playing
-                                el.loop = shouldLoop;
-                                el.play().catch(() => {});
-                              } else if (isNextVideo && !isCurrentVideo) {
-                                // CRITICAL: Keep next video PLAYING (not just loaded) so it's ready
-                                // It will be underneath the current video (lower z-index)
-                                // This prevents flicker because video is already rendering frames
-                                if (el.currentTime > 0.5 || el.paused) {
-                                  el.currentTime = 0;
-                                  el.play().catch(() => {});
-                                }
-                              } else if (isPrevVideo && !isCurrentVideo) {
-                                // Previous video - pause but keep ready
-                                if (!el.paused) {
-                                  el.pause();
-                                }
-                                el.currentTime = 0;
-                              } else if (!isCurrentVideo && !isNextVideo && !isPrevVideo) {
-                                // Other videos - pause to save resources
-                                if (!el.paused) {
-                                  el.pause();
-                                }
-                              }
-                              
-                              // Update sync counter tracking
-                              if (lastSyncCounter !== syncResetCounter) {
-                                el.dataset.lastSyncCounter = String(syncResetCounter);
-                              }
-                            }
-                          }}
-                          onEnded={() => {
-                            // Only advance if this is the current video and all videos are complete
-                            if (isCurrentVideo && allTransitionVideosComplete) {
-                              setCurrentVideoIndexByPhoto(prev => ({
-                                ...prev,
-                                [photo.id]: (prev[photo.id] + 1) % transitionVideoQueue.length
-                              }));
-                            }
-                          }}
-                          style={{
-                            position: 'absolute',
-                            top: 0,
-                            left: 0,
-                            width: '100%',
-                            height: '100%',
-                            objectFit: 'cover',
-                            // Seamless video transitions using z-index layering
-                            // Current video on top (z-index 10), next video ready underneath (z-index 8)
-                            // Previous video stays briefly visible during transition (z-index 6)
-                            zIndex: (() => {
-                              if (isCurrentVideo) return 10;
-                              const nextVideoIndex = (currentVideoIndex + 1) % transitionVideoQueue.length;
-                              if (videoIndex === nextVideoIndex) return 8; // Next video ready underneath
-                              const prevVideoIndex = (currentVideoIndex - 1 + transitionVideoQueue.length) % transitionVideoQueue.length;
-                              if (videoIndex === prevVideoIndex) return 6; // Previous video fading out
-                              return 4; // Other videos at bottom
-                            })(),
-                            pointerEvents: 'none',
-                            // ALL videos stay at opacity 1 to prevent flicker
-                            // We rely on z-index for layering, not opacity
-                            opacity: 1
-                          }}
-                        />
-                      );
-                    });
-                  }
-                  
-                  // Normal mode - just play the photo's own video
-                  return (
-                    <video
-                      src={photo.videoUrl}
-                      autoPlay
-                      loop={true}
-                      muted
-                      playsInline
-                      style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        width: '100%',
-                        height: '100%',
-                        objectFit: 'cover',
-                        zIndex: 5,
-                        pointerEvents: 'none'
-                      }}
-                    />
-                  );
-                })()}
+                {photo.videoUrl && !photo.generatingVideo && playingGeneratedVideoIds.has(photo.id) && (
+                  // All photos play their own video in a simple loop
+                  <video
+                    src={photo.videoUrl}
+                    autoPlay
+                    loop={true}
+                    muted
+                    playsInline
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover',
+                      zIndex: 5,
+                      pointerEvents: 'none'
+                    }}
+                  />
+                )}
 
                 {/* Video generation progress overlay - displays worker, ETA and elapsed time */}
                 {photo.generatingVideo && (
@@ -9670,13 +9542,7 @@ const PhotoGallery = ({
                         className="photo-motion-btn-batch"
                         onClick={(e) => {
                           e.stopPropagation();
-                          // Check if user has seen the intro popup first
-                          if (!hasSeenVideoIntro()) {
-                            setShowVideoIntroPopup(true);
-                            setVideoTargetPhotoIndex(index);
-                            return;
-                          }
-                          // Otherwise show the video dropdown for this photo (without selecting it)
+                          // Show the video dropdown for this photo (without selecting it)
                           setVideoTargetPhotoIndex(index);
                           setShowVideoDropdown(true);
                         }}
@@ -11144,101 +11010,134 @@ const PhotoGallery = ({
       />
 
       {/* Music Modal for Transition Video Download (Beta) */}
-      {/* Inline audio element for transition video music playback */}
-      {appliedMusic && isTransitionMode && allTransitionVideosComplete && (
+      {/* Inline audio element - NOT USED (audio only plays in stitched video overlay) */}
+      {/* Kept for potential future use but never auto-plays */}
+      {false && appliedMusic && isTransitionMode && allTransitionVideosComplete && (
         <audio
           ref={inlineAudioRef}
           src={appliedMusic.audioUrl}
           crossOrigin={appliedMusic.file?.isPreset ? 'anonymous' : undefined}
           loop
-          muted={isInlineAudioMuted}
+          muted={true}
           style={{ display: 'none' }}
         />
       )}
 
-      {/* Mute toggle - shown when in transition mode with completed videos and music applied */}
-      {isTransitionMode && allTransitionVideosComplete && appliedMusic && createPortal(
+      {/* Stitched Video Overlay - Shows the concatenated video */}
+      {showStitchedVideoOverlay && stitchedVideoUrl && createPortal(
         <div
           style={{
             position: 'fixed',
-            bottom: '100px',
-            right: '20px',
-            zIndex: 1000
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.95)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10000000,
+            padding: '20px'
+          }}
+          onClick={() => {
+            setShowStitchedVideoOverlay(false);
+            if (stitchedVideoUrl) {
+              URL.revokeObjectURL(stitchedVideoUrl);
+              setStitchedVideoUrl(null);
+            }
+            // Show tip over download button after closing overlay
+            setShowDownloadTip(true);
+            // Hide tip after 8 seconds
+            setTimeout(() => {
+              setShowDownloadTip(false);
+            }, 8000);
           }}
         >
-          {/* Mute toggle - only show when music is applied */}
-          {appliedMusic && (
+          <div
+            style={{
+              position: 'relative',
+              maxWidth: '90vw',
+              maxHeight: '90vh',
+              width: '100%',
+              height: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <video
+              src={stitchedVideoUrl}
+              controls
+              autoPlay
+              loop
+              style={{
+                maxWidth: '100%',
+                maxHeight: '100%',
+                width: 'auto',
+                height: 'auto'
+              }}
+            />
             <button
               onClick={() => {
-                const audio = inlineAudioRef.current;
-                if (!audio) return;
-                
-                if (isInlineAudioMuted) {
-                  // Unmuting - need to explicitly play for iOS (requires user gesture)
-                  audio.muted = false;
-                  audio.currentTime = appliedMusic.startOffset;
-                  audio.play().catch(() => {});
-                  setIsInlineAudioMuted(false);
-                } else {
-                  // Muting
-                  audio.muted = true;
-                  setIsInlineAudioMuted(true);
+                setShowStitchedVideoOverlay(false);
+                if (stitchedVideoUrl) {
+                  URL.revokeObjectURL(stitchedVideoUrl);
+                  setStitchedVideoUrl(null);
                 }
+                // Show tip over download button after closing overlay
+                setShowDownloadTip(true);
+                // Hide tip after 8 seconds
+                setTimeout(() => {
+                  setShowDownloadTip(false);
+                }, 8000);
               }}
               style={{
-                padding: '12px',
-                backgroundColor: isInlineAudioMuted ? 'rgba(255, 82, 82, 0.8)' : '#1a1a2e',
-                border: '2px solid rgba(255, 255, 255, 0.2)',
+                position: 'absolute',
+                top: '20px',
+                right: '20px',
+                background: 'rgba(0, 0, 0, 0.7)',
+                border: 'none',
                 borderRadius: '50%',
+                width: '40px',
+                height: '40px',
                 color: '#fff',
+                fontSize: '24px',
                 cursor: 'pointer',
-                fontSize: '16px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
-                transition: 'all 0.2s ease',
-                width: '44px',
-                height: '44px'
+                zIndex: 10000001
               }}
-              title={isInlineAudioMuted ? 'Tap to play audio' : 'Tap to mute'}
             >
-              {isInlineAudioMuted ? '🔇' : '🔊'}
+              ×
             </button>
-          )}
-          
-          {/* Main Add Music button */}
-          <button
-            onClick={() => setShowMusicModal(true)}
-            style={{
-              padding: '12px 20px',
-              backgroundColor: appliedMusic ? '#4CAF50' : '#1a1a2e',
-              border: appliedMusic ? '2px solid #4CAF50' : '2px solid rgba(255, 255, 255, 0.2)',
-              borderRadius: '30px',
-              color: '#fff',
-              cursor: 'pointer',
-              fontSize: '14px',
-              fontWeight: '600',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
-              transition: 'all 0.2s ease'
-            }}
-            title={appliedMusic ? 'Change music track' : 'Add music to transition video'}
-          >
-            🎵 {appliedMusic ? 'Music Added' : 'Add Music'}
-            {appliedMusic && (
-              <span style={{
-                fontSize: '10px',
-                backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                padding: '2px 6px',
-                borderRadius: '10px'
-              }}>
-                ✓
-              </span>
-            )}
-          </button>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Loading overlay for stitched video generation */}
+      {isGeneratingStitchedVideo && createPortal(
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10000000,
+            flexDirection: 'column',
+            gap: '20px',
+            color: '#fff'
+          }}
+        >
+          <div style={{ fontSize: '18px' }}>Generating stitched video...</div>
+          <div style={{ fontSize: '14px', opacity: 0.7 }}>Please wait</div>
         </div>,
         document.body
       )}
@@ -11314,7 +11213,8 @@ PhotoGallery.propTypes = {
   // Vibe selector widget props
   updateStyle: PropTypes.func, // Function to update selected style
   switchToModel: PropTypes.func, // Function to switch AI model
-  onNavigateToVibeExplorer: PropTypes.func // Function to navigate to full vibe explorer
+  onNavigateToVibeExplorer: PropTypes.func, // Function to navigate to full vibe explorer
+  onRegisterVideoIntroTrigger: PropTypes.func // Callback to register function that triggers video intro popup
 };
 
 export default PhotoGallery; 

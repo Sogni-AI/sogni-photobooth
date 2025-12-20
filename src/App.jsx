@@ -4297,6 +4297,14 @@ const App = () => {
     preGenerateFrameRef.current = preGenerateFunction;
   }, []);
 
+  // Ref to store the video intro trigger function from PhotoGallery
+  const videoIntroTriggerRef = useRef(null);
+
+  // Callback to receive the video intro trigger function from PhotoGallery
+  const handleRegisterVideoIntroTrigger = useCallback((triggerFunction) => {
+    videoIntroTriggerRef.current = triggerFunction;
+  }, []);
+
   // Callback to receive framed image cache updates from PhotoGallery
   const handleFramedImageCacheUpdate = useCallback((framedImageCache) => {
     setPhotoGalleryFramedImageCache(framedImageCache);
@@ -5591,6 +5599,13 @@ const App = () => {
                 }
                 
                 triggerBatchCelebration();
+
+                // Trigger video intro popup 5 seconds after first successful batch render
+                if (videoIntroTriggerRef.current) {
+                  setTimeout(() => {
+                    videoIntroTriggerRef.current();
+                  }, 5000);
+                }
               }, 7000); // Additional 7 second delay (10 total)
             } else {
               console.log('All jobs completed after delay, proceeding with project completion.');
@@ -5629,6 +5644,13 @@ const App = () => {
               }
               
               triggerBatchCelebration();
+
+              // Trigger video intro popup 5 seconds after first successful batch render
+              if (videoIntroTriggerRef.current) {
+                setTimeout(() => {
+                  videoIntroTriggerRef.current();
+                }, 5000);
+              }
             }
           }, 3000); // Initial 3 second delay
         } else {
@@ -5678,6 +5700,13 @@ const App = () => {
           
           // Trigger celebration for successful batch completion
           triggerBatchCelebration();
+
+          // Trigger video intro popup 5 seconds after first successful batch render
+          if (videoIntroTriggerRef.current) {
+            setTimeout(() => {
+              videoIntroTriggerRef.current();
+            }, 5000);
+          }
         }
       });
 
@@ -9594,6 +9623,7 @@ const App = () => {
           onRegisterFrameCacheClear={(clearFunction) => {
             photoGalleryFrameClearRef.current = clearFunction;
           }}
+          onRegisterVideoIntroTrigger={handleRegisterVideoIntroTrigger}
           qrCodeData={qrCodeData}
           onCloseQR={() => setQrCodeData(null)}
           onOutOfCredits={() => {
