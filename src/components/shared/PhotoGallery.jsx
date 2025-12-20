@@ -3410,7 +3410,7 @@ const PhotoGallery = ({
       ctx.strokeRect(startX, 0, selectionWidth, height);
     }
     
-    // Draw waveform bars - use dark colors for contrast on yellow/light backgrounds
+    // Draw waveform bars - use dark colors for contrast on white background
     audioWaveform.forEach((value, i) => {
       const barHeight = value * (height - 4);
       const x = i * barWidth;
@@ -3420,8 +3420,8 @@ const PhotoGallery = ({
       const barTime = (i / audioWaveform.length) * audioDuration;
       const isInSelection = barTime >= musicStartOffset && barTime < musicStartOffset + videoDuration;
       
-      // Dark gray for non-selected, bright red for selected
-      ctx.fillStyle = isInSelection ? '#dc3545' : 'rgba(0, 0, 0, 0.35)';
+      // Dark charcoal for non-selected, bright red for selected
+      ctx.fillStyle = isInSelection ? '#c62828' : '#333333';
       ctx.fillRect(x + 1, y, barWidth - 2, barHeight);
     });
     
@@ -10703,7 +10703,7 @@ const PhotoGallery = ({
                       const formatted = formatCost(transitionVideoCostRaw, transitionVideoUSD);
                       const usdMatch = formatted.match(/\((.*?)\)/);
                       return usdMatch ? (
-                        <span style={{ fontWeight: '400', opacity: 0.7, fontSize: '10px' }}>≈ {usdMatch[1]}</span>
+                        <span style={{ fontWeight: '500', color: 'rgba(0, 0, 0, 0.6)', fontSize: '10px' }}>≈ {usdMatch[1]}</span>
                       ) : null;
                     })()}
                   </div>
