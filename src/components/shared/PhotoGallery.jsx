@@ -1783,7 +1783,9 @@ const PhotoGallery = ({
     // Expand video section and scroll to it after overlay animation completes
     setTimeout(() => {
       const videoSection = document.getElementById('video-settings-section');
-      if (videoSection) {
+      const scrollContainer = document.querySelector('.control-overlay');
+      
+      if (videoSection && scrollContainer) {
         // Click on the toggle to expand if not already expanded
         const toggle = videoSection.querySelector('.advanced-toggle-subtle');
         if (toggle) {
@@ -1794,16 +1796,26 @@ const PhotoGallery = ({
         }
         // Give a bit more time for expansion animation, then scroll
         setTimeout(() => {
-          videoSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          // Calculate scroll position - get element position relative to scroll container
+          const containerRect = scrollContainer.getBoundingClientRect();
+          const elementRect = videoSection.getBoundingClientRect();
+          const scrollTop = scrollContainer.scrollTop + (elementRect.top - containerRect.top) - (containerRect.height / 3);
+          
+          // Scroll the overlay container directly
+          scrollContainer.scrollTo({
+            top: Math.max(0, scrollTop),
+            behavior: 'smooth'
+          });
+          
           // Add highlight animation
           videoSection.classList.add('video-settings-highlight');
           // Remove highlight after animation completes
           setTimeout(() => {
             videoSection.classList.remove('video-settings-highlight');
           }, 2000);
-        }, 150);
+        }, 200);
       }
-    }, 300);
+    }, 400);
   }, [handleShowControlOverlay]);
 
   // Handle video generation
