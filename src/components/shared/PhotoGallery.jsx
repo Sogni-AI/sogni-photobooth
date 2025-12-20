@@ -3401,16 +3401,16 @@ const PhotoGallery = ({
       const endOffset = Math.min(musicStartOffset + videoDuration, audioDuration);
       const selectionWidth = ((endOffset - musicStartOffset) / audioDuration) * width;
       
-      ctx.fillStyle = 'rgba(255, 107, 107, 0.2)';
+      ctx.fillStyle = 'rgba(220, 53, 69, 0.25)';
       ctx.fillRect(startX, 0, selectionWidth, height);
       
       // Draw selection border
-      ctx.strokeStyle = 'rgba(255, 107, 107, 0.8)';
+      ctx.strokeStyle = 'rgba(220, 53, 69, 0.9)';
       ctx.lineWidth = 2;
       ctx.strokeRect(startX, 0, selectionWidth, height);
     }
     
-    // Draw waveform bars
+    // Draw waveform bars - use dark colors for contrast on yellow/light backgrounds
     audioWaveform.forEach((value, i) => {
       const barHeight = value * (height - 4);
       const x = i * barWidth;
@@ -3420,14 +3420,15 @@ const PhotoGallery = ({
       const barTime = (i / audioWaveform.length) * audioDuration;
       const isInSelection = barTime >= musicStartOffset && barTime < musicStartOffset + videoDuration;
       
-      ctx.fillStyle = isInSelection ? '#ff6b6b' : 'rgba(255, 255, 255, 0.4)';
+      // Dark gray for non-selected, bright red for selected
+      ctx.fillStyle = isInSelection ? '#dc3545' : 'rgba(0, 0, 0, 0.35)';
       ctx.fillRect(x + 1, y, barWidth - 2, barHeight);
     });
     
     // Draw playhead if playing
     if (isPlayingPreview && audioPreviewRef.current) {
       const playheadX = (previewPlayhead / audioDuration) * width;
-      ctx.strokeStyle = '#fff';
+      ctx.strokeStyle = '#000';
       ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.moveTo(playheadX, 0);
@@ -3437,7 +3438,7 @@ const PhotoGallery = ({
     
     // Draw start position marker
     const startMarkerX = (musicStartOffset / audioDuration) * width;
-    ctx.strokeStyle = '#ff6b6b';
+    ctx.strokeStyle = '#dc3545';
     ctx.lineWidth = 3;
     ctx.beginPath();
     ctx.moveTo(startMarkerX, 0);
@@ -3445,7 +3446,7 @@ const PhotoGallery = ({
     ctx.stroke();
     
     // Draw marker handle
-    ctx.fillStyle = '#ff6b6b';
+    ctx.fillStyle = '#dc3545';
     ctx.beginPath();
     ctx.moveTo(startMarkerX - 6, 0);
     ctx.lineTo(startMarkerX + 6, 0);
@@ -10422,9 +10423,10 @@ const PhotoGallery = ({
 
               {/* Music Section - Compact */}
               <div style={{
-                backgroundColor: 'rgba(0, 0, 0, 0.06)',
+                backgroundColor: 'rgba(255, 255, 255, 0.5)',
                 borderRadius: '8px',
-                padding: '10px 12px'
+                padding: '10px 12px',
+                border: '1px solid rgba(0, 0, 0, 0.1)'
               }}>
                 <div style={{
                   display: 'flex',
@@ -10433,19 +10435,19 @@ const PhotoGallery = ({
                   marginBottom: '8px'
                 }}>
                   <span style={{
-                    color: 'rgba(0, 0, 0, 0.7)',
+                    color: 'rgba(0, 0, 0, 0.85)',
                     fontSize: '11px',
-                    fontWeight: '600'
+                    fontWeight: '700'
                   }}>
                     🎵 Add Music (Optional)
                   </span>
                   <span style={{
                     fontSize: '9px',
-                    backgroundColor: '#ff6b6b',
+                    backgroundColor: '#c62828',
                     color: '#fff',
-                    padding: '1px 5px',
+                    padding: '2px 6px',
                     borderRadius: '3px',
-                    fontWeight: '600'
+                    fontWeight: '700'
                   }}>BETA</span>
                 </div>
 
@@ -10534,22 +10536,23 @@ const PhotoGallery = ({
                       alignItems: 'center',
                       marginBottom: '6px'
                     }}>
-                      <label style={{ color: 'rgba(0, 0, 0, 0.7)', fontSize: '11px' }}>
+                      <label style={{ color: 'rgba(0, 0, 0, 0.8)', fontSize: '11px', fontWeight: '600' }}>
                         Select Start Position
                       </label>
                       <button
                         onClick={toggleAudioPreview}
                         style={{
-                          padding: '3px 10px',
-                          backgroundColor: isPlayingPreview ? '#ff6b6b' : 'rgba(0, 0, 0, 0.15)',
+                          padding: '4px 12px',
+                          backgroundColor: isPlayingPreview ? '#c62828' : 'rgba(0, 0, 0, 0.75)',
                           border: 'none',
                           borderRadius: '4px',
-                          color: isPlayingPreview ? '#fff' : '#000',
+                          color: '#fff',
                           cursor: 'pointer',
                           fontSize: '11px',
+                          fontWeight: '600',
                           display: 'flex',
                           alignItems: 'center',
-                          gap: '3px'
+                          gap: '4px'
                         }}
                       >
                         {isPlayingPreview ? '⏸ Pause' : '▶ Preview'}
@@ -10560,11 +10563,12 @@ const PhotoGallery = ({
                     <div
                       style={{
                         position: 'relative',
-                        backgroundColor: 'rgba(0, 0, 0, 0.2)',
+                        backgroundColor: 'rgba(255, 255, 255, 0.85)',
                         borderRadius: '6px',
                         overflow: 'hidden',
                         cursor: isDraggingWaveform ? 'grabbing' : 'crosshair',
-                        userSelect: 'none'
+                        userSelect: 'none',
+                        border: '1px solid rgba(0, 0, 0, 0.15)'
                       }}
                       onMouseDown={handleWaveformMouseDown}
                     >
@@ -10585,12 +10589,13 @@ const PhotoGallery = ({
                     <div style={{
                       display: 'flex',
                       justifyContent: 'space-between',
-                      marginTop: '3px',
+                      marginTop: '4px',
                       fontSize: '10px',
-                      color: 'rgba(0, 0, 0, 0.5)'
+                      color: 'rgba(0, 0, 0, 0.7)',
+                      fontWeight: '500'
                     }}>
                       <span>0:00</span>
-                      <span style={{ color: '#d32f2f', fontWeight: '600' }}>
+                      <span style={{ color: '#c62828', fontWeight: '700' }}>
                         Start: {Math.floor(musicStartOffset / 60)}:{(musicStartOffset % 60).toFixed(1).padStart(4, '0')}
                       </span>
                       <span>
@@ -10600,7 +10605,7 @@ const PhotoGallery = ({
                     
                     <p style={{
                       margin: '4px 0 0 0',
-                      color: 'rgba(0, 0, 0, 0.4)',
+                      color: 'rgba(0, 0, 0, 0.55)',
                       fontSize: '10px',
                       textAlign: 'center'
                     }}>
