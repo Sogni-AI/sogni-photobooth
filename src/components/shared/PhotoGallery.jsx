@@ -8824,6 +8824,8 @@ const PhotoGallery = ({
                               const wasCurrent = el.dataset.wasCurrent === 'true';
                               const lastSyncCounter = parseInt(el.dataset.lastSyncCounter || '0', 10);
                               const syncJustChanged = lastSyncCounter !== syncResetCounter;
+                              const nextVideoIndex = (currentVideoIndex + 1) % transitionVideoQueue.length;
+                              const isNextVideo = videoIndex === nextVideoIndex;
                               
                               if (syncJustChanged && isCurrentVideo) {
                                 // Sync mode just started - reset ALL current videos to beginning
@@ -8837,12 +8839,22 @@ const PhotoGallery = ({
                                 el.play().catch(() => {});
                                 el.dataset.wasCurrent = 'true';
                               } else if (!isCurrentVideo && wasCurrent) {
-                                // Transitioning AWAY from this video - pause
+                                // Transitioning AWAY from this video - pause and reset for next time
                                 el.pause();
+                                el.currentTime = 0;
                                 el.dataset.wasCurrent = 'false';
                               } else if (isCurrentVideo && el.paused) {
                                 // Ensure current video is playing
                                 el.play().catch(() => {});
+                              } else if (isNextVideo && !isCurrentVideo) {
+                                // Pre-load next video - keep it paused at start, ready to play
+                                if (el.currentTime !== 0) {
+                                  el.currentTime = 0;
+                                }
+                                el.pause();
+                              } else if (!isCurrentVideo && !isNextVideo && !el.paused) {
+                                // Pause any other videos to save resources
+                                el.pause();
                               }
                               
                               // Update sync counter tracking
@@ -8867,10 +8879,18 @@ const PhotoGallery = ({
                             width: '100%',
                             height: '100%',
                             objectFit: 'cover',
-                            zIndex: 5,
+                            // Seamless video transitions: current video on top, next video ready underneath
+                            // This prevents flickering when switching between videos
+                            zIndex: isCurrentVideo ? 6 : 5,
                             pointerEvents: 'none',
-                            opacity: isCurrentVideo ? 1 : 0,
-                            visibility: isCurrentVideo ? 'visible' : 'hidden'
+                            // Current video and the next video (to be played) stay visible
+                            // Others hidden to save resources
+                            opacity: (() => {
+                              if (isCurrentVideo) return 1;
+                              const nextVideoIndex = (currentVideoIndex + 1) % transitionVideoQueue.length;
+                              if (videoIndex === nextVideoIndex) return 1; // Next video ready underneath
+                              return 0;
+                            })()
                           }}
                         />
                       );
