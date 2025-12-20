@@ -978,6 +978,8 @@ const PhotoGallery = ({
   const [currentVideoIndexByPhoto, setCurrentVideoIndexByPhoto] = useState({});
   // Track if all transition videos have finished generating (for sync mode)
   const [allTransitionVideosComplete, setAllTransitionVideosComplete] = useState(false);
+  // Track if the user has downloaded the transition video (to suppress confirmation)
+  const [transitionVideoDownloaded, setTransitionVideoDownloaded] = useState(false);
   // Counter to force all videos to reset to beginning when sync starts
   const [syncResetCounter, setSyncResetCounter] = useState(0);
   // Store ready-to-share transition video blob (for iOS share sheet after async concat)
@@ -2212,7 +2214,7 @@ const PhotoGallery = ({
   // Handle batch transition video generation - transitions each image to the next in sequence (circular)
   const handleBatchGenerateTransitionVideo = useCallback(async (skipConfirmation = false) => {
     // Check if there's an existing transition video that hasn't been downloaded
-    if (!skipConfirmation && allTransitionVideosComplete && transitionVideoQueue.length > 0) {
+    if (!skipConfirmation && allTransitionVideosComplete && transitionVideoQueue.length > 0 && !transitionVideoDownloaded) {
       const confirmed = window.confirm("New batch video? FYI You haven't downloaded the last one.");
       if (!confirmed) {
         return;
@@ -2252,6 +2254,7 @@ const PhotoGallery = ({
     setIsTransitionMode(true);
     setTransitionVideoQueue(loadedPhotos.map(p => p.id));
     setAllTransitionVideosComplete(false);  // Reset sync mode for new batch
+    setTransitionVideoDownloaded(false);  // Reset download flag for new batch
     setCurrentVideoIndexByPhoto({});  // Reset video indices
     
     // Clean up music state for new batch
@@ -2645,7 +2648,7 @@ const PhotoGallery = ({
 
       generateWithRetry(photoData, false);
     }
-  }, [photos, sogniClient, setPhotos, settings.videoResolution, settings.videoQuality, settings.videoFramerate, settings.videoDuration, settings.videoNegativePrompt, settings.soundEnabled, tokenType, desiredWidth, desiredHeight, showToast, onOutOfCredits, setPlayingGeneratedVideoIds, allTransitionVideosComplete, transitionVideoQueue]);
+  }, [photos, sogniClient, setPhotos, settings.videoResolution, settings.videoQuality, settings.videoFramerate, settings.videoDuration, settings.videoNegativePrompt, settings.soundEnabled, tokenType, desiredWidth, desiredHeight, showToast, onOutOfCredits, setPlayingGeneratedVideoIds, allTransitionVideosComplete, transitionVideoQueue, transitionVideoDownloaded]);
 
   // Handle video cancellation
   const handleCancelVideo = useCallback(() => {
@@ -3113,10 +3116,11 @@ const PhotoGallery = ({
         text: 'Check out my transition video from Sogni AI Photobooth!'
       });
       
-      // Success - clear the ready video
+      // Success - clear the ready video and mark as downloaded
       setReadyTransitionVideo(null);
       setBulkDownloadProgress({ current: 0, total: 0, message: '' });
       setIsBulkDownloading(false);
+      setTransitionVideoDownloaded(true);
     } catch (shareError) {
       // If user cancelled, that's fine
       if (shareError instanceof Error && 
@@ -3144,6 +3148,7 @@ const PhotoGallery = ({
       setReadyTransitionVideo(null);
       setBulkDownloadProgress({ current: 0, total: 0, message: '' });
       setIsBulkDownloading(false);
+      setTransitionVideoDownloaded(true); // Fallback download also counts
     }
   }, [readyTransitionVideo]);
 
@@ -3764,6 +3769,9 @@ const PhotoGallery = ({
           total: orderedVideos.length,
           message: 'Download complete!'
         });
+        
+        // Mark transition video as downloaded
+        setTransitionVideoDownloaded(true);
       }
 
       // Reset after a delay
