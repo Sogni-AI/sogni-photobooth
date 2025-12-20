@@ -10298,158 +10298,147 @@ const PhotoGallery = ({
         >
           <div
             style={{
-              backgroundColor: '#1a1a2e',
-              borderRadius: '16px',
-              maxWidth: '500px',
+              backgroundColor: '#ffeb3b',
+              borderRadius: '12px',
+              maxWidth: '420px',
               width: '100%',
-              maxHeight: '90vh',
-              overflow: 'auto',
-              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)',
-              border: '1px solid rgba(255, 255, 255, 0.1)'
+              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.1) inset',
+              animation: 'videoDropdownSlideUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)'
             }}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
             <div style={{
-              padding: '20px 24px',
-              borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+              padding: '12px 16px',
+              borderBottom: '1px solid rgba(0, 0, 0, 0.1)',
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center'
             }}>
               <h3 style={{
                 margin: 0,
-                color: '#fff',
-                fontSize: '20px',
-                fontWeight: '600',
+                color: '#000',
+                fontSize: '16px',
+                fontWeight: '700',
+                fontFamily: '"Permanent Marker", cursive',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '8px'
               }}>
                 🔀 Transition Video
               </h3>
-              {/* Settings Cog */}
-              <button
-                onClick={() => {
-                  setShowTransitionVideoPopup(false);
-                  handleShowControlOverlay();
-                  // Expand video section and scroll to it after a short delay
-                  setTimeout(() => {
-                    const videoSection = document.getElementById('video-settings-section');
-                    if (videoSection) {
-                      // Click on the toggle to expand if not already expanded
-                      const toggle = videoSection.querySelector('.advanced-toggle-subtle');
-                      if (toggle) {
-                        const isExpanded = toggle.getAttribute('aria-expanded') === 'true';
-                        if (!isExpanded) {
-                          toggle.click();
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                {/* Settings Cog */}
+                <button
+                  onClick={() => {
+                    setShowTransitionVideoPopup(false);
+                    handleShowControlOverlay();
+                    setTimeout(() => {
+                      const videoSection = document.getElementById('video-settings-section');
+                      if (videoSection) {
+                        const toggle = videoSection.querySelector('.advanced-toggle-subtle');
+                        if (toggle) {
+                          const isExpanded = toggle.getAttribute('aria-expanded') === 'true';
+                          if (!isExpanded) toggle.click();
                         }
-                      }
-                      // Give a bit more time for expansion animation, then scroll
-                      setTimeout(() => {
-                        videoSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        // Add highlight animation
-                        videoSection.classList.add('video-settings-highlight');
-                        // Remove highlight after animation completes
                         setTimeout(() => {
-                          videoSection.classList.remove('video-settings-highlight');
-                        }, 2000);
-                      }, 150);
-                    }
-                  }, 100);
-                }}
-                title="Video Settings"
-                style={{
-                  background: 'rgba(255, 255, 255, 0.1)',
-                  border: 'none',
-                  borderRadius: '8px',
-                  padding: '8px',
-                  cursor: 'pointer',
-                  color: '#fff',
-                  fontSize: '18px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}
-              >
-                ⚙️
-              </button>
+                          videoSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                          videoSection.classList.add('video-settings-highlight');
+                          setTimeout(() => videoSection.classList.remove('video-settings-highlight'), 2000);
+                        }, 150);
+                      }
+                    }, 100);
+                  }}
+                  title="Video Settings"
+                  style={{
+                    background: 'rgba(0, 0, 0, 0.1)',
+                    border: 'none',
+                    borderRadius: '50%',
+                    width: '28px',
+                    height: '28px',
+                    cursor: 'pointer',
+                    color: '#000',
+                    fontSize: '14px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                >
+                  ⚙️
+                </button>
+                {/* Close button */}
+                <button
+                  onClick={() => {
+                    setShowTransitionVideoPopup(false);
+                    setIsPlayingPreview(false);
+                    if (audioPreviewRef.current) audioPreviewRef.current.pause();
+                  }}
+                  style={{
+                    background: 'rgba(0, 0, 0, 0.6)',
+                    border: 'none',
+                    borderRadius: '50%',
+                    width: '24px',
+                    height: '24px',
+                    cursor: 'pointer',
+                    color: '#fff',
+                    fontSize: '14px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                >
+                  ×
+                </button>
+              </div>
             </div>
 
             {/* Content */}
-            <div style={{ padding: '20px 24px' }}>
-              {/* Pricing Info */}
+            <div style={{ padding: '12px 16px' }}>
+              {/* Pricing Info - Compact */}
               <div style={{
-                backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                border: '1px solid rgba(59, 130, 246, 0.3)',
-                borderRadius: '12px',
-                padding: '16px',
-                marginBottom: '20px'
+                backgroundColor: 'rgba(0, 0, 0, 0.08)',
+                borderRadius: '8px',
+                padding: '10px 12px',
+                marginBottom: '12px'
               }}>
                 <div style={{
                   display: 'flex',
                   justifyContent: 'space-between',
-                  alignItems: 'center',
-                  marginBottom: '8px'
+                  alignItems: 'center'
                 }}>
-                  <span style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '13px' }}>
-                    Batch Generation
+                  <span style={{ color: 'rgba(0, 0, 0, 0.6)', fontSize: '11px' }}>
+                    📹 {loadedPhotosCount} video{loadedPhotosCount !== 1 ? 's' : ''} • 📐 {settings.videoResolution || '480p'} • ⏱️ {settings.videoDuration || 5}s
                   </span>
                   {transitionVideoLoading ? (
-                    <span style={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: '12px' }}>
-                      Calculating...
-                    </span>
+                    <span style={{ color: 'rgba(0, 0, 0, 0.5)', fontSize: '11px' }}>...</span>
                   ) : formatCost(transitionVideoCostRaw, transitionVideoUSD) ? (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <span style={{ color: '#fff', fontSize: '16px', fontWeight: '700' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <span style={{ color: '#000', fontSize: '13px', fontWeight: '700' }}>
                         {(() => {
                           const formatted = formatCost(transitionVideoCostRaw, transitionVideoUSD);
-                          const parts = formatted.split('(');
-                          return parts[0].trim();
+                          return formatted.split('(')[0].trim();
                         })()}
                       </span>
                       {(() => {
                         const formatted = formatCost(transitionVideoCostRaw, transitionVideoUSD);
                         const usdMatch = formatted.match(/\((.*?)\)/);
-                        if (usdMatch) {
-                          return (
-                            <span style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '12px', fontWeight: '400' }}>
-                              ≈ {usdMatch[1]}
-                            </span>
-                          );
-                        }
-                        return null;
+                        return usdMatch ? (
+                          <span style={{ color: 'rgba(0, 0, 0, 0.5)', fontSize: '10px' }}>≈ {usdMatch[1]}</span>
+                        ) : null;
                       })()}
                     </div>
-                  ) : (
-                    <span style={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: '12px' }}>
-                      N/A
-                    </span>
-                  )}
-                </div>
-                <div style={{
-                  color: 'rgba(255, 255, 255, 0.5)',
-                  fontSize: '12px',
-                  display: 'flex',
-                  flexWrap: 'wrap',
-                  gap: '8px'
-                }}>
-                  <span>📹 {loadedPhotosCount} video{loadedPhotosCount !== 1 ? 's' : ''}</span>
-                  <span>•</span>
-                  <span>📐 {settings.videoResolution || '480p'}</span>
-                  <span>•</span>
-                  <span>⏱️ {settings.videoDuration || 5}s each</span>
+                  ) : null}
                 </div>
               </div>
 
-              {/* Transition Prompt */}
-              <div style={{ marginBottom: '20px' }}>
+              {/* Transition Prompt - Compact */}
+              <div style={{ marginBottom: '12px' }}>
                 <label style={{
                   display: 'block',
-                  color: 'rgba(255, 255, 255, 0.8)',
-                  fontSize: '13px',
-                  marginBottom: '8px',
-                  fontWeight: '500'
+                  color: 'rgba(0, 0, 0, 0.7)',
+                  fontSize: '11px',
+                  marginBottom: '4px',
+                  fontWeight: '600'
                 }}>
                   ✨ Transition Prompt
                 </label>
@@ -10457,51 +10446,48 @@ const PhotoGallery = ({
                   value={settings.videoTransitionPrompt ?? DEFAULT_SETTINGS.videoTransitionPrompt ?? ''}
                   onChange={(e) => updateSetting('videoTransitionPrompt', e.target.value)}
                   placeholder="Describe how images should transition..."
-                  rows={3}
+                  rows={2}
                   style={{
                     width: '100%',
-                    padding: '12px',
-                    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                    border: '1px solid rgba(255, 255, 255, 0.15)',
-                    borderRadius: '8px',
-                    color: '#fff',
-                    fontSize: '13px',
-                    resize: 'vertical',
-                    minHeight: '80px',
+                    padding: '8px 10px',
+                    backgroundColor: 'rgba(0, 0, 0, 0.06)',
+                    border: '1px solid rgba(0, 0, 0, 0.15)',
+                    borderRadius: '6px',
+                    color: '#000',
+                    fontSize: '12px',
+                    resize: 'none',
                     boxSizing: 'border-box',
                     fontFamily: 'inherit'
                   }}
                 />
               </div>
 
-              {/* Music Section */}
+              {/* Music Section - Compact */}
               <div style={{
-                backgroundColor: 'rgba(255, 255, 255, 0.03)',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                borderRadius: '12px',
-                padding: '16px',
-                marginBottom: '20px'
+                backgroundColor: 'rgba(0, 0, 0, 0.06)',
+                borderRadius: '8px',
+                padding: '10px 12px'
               }}>
                 <div style={{
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center',
-                  marginBottom: '12px'
+                  marginBottom: '8px'
                 }}>
                   <span style={{
-                    color: 'rgba(255, 255, 255, 0.8)',
-                    fontSize: '13px',
-                    fontWeight: '500'
+                    color: 'rgba(0, 0, 0, 0.7)',
+                    fontSize: '11px',
+                    fontWeight: '600'
                   }}>
                     🎵 Add Music (Optional)
                   </span>
                   <span style={{
-                    fontSize: '10px',
+                    fontSize: '9px',
                     backgroundColor: '#ff6b6b',
                     color: '#fff',
-                    padding: '2px 6px',
-                    borderRadius: '4px',
-                    fontWeight: '500'
+                    padding: '1px 5px',
+                    borderRadius: '3px',
+                    fontWeight: '600'
                   }}>BETA</span>
                 </div>
 
@@ -10521,30 +10507,26 @@ const PhotoGallery = ({
                   disabled={isLoadingPreset}
                   style={{
                     width: '100%',
-                    padding: '10px 12px',
-                    backgroundColor: selectedPresetId ? 'rgba(76, 175, 80, 0.2)' : 'rgba(30, 30, 40, 0.9)',
-                    border: selectedPresetId ? '1px solid rgba(76, 175, 80, 0.5)' : '1px solid rgba(255, 255, 255, 0.15)',
-                    borderRadius: '8px',
-                    color: '#fff',
+                    padding: '8px 10px',
+                    backgroundColor: selectedPresetId ? 'rgba(76, 175, 80, 0.2)' : 'rgba(255, 255, 255, 0.8)',
+                    border: selectedPresetId ? '1px solid rgba(76, 175, 80, 0.5)' : '1px solid rgba(0, 0, 0, 0.15)',
+                    borderRadius: '6px',
+                    color: '#000',
                     cursor: isLoadingPreset ? 'wait' : 'pointer',
-                    fontSize: '13px',
+                    fontSize: '12px',
                     appearance: 'none',
-                    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23fff' d='M6 8L1 3h10z'/%3E%3C/svg%3E")`,
+                    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23000' d='M6 8L1 3h10z'/%3E%3C/svg%3E")`,
                     backgroundRepeat: 'no-repeat',
-                    backgroundPosition: 'right 12px center',
-                    paddingRight: '36px',
-                    marginBottom: '8px'
+                    backgroundPosition: 'right 10px center',
+                    paddingRight: '32px',
+                    marginBottom: '6px'
                   }}
                 >
-                  <option value="" style={{ backgroundColor: '#1e1e28', color: '#fff' }}>
+                  <option value="">
                     {isLoadingPreset ? '⏳ Loading...' : '🎵 Select a preset track...'}
                   </option>
                   {TRANSITION_MUSIC_PRESETS.map((preset) => (
-                    <option 
-                      key={preset.id} 
-                      value={preset.id}
-                      style={{ backgroundColor: '#1e1e28', color: '#fff' }}
-                    >
+                    <option key={preset.id} value={preset.id}>
                       {preset.title} • {preset.duration}
                     </option>
                   ))}
@@ -10554,14 +10536,14 @@ const PhotoGallery = ({
                 <div style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '8px',
-                  margin: '8px 0',
-                  color: 'rgba(255, 255, 255, 0.3)',
-                  fontSize: '11px'
+                  gap: '6px',
+                  margin: '6px 0',
+                  color: 'rgba(0, 0, 0, 0.3)',
+                  fontSize: '10px'
                 }}>
-                  <div style={{ flex: 1, height: '1px', backgroundColor: 'rgba(255, 255, 255, 0.1)' }} />
+                  <div style={{ flex: 1, height: '1px', backgroundColor: 'rgba(0, 0, 0, 0.1)' }} />
                   <span>or</span>
-                  <div style={{ flex: 1, height: '1px', backgroundColor: 'rgba(255, 255, 255, 0.1)' }} />
+                  <div style={{ flex: 1, height: '1px', backgroundColor: 'rgba(0, 0, 0, 0.1)' }} />
                 </div>
 
                 {/* Custom file upload button */}
@@ -10572,13 +10554,13 @@ const PhotoGallery = ({
                   }}
                   style={{
                     width: '100%',
-                    padding: '10px 12px',
-                    backgroundColor: musicFile && !selectedPresetId ? 'rgba(76, 175, 80, 0.2)' : 'rgba(255, 255, 255, 0.05)',
-                    border: musicFile && !selectedPresetId ? '1px solid rgba(76, 175, 80, 0.5)' : '1px dashed rgba(255, 255, 255, 0.15)',
-                    borderRadius: '8px',
-                    color: '#fff',
+                    padding: '8px 10px',
+                    backgroundColor: musicFile && !selectedPresetId ? 'rgba(76, 175, 80, 0.2)' : 'rgba(255, 255, 255, 0.6)',
+                    border: musicFile && !selectedPresetId ? '1px solid rgba(76, 175, 80, 0.5)' : '1px dashed rgba(0, 0, 0, 0.2)',
+                    borderRadius: '6px',
+                    color: '#000',
                     cursor: 'pointer',
-                    fontSize: '13px',
+                    fontSize: '12px',
                     textAlign: 'center'
                   }}
                 >
@@ -10587,32 +10569,29 @@ const PhotoGallery = ({
 
                 {/* Waveform Visualization */}
                 {musicFile && audioWaveform && (
-                  <div style={{ marginTop: '12px' }}>
+                  <div style={{ marginTop: '10px' }}>
                     <div style={{
                       display: 'flex',
                       justifyContent: 'space-between',
                       alignItems: 'center',
-                      marginBottom: '8px'
+                      marginBottom: '6px'
                     }}>
-                      <label style={{
-                        color: 'rgba(255, 255, 255, 0.8)',
-                        fontSize: '13px'
-                      }}>
+                      <label style={{ color: 'rgba(0, 0, 0, 0.7)', fontSize: '11px' }}>
                         Select Start Position
                       </label>
                       <button
                         onClick={toggleAudioPreview}
                         style={{
-                          padding: '4px 12px',
-                          backgroundColor: isPlayingPreview ? '#ff6b6b' : 'rgba(255, 255, 255, 0.1)',
+                          padding: '3px 10px',
+                          backgroundColor: isPlayingPreview ? '#ff6b6b' : 'rgba(0, 0, 0, 0.15)',
                           border: 'none',
                           borderRadius: '4px',
-                          color: '#fff',
+                          color: isPlayingPreview ? '#fff' : '#000',
                           cursor: 'pointer',
-                          fontSize: '12px',
+                          fontSize: '11px',
                           display: 'flex',
                           alignItems: 'center',
-                          gap: '4px'
+                          gap: '3px'
                         }}
                       >
                         {isPlayingPreview ? '⏸ Pause' : '▶ Preview'}
@@ -10623,8 +10602,8 @@ const PhotoGallery = ({
                     <div
                       style={{
                         position: 'relative',
-                        backgroundColor: 'rgba(0, 0, 0, 0.3)',
-                        borderRadius: '8px',
+                        backgroundColor: 'rgba(0, 0, 0, 0.2)',
+                        borderRadius: '6px',
                         overflow: 'hidden',
                         cursor: isDraggingWaveform ? 'grabbing' : 'crosshair',
                         userSelect: 'none'
@@ -10634,11 +10613,11 @@ const PhotoGallery = ({
                       <canvas
                         ref={waveformCanvasRef}
                         width={352}
-                        height={80}
+                        height={60}
                         style={{
                           display: 'block',
                           width: '100%',
-                          height: '80px',
+                          height: '60px',
                           pointerEvents: 'none'
                         }}
                       />
@@ -10648,12 +10627,12 @@ const PhotoGallery = ({
                     <div style={{
                       display: 'flex',
                       justifyContent: 'space-between',
-                      marginTop: '4px',
-                      fontSize: '11px',
-                      color: 'rgba(255, 255, 255, 0.5)'
+                      marginTop: '3px',
+                      fontSize: '10px',
+                      color: 'rgba(0, 0, 0, 0.5)'
                     }}>
                       <span>0:00</span>
-                      <span style={{ color: '#ff6b6b' }}>
+                      <span style={{ color: '#d32f2f', fontWeight: '600' }}>
                         Start: {Math.floor(musicStartOffset / 60)}:{(musicStartOffset % 60).toFixed(1).padStart(4, '0')}
                       </span>
                       <span>
@@ -10662,24 +10641,24 @@ const PhotoGallery = ({
                     </div>
                     
                     <p style={{
-                      margin: '8px 0 0 0',
-                      color: 'rgba(255, 255, 255, 0.4)',
-                      fontSize: '11px',
+                      margin: '4px 0 0 0',
+                      color: 'rgba(0, 0, 0, 0.4)',
+                      fontSize: '10px',
                       textAlign: 'center'
                     }}>
-                      Click to set position • Drag red area to move selection
+                      Click to set • Drag red area to move
                     </p>
                   </div>
                 )}
 
                 {/* Manual offset input as fallback */}
                 {musicFile && !audioWaveform && (
-                  <div style={{ marginTop: '12px' }}>
+                  <div style={{ marginTop: '10px' }}>
                     <label style={{
                       display: 'block',
-                      color: 'rgba(255, 255, 255, 0.8)',
-                      fontSize: '13px',
-                      marginBottom: '8px'
+                      color: 'rgba(0, 0, 0, 0.7)',
+                      fontSize: '11px',
+                      marginBottom: '4px'
                     }}>
                       Start Offset (seconds)
                     </label>
@@ -10691,20 +10670,20 @@ const PhotoGallery = ({
                       onChange={(e) => setMusicStartOffset(parseFloat(e.target.value) || 0)}
                       style={{
                         width: '100%',
-                        padding: '10px 12px',
-                        backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                        border: '1px solid rgba(255, 255, 255, 0.2)',
-                        borderRadius: '8px',
-                        color: '#fff',
-                        fontSize: '14px',
+                        padding: '8px 10px',
+                        backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                        border: '1px solid rgba(0, 0, 0, 0.15)',
+                        borderRadius: '6px',
+                        color: '#000',
+                        fontSize: '12px',
                         boxSizing: 'border-box'
                       }}
                       placeholder="0"
                     />
                     <p style={{
-                      margin: '8px 0 0 0',
-                      color: 'rgba(255, 255, 255, 0.4)',
-                      fontSize: '11px'
+                      margin: '4px 0 0 0',
+                      color: 'rgba(0, 0, 0, 0.4)',
+                      fontSize: '10px'
                     }}>
                       Loading waveform...
                     </p>
@@ -10713,56 +10692,30 @@ const PhotoGallery = ({
               </div>
             </div>
 
-            {/* Footer with buttons */}
+            {/* Footer with Generate button */}
             <div style={{
-              padding: '16px 24px',
-              borderTop: '1px solid rgba(255, 255, 255, 0.1)',
-              display: 'flex',
-              gap: '12px',
-              justifyContent: 'flex-end'
+              padding: '10px 16px 12px',
+              borderTop: '1px solid rgba(0, 0, 0, 0.1)'
             }}>
               <button
                 onClick={() => {
                   setShowTransitionVideoPopup(false);
                   setIsPlayingPreview(false);
-                  if (audioPreviewRef.current) {
-                    audioPreviewRef.current.pause();
-                  }
-                }}
-                style={{
-                  padding: '12px 24px',
-                  backgroundColor: 'transparent',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
-                  borderRadius: '8px',
-                  color: '#fff',
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  fontWeight: '500'
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => {
-                  setShowTransitionVideoPopup(false);
-                  setIsPlayingPreview(false);
-                  if (audioPreviewRef.current) {
-                    audioPreviewRef.current.pause();
-                  }
-                  // Generate the transition videos
+                  if (audioPreviewRef.current) audioPreviewRef.current.pause();
                   handleBatchGenerateTransitionVideo();
                 }}
                 disabled={transitionVideoLoading}
                 style={{
-                  padding: '12px 24px',
-                  background: transitionVideoLoading ? 'rgba(59, 130, 246, 0.5)' : 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
+                  width: '100%',
+                  padding: '10px 16px',
+                  background: transitionVideoLoading ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.85)',
                   border: 'none',
                   borderRadius: '8px',
                   color: '#fff',
                   cursor: transitionVideoLoading ? 'not-allowed' : 'pointer',
-                  fontSize: '14px',
+                  fontSize: '13px',
                   fontWeight: '600',
-                  boxShadow: transitionVideoLoading ? 'none' : '0 4px 14px rgba(59, 130, 246, 0.4)'
+                  fontFamily: '"Permanent Marker", cursive'
                 }}
               >
                 🎬 Generate Transition Video
