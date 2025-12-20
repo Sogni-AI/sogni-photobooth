@@ -1022,6 +1022,7 @@ const PhotoGallery = ({
   const audioContextRef = useRef(null);
   const playbackAnimationRef = useRef(null);
   const musicStartOffsetRef = useRef(0); // Track current offset for animation frame access
+  const musicFileRef = useRef(null); // Track current music file for transition video generation
   const inlineAudioRef = useRef(null); // For playing music with transition videos
   
   // State to track if user wants fullscreen mode in Style Explorer
@@ -2258,11 +2259,11 @@ const PhotoGallery = ({
     setShowBatchVideoDropdown(false);
     setSelectedMotionCategory(null);
 
-    // Capture current music settings before starting generation
+    // Capture current music settings from refs (refs always have latest values)
     // These will be applied when the batch completes
-    const capturedMusicFile = musicFile;
-    const capturedMusicStartOffset = musicStartOffset;
-    console.log(`[Transition] Capturing music settings: file=${!!musicFile}, isPreset=${musicFile?.isPreset}, presetUrl=${musicFile?.presetUrl}, offset=${musicStartOffset}`);
+    const capturedMusicFile = musicFileRef.current;
+    const capturedMusicStartOffset = musicStartOffsetRef.current;
+    console.log(`[Transition] Capturing music settings from refs: file=${!!capturedMusicFile}, isPreset=${capturedMusicFile?.isPreset}, presetUrl=${capturedMusicFile?.presetUrl}, offset=${capturedMusicStartOffset}`);
 
     // Pre-warm audio for iOS
     warmUpAudio();
@@ -2705,7 +2706,7 @@ const PhotoGallery = ({
 
       generateWithRetry(photoData, false);
     }
-  }, [photos, sogniClient, setPhotos, settings.videoResolution, settings.videoQuality, settings.videoFramerate, settings.videoDuration, settings.videoNegativePrompt, settings.soundEnabled, tokenType, desiredWidth, desiredHeight, showToast, onOutOfCredits, setPlayingGeneratedVideoIds, allTransitionVideosComplete, transitionVideoQueue, transitionVideoDownloaded, musicFile, musicStartOffset]);
+  }, [photos, sogniClient, setPhotos, settings.videoResolution, settings.videoQuality, settings.videoFramerate, settings.videoDuration, settings.videoNegativePrompt, settings.soundEnabled, tokenType, desiredWidth, desiredHeight, showToast, onOutOfCredits, setPlayingGeneratedVideoIds, allTransitionVideosComplete, transitionVideoQueue, transitionVideoDownloaded]);
 
   // Handle video cancellation
   const handleCancelVideo = useCallback(() => {
@@ -3683,10 +3684,14 @@ const PhotoGallery = ({
     }
   }, [appliedMusic, allTransitionVideosComplete, firstPhotoVideoIndex, isInlineAudioMuted]);
 
-  // Keep ref in sync with musicStartOffset state for animation frame access
+  // Keep refs in sync with music state for animation frame access and transition video generation
   useEffect(() => {
     musicStartOffsetRef.current = musicStartOffset;
   }, [musicStartOffset]);
+  
+  useEffect(() => {
+    musicFileRef.current = musicFile;
+  }, [musicFile]);
 
   // Toggle audio preview playback
   const toggleAudioPreview = useCallback(async () => {
