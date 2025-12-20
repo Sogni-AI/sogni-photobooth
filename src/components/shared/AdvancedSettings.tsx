@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { useApp } from '../../context/AppContext';
 import { AspectRatioOption, TezDevTheme, OutputFormat, Settings } from '../../types/index';
 import { isFluxKontextModel, getModelRanges, getModelDefaults, DEFAULT_SETTINGS } from '../../constants/settings';
@@ -591,7 +592,7 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
     }
   };
 
-  return (
+  return createPortal(
     <div className={`control-overlay ${visible ? 'visible' : ''}`} style={{ position: 'fixed', zIndex: 99999 }}>
       <div className="control-overlay-content">
         <h2 className="settings-title" data-text="Photobooth Settings">Photobooth Settings</h2>
@@ -1566,7 +1567,8 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

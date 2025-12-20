@@ -8769,11 +8769,17 @@ const PhotoGallery = ({
                     title={playingGeneratedVideoIds.has(photo.id) ? 'Stop video' : 'Play video'}
                   >
                     <svg fill="currentColor" width="16" height="16" viewBox="0 0 24 24" style={{ pointerEvents: 'none' }}>
-                      {playingGeneratedVideoIds.has(photo.id) ? (
-                        <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
-                      ) : (
-                        <path d="M8 5v14l11-7z"/>
-                      )}
+                      {(() => {
+                        // In sync mode, only first photo shows as playing
+                        const isFirstTransitionPhoto = transitionVideoQueue.length > 0 && transitionVideoQueue[0] === photo.id;
+                        const isActuallyPlaying = playingGeneratedVideoIds.has(photo.id) && 
+                          (!allTransitionVideosComplete || isFirstTransitionPhoto);
+                        return isActuallyPlaying ? (
+                          <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+                        ) : (
+                          <path d="M8 5v14l11-7z"/>
+                        );
+                      })()}
                     </svg>
                   </button>
                 )}
