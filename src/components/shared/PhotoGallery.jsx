@@ -3371,6 +3371,7 @@ const PhotoGallery = ({
       const presetFile = new File([], `${preset.title}.m4a`, { type: 'audio/mp4' });
       presetFile.presetUrl = preset.url; // Store URL for later fetch
       presetFile.isPreset = true;
+      console.log(`[Preset Select] Creating preset file: url=${preset.url}, title=${preset.title}`);
       setMusicFile(presetFile);
       
       // Set up audio preview using the URL directly
@@ -3690,6 +3691,7 @@ const PhotoGallery = ({
   }, [musicStartOffset]);
   
   useEffect(() => {
+    console.log(`[Music Ref Sync] musicFile changed: file=${!!musicFile}, isPreset=${musicFile?.isPreset}, presetUrl=${musicFile?.presetUrl}`);
     musicFileRef.current = musicFile;
   }, [musicFile]);
 
