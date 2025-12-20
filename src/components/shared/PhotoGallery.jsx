@@ -8782,6 +8782,13 @@ const PhotoGallery = ({
                 {photo.videoUrl && !photo.generatingVideo && playingGeneratedVideoIds.has(photo.id) && (() => {
                   // In transition mode, pre-render ALL videos and show/hide them to avoid loading delays on mobile
                   if (isTransitionMode && transitionVideoQueue.length > 0) {
+                    // When all videos complete, only play on the FIRST photo - others show static image
+                    const isFirstTransitionPhoto = transitionVideoQueue[0] === photo.id;
+                    if (allTransitionVideosComplete && !isFirstTransitionPhoto) {
+                      // Not the first photo in sync mode - show static image instead of video
+                      return null;
+                    }
+                    
                     const currentVideoIndex = currentVideoIndexByPhoto[photo.id] ?? 0;
                     const shouldLoop = !allTransitionVideosComplete;
                     
