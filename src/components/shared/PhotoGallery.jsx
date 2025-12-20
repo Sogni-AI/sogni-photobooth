@@ -868,6 +868,7 @@ const PhotoGallery = ({
   const [showBatchVideoDropdown, setShowBatchVideoDropdown] = useState(false);
   const [showBatchCustomVideoPromptPopup, setShowBatchCustomVideoPromptPopup] = useState(false);
   const [selectedBatchMotionCategory, setSelectedBatchMotionCategory] = useState(null);
+  const [showTransitionVideoPopup, setShowTransitionVideoPopup] = useState(false); // Popup before transition video generation
 
   // Video cost estimation - include selectedPhotoIndex to bust cache when switching photos
   const { loading: videoLoading, cost: videoCostRaw, costInUSD: videoUSD, refetch: refetchVideoCost } = useVideoCostEstimation({
@@ -895,6 +896,18 @@ const PhotoGallery = ({
     fps: settings.videoFramerate || 16,
     duration: settings.videoDuration || 5,
     enabled: isAuthenticated && loadedPhotosCount > 0 && showBatchVideoDropdown,
+    jobCount: loadedPhotosCount
+  });
+
+  // Transition video cost estimation - enabled when popup is shown
+  const { loading: transitionVideoLoading, cost: transitionVideoCostRaw, costInUSD: transitionVideoUSD } = useVideoCostEstimation({
+    imageWidth: desiredWidth || 768,
+    imageHeight: desiredHeight || 1024,
+    resolution: settings.videoResolution || '480p',
+    quality: settings.videoQuality || 'fast',
+    fps: settings.videoFramerate || 16,
+    duration: settings.videoDuration || 5,
+    enabled: isAuthenticated && loadedPhotosCount > 0 && showTransitionVideoPopup,
     jobCount: loadedPhotosCount
   });
   
@@ -5395,9 +5408,9 @@ const PhotoGallery = ({
                     });
                   }
                 } else if (batchActionMode === 'transition') {
-                  // Directly generate transition videos without showing dropdown
+                  // Show transition video popup for configuration before generating
                   if (isAuthenticated) {
-                    handleBatchGenerateTransitionVideo();
+                    setShowTransitionVideoPopup(true);
                   } else {
                     showToast({
                       title: 'Authentication Required',
@@ -5659,10 +5672,10 @@ const PhotoGallery = ({
                           setBatchActionMode('transition');
                           setShowBatchActionDropdown(false);
                           
-                          // Auto-execute transition video generation if switching from another mode
+                          // Show transition video popup for configuration if switching from another mode
                           if (batchActionMode !== 'transition') {
                             if (isAuthenticated) {
-                              handleBatchGenerateTransitionVideo();
+                              setShowTransitionVideoPopup(true);
                             } else {
                               showToast({
                                 title: 'Authentication Required',
@@ -10229,6 +10242,401 @@ const PhotoGallery = ({
         onDismiss={handleVideoIntroDismiss}
         onProceed={handleVideoIntroProceed}
       />
+
+      {/* Transition Video Popup - Shows before generating transition videos */}
+      {showTransitionVideoPopup && createPortal(
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.85)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10000000,
+            padding: '20px'
+          }}
+          onClick={() => {
+            setShowTransitionVideoPopup(false);
+            // Stop any playing preview
+            setIsPlayingPreview(false);
+            if (audioPreviewRef.current) {
+              audioPreviewRef.current.pause();
+            }
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: '#1a1a2e',
+              borderRadius: '16px',
+              maxWidth: '500px',
+              width: '100%',
+              maxHeight: '90vh',
+              overflow: 'auto',
+              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)',
+              border: '1px solid rgba(255, 255, 255, 0.1)'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div style={{
+              padding: '20px 24px',
+              borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <h3 style={{
+                margin: 0,
+                color: '#fff',
+                fontSize: '20px',
+                fontWeight: '600',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}>
+                🔀 Transition Video
+              </h3>
+              {/* Settings Cog */}
+              <button
+                onClick={() => {
+                  setShowTransitionVideoPopup(false);
+                  handleShowControlOverlay();
+                  // Scroll to video section
+                  setTimeout(() => {
+                    const videoSection = document.getElementById('video-settings-section');
+                    if (videoSection) {
+                      const toggle = videoSection.querySelector('.advanced-toggle-subtle');
+                      if (toggle) {
+                        const isExpanded = toggle.getAttribute('aria-expanded') === 'true';
+                        if (!isExpanded) toggle.click();
+                      }
+                      videoSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                  }, 100);
+                }}
+                title="Video Settings"
+                style={{
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  border: 'none',
+                  borderRadius: '8px',
+                  padding: '8px',
+                  cursor: 'pointer',
+                  color: '#fff',
+                  fontSize: '18px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                ⚙️
+              </button>
+            </div>
+
+            {/* Content */}
+            <div style={{ padding: '20px 24px' }}>
+              {/* Pricing Info */}
+              <div style={{
+                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                border: '1px solid rgba(59, 130, 246, 0.3)',
+                borderRadius: '12px',
+                padding: '16px',
+                marginBottom: '20px'
+              }}>
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginBottom: '8px'
+                }}>
+                  <span style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '13px' }}>
+                    Batch Generation
+                  </span>
+                  {transitionVideoLoading ? (
+                    <span style={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: '12px' }}>
+                      Calculating...
+                    </span>
+                  ) : (
+                    <span style={{ color: '#fff', fontSize: '16px', fontWeight: '600' }}>
+                      {formatCost(transitionVideoCostRaw, transitionVideoUSD) || 'N/A'}
+                    </span>
+                  )}
+                </div>
+                <div style={{
+                  color: 'rgba(255, 255, 255, 0.5)',
+                  fontSize: '12px',
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: '8px'
+                }}>
+                  <span>📹 {loadedPhotosCount} video{loadedPhotosCount !== 1 ? 's' : ''}</span>
+                  <span>•</span>
+                  <span>📐 {settings.videoResolution || '480p'}</span>
+                  <span>•</span>
+                  <span>⏱️ {settings.videoDuration || 5}s each</span>
+                </div>
+              </div>
+
+              {/* Transition Prompt */}
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{
+                  display: 'block',
+                  color: 'rgba(255, 255, 255, 0.8)',
+                  fontSize: '13px',
+                  marginBottom: '8px',
+                  fontWeight: '500'
+                }}>
+                  ✨ Transition Prompt
+                </label>
+                <textarea
+                  value={settings.videoTransitionPrompt ?? DEFAULT_SETTINGS.videoTransitionPrompt ?? ''}
+                  onChange={(e) => updateSetting('videoTransitionPrompt', e.target.value)}
+                  placeholder="Describe how images should transition..."
+                  rows={3}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px solid rgba(255, 255, 255, 0.15)',
+                    borderRadius: '8px',
+                    color: '#fff',
+                    fontSize: '13px',
+                    resize: 'vertical',
+                    minHeight: '80px',
+                    boxSizing: 'border-box',
+                    fontFamily: 'inherit'
+                  }}
+                />
+              </div>
+
+              {/* Music Section */}
+              <div style={{
+                backgroundColor: 'rgba(255, 255, 255, 0.03)',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                borderRadius: '12px',
+                padding: '16px',
+                marginBottom: '20px'
+              }}>
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginBottom: '12px'
+                }}>
+                  <span style={{
+                    color: 'rgba(255, 255, 255, 0.8)',
+                    fontSize: '13px',
+                    fontWeight: '500'
+                  }}>
+                    🎵 Add Music (Optional)
+                  </span>
+                  <span style={{
+                    fontSize: '10px',
+                    backgroundColor: '#ff6b6b',
+                    color: '#fff',
+                    padding: '2px 6px',
+                    borderRadius: '4px',
+                    fontWeight: '500'
+                  }}>BETA</span>
+                </div>
+
+                {/* Preset Music Selection */}
+                <select
+                  value={selectedPresetId || ''}
+                  onChange={(e) => {
+                    const preset = TRANSITION_MUSIC_PRESETS.find(p => p.id === e.target.value);
+                    if (preset) {
+                      handlePresetSelect(preset);
+                    } else {
+                      setSelectedPresetId(null);
+                      setMusicFile(null);
+                      setAudioWaveform(null);
+                    }
+                  }}
+                  disabled={isLoadingPreset}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    backgroundColor: selectedPresetId ? 'rgba(76, 175, 80, 0.2)' : 'rgba(30, 30, 40, 0.9)',
+                    border: selectedPresetId ? '1px solid rgba(76, 175, 80, 0.5)' : '1px solid rgba(255, 255, 255, 0.15)',
+                    borderRadius: '8px',
+                    color: '#fff',
+                    cursor: isLoadingPreset ? 'wait' : 'pointer',
+                    fontSize: '13px',
+                    appearance: 'none',
+                    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23fff' d='M6 8L1 3h10z'/%3E%3C/svg%3E")`,
+                    backgroundRepeat: 'no-repeat',
+                    backgroundPosition: 'right 12px center',
+                    paddingRight: '36px',
+                    marginBottom: '8px'
+                  }}
+                >
+                  <option value="" style={{ backgroundColor: '#1e1e28', color: '#fff' }}>
+                    {isLoadingPreset ? '⏳ Loading...' : '🎵 Select a preset track...'}
+                  </option>
+                  {TRANSITION_MUSIC_PRESETS.map((preset) => (
+                    <option 
+                      key={preset.id} 
+                      value={preset.id}
+                      style={{ backgroundColor: '#1e1e28', color: '#fff' }}
+                    >
+                      {preset.title} • {preset.duration}
+                    </option>
+                  ))}
+                </select>
+
+                {/* Or upload divider */}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  margin: '8px 0',
+                  color: 'rgba(255, 255, 255, 0.3)',
+                  fontSize: '11px'
+                }}>
+                  <div style={{ flex: 1, height: '1px', backgroundColor: 'rgba(255, 255, 255, 0.1)' }} />
+                  <span>or</span>
+                  <div style={{ flex: 1, height: '1px', backgroundColor: 'rgba(255, 255, 255, 0.1)' }} />
+                </div>
+
+                {/* Custom file upload button */}
+                <button
+                  onClick={() => {
+                    setSelectedPresetId(null);
+                    musicFileInputRef.current?.click();
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    backgroundColor: musicFile && !selectedPresetId ? 'rgba(76, 175, 80, 0.2)' : 'rgba(255, 255, 255, 0.05)',
+                    border: musicFile && !selectedPresetId ? '1px solid rgba(76, 175, 80, 0.5)' : '1px dashed rgba(255, 255, 255, 0.15)',
+                    borderRadius: '8px',
+                    color: '#fff',
+                    cursor: 'pointer',
+                    fontSize: '13px',
+                    textAlign: 'center'
+                  }}
+                >
+                  {musicFile && !selectedPresetId ? `✅ ${musicFile.name}` : '📁 Upload MP3/M4A'}
+                </button>
+
+                {/* Waveform preview if music selected */}
+                {musicFile && audioWaveform && (
+                  <div style={{ marginTop: '12px' }}>
+                    <div style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      marginBottom: '6px'
+                    }}>
+                      <span style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '11px' }}>
+                        Start: {Math.floor(musicStartOffset / 60)}:{(musicStartOffset % 60).toFixed(1).padStart(4, '0')}
+                      </span>
+                      <button
+                        onClick={toggleAudioPreview}
+                        style={{
+                          padding: '4px 10px',
+                          backgroundColor: isPlayingPreview ? '#ff6b6b' : 'rgba(255, 255, 255, 0.1)',
+                          border: 'none',
+                          borderRadius: '4px',
+                          color: '#fff',
+                          cursor: 'pointer',
+                          fontSize: '11px'
+                        }}
+                      >
+                        {isPlayingPreview ? '⏸ Pause' : '▶ Preview'}
+                      </button>
+                    </div>
+                    <div
+                      style={{
+                        position: 'relative',
+                        backgroundColor: 'rgba(0, 0, 0, 0.3)',
+                        borderRadius: '6px',
+                        overflow: 'hidden',
+                        cursor: isDraggingWaveform ? 'grabbing' : 'crosshair',
+                        userSelect: 'none'
+                      }}
+                      onMouseDown={handleWaveformMouseDown}
+                    >
+                      <canvas
+                        ref={waveformCanvasRef}
+                        width={452}
+                        height={60}
+                        style={{
+                          display: 'block',
+                          width: '100%',
+                          height: '60px',
+                          pointerEvents: 'none'
+                        }}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Footer with buttons */}
+            <div style={{
+              padding: '16px 24px',
+              borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+              display: 'flex',
+              gap: '12px',
+              justifyContent: 'flex-end'
+            }}>
+              <button
+                onClick={() => {
+                  setShowTransitionVideoPopup(false);
+                  setIsPlayingPreview(false);
+                  if (audioPreviewRef.current) {
+                    audioPreviewRef.current.pause();
+                  }
+                }}
+                style={{
+                  padding: '12px 24px',
+                  backgroundColor: 'transparent',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  borderRadius: '8px',
+                  color: '#fff',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: '500'
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  setShowTransitionVideoPopup(false);
+                  setIsPlayingPreview(false);
+                  if (audioPreviewRef.current) {
+                    audioPreviewRef.current.pause();
+                  }
+                  // Generate the transition videos
+                  handleBatchGenerateTransitionVideo();
+                }}
+                disabled={transitionVideoLoading}
+                style={{
+                  padding: '12px 24px',
+                  background: transitionVideoLoading ? 'rgba(59, 130, 246, 0.5)' : 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
+                  border: 'none',
+                  borderRadius: '8px',
+                  color: '#fff',
+                  cursor: transitionVideoLoading ? 'not-allowed' : 'pointer',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  boxShadow: transitionVideoLoading ? 'none' : '0 4px 14px rgba(59, 130, 246, 0.4)'
+                }}
+              >
+                🎬 Generate {loadedPhotosCount} Video{loadedPhotosCount !== 1 ? 's' : ''}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
 
       {/* Video Dropdown Portal for Gallery Mode (when not in slideshow) */}
       {showVideoDropdown && videoTargetPhotoIndex !== null && selectedPhotoIndex === null && createPortal(
