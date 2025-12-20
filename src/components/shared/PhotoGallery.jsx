@@ -2262,6 +2262,7 @@ const PhotoGallery = ({
     // These will be applied when the batch completes
     const capturedMusicFile = musicFile;
     const capturedMusicStartOffset = musicStartOffset;
+    console.log(`[Transition] Capturing music settings: file=${!!musicFile}, isPreset=${musicFile?.isPreset}, presetUrl=${musicFile?.presetUrl}, offset=${musicStartOffset}`);
 
     // Pre-warm audio for iOS
     warmUpAudio();
@@ -2513,17 +2514,20 @@ const PhotoGallery = ({
           setSyncResetCounter(prev => prev + 1);
           
           // Apply captured music settings if music was selected before generation
+          console.log(`[Transition] Checking captured music: file=${!!capturedMusicFile}, isPreset=${capturedMusicFile?.isPreset}, presetUrl=${capturedMusicFile?.presetUrl}`);
           if (capturedMusicFile && successCount > 0) {
             const audioUrl = (capturedMusicFile.isPreset && capturedMusicFile.presetUrl) 
               ? capturedMusicFile.presetUrl 
               : URL.createObjectURL(capturedMusicFile);
             
+            console.log(`[Transition] Applying music: audioUrl=${audioUrl}, offset=${capturedMusicStartOffset}s`);
             setAppliedMusic({
               file: capturedMusicFile,
               startOffset: capturedMusicStartOffset,
               audioUrl
             });
-            console.log(`[Transition] Music applied: offset=${capturedMusicStartOffset}s`);
+          } else {
+            console.log(`[Transition] No music to apply: capturedMusicFile=${!!capturedMusicFile}, successCount=${successCount}`);
           }
           
           if (successCount > 0 && errorCount === 0) {
@@ -4027,6 +4031,7 @@ const PhotoGallery = ({
     }
     
     // Directly proceed with download, using appliedMusic if available
+    console.log(`[Transition Download] appliedMusic=${!!appliedMusic}, file=${!!appliedMusic?.file}, isPreset=${appliedMusic?.file?.isPreset}, presetUrl=${appliedMusic?.file?.presetUrl}`);
     handleProceedDownload(!!appliedMusic);
   }, [isBulkDownloading, transitionVideoQueue, photos, showToast, appliedMusic, handleProceedDownload]);
 
