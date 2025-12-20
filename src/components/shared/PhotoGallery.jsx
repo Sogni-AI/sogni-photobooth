@@ -8833,17 +8833,12 @@ const PhotoGallery = ({
                     title={playingGeneratedVideoIds.has(photo.id) ? 'Stop video' : 'Play video'}
                   >
                     <svg fill="currentColor" width="16" height="16" viewBox="0 0 24 24" style={{ pointerEvents: 'none' }}>
-                      {(() => {
-                        // In sync mode, only first photo shows as playing
-                        const isFirstTransitionPhoto = transitionVideoQueue.length > 0 && transitionVideoQueue[0] === photo.id;
-                        const isActuallyPlaying = playingGeneratedVideoIds.has(photo.id) && 
-                          (!allTransitionVideosComplete || isFirstTransitionPhoto);
-                        return isActuallyPlaying ? (
-                          <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
-                        ) : (
-                          <path d="M8 5v14l11-7z"/>
-                        );
-                      })()}
+                      {/* Icon reflects actual playback state - pause if playing, play if not */}
+                      {playingGeneratedVideoIds.has(photo.id) ? (
+                        <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+                      ) : (
+                        <path d="M8 5v14l11-7z"/>
+                      )}
                     </svg>
                   </button>
                 )}
@@ -8967,13 +8962,11 @@ const PhotoGallery = ({
                             width: '100%',
                             height: '100%',
                             objectFit: 'cover',
-                            // Layered z-index: current on top, then previous (fading out), then next (ready)
-                            zIndex: isCurrentVideo ? 7 : (isPrevVideo ? 6 : 5),
+                            // Current video on top (z-index 10), all others at z-index 5
+                            // All videos stay at opacity 1 to prevent flickering during transitions
+                            zIndex: isCurrentVideo ? 10 : 5,
                             pointerEvents: 'none',
-                            // Keep current, previous (just ended), and next video visible for smooth transitions
-                            opacity: (isCurrentVideo || isNextVideo || isPrevVideo) ? 1 : 0,
-                            // Smooth transition for previous video fading out
-                            transition: isPrevVideo ? 'opacity 0.15s ease-out' : 'none'
+                            opacity: 1
                           }}
                         />
                       );
