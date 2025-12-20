@@ -14,6 +14,7 @@ import { THEME_GROUPS, getDefaultThemeGroupState, getEnabledPrompts } from '../.
 import { getThemeGroupPreferences, saveThemeGroupPreferences, getFavoriteImages, toggleFavoriteImage, saveFavoriteImages, getBlockedPrompts, blockPrompt, hasSeenBatchVideoTip, markBatchVideoTipShown } from '../../utils/cookies';
 import { getAttributionText } from '../../config/ugcAttributions';
 import { isFluxKontextModel, SAMPLE_GALLERY_CONFIG, getQRWatermarkConfig, DEFAULT_SETTINGS } from '../../constants/settings';
+import { TRANSITION_MUSIC_PRESETS } from '../../constants/transitionMusicPresets';
 import { themeConfigService } from '../../services/themeConfig';
 import { useApp } from '../../context/AppContext';
 import { trackDownloadWithStyle } from '../../services/analyticsService';
@@ -997,6 +998,9 @@ const PhotoGallery = ({
   // Applied music for inline playback (set when user confirms in modal)
   const [appliedMusic, setAppliedMusic] = useState(null); // { file, startOffset, audioUrl }
   const [isInlineAudioMuted, setIsInlineAudioMuted] = useState(false);
+  // Preset music selection
+  const [selectedPresetId, setSelectedPresetId] = useState(null);
+  const [isLoadingPreset, setIsLoadingPreset] = useState(false);
   const musicFileInputRef = useRef(null);
   const waveformCanvasRef = useRef(null);
   const audioPreviewRef = useRef(null);
@@ -1255,6 +1259,8 @@ const PhotoGallery = ({
       setPreviewPlayhead(0);
       setShowMusicModal(false);
       setBatchActionMode('download');
+      setSelectedPresetId(null);
+      setIsLoadingPreset(false);
       // Note: appliedMusic cleanup is handled in handleMoreButtonClick to properly revoke URL
     }
     
@@ -1393,6 +1399,8 @@ const PhotoGallery = ({
     setIsInlineAudioMuted(false);
     setShowMusicModal(false);
     setBatchActionMode('download'); // Reset to default mode
+    setSelectedPresetId(null);
+    setIsLoadingPreset(false);
     
     // Stop any playing audio
     if (inlineAudioRef.current) {
@@ -3211,6 +3219,90 @@ const PhotoGallery = ({
       setMusicFile(null);
     }
   }, [showToast]);
+
+  // Handle preset music selection
+  const handlePresetSelect = useCallback(async (preset) => {
+    if (isLoadingPreset) return;
+    
+    setIsLoadingPreset(true);
+    setSelectedPresetId(preset.id);
+    setAudioWaveform(null);
+    setMusicStartOffset(0);
+    
+    try {
+      // Fetch the preset audio file
+      const response = await fetch(preset.url);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch preset: ${response.status}`);
+      }
+      
+      const arrayBuffer = await response.arrayBuffer();
+      
+      // Create a File object from the fetched data
+      const blob = new Blob([arrayBuffer], { type: 'audio/mp4' });
+      const file = new File([blob], `${preset.title}.m4a`, { type: 'audio/mp4' });
+      
+      setMusicFile(file);
+      
+      // Create audio context if needed
+      if (!audioContextRef.current) {
+        audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      
+      // Decode audio file
+      const audioBuffer = await audioContextRef.current.decodeAudioData(arrayBuffer.slice(0));
+      
+      // Get duration
+      setAudioDuration(audioBuffer.duration);
+      
+      // Generate waveform data
+      const channelData = audioBuffer.getChannelData(0);
+      const samples = 200;
+      const blockSize = Math.floor(channelData.length / samples);
+      const waveformData = [];
+      
+      for (let i = 0; i < samples; i++) {
+        const start = i * blockSize;
+        let sum = 0;
+        for (let j = 0; j < blockSize; j++) {
+          sum += Math.abs(channelData[start + j] || 0);
+        }
+        waveformData.push(sum / blockSize);
+      }
+      
+      // Normalize to 0-1 range
+      const max = Math.max(...waveformData);
+      const normalizedWaveform = waveformData.map(v => v / (max || 1));
+      
+      setAudioWaveform(normalizedWaveform);
+      
+      // Create object URL for audio preview
+      if (audioPreviewRef.current) {
+        URL.revokeObjectURL(audioPreviewRef.current.src);
+      }
+      const audioUrl = URL.createObjectURL(file);
+      if (audioPreviewRef.current) {
+        audioPreviewRef.current.src = audioUrl;
+      }
+      
+    } catch (error) {
+      console.error('Failed to load preset:', error);
+      showToast({
+        title: 'Load Error',
+        message: 'Failed to load preset track. Please try again.',
+        type: 'error'
+      });
+      setSelectedPresetId(null);
+    } finally {
+      setIsLoadingPreset(false);
+    }
+  }, [isLoadingPreset, showToast]);
+
+  // Clear preset selection when choosing custom file
+  const handleCustomFileSelect = useCallback(async (e) => {
+    setSelectedPresetId(null);
+    await handleMusicFileSelect(e);
+  }, [handleMusicFileSelect]);
 
   // Draw waveform on canvas
   const drawWaveform = useCallback(() => {
@@ -10383,7 +10475,7 @@ const PhotoGallery = ({
               Add a music track to your transition video
             </p>
 
-            {/* File Upload */}
+            {/* Preset Music Selection */}
             <div style={{ marginBottom: '16px' }}>
               <label style={{
                 display: 'block',
@@ -10391,22 +10483,91 @@ const PhotoGallery = ({
                 fontSize: '13px',
                 marginBottom: '8px'
               }}>
-                Audio File (M4A only)
+                🎶 Choose a Track
               </label>
+              <div style={{
+                display: 'grid',
+                gap: '8px',
+                maxHeight: '180px',
+                overflowY: 'auto',
+                paddingRight: '8px'
+              }}>
+                {TRANSITION_MUSIC_PRESETS.map((preset) => (
+                  <button
+                    key={preset.id}
+                    onClick={() => handlePresetSelect(preset)}
+                    disabled={isLoadingPreset}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      width: '100%',
+                      padding: '10px 12px',
+                      backgroundColor: selectedPresetId === preset.id 
+                        ? 'rgba(76, 175, 80, 0.3)' 
+                        : 'rgba(255, 255, 255, 0.05)',
+                      border: selectedPresetId === preset.id 
+                        ? '1px solid rgba(76, 175, 80, 0.5)' 
+                        : '1px solid rgba(255, 255, 255, 0.1)',
+                      borderRadius: '8px',
+                      color: '#fff',
+                      cursor: isLoadingPreset ? 'wait' : 'pointer',
+                      fontSize: '13px',
+                      textAlign: 'left',
+                      transition: 'all 0.2s ease',
+                      opacity: isLoadingPreset && selectedPresetId !== preset.id ? 0.5 : 1
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '16px' }}>
+                        {isLoadingPreset && selectedPresetId === preset.id ? '⏳' : 
+                         selectedPresetId === preset.id ? '✅' : '🎵'}
+                      </span>
+                      <div>
+                        <div style={{ fontWeight: '500' }}>{preset.title}</div>
+                        <div style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.5)' }}>
+                          {preset.artist} • {preset.duration}
+                        </div>
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Divider */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              margin: '16px 0',
+              color: 'rgba(255, 255, 255, 0.4)',
+              fontSize: '12px'
+            }}>
+              <div style={{ flex: 1, height: '1px', backgroundColor: 'rgba(255, 255, 255, 0.1)' }} />
+              <span>or upload your own</span>
+              <div style={{ flex: 1, height: '1px', backgroundColor: 'rgba(255, 255, 255, 0.1)' }} />
+            </div>
+
+            {/* Custom File Upload */}
+            <div style={{ marginBottom: '16px' }}>
               <input
                 ref={musicFileInputRef}
                 type="file"
                 accept=".m4a,audio/mp4,audio/x-m4a"
-                onChange={handleMusicFileSelect}
+                onChange={handleCustomFileSelect}
                 style={{ display: 'none' }}
               />
               <button
-                onClick={() => musicFileInputRef.current?.click()}
+                onClick={() => {
+                  setSelectedPresetId(null);
+                  musicFileInputRef.current?.click();
+                }}
                 style={{
                   width: '100%',
                   padding: '12px 16px',
-                  backgroundColor: musicFile ? 'rgba(76, 175, 80, 0.2)' : 'rgba(255, 255, 255, 0.1)',
-                  border: musicFile ? '1px solid rgba(76, 175, 80, 0.5)' : '1px dashed rgba(255, 255, 255, 0.3)',
+                  backgroundColor: musicFile && !selectedPresetId ? 'rgba(76, 175, 80, 0.2)' : 'rgba(255, 255, 255, 0.05)',
+                  border: musicFile && !selectedPresetId ? '1px solid rgba(76, 175, 80, 0.5)' : '1px dashed rgba(255, 255, 255, 0.2)',
                   borderRadius: '8px',
                   color: '#fff',
                   cursor: 'pointer',
@@ -10415,17 +10576,16 @@ const PhotoGallery = ({
                   transition: 'all 0.2s ease'
                 }}
               >
-                {musicFile ? `✅ ${musicFile.name}` : '📁 Choose M4A File'}
+                {musicFile && !selectedPresetId ? `✅ ${musicFile.name}` : '📁 Upload Custom M4A File'}
               </button>
-              {!musicFile && (
-                <p style={{
-                  margin: '8px 0 0 0',
-                  color: 'rgba(255, 255, 255, 0.4)',
-                  fontSize: '11px'
-                }}>
-                  Tip: Convert MP3 to M4A using iTunes or online converters
-                </p>
-              )}
+              <p style={{
+                margin: '8px 0 0 0',
+                color: 'rgba(255, 255, 255, 0.4)',
+                fontSize: '11px',
+                textAlign: 'center'
+              }}>
+                M4A format only • Convert MP3 using iTunes or online tools
+              </p>
             </div>
 
             {/* Waveform Visualization */}
