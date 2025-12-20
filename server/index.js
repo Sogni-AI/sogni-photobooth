@@ -12,6 +12,7 @@ import mobileShareRoutes from './routes/mobileShare.js';
 import imageHostingRoutes from './routes/imageHosting.js';
 import analyticsRoutes from './routes/analytics.js';
 import contestRoutes from './routes/contestRoutes.js';
+import audioTranscodeRoutes from './routes/audioTranscode.js';
 import process from 'process'; // Added to address linter error
 
 // Load environment variables FIRST
@@ -113,6 +114,7 @@ app.use('/api/mobile-share', mobileShareRoutes); // Mobile sharing routes
 app.use('/api/images', imageHostingRoutes); // Image hosting routes
 app.use('/api/analytics', analyticsRoutes); // Analytics routes
 app.use('/api/contest', contestRoutes); // Contest routes
+app.use('/api/audio', audioTranscodeRoutes); // Audio transcoding routes
 // Note: Stripe payments call Sogni API directly via SDK (no backend proxy needed)
 
 // Health check endpoint

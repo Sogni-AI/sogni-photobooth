@@ -3157,19 +3157,72 @@ const PhotoGallery = ({
     const file = e.target.files?.[0];
     if (!file) return;
     
-    // Check if it's an M4A file
-    if (!file.name.toLowerCase().endsWith('.m4a')) {
+    const fileName = file.name.toLowerCase();
+    const isMP3 = fileName.endsWith('.mp3');
+    const isM4A = fileName.endsWith('.m4a');
+    
+    // Check if it's a supported format
+    if (!isMP3 && !isM4A) {
       showToast({
         title: 'Invalid Format',
-        message: 'Please select an M4A audio file. MP3 and other formats are not yet supported.',
+        message: 'Please select an MP3 or M4A audio file.',
         type: 'error'
       });
       return;
     }
     
-    setMusicFile(file);
     setAudioWaveform(null);
     setMusicStartOffset(0);
+    
+    let audioFile = file;
+    let arrayBuffer;
+    
+    // If MP3, transcode to M4A using backend
+    if (isMP3) {
+      try {
+        showToast({
+          title: 'Converting Audio',
+          message: 'Converting MP3 to M4A format...',
+          type: 'info'
+        });
+        
+        const formData = new FormData();
+        formData.append('audio', file);
+        
+        const response = await fetch('/api/audio/mp3-to-m4a', {
+          method: 'POST',
+          body: formData
+        });
+        
+        if (!response.ok) {
+          const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+          throw new Error(error.details || error.error || 'Transcoding failed');
+        }
+        
+        const transcoded = await response.arrayBuffer();
+        const m4aBlob = new Blob([transcoded], { type: 'audio/mp4' });
+        audioFile = new File([m4aBlob], file.name.replace(/\.mp3$/i, '.m4a'), { type: 'audio/mp4' });
+        arrayBuffer = transcoded;
+        
+        showToast({
+          title: 'Conversion Complete',
+          message: 'MP3 converted to M4A successfully!',
+          type: 'success'
+        });
+      } catch (transcodeError) {
+        console.error('[Music] MP3 transcode error:', transcodeError);
+        showToast({
+          title: 'Conversion Failed',
+          message: transcodeError.message || 'Failed to convert MP3. Please use M4A format.',
+          type: 'error'
+        });
+        return;
+      }
+    } else {
+      arrayBuffer = await file.arrayBuffer();
+    }
+    
+    setMusicFile(audioFile);
     
     try {
       // Create audio context if needed
@@ -3178,7 +3231,6 @@ const PhotoGallery = ({
       }
       
       // Decode audio file
-      const arrayBuffer = await file.arrayBuffer();
       const audioBuffer = await audioContextRef.current.decodeAudioData(arrayBuffer.slice(0));
       
       // Get duration
@@ -10565,7 +10617,7 @@ const PhotoGallery = ({
               <input
                 ref={musicFileInputRef}
                 type="file"
-                accept=".m4a,audio/mp4,audio/x-m4a"
+                accept=".m4a,.mp3,audio/mp4,audio/x-m4a,audio/mpeg,audio/mp3"
                 onChange={handleCustomFileSelect}
                 style={{ display: 'none' }}
               />
@@ -10587,7 +10639,7 @@ const PhotoGallery = ({
                   transition: 'all 0.2s ease'
                 }}
               >
-                {musicFile && !selectedPresetId ? `✅ ${musicFile.name}` : '📁 Upload Custom M4A File'}
+                {musicFile && !selectedPresetId ? `✅ ${musicFile.name}` : '📁 Upload MP3 or M4A File'}
               </button>
               <p style={{
                 margin: '8px 0 0 0',
@@ -10595,7 +10647,7 @@ const PhotoGallery = ({
                 fontSize: '11px',
                 textAlign: 'center'
               }}>
-                M4A format only • Convert MP3 using iTunes or online tools
+                MP3 files will be automatically converted to M4A
               </p>
             </div>
 
