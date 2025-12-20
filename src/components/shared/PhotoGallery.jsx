@@ -10333,7 +10333,7 @@ const PhotoGallery = ({
             style={{
               backgroundColor: '#ffeb3b',
               borderRadius: '12px',
-              maxWidth: '420px',
+              maxWidth: '520px',
               width: '100%',
               boxShadow: '0 20px 60px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.1) inset',
               animation: 'popupFadeIn 0.25s ease-out'
@@ -10342,7 +10342,7 @@ const PhotoGallery = ({
           >
             {/* Header */}
             <div style={{
-              padding: '12px 16px',
+              padding: '14px 20px',
               borderBottom: '1px solid rgba(0, 0, 0, 0.1)',
               display: 'flex',
               justifyContent: 'space-between',
@@ -10351,7 +10351,7 @@ const PhotoGallery = ({
               <h3 style={{
                 margin: 0,
                 color: '#000',
-                fontSize: '16px',
+                fontSize: '18px',
                 fontWeight: '700',
                 fontFamily: '"Permanent Marker", cursive',
                 display: 'flex',
@@ -10408,14 +10408,14 @@ const PhotoGallery = ({
             </div>
 
             {/* Content */}
-            <div style={{ padding: '10px 16px' }}>
+            <div style={{ padding: '16px 20px' }}>
               {/* Transition Prompt */}
-              <div style={{ marginBottom: '10px' }}>
+              <div style={{ marginBottom: '16px' }}>
                 <label style={{
                   display: 'block',
-                  color: 'rgba(0, 0, 0, 0.6)',
-                  fontSize: '10px',
-                  marginBottom: '4px',
+                  color: 'rgba(0, 0, 0, 0.7)',
+                  fontSize: '11px',
+                  marginBottom: '6px',
                   fontWeight: '600',
                   textTransform: 'uppercase',
                   letterSpacing: '0.5px'
@@ -10426,40 +10426,40 @@ const PhotoGallery = ({
                   value={settings.videoTransitionPrompt ?? DEFAULT_SETTINGS.videoTransitionPrompt ?? ''}
                   onChange={(e) => updateSetting('videoTransitionPrompt', e.target.value)}
                   placeholder="Describe how images should transition..."
-                  rows={2}
+                  rows={3}
                   style={{
                     width: '100%',
-                    padding: '8px 10px',
-                    backgroundColor: 'rgba(255, 255, 255, 0.7)',
+                    padding: '10px 12px',
+                    backgroundColor: 'rgba(255, 255, 255, 0.8)',
                     border: '1px solid rgba(0, 0, 0, 0.15)',
-                    borderRadius: '6px',
+                    borderRadius: '8px',
                     color: '#000',
-                    fontSize: '11px',
-                    lineHeight: '1.4',
+                    fontSize: '13px',
+                    lineHeight: '1.5',
                     resize: 'vertical',
-                    minHeight: '44px',
-                    maxHeight: '120px',
+                    minHeight: '70px',
+                    maxHeight: '150px',
                     boxSizing: 'border-box',
                     fontFamily: 'inherit'
                   }}
                 />
               </div>
 
-              {/* Music Section - Compact */}
+              {/* Music Section */}
               <div style={{
                 backgroundColor: 'rgba(0, 0, 0, 0.08)',
-                borderRadius: '8px',
-                padding: '10px 12px'
+                borderRadius: '10px',
+                padding: '14px 16px'
               }}>
                 <div style={{
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center',
-                  marginBottom: '8px'
+                  marginBottom: '12px'
                 }}>
                   <span style={{
                     color: 'rgba(0, 0, 0, 0.85)',
-                    fontSize: '11px',
+                    fontSize: '12px',
                     fontWeight: '700'
                   }}>
                     🎵 Add Music (Optional)
@@ -10682,7 +10682,7 @@ const PhotoGallery = ({
 
             {/* Footer with pricing and Generate button */}
             <div style={{
-              padding: '8px 16px 12px',
+              padding: '12px 20px 16px',
               borderTop: '1px solid rgba(0, 0, 0, 0.1)'
             }}>
               {/* Pricing row */}
@@ -10690,9 +10690,9 @@ const PhotoGallery = ({
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
-                marginBottom: '8px'
+                marginBottom: '12px'
               }}>
-                <span style={{ fontSize: '10px', fontWeight: '500', color: 'rgba(0, 0, 0, 0.55)' }}>
+                <span style={{ fontSize: '11px', fontWeight: '500', color: 'rgba(0, 0, 0, 0.6)' }}>
                   📹 {loadedPhotosCount} video{loadedPhotosCount !== 1 ? 's' : ''} • 📐 {settings.videoResolution || '480p'} • ⏱️ {settings.videoDuration || 5}s
                 </span>
                 {transitionVideoLoading ? (
@@ -10726,13 +10726,13 @@ const PhotoGallery = ({
                 disabled={transitionVideoLoading}
                 style={{
                   width: '100%',
-                  padding: '10px 16px',
+                  padding: '14px 20px',
                   background: transitionVideoLoading ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.85)',
                   border: 'none',
-                  borderRadius: '8px',
+                  borderRadius: '10px',
                   color: '#fff',
                   cursor: transitionVideoLoading ? 'not-allowed' : 'pointer',
-                  fontSize: '13px',
+                  fontSize: '15px',
                   fontWeight: '600',
                   fontFamily: '"Permanent Marker", cursive'
                 }}
