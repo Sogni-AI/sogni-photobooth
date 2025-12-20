@@ -10383,52 +10383,17 @@ const PhotoGallery = ({
             </div>
 
             {/* Content */}
-            <div style={{ padding: '12px 16px' }}>
-              {/* Pricing Info - Compact */}
-              <div style={{
-                backgroundColor: 'rgba(0, 0, 0, 0.08)',
-                borderRadius: '8px',
-                padding: '10px 12px',
-                marginBottom: '12px'
-              }}>
-                <div style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center'
-                }}>
-                  <span style={{ color: 'rgba(0, 0, 0, 0.6)', fontSize: '11px' }}>
-                    📹 {loadedPhotosCount} video{loadedPhotosCount !== 1 ? 's' : ''} • 📐 {settings.videoResolution || '480p'} • ⏱️ {settings.videoDuration || 5}s
-                  </span>
-                  {transitionVideoLoading ? (
-                    <span style={{ color: 'rgba(0, 0, 0, 0.5)', fontSize: '11px' }}>...</span>
-                  ) : formatCost(transitionVideoCostRaw, transitionVideoUSD) ? (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <span style={{ color: '#000', fontSize: '13px', fontWeight: '700' }}>
-                        {(() => {
-                          const formatted = formatCost(transitionVideoCostRaw, transitionVideoUSD);
-                          return formatted.split('(')[0].trim();
-                        })()}
-                      </span>
-                      {(() => {
-                        const formatted = formatCost(transitionVideoCostRaw, transitionVideoUSD);
-                        const usdMatch = formatted.match(/\((.*?)\)/);
-                        return usdMatch ? (
-                          <span style={{ color: 'rgba(0, 0, 0, 0.5)', fontSize: '10px' }}>≈ {usdMatch[1]}</span>
-                        ) : null;
-                      })()}
-                    </div>
-                  ) : null}
-                </div>
-              </div>
-
-              {/* Transition Prompt - Compact */}
-              <div style={{ marginBottom: '12px' }}>
+            <div style={{ padding: '10px 16px' }}>
+              {/* Transition Prompt */}
+              <div style={{ marginBottom: '10px' }}>
                 <label style={{
                   display: 'block',
-                  color: 'rgba(0, 0, 0, 0.7)',
-                  fontSize: '11px',
+                  color: 'rgba(0, 0, 0, 0.6)',
+                  fontSize: '10px',
                   marginBottom: '4px',
-                  fontWeight: '600'
+                  fontWeight: '600',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px'
                 }}>
                   ✨ Transition Prompt
                 </label>
@@ -10440,12 +10405,15 @@ const PhotoGallery = ({
                   style={{
                     width: '100%',
                     padding: '8px 10px',
-                    backgroundColor: 'rgba(0, 0, 0, 0.06)',
+                    backgroundColor: 'rgba(255, 255, 255, 0.7)',
                     border: '1px solid rgba(0, 0, 0, 0.15)',
                     borderRadius: '6px',
                     color: '#000',
-                    fontSize: '12px',
-                    resize: 'none',
+                    fontSize: '11px',
+                    lineHeight: '1.4',
+                    resize: 'vertical',
+                    minHeight: '44px',
+                    maxHeight: '120px',
                     boxSizing: 'border-box',
                     fontFamily: 'inherit'
                   }}
@@ -10682,11 +10650,42 @@ const PhotoGallery = ({
               </div>
             </div>
 
-            {/* Footer with Generate button */}
+            {/* Footer with pricing and Generate button */}
             <div style={{
-              padding: '10px 16px 12px',
+              padding: '8px 16px 12px',
               borderTop: '1px solid rgba(0, 0, 0, 0.1)'
             }}>
+              {/* Pricing row */}
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: '8px'
+              }}>
+                <span style={{ fontSize: '10px', fontWeight: '500', color: 'rgba(0, 0, 0, 0.55)' }}>
+                  📹 {loadedPhotosCount} video{loadedPhotosCount !== 1 ? 's' : ''} • 📐 {settings.videoResolution || '480p'} • ⏱️ {settings.videoDuration || 5}s
+                </span>
+                {transitionVideoLoading ? (
+                  <span style={{ fontSize: '10px', color: 'rgba(0, 0, 0, 0.5)' }}>...</span>
+                ) : formatCost(transitionVideoCostRaw, transitionVideoUSD) ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <span style={{ fontSize: '11px', fontWeight: '700', color: '#000' }}>
+                      {(() => {
+                        const formatted = formatCost(transitionVideoCostRaw, transitionVideoUSD);
+                        return formatted.split('(')[0].trim();
+                      })()}
+                    </span>
+                    {(() => {
+                      const formatted = formatCost(transitionVideoCostRaw, transitionVideoUSD);
+                      const usdMatch = formatted.match(/\((.*?)\)/);
+                      return usdMatch ? (
+                        <span style={{ fontWeight: '400', opacity: 0.7, fontSize: '10px' }}>≈ {usdMatch[1]}</span>
+                      ) : null;
+                    })()}
+                  </div>
+                ) : null}
+              </div>
+              {/* Generate button */}
               <button
                 onClick={() => {
                   setShowTransitionVideoPopup(false);
