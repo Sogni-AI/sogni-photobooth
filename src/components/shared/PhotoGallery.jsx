@@ -3656,14 +3656,30 @@ const PhotoGallery = ({
         audio.currentTime = appliedMusic.startOffset;
         
         if (isIOS || isMobile) {
-          // On iOS/mobile, autoplay is blocked - start muted and show toast
+          // On iOS/mobile, autoplay is blocked - show persistent toast to start playback
+          // The toast click will be the user gesture needed to start audio
           audio.muted = true;
+          audio.pause(); // Pause audio until user taps
           setIsInlineAudioMuted(true);
+          
+          // Pause all videos until user taps to play
+          // Videos will resume when user taps the toast
+          
           showToast({
-            title: '🎵 Music Ready',
-            message: 'Tap the 🔇 button to hear audio with your video',
-            type: 'info',
-            timeout: 4000
+            title: '🎬 Transition Ready!',
+            message: '👆 Tap here to play with music',
+            type: 'success',
+            autoClose: false, // Don't auto-dismiss - wait for user tap
+            onClick: () => {
+              // This click is a user gesture - we can now play audio!
+              const audioEl = inlineAudioRef.current;
+              if (audioEl) {
+                audioEl.muted = false;
+                audioEl.currentTime = appliedMusic.startOffset;
+                audioEl.play().catch(() => {});
+                setIsInlineAudioMuted(false);
+              }
+            }
           });
         } else if (!isInlineAudioMuted) {
           // Desktop - try to autoplay
