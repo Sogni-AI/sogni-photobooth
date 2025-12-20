@@ -3529,7 +3529,11 @@ const PhotoGallery = ({
   // Apply music for inline playback
   const handleApplyMusic = useCallback(() => {
     if (musicFile) {
-      const audioUrl = URL.createObjectURL(musicFile);
+      // For presets, use the preset URL directly; for uploads, create blob URL
+      const audioUrl = (musicFile.isPreset && musicFile.presetUrl) 
+        ? musicFile.presetUrl 
+        : URL.createObjectURL(musicFile);
+      
       setAppliedMusic({
         file: musicFile,
         startOffset: musicStartOffset,
@@ -3546,7 +3550,8 @@ const PhotoGallery = ({
 
   // Remove applied music
   const handleRemoveMusic = useCallback(() => {
-    if (appliedMusic?.audioUrl) {
+    // Only revoke blob URLs, not preset URLs
+    if (appliedMusic?.audioUrl && !appliedMusic.file?.isPreset) {
       URL.revokeObjectURL(appliedMusic.audioUrl);
     }
     setAppliedMusic(null);
@@ -3628,7 +3633,13 @@ const PhotoGallery = ({
     
     // Ensure audio has a source
     if (!audio.src && musicFile) {
-      audio.src = URL.createObjectURL(musicFile);
+      // For presets, use the preset URL directly; for uploads, create blob URL
+      if (musicFile.isPreset && musicFile.presetUrl) {
+        audio.src = musicFile.presetUrl;
+        audio.crossOrigin = 'anonymous';
+      } else {
+        audio.src = URL.createObjectURL(musicFile);
+      }
     }
     
     if (isPlayingPreview) {
@@ -3675,7 +3686,30 @@ const PhotoGallery = ({
   // Regenerate waveform when modal opens with existing file but no waveform
   useEffect(() => {
     if (showMusicModal && musicFile && !audioWaveform) {
-      // Regenerate waveform for existing file
+      // Skip waveform regeneration for presets (they have placeholder waveforms set in handlePresetSelect)
+      // and the file is empty, so decoding would fail
+      if (musicFile.isPreset) {
+        // For presets, just regenerate the placeholder waveform and set the audio src
+        const samples = 200;
+        const waveformData = [];
+        const presetId = selectedPresetId || 'preset';
+        for (let i = 0; i < samples; i++) {
+          const seed = presetId.charCodeAt(i % presetId.length);
+          const noise = Math.sin(i * 0.1 + seed) * 0.3 + 0.5;
+          const envelope = Math.sin((i / samples) * Math.PI) * 0.3 + 0.7;
+          waveformData.push(noise * envelope);
+        }
+        setAudioWaveform(waveformData);
+        
+        // Set audio src for preview using preset URL
+        if (audioPreviewRef.current && musicFile.presetUrl) {
+          audioPreviewRef.current.src = musicFile.presetUrl;
+          audioPreviewRef.current.crossOrigin = 'anonymous';
+        }
+        return;
+      }
+      
+      // Regenerate waveform for user-uploaded file
       (async () => {
         try {
           if (!audioContextRef.current) {
@@ -3715,7 +3749,7 @@ const PhotoGallery = ({
         }
       })();
     }
-  }, [showMusicModal, musicFile, audioWaveform]);
+  }, [showMusicModal, musicFile, audioWaveform, selectedPresetId]);
 
   // Proceed with download (with or without music)
   const handleProceedDownload = useCallback(async (includeMusic) => {
@@ -10437,13 +10471,14 @@ const PhotoGallery = ({
         <audio
           ref={inlineAudioRef}
           src={appliedMusic.audioUrl}
+          crossOrigin={appliedMusic.file?.isPreset ? 'anonymous' : undefined}
           loop
           muted={isInlineAudioMuted}
           style={{ display: 'none' }}
         />
       )}
 
-      {/* Add Music Button - Desktop only, shown when in transition mode with completed videos */}
+      {/* Add Music Button - shown when in transition mode with completed videos */}
       {isTransitionMode && allTransitionVideosComplete && createPortal(
         <div
           style={{
