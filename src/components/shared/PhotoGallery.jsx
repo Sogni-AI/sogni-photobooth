@@ -3235,60 +3235,52 @@ const PhotoGallery = ({
     setMusicStartOffset(0);
     
     try {
-      // Fetch the preset audio file
-      const response = await fetch(preset.url);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch preset: ${response.status}`);
+      // For presets, use Audio element to get duration (avoids CORS issues for metadata)
+      // The actual audio data will be fetched at muxing time through the backend proxy
+      const audio = new Audio();
+      audio.crossOrigin = 'anonymous';
+      
+      await new Promise((resolve, reject) => {
+        audio.onloadedmetadata = () => {
+          setAudioDuration(audio.duration);
+          resolve();
+        };
+        audio.onerror = () => {
+          // Fallback: parse duration from preset metadata
+          const durationParts = preset.duration.split(':');
+          const minutes = parseInt(durationParts[0], 10);
+          const seconds = parseInt(durationParts[1], 10);
+          setAudioDuration(minutes * 60 + seconds);
+          resolve();
+        };
+        audio.src = preset.url;
+      });
+      
+      // Create a placeholder File object with preset info
+      // Actual audio will be fetched at download time
+      const presetFile = new File([], `${preset.title}.m4a`, { type: 'audio/mp4' });
+      presetFile.presetUrl = preset.url; // Store URL for later fetch
+      presetFile.isPreset = true;
+      setMusicFile(presetFile);
+      
+      // Set up audio preview using the URL directly
+      if (audioPreviewRef.current) {
+        audioPreviewRef.current.src = preset.url;
+        audioPreviewRef.current.crossOrigin = 'anonymous';
       }
       
-      const arrayBuffer = await response.arrayBuffer();
-      
-      // Create a File object from the fetched data
-      const blob = new Blob([arrayBuffer], { type: 'audio/mp4' });
-      const file = new File([blob], `${preset.title}.m4a`, { type: 'audio/mp4' });
-      
-      setMusicFile(file);
-      
-      // Create audio context if needed
-      if (!audioContextRef.current) {
-        audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
-      }
-      
-      // Decode audio file
-      const audioBuffer = await audioContextRef.current.decodeAudioData(arrayBuffer.slice(0));
-      
-      // Get duration
-      setAudioDuration(audioBuffer.duration);
-      
-      // Generate waveform data
-      const channelData = audioBuffer.getChannelData(0);
+      // Generate a simple gradient waveform visualization for presets
+      // (We can't get actual waveform data without CORS access to the file)
       const samples = 200;
-      const blockSize = Math.floor(channelData.length / samples);
       const waveformData = [];
-      
       for (let i = 0; i < samples; i++) {
-        const start = i * blockSize;
-        let sum = 0;
-        for (let j = 0; j < blockSize; j++) {
-          sum += Math.abs(channelData[start + j] || 0);
-        }
-        waveformData.push(sum / blockSize);
+        // Create a pleasing pseudo-random waveform based on preset ID
+        const seed = preset.id.charCodeAt(i % preset.id.length);
+        const noise = Math.sin(i * 0.1 + seed) * 0.3 + 0.5;
+        const envelope = Math.sin((i / samples) * Math.PI) * 0.3 + 0.7;
+        waveformData.push(noise * envelope);
       }
-      
-      // Normalize to 0-1 range
-      const max = Math.max(...waveformData);
-      const normalizedWaveform = waveformData.map(v => v / (max || 1));
-      
-      setAudioWaveform(normalizedWaveform);
-      
-      // Create object URL for audio preview
-      if (audioPreviewRef.current) {
-        URL.revokeObjectURL(audioPreviewRef.current.src);
-      }
-      const audioUrl = URL.createObjectURL(file);
-      if (audioPreviewRef.current) {
-        audioPreviewRef.current.src = audioUrl;
-      }
+      setAudioWaveform(waveformData);
       
     } catch (error) {
       console.error('Failed to load preset:', error);
@@ -3710,7 +3702,23 @@ const PhotoGallery = ({
       let audioOptions = null;
       if (includeMusic && appliedMusic?.file) {
         try {
-          const audioBuffer = await appliedMusic.file.arrayBuffer();
+          let audioBuffer;
+          
+          // Check if this is a preset (has presetUrl) or a user-uploaded file
+          if (appliedMusic.file.isPreset && appliedMusic.file.presetUrl) {
+            setBulkDownloadProgress({ current: 0, total: 0, message: 'Fetching audio track...' });
+            console.log(`[Transition Video] Fetching preset audio from: ${appliedMusic.file.presetUrl}`);
+            
+            const response = await fetch(appliedMusic.file.presetUrl);
+            if (!response.ok) {
+              throw new Error(`Failed to fetch preset audio: ${response.status}`);
+            }
+            audioBuffer = await response.arrayBuffer();
+          } else {
+            // User-uploaded file - read directly
+            audioBuffer = await appliedMusic.file.arrayBuffer();
+          }
+          
           audioOptions = {
             buffer: audioBuffer,
             startOffset: appliedMusic.startOffset || 0
@@ -3718,6 +3726,11 @@ const PhotoGallery = ({
           console.log(`[Transition Video] Audio prepared: ${(audioBuffer.byteLength / 1024 / 1024).toFixed(2)}MB, offset: ${appliedMusic.startOffset}s`);
         } catch (audioError) {
           console.error('Failed to read audio file:', audioError);
+          showToast({
+            title: 'Audio Error',
+            message: 'Failed to load audio track. Video will be created without music.',
+            type: 'warning'
+          });
           // Continue without audio
         }
       }
@@ -10483,7 +10496,7 @@ const PhotoGallery = ({
               Add a music track to your transition video
             </p>
 
-            {/* Preset Music Selection */}
+            {/* Preset Music Selection - Dropdown */}
             <div style={{ marginBottom: '16px' }}>
               <label style={{
                 display: 'block',
@@ -10493,54 +10506,44 @@ const PhotoGallery = ({
               }}>
                 🎶 Choose a Track
               </label>
-              <div style={{
-                display: 'grid',
-                gap: '8px',
-                maxHeight: '180px',
-                overflowY: 'auto',
-                paddingRight: '8px'
-              }}>
+              <select
+                value={selectedPresetId || ''}
+                onChange={(e) => {
+                  const preset = TRANSITION_MUSIC_PRESETS.find(p => p.id === e.target.value);
+                  if (preset) {
+                    handlePresetSelect(preset);
+                  }
+                }}
+                disabled={isLoadingPreset}
+                style={{
+                  width: '100%',
+                  padding: '12px 16px',
+                  backgroundColor: selectedPresetId ? 'rgba(76, 175, 80, 0.2)' : 'rgba(30, 30, 40, 0.9)',
+                  border: selectedPresetId ? '1px solid rgba(76, 175, 80, 0.5)' : '1px solid rgba(255, 255, 255, 0.2)',
+                  borderRadius: '8px',
+                  color: '#fff',
+                  cursor: isLoadingPreset ? 'wait' : 'pointer',
+                  fontSize: '14px',
+                  appearance: 'none',
+                  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23fff' d='M6 8L1 3h10z'/%3E%3C/svg%3E")`,
+                  backgroundRepeat: 'no-repeat',
+                  backgroundPosition: 'right 12px center',
+                  paddingRight: '36px'
+                }}
+              >
+                <option value="" style={{ backgroundColor: '#1e1e28', color: '#fff' }}>
+                  {isLoadingPreset ? '⏳ Loading...' : '🎵 Select a preset track...'}
+                </option>
                 {TRANSITION_MUSIC_PRESETS.map((preset) => (
-                  <button
-                    key={preset.id}
-                    onClick={() => handlePresetSelect(preset)}
-                    disabled={isLoadingPreset}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      width: '100%',
-                      padding: '10px 12px',
-                      backgroundColor: selectedPresetId === preset.id 
-                        ? 'rgba(76, 175, 80, 0.3)' 
-                        : 'rgba(255, 255, 255, 0.05)',
-                      border: selectedPresetId === preset.id 
-                        ? '1px solid rgba(76, 175, 80, 0.5)' 
-                        : '1px solid rgba(255, 255, 255, 0.1)',
-                      borderRadius: '8px',
-                      color: '#fff',
-                      cursor: isLoadingPreset ? 'wait' : 'pointer',
-                      fontSize: '13px',
-                      textAlign: 'left',
-                      transition: 'all 0.2s ease',
-                      opacity: isLoadingPreset && selectedPresetId !== preset.id ? 0.5 : 1
-                    }}
+                  <option 
+                    key={preset.id} 
+                    value={preset.id}
+                    style={{ backgroundColor: '#1e1e28', color: '#fff' }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ fontSize: '16px' }}>
-                        {isLoadingPreset && selectedPresetId === preset.id ? '⏳' : 
-                         selectedPresetId === preset.id ? '✅' : '🎵'}
-                      </span>
-                      <div>
-                        <div style={{ fontWeight: '500' }}>{preset.title}</div>
-                        <div style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.5)' }}>
-                          {preset.artist} • {preset.duration}
-                        </div>
-                      </div>
-                    </div>
-                  </button>
+                    {preset.title} • {preset.duration}
+                  </option>
                 ))}
-              </div>
+              </select>
             </div>
 
             {/* Divider */}
