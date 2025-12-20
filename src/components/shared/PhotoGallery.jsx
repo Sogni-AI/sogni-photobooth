@@ -8840,11 +8840,31 @@ const PhotoGallery = ({
                 {photo.videoUrl && !photo.generatingVideo && playingGeneratedVideoIds.has(photo.id) && (() => {
                   // In transition mode, pre-render ALL videos and show/hide them to avoid loading delays on mobile
                   if (isTransitionMode && transitionVideoQueue.length > 0) {
-                    // When all videos complete, only play on the FIRST photo - others show static image
+                    // When all videos complete, only the FIRST photo shows the full sequence
+                    // Other photos play their own single video in a simple loop when clicked
                     const isFirstTransitionPhoto = transitionVideoQueue[0] === photo.id;
                     if (allTransitionVideosComplete && !isFirstTransitionPhoto) {
-                      // Not the first photo in sync mode - show static image instead of video
-                      return null;
+                      // Not the first photo - play this photo's own video in simple loop mode
+                      return (
+                        <video
+                          key={`${photo.id}-single-video`}
+                          src={photo.videoUrl}
+                          autoPlay
+                          loop={true}
+                          muted
+                          playsInline
+                          style={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover',
+                            zIndex: 5,
+                            pointerEvents: 'none'
+                          }}
+                        />
+                      );
                     }
                     
                     const currentVideoIndex = currentVideoIndexByPhoto[photo.id] ?? 0;
@@ -8858,13 +8878,16 @@ const PhotoGallery = ({
                       if (!videoUrl) return null;
                       
                       const isCurrentVideo = videoIndex === currentVideoIndex;
+                      const nextVideoIndex = (currentVideoIndex + 1) % transitionVideoQueue.length;
+                      const isNextVideo = videoIndex === nextVideoIndex;
+                      // Previous video (the one that just finished) - keep visible briefly during transition
+                      const prevVideoIndex = (currentVideoIndex - 1 + transitionVideoQueue.length) % transitionVideoQueue.length;
+                      const isPrevVideo = videoIndex === prevVideoIndex;
                       
                       return (
                         <video
                           key={`${photo.id}-video-${videoIndex}`}
                           src={videoUrl}
-                          autoPlay
-                          loop={shouldLoop}
                           muted
                           playsInline
                           preload="auto"
@@ -8876,18 +8899,18 @@ const PhotoGallery = ({
                               const wasCurrent = el.dataset.wasCurrent === 'true';
                               const lastSyncCounter = parseInt(el.dataset.lastSyncCounter || '0', 10);
                               const syncJustChanged = lastSyncCounter !== syncResetCounter;
-                              const nextVideoIndex = (currentVideoIndex + 1) % transitionVideoQueue.length;
-                              const isNextVideo = videoIndex === nextVideoIndex;
                               
                               if (syncJustChanged && isCurrentVideo) {
                                 // Sync mode just started - reset ALL current videos to beginning
                                 el.currentTime = 0;
+                                el.loop = shouldLoop;
                                 el.play().catch(() => {});
                                 el.dataset.wasCurrent = 'true';
                                 el.dataset.lastSyncCounter = String(syncResetCounter);
                               } else if (isCurrentVideo && !wasCurrent) {
                                 // Transitioning TO this video - reset and play
                                 el.currentTime = 0;
+                                el.loop = shouldLoop;
                                 el.play().catch(() => {});
                                 el.dataset.wasCurrent = 'true';
                               } else if (!isCurrentVideo && wasCurrent) {
@@ -8897,6 +8920,7 @@ const PhotoGallery = ({
                                 el.dataset.wasCurrent = 'false';
                               } else if (isCurrentVideo && el.paused) {
                                 // Ensure current video is playing
+                                el.loop = shouldLoop;
                                 el.play().catch(() => {});
                               } else if (isNextVideo && !isCurrentVideo) {
                                 // Pre-load next video - keep it paused at start, ready to play
@@ -8931,18 +8955,13 @@ const PhotoGallery = ({
                             width: '100%',
                             height: '100%',
                             objectFit: 'cover',
-                            // Seamless video transitions: current video on top, next video ready underneath
-                            // This prevents flickering when switching between videos
-                            zIndex: isCurrentVideo ? 6 : 5,
+                            // Layered z-index: current on top, then previous (fading out), then next (ready)
+                            zIndex: isCurrentVideo ? 7 : (isPrevVideo ? 6 : 5),
                             pointerEvents: 'none',
-                            // Current video and the next video (to be played) stay visible
-                            // Others hidden to save resources
-                            opacity: (() => {
-                              if (isCurrentVideo) return 1;
-                              const nextVideoIndex = (currentVideoIndex + 1) % transitionVideoQueue.length;
-                              if (videoIndex === nextVideoIndex) return 1; // Next video ready underneath
-                              return 0;
-                            })()
+                            // Keep current, previous (just ended), and next video visible for smooth transitions
+                            opacity: (isCurrentVideo || isNextVideo || isPrevVideo) ? 1 : 0,
+                            // Smooth transition for previous video fading out
+                            transition: isPrevVideo ? 'opacity 0.15s ease-out' : 'none'
                           }}
                         />
                       );
