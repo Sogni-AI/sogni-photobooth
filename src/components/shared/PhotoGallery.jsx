@@ -6834,36 +6834,41 @@ const PhotoGallery = ({
                         {!videoLoading && formatCost(videoCostRaw, videoUSD) ? (
                           <div style={{
                             padding: '8px 16px 12px 16px',
-                            fontSize: '11px',
-                            fontWeight: '700',
-                            letterSpacing: '0.2px',
-                            display: 'flex',
-                            gap: '4px',
-                            alignItems: 'center',
-                            justifyContent: 'flex-end',
                             borderTop: '1px solid rgba(0, 0, 0, 0.15)',
                             color: '#000',
                             flexShrink: 0
                           }}>
-                            <span style={{ fontWeight: '700' }}>
-                              {(() => {
-                                const formatted = formatCost(videoCostRaw, videoUSD);
-                                const parts = formatted.split('(');
-                                return parts[0].trim();
-                              })()}
-                            </span>
-                            {(() => {
-                              const formatted = formatCost(videoCostRaw, videoUSD);
-                              const usdMatch = formatted.match(/\((.*?)\)/);
-                              if (usdMatch) {
-                                return (
-                                  <span style={{ fontWeight: '400', opacity: 0.75, fontSize: '10px' }}>
-                                    ≈ {usdMatch[1]}
-                                  </span>
-                                );
-                              }
-                              return null;
-                            })()}
+                            <div style={{
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                              marginBottom: '4px'
+                            }}>
+                              <span style={{ fontSize: '10px', fontWeight: '500', opacity: 0.6 }}>
+                                📐 {settings.videoResolution || '480p'} • ⏱️ {settings.videoDuration || 5}s
+                              </span>
+                              <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                                <span style={{ fontSize: '11px', fontWeight: '700' }}>
+                                  {(() => {
+                                    const formatted = formatCost(videoCostRaw, videoUSD);
+                                    const parts = formatted.split('(');
+                                    return parts[0].trim();
+                                  })()}
+                                </span>
+                                {(() => {
+                                  const formatted = formatCost(videoCostRaw, videoUSD);
+                                  const usdMatch = formatted.match(/\((.*?)\)/);
+                                  if (usdMatch) {
+                                    return (
+                                      <span style={{ fontWeight: '400', opacity: 0.75, fontSize: '10px' }}>
+                                        ≈ {usdMatch[1]}
+                                      </span>
+                                    );
+                                  }
+                                  return null;
+                                })()}
+                              </div>
+                            </div>
                           </div>
                         ) : videoLoading ? (
                           <div style={{
@@ -6937,36 +6942,41 @@ const PhotoGallery = ({
                         {!videoLoading && formatCost(videoCostRaw, videoUSD) ? (
                           <div style={{
                             padding: '8px 16px 12px 16px',
-                            fontSize: '11px',
-                            fontWeight: '700',
-                            letterSpacing: '0.2px',
-                            display: 'flex',
-                            gap: '4px',
-                            alignItems: 'center',
-                            justifyContent: 'flex-end',
                             borderTop: '1px solid rgba(0, 0, 0, 0.15)',
                             color: '#000',
                             flexShrink: 0
                           }}>
-                            <span style={{ fontWeight: '700' }}>
-                              {(() => {
-                                const formatted = formatCost(videoCostRaw, videoUSD);
-                                const parts = formatted.split('(');
-                                return parts[0].trim();
-                              })()}
-                            </span>
-                            {(() => {
-                              const formatted = formatCost(videoCostRaw, videoUSD);
-                              const usdMatch = formatted.match(/\((.*?)\)/);
-                              if (usdMatch) {
-                                return (
-                                  <span style={{ fontWeight: '400', opacity: 0.75, fontSize: '10px' }}>
-                                    ≈ {usdMatch[1]}
-                                  </span>
-                                );
-                              }
-                              return null;
-                            })()}
+                            <div style={{
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                              marginBottom: '4px'
+                            }}>
+                              <span style={{ fontSize: '10px', fontWeight: '500', opacity: 0.6 }}>
+                                📐 {settings.videoResolution || '480p'} • ⏱️ {settings.videoDuration || 5}s
+                              </span>
+                              <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                                <span style={{ fontSize: '11px', fontWeight: '700' }}>
+                                  {(() => {
+                                    const formatted = formatCost(videoCostRaw, videoUSD);
+                                    const parts = formatted.split('(');
+                                    return parts[0].trim();
+                                  })()}
+                                </span>
+                                {(() => {
+                                  const formatted = formatCost(videoCostRaw, videoUSD);
+                                  const usdMatch = formatted.match(/\((.*?)\)/);
+                                  if (usdMatch) {
+                                    return (
+                                      <span style={{ fontWeight: '400', opacity: 0.75, fontSize: '10px' }}>
+                                        ≈ {usdMatch[1]}
+                                      </span>
+                                    );
+                                  }
+                                  return null;
+                                })()}
+                              </div>
+                            </div>
                           </div>
                         ) : videoLoading ? (
                           <div style={{
