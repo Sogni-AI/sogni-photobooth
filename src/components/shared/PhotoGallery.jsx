@@ -10346,20 +10346,30 @@ const PhotoGallery = ({
               borderBottom: '1px solid rgba(0, 0, 0, 0.1)',
               display: 'flex',
               justifyContent: 'space-between',
-              alignItems: 'center'
+              alignItems: 'flex-start'
             }}>
-              <h3 style={{
-                margin: 0,
-                color: '#000',
-                fontSize: '18px',
-                fontWeight: '700',
-                fontFamily: '"Permanent Marker", cursive',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px'
-              }}>
-                🔀 Transition Video
-              </h3>
+              <div>
+                <h3 style={{
+                  margin: 0,
+                  color: '#000',
+                  fontSize: '18px',
+                  fontWeight: '700',
+                  fontFamily: '"Permanent Marker", cursive',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}>
+                  🔀 Transition Video
+                </h3>
+                <p style={{
+                  margin: '4px 0 0 0',
+                  color: 'rgba(0, 0, 0, 0.6)',
+                  fontSize: '12px',
+                  fontWeight: '400'
+                }}>
+                  Generate a sweet transition video between every image in your batch.
+                </p>
+              </div>
               <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                 {/* Settings Cog */}
                 <button
