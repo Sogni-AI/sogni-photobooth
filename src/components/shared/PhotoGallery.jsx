@@ -1008,6 +1008,7 @@ const PhotoGallery = ({
   const audioPreviewRef = useRef(null);
   const audioContextRef = useRef(null);
   const playbackAnimationRef = useRef(null);
+  const musicStartOffsetRef = useRef(0); // Track current offset for animation frame access
   const inlineAudioRef = useRef(null); // For playing music with transition videos
   
   // State to track if user wants fullscreen mode in Style Explorer
@@ -3623,6 +3624,11 @@ const PhotoGallery = ({
     }
   }, [appliedMusic, allTransitionVideosComplete, firstPhotoVideoIndex, isInlineAudioMuted]);
 
+  // Keep ref in sync with musicStartOffset state for animation frame access
+  useEffect(() => {
+    musicStartOffsetRef.current = musicStartOffset;
+  }, [musicStartOffset]);
+
   // Toggle audio preview playback
   const toggleAudioPreview = useCallback(async () => {
     const audio = audioPreviewRef.current;
@@ -3649,25 +3655,27 @@ const PhotoGallery = ({
         cancelAnimationFrame(playbackAnimationRef.current);
       }
     } else {
-      // Calculate the selection end time
-      const videoDuration = getVideoDuration();
-      const selectionEnd = musicStartOffset + videoDuration;
-      
       try {
         audio.currentTime = musicStartOffset;
         await audio.play();
         setIsPlayingPreview(true);
         
         // Update playhead position during playback - loop within selection bounds
+        // Uses refs to read current values (not stale closure values)
         const updatePlayhead = () => {
           if (audio.paused) {
             setIsPlayingPreview(false);
             return;
           }
           
+          // Read current offset from ref (updated when user drags selection)
+          const currentOffset = musicStartOffsetRef.current;
+          const videoDuration = getVideoDuration();
+          const selectionEnd = currentOffset + videoDuration;
+          
           // Check if we've passed the selection end - loop back to start
           if (audio.currentTime >= selectionEnd) {
-            audio.currentTime = musicStartOffset;
+            audio.currentTime = currentOffset;
           }
           
           setPreviewPlayhead(audio.currentTime);
