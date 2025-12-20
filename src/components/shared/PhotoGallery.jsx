@@ -10571,38 +10571,46 @@ const PhotoGallery = ({
                   {musicFile && !selectedPresetId ? `✅ ${musicFile.name}` : '📁 Upload MP3/M4A'}
                 </button>
 
-                {/* Waveform preview if music selected */}
+                {/* Waveform Visualization */}
                 {musicFile && audioWaveform && (
                   <div style={{ marginTop: '12px' }}>
                     <div style={{
                       display: 'flex',
                       justifyContent: 'space-between',
                       alignItems: 'center',
-                      marginBottom: '6px'
+                      marginBottom: '8px'
                     }}>
-                      <span style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '11px' }}>
-                        Start: {Math.floor(musicStartOffset / 60)}:{(musicStartOffset % 60).toFixed(1).padStart(4, '0')}
-                      </span>
+                      <label style={{
+                        color: 'rgba(255, 255, 255, 0.8)',
+                        fontSize: '13px'
+                      }}>
+                        Select Start Position
+                      </label>
                       <button
                         onClick={toggleAudioPreview}
                         style={{
-                          padding: '4px 10px',
+                          padding: '4px 12px',
                           backgroundColor: isPlayingPreview ? '#ff6b6b' : 'rgba(255, 255, 255, 0.1)',
                           border: 'none',
                           borderRadius: '4px',
                           color: '#fff',
                           cursor: 'pointer',
-                          fontSize: '11px'
+                          fontSize: '12px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px'
                         }}
                       >
                         {isPlayingPreview ? '⏸ Pause' : '▶ Preview'}
                       </button>
                     </div>
+                    
+                    {/* Canvas for waveform */}
                     <div
                       style={{
                         position: 'relative',
                         backgroundColor: 'rgba(0, 0, 0, 0.3)',
-                        borderRadius: '6px',
+                        borderRadius: '8px',
                         overflow: 'hidden',
                         cursor: isDraggingWaveform ? 'grabbing' : 'crosshair',
                         userSelect: 'none'
@@ -10611,16 +10619,81 @@ const PhotoGallery = ({
                     >
                       <canvas
                         ref={waveformCanvasRef}
-                        width={452}
-                        height={60}
+                        width={352}
+                        height={80}
                         style={{
                           display: 'block',
                           width: '100%',
-                          height: '60px',
+                          height: '80px',
                           pointerEvents: 'none'
                         }}
                       />
                     </div>
+                    
+                    {/* Time indicators */}
+                    <div style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      marginTop: '4px',
+                      fontSize: '11px',
+                      color: 'rgba(255, 255, 255, 0.5)'
+                    }}>
+                      <span>0:00</span>
+                      <span style={{ color: '#ff6b6b' }}>
+                        Start: {Math.floor(musicStartOffset / 60)}:{(musicStartOffset % 60).toFixed(1).padStart(4, '0')}
+                      </span>
+                      <span>
+                        {Math.floor(audioDuration / 60)}:{Math.floor(audioDuration % 60).toString().padStart(2, '0')}
+                      </span>
+                    </div>
+                    
+                    <p style={{
+                      margin: '8px 0 0 0',
+                      color: 'rgba(255, 255, 255, 0.4)',
+                      fontSize: '11px',
+                      textAlign: 'center'
+                    }}>
+                      Click to set position • Drag red area to move selection
+                    </p>
+                  </div>
+                )}
+
+                {/* Manual offset input as fallback */}
+                {musicFile && !audioWaveform && (
+                  <div style={{ marginTop: '12px' }}>
+                    <label style={{
+                      display: 'block',
+                      color: 'rgba(255, 255, 255, 0.8)',
+                      fontSize: '13px',
+                      marginBottom: '8px'
+                    }}>
+                      Start Offset (seconds)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.5"
+                      value={musicStartOffset}
+                      onChange={(e) => setMusicStartOffset(parseFloat(e.target.value) || 0)}
+                      style={{
+                        width: '100%',
+                        padding: '10px 12px',
+                        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                        border: '1px solid rgba(255, 255, 255, 0.2)',
+                        borderRadius: '8px',
+                        color: '#fff',
+                        fontSize: '14px',
+                        boxSizing: 'border-box'
+                      }}
+                      placeholder="0"
+                    />
+                    <p style={{
+                      margin: '8px 0 0 0',
+                      color: 'rgba(255, 255, 255, 0.4)',
+                      fontSize: '11px'
+                    }}>
+                      Loading waveform...
+                    </p>
                   </div>
                 )}
               </div>
@@ -10678,7 +10751,7 @@ const PhotoGallery = ({
                   boxShadow: transitionVideoLoading ? 'none' : '0 4px 14px rgba(59, 130, 246, 0.4)'
                 }}
               >
-                🎬 Generate {loadedPhotosCount} Video{loadedPhotosCount !== 1 ? 's' : ''}
+                🎬 Generate Transition Video
               </button>
             </div>
           </div>
