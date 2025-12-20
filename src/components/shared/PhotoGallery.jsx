@@ -2258,6 +2258,11 @@ const PhotoGallery = ({
     setShowBatchVideoDropdown(false);
     setSelectedMotionCategory(null);
 
+    // Capture current music settings before starting generation
+    // These will be applied when the batch completes
+    const capturedMusicFile = musicFile;
+    const capturedMusicStartOffset = musicStartOffset;
+
     // Pre-warm audio for iOS
     warmUpAudio();
 
@@ -2507,6 +2512,20 @@ const PhotoGallery = ({
           // Increment sync counter to force all videos to reset their currentTime
           setSyncResetCounter(prev => prev + 1);
           
+          // Apply captured music settings if music was selected before generation
+          if (capturedMusicFile && successCount > 0) {
+            const audioUrl = (capturedMusicFile.isPreset && capturedMusicFile.presetUrl) 
+              ? capturedMusicFile.presetUrl 
+              : URL.createObjectURL(capturedMusicFile);
+            
+            setAppliedMusic({
+              file: capturedMusicFile,
+              startOffset: capturedMusicStartOffset,
+              audioUrl
+            });
+            console.log(`[Transition] Music applied: offset=${capturedMusicStartOffset}s`);
+          }
+          
           if (successCount > 0 && errorCount === 0) {
             const videoMessage = getRandomVideoMessage();
             showToast({
@@ -2682,7 +2701,7 @@ const PhotoGallery = ({
 
       generateWithRetry(photoData, false);
     }
-  }, [photos, sogniClient, setPhotos, settings.videoResolution, settings.videoQuality, settings.videoFramerate, settings.videoDuration, settings.videoNegativePrompt, settings.soundEnabled, tokenType, desiredWidth, desiredHeight, showToast, onOutOfCredits, setPlayingGeneratedVideoIds, allTransitionVideosComplete, transitionVideoQueue, transitionVideoDownloaded]);
+  }, [photos, sogniClient, setPhotos, settings.videoResolution, settings.videoQuality, settings.videoFramerate, settings.videoDuration, settings.videoNegativePrompt, settings.soundEnabled, tokenType, desiredWidth, desiredHeight, showToast, onOutOfCredits, setPlayingGeneratedVideoIds, allTransitionVideosComplete, transitionVideoQueue, transitionVideoDownloaded, musicFile, musicStartOffset]);
 
   // Handle video cancellation
   const handleCancelVideo = useCallback(() => {
