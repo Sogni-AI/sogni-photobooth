@@ -10478,8 +10478,8 @@ const PhotoGallery = ({
         />
       )}
 
-      {/* Add Music Button - shown when in transition mode with completed videos */}
-      {isTransitionMode && allTransitionVideosComplete && createPortal(
+      {/* Add Music Button - shown when in transition mode with completed videos, hidden when batch menu is open */}
+      {isTransitionMode && allTransitionVideosComplete && !batchActionMode && createPortal(
         <div
           style={{
             position: 'fixed',
