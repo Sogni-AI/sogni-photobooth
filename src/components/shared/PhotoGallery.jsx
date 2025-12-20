@@ -3649,17 +3649,27 @@ const PhotoGallery = ({
         cancelAnimationFrame(playbackAnimationRef.current);
       }
     } else {
+      // Calculate the selection end time
+      const videoDuration = getVideoDuration();
+      const selectionEnd = musicStartOffset + videoDuration;
+      
       try {
         audio.currentTime = musicStartOffset;
         await audio.play();
         setIsPlayingPreview(true);
         
-        // Update playhead position during playback
+        // Update playhead position during playback - loop within selection bounds
         const updatePlayhead = () => {
           if (audio.paused) {
             setIsPlayingPreview(false);
             return;
           }
+          
+          // Check if we've passed the selection end - loop back to start
+          if (audio.currentTime >= selectionEnd) {
+            audio.currentTime = musicStartOffset;
+          }
+          
           setPreviewPlayhead(audio.currentTime);
           playbackAnimationRef.current = requestAnimationFrame(updatePlayhead);
         };
@@ -3668,7 +3678,7 @@ const PhotoGallery = ({
         console.error('[Audio Preview] Failed to play:', err);
       }
     }
-  }, [isPlayingPreview, musicStartOffset, musicFile]);
+  }, [isPlayingPreview, musicStartOffset, musicFile, getVideoDuration]);
 
   // Cleanup audio preview on modal close
   useEffect(() => {
