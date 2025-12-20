@@ -3645,12 +3645,33 @@ const PhotoGallery = ({
       audioReadyRef.current = false;
       lastAppliedMusicUrlRef.current = appliedMusic.audioUrl;
       
+      // Check if we're on iOS/mobile where autoplay is restricted
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+        (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      
       const handleCanPlay = () => {
         audioReadyRef.current = true;
         // Now we can safely seek to the start offset
         audio.currentTime = appliedMusic.startOffset;
-        if (!isInlineAudioMuted) {
-          audio.play().catch(() => {});
+        
+        if (isIOS || isMobile) {
+          // On iOS/mobile, autoplay is blocked - start muted and show toast
+          audio.muted = true;
+          setIsInlineAudioMuted(true);
+          showToast({
+            title: '🎵 Music Ready',
+            message: 'Tap the 🔇 button to hear audio with your video',
+            type: 'info',
+            timeout: 4000
+          });
+        } else if (!isInlineAudioMuted) {
+          // Desktop - try to autoplay
+          audio.play().catch(() => {
+            // If autoplay fails on desktop too, mute and notify
+            audio.muted = true;
+            setIsInlineAudioMuted(true);
+          });
         }
       };
       
@@ -3663,7 +3684,7 @@ const PhotoGallery = ({
         return () => audio.removeEventListener('canplay', handleCanPlay);
       }
     }
-  }, [appliedMusic, allTransitionVideosComplete, isInlineAudioMuted]);
+  }, [appliedMusic, allTransitionVideosComplete, isInlineAudioMuted, showToast]);
 
   // Sync inline audio with transition video playback - only react to first photo's index changes
   useEffect(() => {
@@ -3679,8 +3700,9 @@ const PhotoGallery = ({
       audio.currentTime = appliedMusic.startOffset;
     }
     
-    // Ensure audio is playing (only call play if paused to avoid interruption)
-    if (audio.paused && !isInlineAudioMuted) {
+    // Only try to play if not muted (user has already interacted on iOS)
+    // On iOS, play() will fail without user gesture, so we rely on the mute button
+    if (audio.paused && !isInlineAudioMuted && !audio.muted) {
       audio.play().catch(() => {});
     }
   }, [appliedMusic, allTransitionVideosComplete, firstPhotoVideoIndex, isInlineAudioMuted]);
@@ -11102,27 +11124,78 @@ const PhotoGallery = ({
             zIndex: 1000
           }}
         >
+          {/* Mute toggle - only show when music is applied */}
+          {appliedMusic && (
+            <button
+              onClick={() => {
+                const audio = inlineAudioRef.current;
+                if (!audio) return;
+                
+                if (isInlineAudioMuted) {
+                  // Unmuting - need to explicitly play for iOS (requires user gesture)
+                  audio.muted = false;
+                  audio.currentTime = appliedMusic.startOffset;
+                  audio.play().catch(() => {});
+                  setIsInlineAudioMuted(false);
+                } else {
+                  // Muting
+                  audio.muted = true;
+                  setIsInlineAudioMuted(true);
+                }
+              }}
+              style={{
+                padding: '12px',
+                backgroundColor: isInlineAudioMuted ? 'rgba(255, 82, 82, 0.8)' : '#1a1a2e',
+                border: '2px solid rgba(255, 255, 255, 0.2)',
+                borderRadius: '50%',
+                color: '#fff',
+                cursor: 'pointer',
+                fontSize: '16px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
+                transition: 'all 0.2s ease',
+                width: '44px',
+                height: '44px'
+              }}
+              title={isInlineAudioMuted ? 'Tap to play audio' : 'Tap to mute'}
+            >
+              {isInlineAudioMuted ? '🔇' : '🔊'}
+            </button>
+          )}
+          
+          {/* Main Add Music button */}
           <button
-            onClick={() => setIsInlineAudioMuted(prev => !prev)}
+            onClick={() => setShowMusicModal(true)}
             style={{
-              padding: '12px',
-              backgroundColor: isInlineAudioMuted ? 'rgba(255, 82, 82, 0.8)' : '#1a1a2e',
-              border: '2px solid rgba(255, 255, 255, 0.2)',
-              borderRadius: '50%',
+              padding: '12px 20px',
+              backgroundColor: appliedMusic ? '#4CAF50' : '#1a1a2e',
+              border: appliedMusic ? '2px solid #4CAF50' : '2px solid rgba(255, 255, 255, 0.2)',
+              borderRadius: '30px',
               color: '#fff',
               cursor: 'pointer',
-              fontSize: '16px',
+              fontSize: '14px',
+              fontWeight: '600',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center',
+              gap: '8px',
               boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
-              transition: 'all 0.2s ease',
-              width: '44px',
-              height: '44px'
+              transition: 'all 0.2s ease'
             }}
-            title={isInlineAudioMuted ? 'Unmute audio' : 'Mute audio'}
+            title={appliedMusic ? 'Change music track' : 'Add music to transition video'}
           >
-            {isInlineAudioMuted ? '🔇' : '🔊'}
+            🎵 {appliedMusic ? 'Music Added' : 'Add Music'}
+            {appliedMusic && (
+              <span style={{
+                fontSize: '10px',
+                backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                padding: '2px 6px',
+                borderRadius: '10px'
+              }}>
+                ✓
+              </span>
+            )}
           </button>
         </div>,
         document.body
