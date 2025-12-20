@@ -1238,6 +1238,22 @@ const PhotoGallery = ({
         }
       });
       setFramedImageUrls({});
+      
+      // Also clean up transition/music state when new batch detected
+      console.log('Clearing transition and music state due to new photo batch');
+      setIsTransitionMode(false);
+      setTransitionVideoQueue([]);
+      setAllTransitionVideosComplete(false);
+      setCurrentVideoIndexByPhoto({});
+      setMusicFile(null);
+      setAudioWaveform(null);
+      setMusicStartOffset(0);
+      setAudioDuration(0);
+      setIsPlayingPreview(false);
+      setPreviewPlayhead(0);
+      setShowMusicModal(false);
+      setBatchActionMode('download');
+      // Note: appliedMusic cleanup is handled in handleMoreButtonClick to properly revoke URL
     }
     
     // Update the previous length ref
@@ -1356,6 +1372,40 @@ const PhotoGallery = ({
       onClearMobileShareCache();
     }
     
+    // Clean up all transition/music state for new batch
+    console.log('Clearing transition and music state for new batch');
+    if (appliedMusic?.audioUrl) {
+      URL.revokeObjectURL(appliedMusic.audioUrl);
+    }
+    setAppliedMusic(null);
+    setIsTransitionMode(false);
+    setTransitionVideoQueue([]);
+    setAllTransitionVideosComplete(false);
+    setCurrentVideoIndexByPhoto({});
+    setMusicFile(null);
+    setAudioWaveform(null);
+    setMusicStartOffset(0);
+    setAudioDuration(0);
+    setIsPlayingPreview(false);
+    setPreviewPlayhead(0);
+    setIsInlineAudioMuted(false);
+    setShowMusicModal(false);
+    setBatchActionMode('download'); // Reset to default mode
+    
+    // Stop any playing audio
+    if (inlineAudioRef.current) {
+      inlineAudioRef.current.pause();
+      inlineAudioRef.current.src = '';
+    }
+    if (audioPreviewRef.current) {
+      audioPreviewRef.current.pause();
+      audioPreviewRef.current.src = '';
+    }
+    
+    // Reset audio tracking refs
+    audioReadyRef.current = false;
+    lastAppliedMusicUrlRef.current = null;
+    
     if (isGenerating && activeProjectReference.current) {
       // Cancel current project before opening ImageAdjuster
       console.log('Cancelling current project from more button:', activeProjectReference.current);
@@ -1383,7 +1433,7 @@ const PhotoGallery = ({
         handleOpenImageAdjusterForNextBatch();
       }
     }
-  }, [isGenerating, activeProjectReference, sogniClient, handleOpenImageAdjusterForNextBatch, framedImageUrls, onClearQrCode, onClearMobileShareCache]);
+  }, [isGenerating, activeProjectReference, sogniClient, handleOpenImageAdjusterForNextBatch, framedImageUrls, onClearQrCode, onClearMobileShareCache, appliedMusic]);
 
   // Generate QR code when qrCodeData changes
   useEffect(() => {
@@ -2150,7 +2200,15 @@ const PhotoGallery = ({
   }, [photos, sogniClient, setPhotos, settings.videoResolution, settings.videoQuality, settings.videoFramerate, settings.videoDuration, settings.videoPositivePrompt, settings.videoNegativePrompt, settings.soundEnabled, tokenType, desiredWidth, desiredHeight, showToast, onOutOfCredits, setPlayingGeneratedVideoIds]);
 
   // Handle batch transition video generation - transitions each image to the next in sequence (circular)
-  const handleBatchGenerateTransitionVideo = useCallback(async () => {
+  const handleBatchGenerateTransitionVideo = useCallback(async (skipConfirmation = false) => {
+    // Check if there's an existing transition video that hasn't been downloaded
+    if (!skipConfirmation && allTransitionVideosComplete && transitionVideoQueue.length > 0) {
+      const confirmed = window.confirm("New batch video? FYI You haven't downloaded the last one.");
+      if (!confirmed) {
+        return;
+      }
+    }
+    
     setShowBatchVideoDropdown(false);
     setSelectedMotionCategory(null);
 
@@ -2200,7 +2258,7 @@ const PhotoGallery = ({
     setShowVideoNewBadge(false);
 
     // Use fixed transition prompt
-    const motionPrompt = 'Transition the subject from start image to last image in a slick and fun way';
+    const motionPrompt = 'Cinematic transition shot that connects the starting frame reference image to the ending frame reference image. Preserve the same subject identity and facial structure. Use a premium artistic transition or transformation: dynamic camera zoom plus a subject action that passes close to the lens to create brief natural occlusion, then reveal cleanly into the ending scene. Camera motion: smooth dolly push with parallax, or a pan that resolves into the new scene, or a short orbit arc around the subject. Creative transition action near lens. During the occlusion, allow wardrobe and environment to morph smoothly; keep the final reveal sharp, stable, and cinematic with restrained optical character, subtle anamorphic flare, fine film grain, controlled contrast';
     const negativePrompt = settings.videoNegativePrompt || '';
 
     // Show toast for batch generation
@@ -2214,8 +2272,11 @@ const PhotoGallery = ({
     // Generate transition videos for each photo
     let successCount = 0;
     let errorCount = 0;
+    const retryAttempts = {}; // Track retry attempts per photo
+    const MAX_RETRIES = 1; // Retry failed videos once
 
-    for (let i = 0; i < loadedPhotos.length; i++) {
+    // Helper function to generate a single transition video with retry capability
+    const generateTransitionVideoForPhoto = async (i, isRetry = false) => {
       const photo = loadedPhotos[i];
       const photoIndex = photos.findIndex(p => p.id === photo.id);
       
@@ -2223,25 +2284,26 @@ const PhotoGallery = ({
       // This ensures we have the latest state after any refreshes
       const currentPhoto = photoIndex !== -1 ? photos[photoIndex] : null;
 
-      console.log(`[Transition] Processing photo ${i + 1}/${loadedPhotos.length}: id=${photo.id}, photoIndex=${photoIndex}`);
-      console.log(`[Transition]   - loadedPhoto state: generatingVideo=${photo.generatingVideo}, hasImages=${!!photo.images?.length}`);
-      console.log(`[Transition]   - currentPhoto state: generatingVideo=${currentPhoto?.generatingVideo}, hasImages=${!!currentPhoto?.images?.length}, loading=${currentPhoto?.loading}, generating=${currentPhoto?.generating}`);
+      const retryLabel = isRetry ? ' [RETRY]' : '';
+      console.log(`[Transition]${retryLabel} Processing photo ${i + 1}/${loadedPhotos.length}: id=${photo.id}, photoIndex=${photoIndex}`);
+      console.log(`[Transition]${retryLabel}   - loadedPhoto state: generatingVideo=${photo.generatingVideo}, hasImages=${!!photo.images?.length}`);
+      console.log(`[Transition]${retryLabel}   - currentPhoto state: generatingVideo=${currentPhoto?.generatingVideo}, hasImages=${!!currentPhoto?.images?.length}, loading=${currentPhoto?.loading}, generating=${currentPhoto?.generating}`);
 
       if (photoIndex === -1 || !currentPhoto) {
-        console.warn(`[Transition] Photo ${photo.id} not found in photos array! Skipping.`);
-        continue;
+        console.warn(`[Transition]${retryLabel} Photo ${photo.id} not found in photos array! Skipping.`);
+        return { skipped: true };
       }
       
-      // Check CURRENT photo state (not captured loadedPhotos)
-      if (currentPhoto.generatingVideo) {
+      // Check CURRENT photo state (not captured loadedPhotos) - skip for initial generation, allow for retries
+      if (!isRetry && currentPhoto.generatingVideo) {
         console.log(`[Transition] Photo ${photo.id} already generating video. Skipping.`);
-        continue;
+        return { skipped: true };
       }
       
       // Also check if the current photo is still loading/generating (from a refresh)
       if (currentPhoto.loading || currentPhoto.generating) {
-        console.log(`[Transition] Photo ${photo.id} still loading/generating. Skipping.`);
-        continue;
+        console.log(`[Transition]${retryLabel} Photo ${photo.id} still loading/generating. Skipping.`);
+        return { skipped: true };
       }
 
       // Get current image from CURRENT photo state (START of transition)
@@ -2254,19 +2316,21 @@ const PhotoGallery = ({
       const nextPhoto = nextPhotoStateIndex !== -1 ? photos[nextPhotoStateIndex] : nextLoadedPhoto;
       const nextImageUrl = nextPhoto.enhancedImageUrl || nextPhoto.images?.[0] || nextPhoto.originalDataUrl;
       
-      console.log(`[Transition] Photo ${i}: currentImageUrl=${currentImageUrl?.substring(0, 50)}..., nextImageUrl=${nextImageUrl?.substring(0, 50)}...`);
+      console.log(`[Transition]${retryLabel} Photo ${i}: currentImageUrl=${currentImageUrl?.substring(0, 50)}..., nextImageUrl=${nextImageUrl?.substring(0, 50)}...`);
       
       if (!currentImageUrl || !nextImageUrl) {
-        console.error(`[Transition] Missing image URL for photo ${i}. currentImageUrl=${!!currentImageUrl}, nextImageUrl=${!!nextImageUrl}`);
-        errorCount++;
-        continue;
+        console.error(`[Transition]${retryLabel} Missing image URL for photo ${i}. currentImageUrl=${!!currentImageUrl}, nextImageUrl=${!!nextImageUrl}`);
+        return { error: true, photoIndex: i };
       }
 
       const generatingPhotoId = photo.id;
 
-      // Load both images to get their data
-      // Uses canvas approach to handle CORS issues with S3 URLs
-      const loadImageAsBuffer = async (url) => {
+      return { photo, photoIndex, currentPhoto, currentImageUrl, nextImageUrl, generatingPhotoId, i };
+    };
+
+    // Load both images to get their data
+    // Uses canvas approach to handle CORS issues with S3 URLs
+    const loadImageAsBuffer = async (url) => {
         return new Promise((resolve, reject) => {
           const img = new Image();
           // Set crossOrigin for S3/HTTPS URLs to enable canvas extraction
@@ -2378,6 +2442,52 @@ const PhotoGallery = ({
         });
       };
 
+    // Helper to check completion and show appropriate toast
+    const checkCompletion = () => {
+      const totalProcessed = successCount + errorCount;
+      if (totalProcessed === loadedPhotos.length) {
+        setTimeout(() => {
+          console.log(`[Transition] All videos processed! ${successCount} success, ${errorCount} failed. Enabling Add Music button`);
+          setAllTransitionVideosComplete(true);
+          
+          // Reset all polaroids to start at video index 0 for synchronized looping
+          const syncedIndices = {};
+          loadedPhotos.forEach((p) => {
+            syncedIndices[p.id] = 0;
+          });
+          setCurrentVideoIndexByPhoto(syncedIndices);
+          
+          if (successCount > 0 && errorCount === 0) {
+            const videoMessage = getRandomVideoMessage();
+            showToast({
+              title: videoMessage.title,
+              message: `All ${successCount} transition video${successCount > 1 ? 's' : ''} generated! Playing in sync...`,
+              type: 'success',
+              timeout: 5000
+            });
+          } else if (successCount > 0) {
+            showToast({
+              title: 'Partial Success',
+              message: `${successCount} of ${loadedPhotos.length} transition videos generated. Playing in sync...`,
+              type: 'info',
+              timeout: 5000
+            });
+          } else {
+            showToast({
+              title: 'Batch Transition Video Failed',
+              message: 'All transition video generations failed. Please try again.',
+              type: 'error'
+            });
+          }
+        }, 500);
+      }
+    };
+
+    // Generate video with retry support
+    const generateWithRetry = async (photoData, isRetry = false) => {
+      const { photo, photoIndex, currentPhoto, currentImageUrl, nextImageUrl, i } = photoData;
+      const retryLabel = isRetry ? ' [RETRY]' : '';
+
       try {
         // Load both images
         const [currentImage, nextImage] = await Promise.all([
@@ -2390,7 +2500,7 @@ const PhotoGallery = ({
         const actualHeight = currentImage.height;
 
         generateVideo({
-          photo: currentPhoto, // Use current photo from state, not captured loadedPhotos
+          photo: currentPhoto,
           photoIndex: photoIndex,
           subIndex: 0,
           imageWidth: actualWidth,
@@ -2406,85 +2516,57 @@ const PhotoGallery = ({
           tokenType: tokenType,
           referenceImage: currentImage.buffer,
           referenceImageEnd: nextImage.buffer,
-          onComplete: (videoUrl) => {
+          onComplete: () => {
             successCount++;
+            console.log(`[Transition]${retryLabel} Video ${i + 1} completed successfully`);
             
             // Play sonic logo and auto-play this video immediately as it completes
             playSonicLogo(settings.soundEnabled);
             
-            // Set this polaroid to play its own video (index matches its position in queue)
+            // Set this polaroid to play its own video
             setCurrentVideoIndexByPhoto(prev => ({
               ...prev,
-              [photo.id]: i  // Play this polaroid's own video
+              [photo.id]: i
             }));
             
             // Start playing this video immediately
             setPlayingGeneratedVideoIds(prev => new Set([...prev, photo.id]));
             
-            // When ALL transition videos are complete (success or fail), switch to sync mode
-            const totalProcessed = successCount + errorCount;
-            if (totalProcessed === loadedPhotos.length) {
-              // Short delay to let the last video start, then sync everyone to video 0
-              setTimeout(() => {
-                // Enable sync mode - all polaroids will now advance together
-                console.log(`[Transition] All videos processed! ${successCount} success, ${errorCount} failed. Enabling Add Music button`);
-                setAllTransitionVideosComplete(true);
-                
-                // Reset all polaroids to start at video index 0 for synchronized looping
-                const syncedIndices = {};
-                loadedPhotos.forEach((p) => {
-                  syncedIndices[p.id] = 0;
-                });
-                setCurrentVideoIndexByPhoto(syncedIndices);
-                
-                if (successCount > 0) {
-                  const videoMessage = getRandomVideoMessage();
-                  showToast({
-                    title: videoMessage.title,
-                    message: errorCount > 0 
-                      ? `${successCount} of ${loadedPhotos.length} transition videos generated. Playing in sync...`
-                      : `All ${successCount} transition video${successCount > 1 ? 's' : ''} generated! Playing in sync...`,
-                    type: errorCount > 0 ? 'info' : 'success',
-                    timeout: 5000
-                  });
-                }
-              }, 500);
-            }
+            checkCompletion();
           },
-          onError: (error) => {
-            errorCount++;
-            const totalProcessed = successCount + errorCount;
+          onError: async (error) => {
+            console.error(`[Transition]${retryLabel} Video ${i + 1} failed:`, error);
             
-            // When ALL transition videos are processed (success or fail), enable Add Music
-            if (totalProcessed === loadedPhotos.length) {
-              setTimeout(() => {
-                console.log(`[Transition] All videos processed! ${successCount} success, ${errorCount} failed. Enabling Add Music button`);
-                setAllTransitionVideosComplete(true);
-                
-                // Reset all polaroids to start at video index 0 for synchronized looping (for any that succeeded)
-                const syncedIndices = {};
-                loadedPhotos.forEach((p) => {
-                  syncedIndices[p.id] = 0;
-                });
-                setCurrentVideoIndexByPhoto(syncedIndices);
-                
-                if (successCount > 0) {
-                  showToast({
-                    title: 'Partial Success',
-                    message: `${successCount} of ${loadedPhotos.length} transition videos generated. Playing in sync...`,
-                    type: 'info',
-                    timeout: 5000
-                  });
-                }
-              }, 500);
-            }
-            
-            if (errorCount === loadedPhotos.length) {
+            // Check if we should retry
+            const currentRetries = retryAttempts[photo.id] || 0;
+            if (currentRetries < MAX_RETRIES) {
+              retryAttempts[photo.id] = currentRetries + 1;
+              console.log(`[Transition] Retrying video ${i + 1} (attempt ${currentRetries + 1} of ${MAX_RETRIES})...`);
+              
               showToast({
-                title: 'Batch Transition Video Failed',
-                message: 'All transition video generations failed. Please try again.',
-                type: 'error'
+                title: '🔄 Retrying...',
+                message: `Video ${i + 1} failed, retrying automatically...`,
+                type: 'info',
+                timeout: 2000
               });
+              
+              // Wait a moment before retrying
+              await new Promise(resolve => setTimeout(resolve, 1500));
+              
+              // Re-fetch photo data in case state changed
+              const retryPhotoData = await generateTransitionVideoForPhoto(i, true);
+              if (!retryPhotoData.skipped && !retryPhotoData.error) {
+                generateWithRetry(retryPhotoData, true);
+              } else {
+                // Retry failed to even start
+                errorCount++;
+                checkCompletion();
+              }
+            } else {
+              // Max retries reached
+              errorCount++;
+              console.log(`[Transition] Video ${i + 1} failed after ${MAX_RETRIES} retry attempt(s)`);
+              checkCompletion();
             }
           },
           onCancel: () => {
@@ -2492,24 +2574,65 @@ const PhotoGallery = ({
           },
           onOutOfCredits: () => {
             console.log('[VIDEO] Triggering out of credits popup from batch transition video generation');
+            // Don't retry on out of credits - count as error immediately
+            errorCount++;
+            checkCompletion();
             if (onOutOfCredits) {
               onOutOfCredits();
             }
           }
         });
       } catch (error) {
-        console.error('[TRANSITION VIDEO] Failed to load images:', error);
-        errorCount++;
-        if (errorCount === loadedPhotos.length) {
+        console.error(`[Transition]${retryLabel} Failed to load images for photo ${i}:`, error);
+        
+        // Check if we should retry image loading
+        const currentRetries = retryAttempts[photo.id] || 0;
+        if (currentRetries < MAX_RETRIES) {
+          retryAttempts[photo.id] = currentRetries + 1;
+          console.log(`[Transition] Retrying image load for video ${i + 1} (attempt ${currentRetries + 1} of ${MAX_RETRIES})...`);
+          
           showToast({
-            title: 'Batch Transition Video Failed',
-            message: 'Failed to load images for transition video generation.',
-            type: 'error'
+            title: '🔄 Retrying...',
+            message: `Failed to load images, retrying...`,
+            type: 'info',
+            timeout: 2000
           });
+          
+          // Wait a moment before retrying
+          await new Promise(resolve => setTimeout(resolve, 1500));
+          
+          // Re-fetch photo data and retry
+          const retryPhotoData = await generateTransitionVideoForPhoto(i, true);
+          if (!retryPhotoData.skipped && !retryPhotoData.error) {
+            generateWithRetry(retryPhotoData, true);
+          } else {
+            errorCount++;
+            checkCompletion();
+          }
+        } else {
+          errorCount++;
+          checkCompletion();
         }
       }
+    };
+
+    // Process all photos
+    for (let i = 0; i < loadedPhotos.length; i++) {
+      const photoData = await generateTransitionVideoForPhoto(i, false);
+      
+      if (photoData.skipped) {
+        continue;
+      }
+      
+      if (photoData.error) {
+        errorCount++;
+        checkCompletion();
+        continue;
+      }
+
+      generateWithRetry(photoData, false);
     }
-  }, [photos, sogniClient, setPhotos, settings.videoResolution, settings.videoQuality, settings.videoFramerate, settings.videoDuration, settings.videoNegativePrompt, settings.soundEnabled, tokenType, desiredWidth, desiredHeight, showToast, onOutOfCredits, setPlayingGeneratedVideoIds]);
+  }, [photos, sogniClient, setPhotos, settings.videoResolution, settings.videoQuality, settings.videoFramerate, settings.videoDuration, settings.videoNegativePrompt, settings.soundEnabled, tokenType, desiredWidth, desiredHeight, showToast, onOutOfCredits, setPlayingGeneratedVideoIds, allTransitionVideosComplete, transitionVideoQueue]);
 
   // Handle video cancellation
   const handleCancelVideo = useCallback(() => {
@@ -3291,19 +3414,23 @@ const PhotoGallery = ({
   const firstPhotoVideoIndex = firstPhotoId ? (currentVideoIndexByPhoto[firstPhotoId] ?? 0) : 0;
   const prevVideoIndexRef = useRef(firstPhotoVideoIndex);
   const audioReadyRef = useRef(false); // Track if audio is seekable
+  const lastAppliedMusicUrlRef = useRef(null); // Track last processed audio URL
 
   // Initialize inline audio when appliedMusic changes
   useEffect(() => {
     const audio = inlineAudioRef.current;
     if (!audio || !appliedMusic || !allTransitionVideosComplete) {
       audioReadyRef.current = false;
+      lastAppliedMusicUrlRef.current = null;
       return;
     }
     
-    // If source changed, we need to wait for it to be ready
-    if (audio.src !== appliedMusic.audioUrl) {
+    // Check if this is a new audio source we haven't processed yet
+    const isNewSource = lastAppliedMusicUrlRef.current !== appliedMusic.audioUrl;
+    
+    if (isNewSource) {
       audioReadyRef.current = false;
-      audio.src = appliedMusic.audioUrl;
+      lastAppliedMusicUrlRef.current = appliedMusic.audioUrl;
       
       const handleCanPlay = () => {
         audioReadyRef.current = true;
@@ -3314,8 +3441,14 @@ const PhotoGallery = ({
         }
       };
       
-      audio.addEventListener('canplay', handleCanPlay, { once: true });
-      return () => audio.removeEventListener('canplay', handleCanPlay);
+      // Check if already ready (audio element might have loaded via JSX src)
+      if (audio.readyState >= 3) {
+        // HAVE_FUTURE_DATA or HAVE_ENOUGH_DATA - already ready to play
+        handleCanPlay();
+      } else {
+        audio.addEventListener('canplay', handleCanPlay, { once: true });
+        return () => audio.removeEventListener('canplay', handleCanPlay);
+      }
     }
   }, [appliedMusic, allTransitionVideosComplete, isInlineAudioMuted]);
 
@@ -10096,12 +10229,12 @@ const PhotoGallery = ({
         <div
           style={{
             position: 'fixed',
-            bottom: '100px',
+            bottom: '160px',
             right: '20px',
             display: 'flex',
             alignItems: 'center',
             gap: '8px',
-            zIndex: 1000
+            zIndex: 10000010
           }}
         >
           {/* Mute toggle - only show when music is applied */}
