@@ -5472,7 +5472,7 @@ const PhotoGallery = ({
               <span>▼</span>
             </button>
             
-            {/* Mode selection dropdown */}
+            {/* Mode selection dropdown - portaled to document.body for proper z-index stacking */}
             {showBatchActionDropdown && !isBulkDownloading && (() => {
               // Count loaded photos (excluding originals and hidden/discarded ones)
               const currentPhotosArray = isPromptSelectorMode ? filteredPhotos : photos;
@@ -5481,13 +5481,13 @@ const PhotoGallery = ({
               ).length;
               const canUseVideo = loadedPhotosCount > 0;
 
-              return (
+              return createPortal(
                 <div
                   className="batch-action-mode-dropdown"
                   style={{
-                    position: 'absolute',
-                    bottom: '50px',
-                    right: '0',
+                    position: 'fixed',
+                    bottom: '90px',
+                    right: '32px',
                     background: 'rgba(255, 255, 255, 0.98)',
                     borderRadius: '8px',
                     boxShadow: '0 4px 16px rgba(0,0,0,0.2)',
@@ -5761,14 +5761,14 @@ const PhotoGallery = ({
               </div>
             )}
               
-          {/* Progress indicator for downloads */}
-          {(isBulkDownloading || readyTransitionVideo) && bulkDownloadProgress.message && (
+          {/* Progress indicator for downloads - portaled for proper z-index */}
+          {(isBulkDownloading || readyTransitionVideo) && bulkDownloadProgress.message && createPortal(
             <div
               className="bulk-download-progress"
               style={{
-                position: 'absolute',
-                bottom: '50px',
-                right: '0',
+                position: 'fixed',
+                bottom: '90px',
+                right: '32px',
                 background: 'rgba(0, 0, 0, 0.85)',
                 color: 'white',
                 padding: '8px 12px',
@@ -5779,7 +5779,7 @@ const PhotoGallery = ({
                 minWidth: '150px',
                 textAlign: 'right',
                 whiteSpace: 'nowrap',
-                zIndex: 10000002
+                zIndex: 10001
               }}
             >
               <div>{bulkDownloadProgress.message}</div>
@@ -5808,7 +5808,8 @@ const PhotoGallery = ({
                   📱 Save Video
                 </button>
               )}
-            </div>
+            </div>,
+            document.body
           )}
 
           {/* Batch video mode tutorial tip - shown once after first render */}
