@@ -5685,7 +5685,8 @@ const PhotoGallery = ({
                       </button>
                     </>
                   )}
-                </div>
+                </div>,
+                document.body
               );
             })()}
 
