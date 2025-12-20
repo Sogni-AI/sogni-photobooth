@@ -548,7 +548,7 @@ export async function generateVideo(options: GenerateVideoOptions): Promise<void
     };
     const baseTimeoutMs = timeoutMinutes[quality] * 60 * 1000;
     const inactivityTimeoutMs = 120 * 1000; // 120 seconds of no activity
-    
+
     // Initialize last activity time
     activeProject.lastActivityTime = Date.now();
 

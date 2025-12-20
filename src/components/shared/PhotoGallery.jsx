@@ -3758,16 +3758,50 @@ const PhotoGallery = ({
           
           // Check if this is a preset (has presetUrl) or a user-uploaded file
           if (appliedMusic.file.isPreset && appliedMusic.file.presetUrl) {
-            setBulkDownloadProgress({ current: 0, total: 0, message: 'Fetching audio track...' });
-            console.log(`[Transition Video] Fetching preset audio from: ${appliedMusic.file.presetUrl}`);
+            const presetUrl = appliedMusic.file.presetUrl;
+            const isMP3 = presetUrl.toLowerCase().endsWith('.mp3');
             
-            const response = await fetch(appliedMusic.file.presetUrl);
-            if (!response.ok) {
-              throw new Error(`Failed to fetch preset audio: ${response.status}`);
+            if (isMP3) {
+              // MP3 preset - fetch and transcode via backend
+              setBulkDownloadProgress({ current: 0, total: 0, message: 'Converting audio track...' });
+              console.log(`[Transition Video] Fetching and transcoding MP3 preset from: ${presetUrl}`);
+              
+              // First fetch the MP3 file
+              const mp3Response = await fetch(presetUrl);
+              if (!mp3Response.ok) {
+                throw new Error(`Failed to fetch preset audio: ${mp3Response.status}`);
+              }
+              const mp3Blob = await mp3Response.blob();
+              
+              // Send to backend for transcoding
+              const formData = new FormData();
+              formData.append('audio', mp3Blob, 'preset.mp3');
+              
+              const transcodeResponse = await fetch('/api/audio/mp3-to-m4a', {
+                method: 'POST',
+                body: formData
+              });
+              
+              if (!transcodeResponse.ok) {
+                const error = await transcodeResponse.json().catch(() => ({ error: 'Unknown error' }));
+                throw new Error(error.details || error.error || 'Transcoding failed');
+              }
+              
+              audioBuffer = await transcodeResponse.arrayBuffer();
+              console.log(`[Transition Video] MP3 transcoded to M4A: ${(audioBuffer.byteLength / 1024 / 1024).toFixed(2)}MB`);
+            } else {
+              // M4A preset - fetch directly
+              setBulkDownloadProgress({ current: 0, total: 0, message: 'Fetching audio track...' });
+              console.log(`[Transition Video] Fetching preset audio from: ${presetUrl}`);
+              
+              const response = await fetch(presetUrl);
+              if (!response.ok) {
+                throw new Error(`Failed to fetch preset audio: ${response.status}`);
+              }
+              audioBuffer = await response.arrayBuffer();
             }
-            audioBuffer = await response.arrayBuffer();
           } else {
-            // User-uploaded file - read directly
+            // User-uploaded file - read directly (already transcoded if MP3)
             audioBuffer = await appliedMusic.file.arrayBuffer();
           }
           
