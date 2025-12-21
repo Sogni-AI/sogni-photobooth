@@ -211,7 +211,7 @@ export const VIDEO_GENERATED_KEY = 'sogni_video_generated';
 export const VIDEO_TIP_SHOWN_KEY = 'sogni_video_tip_shown';
 
 // BASE Hero video prompt - partnership with Base.org
-export const BASE_HERO_PROMPT = "the subject casts off their clothes revealing a tight black tshirt and headworn earset Shure wireless microphone near mouth. Their wig falls off and they raise their hands in triumphant affirmative approval. A movie style title appears. Professional dolly zoom in witih shallow depth of field. A large wireless lapel microphone is on their face and they stretch out their hands close to the camera with dramatic hand emphasis. Their bald head gleams and they smile confidently. Keep face identity and features through transformation. BOLD FOR BASE text appears artfully and dramatically.";
+export const BASE_HERO_PROMPT = "the subject casts off their clothes revealing a tight black tshirt and headworn earset Shure wireless microphone near mouth. Their wig falls off and they raise their hands in triumphant affirmative approval. A movie style title appears. Professional dolly zoom in witih shallow depth of field. Add a thin headset microphone wrapping to the cheek. The subject raises both hands into expressive, slightly over-dramatic keynote gestures (palms open, fingers natural). Their bald head gleams and they smile confidently. Keep face identity and features through transformation. Stage lighting: soft spotlight on face, subtle rim light, dark background with faint blue accents and bokeh. Include clean on-screen typography that appears near the end: BOLD FOR BASE in bold modern sans-serif. Camera: gentle push-in, stable, crisp detail, high-end event look.";
 
 /**
  * Check if the user has seen the video intro popup
