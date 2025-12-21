@@ -877,6 +877,7 @@ const PhotoGallery = ({
   const [showBatchBaseHeroPopup, setShowBatchBaseHeroPopup] = useState(false); // Popup before BASE Hero video generation (batch)
   const [showPromptVideoPopup, setShowPromptVideoPopup] = useState(false); // Popup before Prompt Video generation (single)
   const [showBatchPromptVideoPopup, setShowBatchPromptVideoPopup] = useState(false); // Popup before Prompt Video generation (batch)
+  const [autoTriggerBaseHeroAfterGeneration, setAutoTriggerBaseHeroAfterGeneration] = useState(false); // Auto-trigger Base Hero after photo generation
 
   // Video cost estimation - include selectedPhotoIndex to bust cache when switching photos
   const { loading: videoLoading, cost: videoCostRaw, costInUSD: videoUSD, refetch: refetchVideoCost } = useVideoCostEstimation({
@@ -2137,6 +2138,62 @@ const PhotoGallery = ({
     img.src = imageUrl;
   }, [videoTargetPhotoIndex, selectedPhotoIndex, selectedSubIndex, desiredWidth, desiredHeight, sogniClient, setPhotos, settings.videoResolution, settings.videoQuality, photos, showToast]);
 
+  // Check for Base Hero deep link on mount
+  useEffect(() => {
+    const baseHeroDeepLink = sessionStorage.getItem('baseHeroDeepLink');
+    if (baseHeroDeepLink === 'true') {
+      console.log('[Base Hero] Deep link detected, checking for photos');
+      sessionStorage.removeItem('baseHeroDeepLink');
+      
+      // Check if user has photos
+      const loadedPhotos = photos.filter(
+        photo => !photo.hidden && !photo.loading && !photo.generating && !photo.error && photo.images && photo.images.length > 0 && !photo.isOriginal
+      );
+      
+      if (loadedPhotos.length > 0) {
+        // User has photos, show batch Base Hero popup
+        console.log('[Base Hero] User has photos, showing batch popup');
+        setShowBatchBaseHeroPopup(true);
+      } else {
+        // No photos, set flag to auto-trigger after generation
+        console.log('[Base Hero] No photos found, will auto-trigger after generation');
+        setAutoTriggerBaseHeroAfterGeneration(true);
+        showToast({
+          title: '📸 Photos Needed',
+          message: 'Please generate some photos first, then we\'ll automatically create your Base Hero videos!',
+          type: 'info',
+          timeout: 5000
+        });
+      }
+    }
+  }, [photos, showToast]); // Run when photos or showToast changes
+
+  // Auto-trigger Base Hero after photo generation completes
+  useEffect(() => {
+    if (autoTriggerBaseHeroAfterGeneration && !isGenerating) {
+      // Check if we now have photos
+      const loadedPhotos = photos.filter(
+        photo => !photo.hidden && !photo.loading && !photo.generating && !photo.error && photo.images && photo.images.length > 0 && !photo.isOriginal
+      );
+      
+      if (loadedPhotos.length > 0) {
+        console.log('[Base Hero] Photos generated, auto-triggering batch Base Hero');
+        setAutoTriggerBaseHeroAfterGeneration(false);
+        
+        // Small delay to ensure UI is ready
+        setTimeout(() => {
+          setShowBatchBaseHeroPopup(true);
+          showToast({
+            title: '🟦 Ready for Base Hero!',
+            message: 'Your photos are ready! Click Generate to create your Base Hero videos.',
+            type: 'success',
+            timeout: 4000
+          });
+        }, 500);
+      }
+    }
+  }, [isGenerating, photos, autoTriggerBaseHeroAfterGeneration]);
+
   // Handle BASE Hero video generation (single)
   const handleBaseHeroVideo = useCallback(async () => {
     setShowVideoOptionsList(false);
@@ -2146,6 +2203,26 @@ const PhotoGallery = ({
   // Handle BASE Hero video generation execution (single)
   const handleBaseHeroVideoExecute = useCallback(async () => {
     setShowBaseHeroPopup(false);
+    
+    // Check if user has photos - if not, redirect to generation workflow
+    const loadedPhotos = photos.filter(
+      photo => !photo.hidden && !photo.loading && !photo.generating && !photo.error && photo.images && photo.images.length > 0 && !photo.isOriginal
+    );
+    
+    if (loadedPhotos.length === 0) {
+      showToast({
+        title: '📸 Photos Needed',
+        message: 'Please generate some photos first. We\'ll automatically create your Base Hero videos after!',
+        type: 'info',
+        timeout: 5000
+      });
+      setAutoTriggerBaseHeroAfterGeneration(true);
+      // Navigate back to camera/start menu
+      if (handleBackToCamera) {
+        handleBackToCamera();
+      }
+      return;
+    }
     
     // Pre-warm audio for iOS
     warmUpAudio();
@@ -2370,9 +2447,6 @@ const PhotoGallery = ({
   const handleBatchBaseHeroVideoExecute = useCallback(async () => {
     setShowBatchBaseHeroPopup(false);
     
-    // Pre-warm audio for iOS
-    warmUpAudio();
-
     // Get all loaded photos (excluding hidden/discarded ones)
     const loadedPhotos = photos.filter(
       photo => !photo.hidden && !photo.loading && !photo.generating && !photo.error && photo.images && photo.images.length > 0 && !photo.isOriginal
@@ -2380,19 +2454,28 @@ const PhotoGallery = ({
 
     if (loadedPhotos.length === 0) {
       showToast({
-        title: 'No Images',
-        message: 'No images available for video generation.',
-        type: 'error'
+        title: '📸 Photos Needed',
+        message: 'Please generate some photos first. We\'ll automatically create your Base Hero videos after!',
+        type: 'info',
+        timeout: 5000
       });
+      setAutoTriggerBaseHeroAfterGeneration(true);
+      // Navigate back to camera/start menu
+      if (handleBackToCamera) {
+        handleBackToCamera();
+      }
       return;
     }
+    
+    // Pre-warm audio for iOS
+    warmUpAudio();
 
     // Hide the NEW badge after first video generation attempt
     setShowVideoNewBadge(false);
 
     // Show toast for batch generation
     showToast({
-      title: '🦸 Batch BASE Hero Generation',
+      title: '🟦 Batch BASE Hero Generation',
       message: `Starting BASE Hero video generation for ${loadedPhotos.length} image${loadedPhotos.length > 1 ? 's' : ''}...`,
       type: 'info',
       timeout: 3000
@@ -6413,7 +6496,7 @@ const PhotoGallery = ({
                           e.currentTarget.style.background = 'transparent';
                         }}
                       >
-                        <span>🦸</span> BASE Hero
+                        <span>🟦</span> BASE Hero
                       </button>
                       <button
                         className="batch-action-mode-option"
@@ -7524,7 +7607,7 @@ const PhotoGallery = ({
                         e.currentTarget.style.background = 'transparent';
                       }}
                     >
-                      <span>🦸</span>
+                      <span>🟦</span>
                       <span>BASE Hero</span>
                     </button>
                     <button
@@ -11618,7 +11701,7 @@ const PhotoGallery = ({
               e.currentTarget.style.background = 'transparent';
             }}
           >
-            <span>🦸</span>
+            <span>🟦</span>
             <span>BASE Hero</span>
           </button>
         </div>,
@@ -11832,7 +11915,7 @@ const PhotoGallery = ({
                 e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 82, 255, 0.3)';
               }}
             >
-              <span>🦸</span>
+              <span>🟦</span>
               <span>BASE Hero</span>
             </button>
             <button

@@ -1266,6 +1266,17 @@ const App = () => {
     const searchParam = url.searchParams.get('search');
     const referralParam = url.searchParams.get('referral');
     const galleryParam = url.searchParams.get('gallery');
+    const baseHeroParam = url.searchParams.get('baseHero');
+    
+    // Handle Base Hero deep link - store in sessionStorage for PhotoGallery to pick up
+    if (baseHeroParam === 'true') {
+      console.log('[Base Hero] Deep link detected, setting flag for auto-trigger');
+      sessionStorage.setItem('baseHeroDeepLink', 'true');
+      // Remove parameter from URL to prevent re-triggering
+      url.searchParams.delete('baseHero');
+      const newUrl = url.pathname + (url.search ? url.search : '');
+      window.history.replaceState(window.history.state || {}, '', newUrl);
+    }
     
     // Handle referral parameter - track the referring user
     if (referralParam) {
