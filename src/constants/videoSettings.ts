@@ -210,6 +210,9 @@ export const VIDEO_GENERATED_KEY = 'sogni_video_generated';
  */
 export const VIDEO_TIP_SHOWN_KEY = 'sogni_video_tip_shown';
 
+// BASE Hero video prompt - partnership with Base.org
+export const BASE_HERO_PROMPT = "the subject casts off their clothes revealing a tight black tshirt and headworn earset Shure wireless microphone near mouth. Their wig falls off and they raise their hands in triumphant affirmative approval. A movie style title appears. Professional dolly zoom in witih shallow depth of field. A large wireless lapel microphone is on their face and they stretch out their hands close to the camera with dramatic hand emphasis. Their bald head gleams and they smile confidently. Keep face identity and features through transformation. BOLD FOR BASE text appears artfully and dramatically.";
+
 /**
  * Check if the user has seen the video intro popup
  */
