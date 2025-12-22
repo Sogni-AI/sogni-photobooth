@@ -232,6 +232,7 @@ const VideoSelectionPopup = ({
   }, [promptVideoIndex, emojiVideoIndex, baldForBaseVideoIndex, isBatch, photoCount]);
 
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+  const [windowHeight, setWindowHeight] = useState(window.innerHeight);
 
   useEffect(() => {
     let timeoutId;
@@ -239,11 +240,14 @@ const VideoSelectionPopup = ({
       clearTimeout(timeoutId);
       timeoutId = setTimeout(() => {
         setWindowWidth(window.innerWidth);
+        setWindowHeight(window.innerHeight);
       }, 150);
     };
     window.addEventListener('resize', handleResize);
+    window.addEventListener('orientationchange', handleResize);
     return () => {
       window.removeEventListener('resize', handleResize);
+      window.removeEventListener('orientationchange', handleResize);
       clearTimeout(timeoutId);
     };
   }, []);
@@ -259,21 +263,59 @@ const VideoSelectionPopup = ({
         const container = gridContainerRef.current?.parentElement;
         const header = headerRef.current;
         if (container && header) {
+          // Get actual container height (already accounts for backdrop padding)
           const containerHeight = container.clientHeight;
           const headerHeight = header.offsetHeight;
-          const padding = isMobile ? 32 : 48; // Top + bottom padding
-          const availableHeight = containerHeight - headerHeight - padding;
-          if (gridContainerRef.current) {
+          // Container padding (top + bottom)
+          const containerPadding = isMobile ? 16 : isTablet ? 20 : 24;
+          const verticalPadding = containerPadding * 2;
+          // Calculate available height for grid
+          const availableHeight = containerHeight - headerHeight - verticalPadding;
+          if (gridContainerRef.current && availableHeight > 0) {
             gridContainerRef.current.style.maxHeight = `${availableHeight}px`;
             gridContainerRef.current.style.height = `${availableHeight}px`;
           }
         }
       };
-      updateGridHeight();
-      window.addEventListener('resize', updateGridHeight);
-      return () => window.removeEventListener('resize', updateGridHeight);
+      // Use requestAnimationFrame to ensure DOM is ready
+      requestAnimationFrame(() => {
+        updateGridHeight();
+      });
+      
+      const handleResize = () => {
+        updateGridHeight();
+      };
+      
+      const handleOrientationChange = () => {
+        // Delay to ensure viewport has settled after orientation change
+        setTimeout(() => {
+          setWindowHeight(window.innerHeight);
+          updateGridHeight();
+        }, 100);
+      };
+      
+      const handleVisualViewportResize = () => {
+        // Update window height when visual viewport changes (browser chrome)
+        setWindowHeight(window.innerHeight);
+        updateGridHeight();
+      };
+      
+      window.addEventListener('resize', handleResize);
+      window.addEventListener('orientationchange', handleOrientationChange);
+      // Also update on visual viewport changes (for mobile browser chrome)
+      if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', handleVisualViewportResize);
+      }
+      
+      return () => {
+        window.removeEventListener('resize', handleResize);
+        window.removeEventListener('orientationchange', handleOrientationChange);
+        if (window.visualViewport) {
+          window.visualViewport.removeEventListener('resize', handleVisualViewportResize);
+        }
+      };
     }
-  }, [visible, isMobile, windowWidth]);
+  }, [visible, isMobile, isTablet, windowWidth, windowHeight]);
 
   if (!visible) return null;
 
@@ -293,7 +335,7 @@ const VideoSelectionPopup = ({
         padding: isMobile ? '10px' : '20px',
         backdropFilter: 'blur(8px)',
         animation: 'fadeIn 0.2s ease',
-        overflow: 'scroll',
+        overflow: 'hidden',
         WebkitOverflowScrolling: 'touch'
       }}
       onClick={handleBackdropClick}
@@ -305,15 +347,15 @@ const VideoSelectionPopup = ({
           padding: isMobile ? '16px' : isTablet ? '20px' : '24px',
           maxWidth: isMobile ? '100%' : '100%',
           width: '100%',
-          height: isMobile ? 'calc(100vh - 20px)' : 'calc(100vh - 40px)',
-          maxHeight: isMobile ? 'calc(100vh - 20px)' : 'calc(100vh - 40px)',
+          height: isMobile ? `${windowHeight - 20}px` : 'calc(100vh - 40px)',
+          maxHeight: isMobile ? `${windowHeight - 20}px` : 'calc(100vh - 40px)',
           boxShadow: '0 24px 80px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(0, 0, 0, 0.05)',
           animation: 'slideUp 0.3s ease',
           position: 'relative',
           margin: 'auto',
           display: 'flex',
           flexDirection: 'column',
-          overflow: 'scroll',
+          overflow: 'hidden',
           WebkitOverflowScrolling: 'touch'
         }}
         onClick={(e) => e.stopPropagation()}
