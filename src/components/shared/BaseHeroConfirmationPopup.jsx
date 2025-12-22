@@ -182,9 +182,9 @@ const BaseHeroConfirmationPopup = ({
           alt="Sloth mascot with camera"
           style={{
             position: 'absolute',
-            left: isWideScreen ? '16%' : '15%',
-            top: isWideScreen ? '0%' : '0px',
-            height: isWideScreen ? '104%' : '102%',
+            left: isWideScreen ? '16%' : '3%',
+            top: isWideScreen ? '0%' : '-10%',
+            height: isWideScreen ? '104%' : '132%',
             opacity: 1,
             zIndex: 1,
             pointerEvents: 'none',
@@ -552,7 +552,7 @@ const BaseHeroConfirmationPopup = ({
               ? '⏳ Calculating...' 
               : isBatch && itemCount > 1
                 ? `🟦 Generate ${itemCount} BASE Hero Videos ⚡️`
-                : '🟦 Generate BASE Hero Video ⚡️'
+                : '🟦 Generate a BASE Hero Video ⚡️'
             }
           </button>
         </div>
