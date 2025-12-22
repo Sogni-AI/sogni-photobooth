@@ -18,21 +18,38 @@ class ErrorBoundary extends React.Component {
 
   componentDidCatch(error, errorInfo) {
     // Log the error to console for debugging
-    console.error('🚨 React Error Boundary caught an error:', error, errorInfo);
+    console.error('🚨🚨🚨 React Error Boundary caught an error 🚨🚨🚨');
+    console.error('Error:', error);
+    console.error('Error message:', error?.message);
+    console.error('Error stack:', error?.stack);
+    console.error('ErrorInfo:', errorInfo);
+    console.error('Component stack:', errorInfo?.componentStack);
+    console.error('Timestamp:', new Date().toISOString());
+    console.error('User agent:', navigator.userAgent);
+    console.error('Window size:', window.innerWidth, 'x', window.innerHeight);
+    
+    // Try to capture current state
+    try {
+      console.error('Current URL:', window.location.href);
+      console.error('ImageAdjuster visible:', document.querySelector('.image-adjuster-overlay') ? 'YES' : 'NO');
+      const img = document.querySelector('.image-adjuster-overlay img');
+      if (img) {
+        console.error('Image element found:', {
+          complete: img.complete,
+          naturalWidth: img.naturalWidth,
+          naturalHeight: img.naturalHeight,
+          src: img.src?.substring(0, 50) + '...'
+        });
+      }
+    } catch (e) {
+      console.error('Error capturing state:', e);
+    }
     
     // Update state with error details
     this.setState({
       error: error,
       errorInfo: errorInfo
     });
-
-    // Log specific details about the error
-    if (error?.message) {
-      console.error('Error message:', error.message);
-    }
-    if (errorInfo?.componentStack) {
-      console.error('Component stack:', errorInfo.componentStack);
-    }
   }
 
   handleReload = () => {

@@ -76,6 +76,7 @@ import webSocketErrorTester from './utils/testWebSocketErrors';
 import SplashScreen from './components/shared/SplashScreen';
 // Import the ImageAdjuster component
 import ImageAdjuster from './components/shared/ImageAdjuster';
+import ErrorBoundary from './components/shared/ErrorBoundary';
 // Import the UploadProgress component
 import UploadProgress from './components/shared/UploadProgress';
 import PromoPopup from './components/shared/PromoPopup';
@@ -10007,23 +10008,24 @@ const App = () => {
       
       {/* Add this section at the end, right before the closing tag */}
       {showImageAdjuster && currentUploadedImageUrl && (
-        <ImageAdjuster
-          key={currentUploadedImageUrl}
-          imageUrl={currentUploadedImageUrl}
-          onConfirm={handleAdjustedImage}
-          onCancel={handleCancelAdjusting}
-          initialPosition={
-            lastAdjustedPhoto?.adjustments?.position || defaultPosition
-          }
-          defaultScale={
-            lastAdjustedPhoto?.adjustments?.scale || defaultScaleValue
-          }
-          numImages={numImages}
-          stylePrompts={stylePrompts}
-          onNavigateToVibeExplorer={handleNavigateToPromptSelector}
-          photoSource={currentUploadedSource || lastAdjustedPhoto?.source || 'upload'}
-          isCameraActive={!!(videoReference.current && videoReference.current.srcObject)}
-          onTakeNewPhoto={async () => {
+        <ErrorBoundary key={`error-boundary-${currentUploadedImageUrl.substring(0, 20)}`}>
+          <ImageAdjuster
+            key={currentUploadedImageUrl}
+            imageUrl={currentUploadedImageUrl}
+            onConfirm={handleAdjustedImage}
+            onCancel={handleCancelAdjusting}
+            initialPosition={
+              lastAdjustedPhoto?.adjustments?.position || defaultPosition
+            }
+            defaultScale={
+              lastAdjustedPhoto?.adjustments?.scale || defaultScaleValue
+            }
+            numImages={numImages}
+            stylePrompts={stylePrompts}
+            onNavigateToVibeExplorer={handleNavigateToPromptSelector}
+            photoSource={currentUploadedSource || lastAdjustedPhoto?.source || 'upload'}
+            isCameraActive={!!(videoReference.current && videoReference.current.srcObject)}
+            onTakeNewPhoto={async () => {
             // Close the current adjuster
             setShowImageAdjuster(false);
             if (currentUploadedImageUrl) {
@@ -10107,6 +10109,7 @@ const App = () => {
             input.click();
           }}
         />
+        </ErrorBoundary>
       )}
 
       {/* Style Reference Image Adjuster */}

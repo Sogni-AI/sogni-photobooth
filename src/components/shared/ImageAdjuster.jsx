@@ -34,9 +34,11 @@ const ImageAdjuster = ({
   onTakeNewPhoto = null,
   isCameraActive = false // Whether camera is currently running in the background
 }) => {
-  console.log('[IMAGE_ADJUSTER] ========== COMPONENT RENDER/MOUNT ==========');
-  console.log('[IMAGE_ADJUSTER] imageUrl prop:', imageUrl?.substring(0, 50) + '...');
-  console.log('[IMAGE_ADJUSTER] Timestamp:', new Date().toISOString());
+  // Guard against invalid props that could cause render crashes
+  if (!imageUrl) {
+    console.error('[IMAGE_ADJUSTER] CRITICAL: imageUrl is missing!');
+    return null;
+  }
 
   
   const { settings, updateSetting, switchToModel } = useApp();
@@ -134,14 +136,6 @@ const ImageAdjuster = ({
         // Check if image is complete and has valid dimensions
         // Don't check src match as blob URLs might be different objects
         if (img.complete && img.naturalWidth > 0 && img.naturalHeight > 0) {
-          console.log('[IMAGE_ADJUSTER] ✅ Image already loaded (cached or fast load), setting imageLoaded to true', {
-            complete: img.complete,
-            naturalWidth: img.naturalWidth,
-            naturalHeight: img.naturalHeight,
-            checkCount: checkCount,
-            src: img.src.substring(0, 50) + '...',
-            readyState: img.readyState
-          });
           setImageLoaded(true);
           return; // Stop checking
         }
@@ -153,14 +147,6 @@ const ImageAdjuster = ({
       } else {
         // After max checks, if image still not loaded, show it anyway to prevent stuck state
         // This handles edge cases where onLoad never fires
-        console.warn('[IMAGE_ADJUSTER] ⚠️ Image did not load within expected time, showing anyway to prevent stuck state', {
-          checkCount: checkCount,
-          imageRefExists: !!imageRef.current,
-          imageComplete: imageRef.current?.complete,
-          naturalWidth: imageRef.current?.naturalWidth,
-          naturalHeight: imageRef.current?.naturalHeight,
-          readyState: imageRef.current?.readyState
-        });
         // Show the image anyway - better to show a potentially broken image than stuck loading state
         if (imageRef.current) {
           setImageLoaded(true);
@@ -169,12 +155,10 @@ const ImageAdjuster = ({
     };
     
     // Start checking after a short delay to allow DOM to update
-    console.log('[IMAGE_ADJUSTER] Starting image load check loop');
     timeoutId = setTimeout(checkImageLoaded, 50);
     
     // Cleanup function to cancel pending checks
     return () => {
-      console.log('[IMAGE_ADJUSTER] Cleaning up image load check loop');
       isCleanedUp = true;
       if (timeoutId) {
         clearTimeout(timeoutId);
@@ -345,10 +329,7 @@ const ImageAdjuster = ({
   
   // Cleanup debounce timers on unmount
   useEffect(() => {
-    console.log('[IMAGE_ADJUSTER] Component mounted, setting up cleanup');
     return () => {
-      console.log('[IMAGE_ADJUSTER] ========== COMPONENT UNMOUNTING ==========');
-      console.log('[IMAGE_ADJUSTER] Timestamp:', new Date().toISOString());
       if (sliderDebounceTimer.current) {
         clearTimeout(sliderDebounceTimer.current);
       }
@@ -413,41 +394,21 @@ const ImageAdjuster = ({
   
   // Handle image load
   const handleImageLoad = useCallback(() => {
-    console.log('[IMAGE_ADJUSTER] ========== IMAGE ONLOAD EVENT FIRED ==========');
-    console.log('[IMAGE_ADJUSTER] Timestamp:', new Date().toISOString());
-    console.log('[IMAGE_ADJUSTER] imageUrl:', imageUrl?.substring(0, 50) + '...');
-    
     // Double-check that image is actually loaded before setting state
     if (imageRef.current && imageRef.current.complete && 
         imageRef.current.naturalWidth > 0 && imageRef.current.naturalHeight > 0) {
-      console.log('[IMAGE_ADJUSTER] ✅ Image load event fired, image is ready', {
-        naturalWidth: imageRef.current.naturalWidth,
-        naturalHeight: imageRef.current.naturalHeight,
-        complete: imageRef.current.complete,
-        readyState: imageRef.current.readyState,
-        src: imageRef.current.src?.substring(0, 50) + '...'
-      });
       setImageLoaded(true);
     } else {
-      console.warn('[IMAGE_ADJUSTER] ⚠️ Image load event fired but image not ready yet, will retry', {
-        complete: imageRef.current?.complete,
-        naturalWidth: imageRef.current?.naturalWidth,
-        naturalHeight: imageRef.current?.naturalHeight,
-        readyState: imageRef.current?.readyState
-      });
       // Retry after a short delay in case dimensions aren't ready yet
       setTimeout(() => {
         if (imageRef.current && imageRef.current.complete && 
             imageRef.current.naturalWidth > 0 && imageRef.current.naturalHeight > 0) {
-          console.log('[IMAGE_ADJUSTER] ✅ Image ready after retry');
           setImageLoaded(true);
-        } else {
-          console.error('[IMAGE_ADJUSTER] ❌ Image still not ready after retry');
         }
       }, 100);
     }
     // Don't reset position - keep the initial position from props
-  }, [imageUrl]);
+  }, []);
   
   // Add document-level event listeners for mouse drag operations
   useEffect(() => {
@@ -656,72 +617,28 @@ const ImageAdjuster = ({
   
   // Handle confirm button click
   const handleConfirm = useCallback(() => {
-    console.log('[IMAGE_ADJUSTER] ========== GENERATE BUTTON CLICKED ==========');
-    console.log('[IMAGE_ADJUSTER] Timestamp:', new Date().toISOString());
-    console.log('[IMAGE_ADJUSTER] imageUrl:', imageUrl?.substring(0, 50) + '...');
-    console.log('[IMAGE_ADJUSTER] containerRef.current:', !!containerRef.current);
-    console.log('[IMAGE_ADJUSTER] imageRef.current:', !!imageRef.current);
-    console.log('[IMAGE_ADJUSTER] isProcessing:', isProcessing);
-    console.log('[IMAGE_ADJUSTER] imageLoaded state:', imageLoaded);
-    
     if (!containerRef.current || !imageRef.current) {
-      console.error('[IMAGE_ADJUSTER] Missing refs! containerRef:', !!containerRef.current, 'imageRef:', !!imageRef.current);
       return;
     }
     
     // Prevent multiple clicks while processing
     if (isProcessing) {
-      console.log('[IMAGE_ADJUSTER] Already processing, ignoring additional click');
       return;
     }
     
     // Check if image is loaded - critical for mobile to prevent crashes
     const image = imageRef.current;
     
-    console.log('[IMAGE_ADJUSTER] Image element state:', {
-      complete: image.complete,
-      naturalWidth: image.naturalWidth,
-      naturalHeight: image.naturalHeight,
-      width: image.width,
-      height: image.height,
-      src: image.src?.substring(0, 50) + '...',
-      currentSrc: image.currentSrc?.substring(0, 50) + '...',
-      readyState: image.readyState,
-      onload: typeof image.onload
-    });
-    
-    // Check preload state if available
-    if (window.__preloadImg) {
-      console.log('[IMAGE_ADJUSTER] Preload image exists:', {
-        naturalWidth: window.__preloadImg.naturalWidth,
-        naturalHeight: window.__preloadImg.naturalHeight,
-        complete: window.__preloadImg.complete,
-        context: window.__preloadContext,
-        preloadTime: window.__preloadTime ? Date.now() - window.__preloadTime + 'ms ago' : 'unknown'
-      });
-    } else {
-      console.log('[IMAGE_ADJUSTER] No preload image found in window.__preloadImg');
-    }
-    
     // Validate image dimensions - prevent division by zero or invalid calculations
     // This check must happen before any calculations to prevent React error #310
     if (!image.complete || !image.naturalWidth || !image.naturalHeight || 
         image.naturalWidth === 0 || image.naturalHeight === 0) {
-      console.error('[IMAGE_ADJUSTER] ❌❌❌ IMAGE NOT FULLY LOADED ❌❌❌');
-      console.error('[IMAGE_ADJUSTER] Image state:', {
-        complete: image.complete,
-        naturalWidth: image.naturalWidth,
-        naturalHeight: image.naturalHeight,
-        imageLoaded: imageLoaded,
-        readyState: image.readyState
-      });
       alert('Image is not ready yet. Please wait a moment for the image to fully load, then try again.');
       return;
     }
     
     // Set processing state to prevent unmounting
     setIsProcessing(true);
-    console.log('[IMAGE_ADJUSTER] ✅ Image validation passed, starting processing...');
     
     const container = containerRef.current;
     
@@ -774,88 +691,99 @@ const ImageAdjuster = ({
     const adjustedY = scaledOffsetY + (position.y * screenToCanvasY);
     
     // Draw the image with all adjustments applied
-    console.log('[IMAGE_ADJUSTER] About to call ctx.drawImage()');
-    console.log('[IMAGE_ADJUSTER] Image element state at drawImage:', {
-      complete: image.complete,
-      naturalWidth: image.naturalWidth,
-      naturalHeight: image.naturalHeight,
-      readyState: image.readyState
-    });
-    ctx.drawImage(
-      image,
-      adjustedX,
-      adjustedY,
-      drawWidth,
-      drawHeight
-    );
-    console.log('[IMAGE_ADJUSTER] ctx.drawImage() completed successfully');
-    
-    console.log('[IMAGE_ADJUSTER] About to call canvas.toBlob()');
-    console.log('[IMAGE_ADJUSTER] Canvas dimensions:', canvas.width, 'x', canvas.height);
-    console.log('[IMAGE_ADJUSTER] Image dimensions:', image.naturalWidth, 'x', image.naturalHeight);
-    console.log('[IMAGE_ADJUSTER] Draw dimensions:', drawWidth, 'x', drawHeight);
-    console.log('[IMAGE_ADJUSTER] Position:', position);
-    console.log('[IMAGE_ADJUSTER] Scale:', scale);
+    // Wrap in try-catch to catch any drawImage failures
+    try {
+      ctx.drawImage(
+        image,
+        adjustedX,
+        adjustedY,
+        drawWidth,
+        drawHeight
+      );
+    } catch (drawError) {
+      console.error('[IMAGE_ADJUSTER] CRITICAL: ctx.drawImage() failed:', drawError);
+      console.error('[IMAGE_ADJUSTER] Image state at failure:', {
+        complete: image.complete,
+        naturalWidth: image.naturalWidth,
+        naturalHeight: image.naturalHeight,
+        readyState: image.readyState,
+        src: image.src?.substring(0, 50) + '...'
+      });
+      setIsProcessing(false);
+      alert('Failed to process image. The image may not be fully loaded. Please try again.');
+      return;
+    }
     
     // Convert to PNG blob first with maximum quality to preserve details
-    const toBlobStartTime = Date.now();
-    canvas.toBlob(async (pngBlob) => {
-      const toBlobTime = Date.now() - toBlobStartTime;
-      console.log('[IMAGE_ADJUSTER] canvas.toBlob() callback fired after', toBlobTime, 'ms');
-      
-      // Validate that blob was created successfully (can fail on mobile Safari)
-      if (!pngBlob) {
-        console.error('[IMAGE_ADJUSTER] ❌❌❌ CANVAS.TOBLOB() FAILED - BLOB IS NULL/UNDEFINED ❌❌❌');
-        console.error('[IMAGE_ADJUSTER] This is the race condition! Image was not ready when toBlob was called.');
-        console.error('[IMAGE_ADJUSTER] Image state at failure:', {
-          complete: image.complete,
-          naturalWidth: image.naturalWidth,
-          naturalHeight: image.naturalHeight,
-          readyState: image.readyState
+    // Wrap in try-catch to catch synchronous errors
+    try {
+      canvas.toBlob(async (pngBlob) => {
+        // Validate that blob was created successfully (can fail on mobile Safari)
+        if (!pngBlob) {
+          console.error('[IMAGE_ADJUSTER] ❌❌❌ CANVAS.TOBLOB() FAILED - BLOB IS NULL/UNDEFINED ❌❌❌');
+          console.error('[IMAGE_ADJUSTER] This is the race condition! Image was not ready when toBlob was called.');
+          console.error('[IMAGE_ADJUSTER] Image state at failure:', {
+            complete: image.complete,
+            naturalWidth: image.naturalWidth,
+            naturalHeight: image.naturalHeight,
+            readyState: image.readyState,
+            src: image.src?.substring(0, 50) + '...'
+          });
+          console.error('[IMAGE_ADJUSTER] Canvas state:', {
+            width: canvas.width,
+            height: canvas.height
+          });
+          setIsProcessing(false);
+          alert('Failed to process image. This can happen on mobile with large images. Please try with a smaller zoom or take a new photo.');
+          return;
+        }
+
+        console.log('[IMAGE_ADJUSTER] ✅ Canvas blob created successfully:', {
+          size: pngBlob.size,
+          type: pngBlob.type
         });
-        setIsProcessing(false);
-        alert('Failed to process image. This can happen on mobile with large images. Please try with a smaller zoom or take a new photo.');
-        return;
-      }
 
-      console.log('[IMAGE_ADJUSTER] ✅ Canvas blob created successfully:', {
-        size: pngBlob.size,
-        type: pngBlob.type,
-        time: toBlobTime + 'ms'
-      });
+        // Convert PNG to high-quality JPEG for efficient upload
+        let finalBlob;
+        try {
+          const { convertPngToHighQualityJpeg } = await import('../../utils/imageProcessing.js');
+          // Don't add watermarks to adjusted images - they're used as placeholders
+          // Watermarks should only be applied to final outputs (downloads, shares)
+          finalBlob = await convertPngToHighQualityJpeg(pngBlob, 0.92, null);
+          console.log(`📊 ImageAdjuster: JPEG format selected for upload (no watermark - used as placeholder)`);
+        } catch (conversionError) {
+          console.warn('ImageAdjuster: JPEG conversion failed, using PNG:', conversionError);
+          finalBlob = pngBlob;
+          console.log(`📊 ImageAdjuster: PNG format (fallback)`);
+        }
 
-      // Convert PNG to high-quality JPEG for efficient upload
-      let finalBlob;
-      try {
-        const { convertPngToHighQualityJpeg } = await import('../../utils/imageProcessing.js');
-        // Don't add watermarks to adjusted images - they're used as placeholders
-        // Watermarks should only be applied to final outputs (downloads, shares)
-        finalBlob = await convertPngToHighQualityJpeg(pngBlob, 0.92, null);
-        console.log(`📊 ImageAdjuster: JPEG format selected for upload (no watermark - used as placeholder)`);
-      } catch (conversionError) {
-        console.warn('ImageAdjuster: JPEG conversion failed, using PNG:', conversionError);
-        finalBlob = pngBlob;
-        console.log(`📊 ImageAdjuster: PNG format (fallback)`);
-      }
+        // Validate final blob before confirming
+        if (!finalBlob) {
+          console.error('❌ Final blob is null after conversion');
+          setIsProcessing(false);
+          alert('Failed to process image. Please try again.');
+          return;
+        }
 
-      // Validate final blob before confirming
-      if (!finalBlob) {
-        console.error('❌ Final blob is null after conversion');
-        setIsProcessing(false);
-        alert('Failed to process image. Please try again.');
-        return;
-      }
+        // Log final file size being transmitted
+        const finalSizeMB = (finalBlob.size / 1024 / 1024).toFixed(2);
+        console.log(`📤 ImageAdjuster transmission size: ${finalSizeMB}MB`);
 
-      // Log final file size being transmitted
-      const finalSizeMB = (finalBlob.size / 1024 / 1024).toFixed(2);
-      console.log(`📤 ImageAdjuster transmission size: ${finalSizeMB}MB`);
-
-      // ALWAYS call onConfirm with the blob - let the parent handle it
-      // The parent (App.jsx) expects this callback and will handle cleanup
-      // Don't check mounted state here - we want the operation to complete even if component unmounts
-      console.log('✅ Processing complete, calling onConfirm');
-      onConfirm(finalBlob, { position, scale, batchCount: selectedBatchCount });
-    }, 'image/png', 1.0);
+        // ALWAYS call onConfirm with the blob - let the parent handle it
+        // The parent (App.jsx) expects this callback and will handle cleanup
+        // Don't check mounted state here - we want the operation to complete even if component unmounts
+        try {
+          onConfirm(finalBlob, { position, scale, batchCount: selectedBatchCount });
+        } catch (confirmError) {
+          console.error('[IMAGE_ADJUSTER] CRITICAL: onConfirm callback failed:', confirmError);
+          setIsProcessing(false);
+        }
+      }, 'image/png', 1.0);
+    } catch (toBlobError) {
+      console.error('[IMAGE_ADJUSTER] CRITICAL: canvas.toBlob() threw synchronous error:', toBlobError);
+      setIsProcessing(false);
+      alert('Failed to process image. Please try again.');
+    }
   }, [isProcessing, imageLoaded, dimensions, scale, position, selectedBatchCount, onConfirm]);
   
   

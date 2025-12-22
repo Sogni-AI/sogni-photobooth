@@ -59,7 +59,7 @@ const BaldForBaseConfirmationPopup = ({
     }
   }, [visible]);
 
-  // Update video source when index changes - optimized for iOS caching
+  // Update video source when index changes - iOS optimized approach
   useEffect(() => {
     if (videoRef.current && videoUrls[currentVideoIndex]) {
       const video = videoRef.current;
@@ -67,39 +67,36 @@ const BaldForBaseConfirmationPopup = ({
       
       // Only update if the source is different to avoid unnecessary reloads
       if (video.src !== newSrc) {
-        // Pause and reset before changing source
+        // Pause before changing source
         video.pause();
+        
+        // On iOS, append fragment identifier to prompt immediate frame display
+        // Don't call load() - let browser handle it naturally to use cache
+        const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+        const srcWithFragment = isIOS ? `${newSrc}#t=0.001` : newSrc;
+        video.src = srcWithFragment;
         video.currentTime = 0;
         
-        // Set new source
-        video.src = newSrc;
-        
-        // On iOS, avoid calling load() if possible to prevent cache invalidation
-        // Use requestAnimationFrame to allow browser to process src change
-        requestAnimationFrame(() => {
-          if (videoRef.current && videoRef.current.src === newSrc) {
-            const videoEl = videoRef.current;
-            // If video is already ready (cached), play immediately
-            if (videoEl.readyState >= 3) {
-              videoEl.play().catch(err => {
-                console.log('Video autoplay prevented:', err);
-                setVideoError(err.message);
-              });
-            } else {
-              // Only call load() if not ready - this will trigger loading
-              videoEl.load();
-              const playWhenReady = () => {
-                if (videoRef.current && videoRef.current.src === newSrc) {
-                  videoRef.current.play().catch(err => {
-                    console.log('Video autoplay prevented:', err);
-                    setVideoError(err.message);
-                  });
-                }
-              };
-              videoEl.addEventListener('canplay', playWhenReady, { once: true });
-            }
+        // Try to play immediately - if cached, this should work
+        // Use loadeddata event which fires faster than canplay on cached videos
+        const tryPlay = () => {
+          if (videoRef.current && videoRef.current.src.includes(newSrc)) {
+            videoRef.current.play().catch(err => {
+              console.log('Video autoplay prevented:', err);
+              setVideoError(err.message);
+            });
           }
-        });
+        };
+        
+        // If already loaded (cached), play immediately
+        if (video.readyState >= 2) {
+          requestAnimationFrame(tryPlay);
+        } else {
+          // Wait for loadeddata which fires quickly for cached videos
+          video.addEventListener('loadeddata', tryPlay, { once: true });
+          // Fallback to canplay if loadeddata doesn't fire
+          video.addEventListener('canplay', tryPlay, { once: true });
+        }
       }
     }
   }, [currentVideoIndex]);
