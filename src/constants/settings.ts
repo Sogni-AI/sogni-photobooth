@@ -137,8 +137,8 @@ export const getModelRanges = (modelValue: string, isLoggedInWithFrontendAuth: b
   if (deviceIsMobile) {
     maxImages = Math.min(maxImages, MOBILE_MAX_IMAGES);
   }
-  // For SD: default 16 when not logged in, 8 when logged in (to save user credits)
-  const defaultNumImages = isLoggedInWithFrontendAuth ? 8 : 16;
+  // For SD: default 8 images (for both logged in and not logged in users)
+  const defaultNumImages = 8;
 
   return {
     promptGuidance: { min: 1.8, max: 3, step: 0.1, default: 2 },

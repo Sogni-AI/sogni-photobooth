@@ -176,6 +176,21 @@ const BaseHeroConfirmationPopup = ({
         }}
         onClick={(e) => e.stopPropagation()}
       >
+        {/* Giant Pink Sloth Background */}
+        <img
+          src="/sloth_cam_hop_trnsparent.png"
+          alt="Sloth mascot with camera"
+          style={{
+            position: 'absolute',
+            left: isWideScreen ? '16%' : '15%',
+            top: isWideScreen ? '0%' : '0px',
+            height: isWideScreen ? '104%' : '102%',
+            opacity: 1,
+            zIndex: 1,
+            pointerEvents: 'none',
+            animation: 'float 6s ease-in-out infinite'
+          }}
+        />
         {/* Close button - overlaps image content */}
         <button
           onClick={onClose}
@@ -224,8 +239,8 @@ const BaseHeroConfirmationPopup = ({
           <div 
             className="base-hero-popup-content"
             style={{
-              background: 'rgba(255, 255, 255, 0.1)', // Light blue background
-              padding: isWideScreen ? '32px' : '16px 38px', // Padding around content
+              background: 'rgba(0, 0, 0, 0.4)', // Black background at 0.3 opacity
+              padding: isWideScreen ? '32px' : '36px 18px', // Padding around content
               flex: isWideScreen ? '1 1 auto' : '0 0 auto', // Allow content to grow on desktop
               display: 'flex',
               flexDirection: 'column',
@@ -234,16 +249,17 @@ const BaseHeroConfirmationPopup = ({
               minWidth: 0,
               position: 'relative',
               borderRadius: '12px', // Rounded corners for the content area
-              gap: isWideScreen ? '16px' : '0', // Add gap between title and content on desktop
-              alignSelf: isWideScreen ? 'stretch' : 'auto' // Stretch to fill available space on desktop
+              gap: isWideScreen ? '16px' : '16px', // Add gap between title and content on desktop
+              alignSelf: isWideScreen ? 'stretch' : 'auto', // Stretch to fill available space on desktop
+              zIndex: 2 // Ensure content appears above sloth background
             }}
           >
             {/* Popup Title - inside blue content area */}
             <div style={{
-              fontSize: isWideScreen ? '24px' : '20px',
+              fontSize: isWideScreen ? '24px' : '22px',
               fontWeight: '700',
               color: 'white',
-              marginBottom: isWideScreen ? '24px' : '20px',
+              marginBottom: isWideScreen ? '24px' : '10px',
               lineHeight: '1.3',
               letterSpacing: '-0.01em',
               textAlign: 'center',
@@ -292,13 +308,24 @@ const BaseHeroConfirmationPopup = ({
                   </p>
                   <p style={{
                     margin: 0,
+                    marginBottom: '12px',
                     color: 'rgba(255, 255, 255, 0.9)',
                     fontSize: isWideScreen ? '14px' : '13px',
                     lineHeight: '1.55', // Slightly tighter line height
                     textAlign: 'left',
                     wordSpacing: '0.05em' // Slight word spacing to help with line breaks
                   }}>
-                    To celebrate, share your own fun BASE Hero video on X or Base App and tag <a href="https://x.com/Sogni_Protocol" target="_blank" rel="noopener noreferrer" style={{ color: 'white', textDecoration: 'underline', fontWeight: '700' }}>@Sogni_Protocol</a> for a chance at 100,000 SOGNI tokens! We'll be selecting <strong style={{ color: 'white' }}>5 winners on Jan 15.</strong> Tag and follow for updates.
+                    To celebrate, share your own fun BASE Hero video on X or Base App and tag <a href="https://x.com/Sogni_Protocol" target="_blank" rel="noopener noreferrer" style={{ color: 'white', textDecoration: 'underline', fontWeight: '700' }}>@Sogni_Protocol</a> for a chance at 100,000 SOGNI tokens!
+                  </p>
+                  <p style={{
+                    margin: 0,
+                    color: 'rgba(255, 255, 255, 0.9)',
+                    fontSize: isWideScreen ? '14px' : '13px',
+                    lineHeight: '1.55', // Slightly tighter line height
+                    textAlign: 'left',
+                    wordSpacing: '0.05em' // Slight word spacing to help with line breaks
+                  }}>
+                    We'll be selecting <strong style={{ color: 'white' }}>5 winners on Jan 15.</strong> Tag and follow for updates.
                   </p>
                 </div>
 
@@ -318,7 +345,8 @@ const BaseHeroConfirmationPopup = ({
             alignItems: 'center',
             justifyContent: 'center',
                     marginLeft: '0', // No extra margin - container padding handles spacing
-                    marginTop: '0' // Better alignment
+                    marginTop: '0', // Better alignment
+                    zIndex: 3 // Ensure video appears above sloth
           }}>
             <video
               ref={videoRef}
@@ -374,7 +402,7 @@ const BaseHeroConfirmationPopup = ({
                 src="/base-hero-wallet-metadata.png"
                 alt="Base App Preview"
                 style={{
-                  width: '100%',
+                  width: isWideScreen ? '50%' : '75%',
                   height: 'auto',
                   display: 'block',
                   maxHeight: isWideScreen ? '300px' : '180px',
@@ -400,8 +428,7 @@ const BaseHeroConfirmationPopup = ({
                 textDecoration: 'none',
                 border: '1px solid rgba(255, 255, 255, 0.3)',
                 transition: 'all 0.2s ease',
-                marginTop: isWideScreen ? '20px' : '18px', // Consistent spacing
-                alignSelf: 'flex-end' // Right align the button
+                alignSelf: 'start'
               }}
               onMouseOver={(e) => {
                 e.currentTarget.style.background = 'rgba(255, 255, 255, 0.3)';
@@ -431,7 +458,8 @@ const BaseHeroConfirmationPopup = ({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            alignSelf: isWideScreen ? 'center' : 'center' // Center vertically on desktop
+            alignSelf: isWideScreen ? 'center' : 'center', // Center vertically on desktop
+            zIndex: 3 // Ensure video appears above sloth
           }}>
             <video
               ref={videoRef}
@@ -482,7 +510,9 @@ const BaseHeroConfirmationPopup = ({
           marginTop: isWideScreen ? '20px' : '12px',
           marginBottom: isWideScreen ? '16px' : '12px', // Padding between button and footer
           flexShrink: 0,
-          justifyContent: isWideScreen ? 'flex-end' : 'stretch' // Right align button on desktop
+          justifyContent: isWideScreen ? 'flex-end' : 'stretch', // Right align button on desktop
+          position: 'relative',
+          zIndex: 3 // Ensure buttons appear above sloth
         }}>
           <button
             type="button"
@@ -534,7 +564,9 @@ const BaseHeroConfirmationPopup = ({
             borderTop: '1px solid rgba(255, 255, 255, 0.15)',
             color: 'rgba(255, 255, 255, 0.9)',
             fontSize: '11px',
-            textAlign: 'center'
+            textAlign: 'center',
+            position: 'relative',
+            zIndex: 3 // Ensure footer appears above sloth
           }}>
             <div style={{
               display: 'flex',
@@ -571,7 +603,9 @@ const BaseHeroConfirmationPopup = ({
             fontWeight: '700',
             textAlign: 'center',
             borderTop: '1px solid rgba(255, 255, 255, 0.15)',
-            color: 'rgba(255, 255, 255, 0.9)'
+            color: 'rgba(255, 255, 255, 0.9)',
+            position: 'relative',
+            zIndex: 3 // Ensure footer appears above sloth
           }}>
             Calculating cost...
           </div>
@@ -592,6 +626,14 @@ const BaseHeroConfirmationPopup = ({
           to {
             opacity: 1;
             transform: translateY(0);
+          }
+        }
+        @keyframes float {
+          0%, 100% {
+            transform: translateY(0px);
+          }
+          50% {
+            transform: translateY(-20px);
           }
         }
         /* Hide scrollbar but allow scrolling */

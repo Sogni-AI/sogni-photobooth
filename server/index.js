@@ -270,9 +270,9 @@ const handleWinterRoute = (req, res) => {
       `content="${winterTitle}"`
     );
     
-    // Replace og:description - match the exact multi-line format
+    // Replace og:description - match the updated description format (includes video portraits)
     modifiedHtml = modifiedHtml.replace(
-      /Create stunning AI headshots and portraits with Sogni Photobooth—your free AI portrait generator and anime PFP maker\. Transform your photos with 200\+ AI styles in seconds!/g,
+      /Create stunning AI headshots, portraits, and video portraits with Sogni Photobooth—your free AI portrait generator and anime PFP maker\. Transform your photos with 200\+ AI styles in seconds, or generate AI videos from your portraits!/g,
       winterDesc
     );
     
@@ -329,10 +329,8 @@ const handleBaseHeroRoute = (req, res) => {
     const baseHeroTitle = '🟦 BASE Hero Video Generator | Sogni AI Photobooth';
     const baseHeroDesc = 'Create your own fun BASE Hero video! Share on X or Base App and tag @Sogni_Protocol for a chance at 100,000 SOGNI tokens. 5 winners selected on Jan 15.';
     const baseHeroUrl = `${baseUrl}/event/base-hero`;
-    const baseHeroImage = `${baseUrl}/base-hero-wallet-metadata.png`;
 
     console.log(`[Base Hero Route] Using baseUrl: ${baseUrl}`);
-    console.log(`[Base Hero Route] Base Hero image URL: ${baseHeroImage}`);
 
     // Replace title - handle various formats
     modifiedHtml = modifiedHtml.replace(
@@ -346,17 +344,13 @@ const handleBaseHeroRoute = (req, res) => {
       `content="${baseHeroTitle}"`
     );
     
-    // Replace og:description - match the exact multi-line format
+    // Replace og:description - match the updated description format (includes video portraits)
     modifiedHtml = modifiedHtml.replace(
-      /Create stunning AI headshots and portraits with Sogni Photobooth—your free AI portrait generator and anime PFP maker\. Transform your photos with 200\+ AI styles in seconds!/g,
+      /Create stunning AI headshots, portraits, and video portraits with Sogni Photobooth—your free AI portrait generator and anime PFP maker\. Transform your photos with 200\+ AI styles in seconds, or generate AI videos from your portraits!/g,
       baseHeroDesc
     );
     
-    // Replace og:image - the GitHub repository image
-    modifiedHtml = modifiedHtml.replace(
-      /https:\/\/repository-images\.githubusercontent\.com\/945858402\/6ae0abb5-c7cc-42ba-9051-9d644e1f130a/g,
-      baseHeroImage
-    );
+    // Note: We keep the default og:image (GitHub repository image) - only title/description change
     
     // Replace og:url and twitter:url
     modifiedHtml = modifiedHtml.replace(

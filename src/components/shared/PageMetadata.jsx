@@ -70,12 +70,12 @@ const PageMetadata = () => {
       },
       default: {
         title: 'Sogni AI Photobooth | Free AI Headshot Generator & Portrait Maker',
-        description: 'Create stunning AI headshots and portraits with Sogni Photobooth—your all-in-one AI headshot generator, free AI portrait generator, and anime PFP maker. Transform your photos with 200+ styles in seconds!',
+        description: 'Create stunning AI headshots, portraits, and video portraits with Sogni Photobooth—your all-in-one AI headshot generator, free AI portrait generator, and anime PFP maker. Transform your photos with 200+ styles in seconds, or generate AI videos from your portraits!',
         ogTitle: 'Sogni AI Photobooth | Free AI Headshot Generator & Portrait Maker',
-        ogDescription: 'Create stunning AI headshots and portraits with Sogni Photobooth—your free AI portrait generator and anime PFP maker. Transform your photos with 200+ AI styles in seconds!',
+        ogDescription: 'Create stunning AI headshots, portraits, and video portraits with Sogni Photobooth—your free AI portrait generator and anime PFP maker. Transform your photos with 200+ AI styles in seconds, or generate AI videos from your portraits!',
         twitterTitle: 'Sogni AI Photobooth | Free AI Headshot & Portrait Generator',
-        twitterDescription: 'Create stunning AI headshots, portraits, and anime PFPs with our free AI generator. 200+ styles, instant results!',
-        keywords: 'AI headshot generator, free AI portrait generator, AI portrait generator, PFP maker, anime PFP maker, AI photo generator, AI photobooth, AI selfie generator, profile picture maker, anime avatar creator, AI art generator, portrait AI, headshot maker, AI image generator, photo transformer'
+        twitterDescription: 'Create stunning AI headshots, portraits, video portraits, and anime PFPs with our free AI generator. 200+ styles, instant results! Generate AI videos from your photos.',
+        keywords: 'AI headshot generator, free AI portrait generator, AI portrait generator, AI video generator, video portraits, AI video portraits, PFP maker, anime PFP maker, AI photo generator, AI photobooth, AI selfie generator, profile picture maker, anime avatar creator, AI art generator, portrait AI, headshot maker, AI image generator, photo transformer, AI video maker, portrait video generator'
       }
     };
 
