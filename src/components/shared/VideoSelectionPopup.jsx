@@ -44,6 +44,12 @@ const VideoSelectionPopup = ({
   const [promptVideoIndex, setPromptVideoIndex] = useState(0);
   const [emojiVideoIndex, setEmojiVideoIndex] = useState(0);
   const [baldForBaseVideoIndex, setBaldForBaseVideoIndex] = useState(0);
+  const [videoLoadedStates, setVideoLoadedStates] = useState({
+    'prompt': false,
+    'emoji': false,
+    'bald-for-base': false,
+    'transition': false
+  });
   const promptVideoRefs = React.useRef({});
   const emojiVideoRefs = React.useRef({});
   const baldForBaseVideoRefs = React.useRef({});
@@ -124,52 +130,99 @@ const VideoSelectionPopup = ({
 
   // Preload all videos when popup opens to ensure they're cached on iOS
   useEffect(() => {
-    if (visible) {
-      setPromptVideoIndex(0);
-      setEmojiVideoIndex(0);
-      setBaldForBaseVideoIndex(0);
-      
-      // Preload all videos in hidden elements to cache them on iOS
-      const allVideos = [...promptVideos, ...emojiVideos, ...baldForBaseVideos];
-      allVideos.forEach((videoUrl) => {
-        const preloadVideo = document.createElement('video');
-        preloadVideo.src = videoUrl;
-        preloadVideo.preload = 'auto';
-        preloadVideo.muted = true;
-        preloadVideo.style.display = 'none';
-        document.body.appendChild(preloadVideo);
-        // Remove after a short delay to allow caching
-        setTimeout(() => {
-          document.body.removeChild(preloadVideo);
-        }, 1000);
+    if (!visible) return;
+    
+    setPromptVideoIndex(0);
+    setEmojiVideoIndex(0);
+    setBaldForBaseVideoIndex(0);
+    // Reset loading states when popup opens
+    setVideoLoadedStates({
+      'prompt': false,
+      'emoji': false,
+      'bald-for-base': false,
+      'transition': false
+    });
+    
+    // Preload first videos using link preload for better performance
+    const firstVideos = [
+      promptVideos[0],
+      emojiVideos[0],
+      baldForBaseVideos[0],
+      'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/videos/transitions/jen.mp4'
+    ];
+    
+    // Add link preload tags to head for faster loading
+    const preloadLinks = firstVideos.map(videoUrl => {
+      const link = document.createElement('link');
+      link.rel = 'preload';
+      link.as = 'video';
+      link.href = videoUrl;
+      link.crossOrigin = 'anonymous';
+      document.head.appendChild(link);
+      return link;
+    });
+    
+    // Also preload all videos in hidden elements to cache them on iOS
+    const allVideos = [...promptVideos, ...emojiVideos, ...baldForBaseVideos];
+    const preloadVideoElements = allVideos.map((videoUrl) => {
+      const preloadVideo = document.createElement('video');
+      preloadVideo.src = videoUrl;
+      preloadVideo.preload = 'auto';
+      preloadVideo.muted = true;
+      preloadVideo.style.display = 'none';
+      document.body.appendChild(preloadVideo);
+      return preloadVideo;
+    });
+    
+    // Remove preload videos after a delay to allow caching
+    const preloadTimeout = setTimeout(() => {
+      preloadVideoElements.forEach(video => {
+        if (document.body.contains(video)) {
+          document.body.removeChild(video);
+        }
       });
-      
-      // Reset and play first videos
-      const promptVideoEl = promptVideoRefs.current['prompt'];
-      if (promptVideoEl) {
-        promptVideoEl.src = promptVideos[0];
-        promptVideoEl.load();
-        promptVideoEl.play().catch(err => {
-          console.log('Video autoplay prevented:', err);
-        });
-      }
-      const emojiVideoEl = emojiVideoRefs.current['emoji'];
-      if (emojiVideoEl) {
-        emojiVideoEl.src = emojiVideos[0];
-        emojiVideoEl.load();
-        emojiVideoEl.play().catch(err => {
-          console.log('Video autoplay prevented:', err);
-        });
-      }
-      const baldForBaseVideoEl = baldForBaseVideoRefs.current['bald-for-base'];
-      if (baldForBaseVideoEl) {
-        baldForBaseVideoEl.src = baldForBaseVideos[0];
-        baldForBaseVideoEl.load();
-        baldForBaseVideoEl.play().catch(err => {
-          console.log('Video autoplay prevented:', err);
-        });
-      }
+    }, 2000);
+    
+    // Reset and play first videos
+    const promptVideoEl = promptVideoRefs.current['prompt'];
+    if (promptVideoEl) {
+      promptVideoEl.src = promptVideos[0];
+      promptVideoEl.load();
+      promptVideoEl.play().catch(err => {
+        console.log('Video autoplay prevented:', err);
+      });
     }
+    const emojiVideoEl = emojiVideoRefs.current['emoji'];
+    if (emojiVideoEl) {
+      emojiVideoEl.src = emojiVideos[0];
+      emojiVideoEl.load();
+      emojiVideoEl.play().catch(err => {
+        console.log('Video autoplay prevented:', err);
+      });
+    }
+    const baldForBaseVideoEl = baldForBaseVideoRefs.current['bald-for-base'];
+    if (baldForBaseVideoEl) {
+      baldForBaseVideoEl.src = baldForBaseVideos[0];
+      baldForBaseVideoEl.load();
+      baldForBaseVideoEl.play().catch(err => {
+        console.log('Video autoplay prevented:', err);
+      });
+    }
+    
+    // Cleanup function
+    return () => {
+      clearTimeout(preloadTimeout);
+      preloadLinks.forEach(link => {
+        if (document.head.contains(link)) {
+          document.head.removeChild(link);
+        }
+      });
+      preloadVideoElements.forEach(video => {
+        if (document.body.contains(video)) {
+          document.body.removeChild(video);
+        }
+      });
+    };
   }, [visible]);
 
   // Memoize videoOptions to prevent unnecessary re-renders
@@ -511,20 +564,37 @@ const VideoSelectionPopup = ({
                 {/* Video Container - Hero Element - Always 2:3 Aspect Ratio */}
                 <div style={{
                   width: '100%',
+                  maxWidth: '480px',
                   aspectRatio: '2 / 3',
                   borderRadius: isMobile ? '18px 18px 0 0' : '22px 22px 0 0',
-                  background: option.exampleVideo 
-                    ? '#000' 
-                    : isDisabled 
-                      ? 'linear-gradient(135deg, #E5E7EB 0%, #D1D5DB 100%)'
-                      : option.gradient,
+                  background: isDisabled 
+                    ? 'linear-gradient(135deg, #E5E7EB 0%, #D1D5DB 100%)'
+                    : option.gradient,
                   overflow: 'hidden',
                   position: 'relative',
                   isolation: 'isolate',
                   flexShrink: 0,
                   minHeight: 0,
-                  maxHeight: '100%'
+                  maxHeight: '100%',
+                  margin: '0 auto'
                 }}>
+                  {/* Placeholder icon - shown while video is loading or if no video */}
+                  {(!option.exampleVideo || !videoLoadedStates[option.id === 'batch-transition' ? 'transition' : option.id]) && (
+                    <div style={{
+                      position: 'absolute',
+                      top: '50%',
+                      left: '50%',
+                      transform: 'translate(-50%, -50%)',
+                      fontSize: isMobile ? '64px' : '80px',
+                      opacity: isDisabled ? 0.3 : 0.5,
+                      filter: 'drop-shadow(0 4px 12px rgba(0, 0, 0, 0.3))',
+                      zIndex: 1,
+                      transition: 'opacity 0.3s ease'
+                    }}>
+                      {option.icon}
+                    </div>
+                  )}
+                  
                   {option.exampleVideo ? (
                     <>
                       {/* Subtle gradient overlay for depth */}
@@ -535,8 +605,10 @@ const VideoSelectionPopup = ({
                         right: 0,
                         bottom: 0,
                         background: 'linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.15) 100%)',
-                        zIndex: 1,
-                        pointerEvents: 'none'
+                        zIndex: 2,
+                        pointerEvents: 'none',
+                        opacity: videoLoadedStates[option.id] ? 1 : 0,
+                        transition: 'opacity 0.3s ease'
                       }} />
                       {/* Single video element - simple approach matching Bald For Base popup */}
                       <video
@@ -556,6 +628,16 @@ const VideoSelectionPopup = ({
                         playsInline
                         preload="auto"
                         loop={!option.exampleVideos}
+                        onLoadedData={() => {
+                          // Handle both 'transition' and 'batch-transition' IDs
+                          const stateKey = option.id === 'batch-transition' ? 'transition' : option.id;
+                          setVideoLoadedStates(prev => ({ ...prev, [stateKey]: true }));
+                        }}
+                        onCanPlay={() => {
+                          // Also mark as loaded on canplay for faster feedback
+                          const stateKey = option.id === 'batch-transition' ? 'transition' : option.id;
+                          setVideoLoadedStates(prev => ({ ...prev, [stateKey]: true }));
+                        }}
                         onEnded={() => {
                           if (option.exampleVideos && option.setVideoIndex) {
                             const nextIndex = (option.videoIndex + 1) % option.exampleVideos.length;
@@ -570,23 +652,13 @@ const VideoSelectionPopup = ({
                           position: 'absolute',
                           top: 0,
                           left: 0,
-                          zIndex: 0
+                          zIndex: 0,
+                          opacity: videoLoadedStates[option.id === 'batch-transition' ? 'transition' : option.id] ? 1 : 0,
+                          transition: 'opacity 0.3s ease'
                         }}
                       />
                     </>
-                  ) : (
-                    <div style={{
-                      position: 'absolute',
-                      top: '50%',
-                      left: '50%',
-                      transform: 'translate(-50%, -50%)',
-                      fontSize: isMobile ? '64px' : '80px',
-                      opacity: isDisabled ? 0.3 : 0.4,
-                      filter: 'drop-shadow(0 4px 12px rgba(0, 0, 0, 0.2))'
-                    }}>
-                      {option.icon}
-                    </div>
-                  )}
+                  ) : null}
                   
                   {/* Subtle corner accent */}
                   <div style={{
