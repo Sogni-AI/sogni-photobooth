@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import PropTypes from 'prop-types';
 import urls from '../../config/urls';
@@ -45,14 +45,107 @@ const VideoSelectionPopup = ({
 
   const [promptVideoIndex, setPromptVideoIndex] = useState(0);
   const [emojiVideoIndex, setEmojiVideoIndex] = useState(0);
+  const [baldForBaseVideoIndex, setBaldForBaseVideoIndex] = useState(0);
   const promptVideoRefs = React.useRef({});
   const emojiVideoRefs = React.useRef({});
+  const baldForBaseVideoRefs = React.useRef({});
+  // Preload refs for seamless video transitions
+  const promptPreloadRefs = React.useRef({});
+  const emojiPreloadRefs = React.useRef({});
+  const baldForBasePreloadRefs = React.useRef({});
+  // Track manual transitions to avoid useEffect conflicts
+  const isManualTransition = React.useRef({ prompt: false, emoji: false, 'bald-for-base': false });
+
+  // Preload next video for seamless transitions
+  useEffect(() => {
+    // Preload next prompt video
+    if (promptVideos.length > 1) {
+      const nextPromptIndex = (promptVideoIndex + 1) % promptVideos.length;
+      const preloadEl = promptPreloadRefs.current['prompt'];
+      if (preloadEl) {
+        preloadEl.src = promptVideos[nextPromptIndex];
+        preloadEl.load();
+      }
+    }
+    // Preload next emoji video
+    if (emojiVideos.length > 1) {
+      const nextEmojiIndex = (emojiVideoIndex + 1) % emojiVideos.length;
+      const preloadEl = emojiPreloadRefs.current['emoji'];
+      if (preloadEl) {
+        preloadEl.src = emojiVideos[nextEmojiIndex];
+        preloadEl.load();
+      }
+    }
+    // Preload next Bald for Base video
+    if (baldForBaseVideos.length > 1) {
+      const nextBaldForBaseIndex = (baldForBaseVideoIndex + 1) % baldForBaseVideos.length;
+      const preloadEl = baldForBasePreloadRefs.current['bald-for-base'];
+      if (preloadEl) {
+        preloadEl.src = baldForBaseVideos[nextBaldForBaseIndex];
+        preloadEl.load();
+      }
+    }
+  }, [promptVideoIndex, emojiVideoIndex, baldForBaseVideoIndex]);
+
+  // Sync video src when index changes (skip if manual transition in progress)
+  // Optimized: only update if src actually changed
+  useEffect(() => {
+    if (isManualTransition.current.prompt) {
+      isManualTransition.current.prompt = false;
+      return;
+    }
+    const promptVideoEl = promptVideoRefs.current['prompt'];
+    if (promptVideoEl && promptVideos[promptVideoIndex]) {
+      const expectedSrc = promptVideos[promptVideoIndex];
+      // Simple check: only update if src doesn't match
+      if (promptVideoEl.src !== expectedSrc && !promptVideoEl.src.endsWith(expectedSrc.split('/').pop())) {
+        promptVideoEl.src = expectedSrc;
+        promptVideoEl.load();
+        promptVideoEl.play().catch(() => {});
+      }
+    }
+  }, [promptVideoIndex]);
+
+  useEffect(() => {
+    if (isManualTransition.current.emoji) {
+      isManualTransition.current.emoji = false;
+      return;
+    }
+    const emojiVideoEl = emojiVideoRefs.current['emoji'];
+    if (emojiVideoEl && emojiVideos[emojiVideoIndex]) {
+      const expectedSrc = emojiVideos[emojiVideoIndex];
+      // Simple check: only update if src doesn't match
+      if (emojiVideoEl.src !== expectedSrc && !emojiVideoEl.src.endsWith(expectedSrc.split('/').pop())) {
+        emojiVideoEl.src = expectedSrc;
+        emojiVideoEl.load();
+        emojiVideoEl.play().catch(() => {});
+      }
+    }
+  }, [emojiVideoIndex]);
+
+  useEffect(() => {
+    if (isManualTransition.current['bald-for-base']) {
+      isManualTransition.current['bald-for-base'] = false;
+      return;
+    }
+    const baldForBaseVideoEl = baldForBaseVideoRefs.current['bald-for-base'];
+    if (baldForBaseVideoEl && baldForBaseVideos[baldForBaseVideoIndex]) {
+      const expectedSrc = baldForBaseVideos[baldForBaseVideoIndex];
+      // Simple check: only update if src doesn't match
+      if (baldForBaseVideoEl.src !== expectedSrc && !baldForBaseVideoEl.src.endsWith(expectedSrc.split('/').pop())) {
+        baldForBaseVideoEl.src = expectedSrc;
+        baldForBaseVideoEl.load();
+        baldForBaseVideoEl.play().catch(() => {});
+      }
+    }
+  }, [baldForBaseVideoIndex]);
 
   // Reset video indices when popup becomes visible
   useEffect(() => {
     if (visible) {
       setPromptVideoIndex(0);
       setEmojiVideoIndex(0);
+      setBaldForBaseVideoIndex(0);
       // Reset prompt video source
       const promptVideoEl = promptVideoRefs.current['prompt'];
       if (promptVideoEl) {
@@ -71,70 +164,114 @@ const VideoSelectionPopup = ({
           console.log('Video autoplay prevented:', err);
         });
       }
+      // Reset Bald for Base video source
+      const baldForBaseVideoEl = baldForBaseVideoRefs.current['bald-for-base'];
+      if (baldForBaseVideoEl) {
+        baldForBaseVideoEl.src = baldForBaseVideos[0];
+        baldForBaseVideoEl.load();
+        baldForBaseVideoEl.play().catch(err => {
+          console.log('Video autoplay prevented:', err);
+        });
+      }
+      // Preload first next videos
+      if (promptVideos.length > 1) {
+        const preloadEl = promptPreloadRefs.current['prompt'];
+        if (preloadEl) {
+          preloadEl.src = promptVideos[1];
+          preloadEl.load();
+        }
+      }
+      if (emojiVideos.length > 1) {
+        const preloadEl = emojiPreloadRefs.current['emoji'];
+        if (preloadEl) {
+          preloadEl.src = emojiVideos[1];
+          preloadEl.load();
+        }
+      }
+      if (baldForBaseVideos.length > 1) {
+        const preloadEl = baldForBasePreloadRefs.current['bald-for-base'];
+        if (preloadEl) {
+          preloadEl.src = baldForBaseVideos[1];
+          preloadEl.load();
+        }
+      }
     }
   }, [visible]);
 
-  const videoOptions = [
-    {
-      id: 'prompt',
-      icon: '✨',
-      title: 'Prompt Video',
-      description: 'Create custom motion videos using your own text prompts describing what should happen in the video.',
-      gradient: 'linear-gradient(135deg, #8B5CF6 0%, #6D28D9 100%)',
-      exampleVideo: promptVideos[promptVideoIndex],
-      exampleVideos: promptVideos,
-      videoIndex: promptVideoIndex,
-      setVideoIndex: setPromptVideoIndex
-    },
-    {
-      id: 'emoji',
-      icon: '🎥',
-      title: 'Emoji Video',
-      description: 'Generate videos using one of 160 emoji-based motion styles. The example is 🤑',
-      gradient: 'linear-gradient(135deg, #ffeb3b 0%, #fbc02d 100%)',
-      exampleVideo: emojiVideos[emojiVideoIndex],
-      exampleVideos: emojiVideos,
-      videoIndex: emojiVideoIndex,
-      setVideoIndex: setEmojiVideoIndex
-    }
-  ];
+  // Memoize videoOptions to prevent unnecessary re-renders
+  const videoOptions = useMemo(() => {
+    const options = [
+      {
+        id: 'prompt',
+        icon: '✨',
+        title: 'Prompt Video',
+        description: 'Create custom motion videos using your own text prompts describing what should happen in the video.',
+        gradient: 'linear-gradient(135deg, #8B5CF6 0%, #6D28D9 100%)',
+        exampleVideo: promptVideos[promptVideoIndex],
+        exampleVideos: promptVideos,
+        videoIndex: promptVideoIndex,
+        setVideoIndex: setPromptVideoIndex
+      },
+      {
+        id: 'emoji',
+        icon: '🎥',
+        title: 'Emoji Video',
+        description: 'Generate videos using one of 160 emoji-based motion styles. The example is 🤑',
+        gradient: 'linear-gradient(135deg, #ffeb3b 0%, #fbc02d 100%)',
+        exampleVideo: emojiVideos[emojiVideoIndex],
+        exampleVideos: emojiVideos,
+        videoIndex: emojiVideoIndex,
+        setVideoIndex: setEmojiVideoIndex
+      }
+    ];
 
-  // Transition Video example (2:3 aspect ratio)
-  const transitionVideo = 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/videos/transitions/jen.mp4';
+    // Transition Video example (2:3 aspect ratio)
+    const transitionVideo = 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/videos/transitions/jen.mp4';
 
-  // Add Transition Video option (always show, but disable if < 2 images in single mode)
-  const transitionOption = {
-    id: isBatch ? 'batch-transition' : 'transition',
-    icon: '🔀',
-    title: isBatch ? 'Batch Transition' : 'Transition Video',
-    description: isBatch 
-      ? 'Create looping videos that connect multiple images together with seamless transitions.'
-      : 'Create looping videos that connect multiple images together with seamless transitions. Requires 2 or more images.',
-    gradient: 'linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)',
-    exampleVideo: transitionVideo,
-    disabled: !isBatch && photoCount < 2
-  };
-  videoOptions.push(transitionOption);
+    // Add Transition Video option (always show, but disable if < 2 images in single mode)
+    options.push({
+      id: isBatch ? 'batch-transition' : 'transition',
+      icon: '🔀',
+      title: isBatch ? 'Batch Transition' : 'Transition Video',
+      description: isBatch 
+        ? 'Create looping videos that connect multiple images together with seamless transitions.'
+        : 'Create looping videos that connect multiple images together with seamless transitions. Requires 2 or more images.',
+      gradient: 'linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)',
+      exampleVideo: transitionVideo,
+      disabled: !isBatch && photoCount < 2
+    });
 
-  // Add Bald for Base option last
-  const baldForBaseOption = {
-    id: 'bald-for-base',
-    icon: '🟦',
-    title: 'Bald for Base',
-    description: 'Create videos for the Bald for Base challenge. Make Brian Armstrong proud with your clever antics.',
-    gradient: 'linear-gradient(135deg, #0052FF 0%, #0039CC 100%)',
-    exampleVideo: baldForBaseVideos[0] // Use first Bald for Base video
-  };
-  videoOptions.push(baldForBaseOption);
+    // Add Bald for Base option last
+    options.push({
+      id: 'bald-for-base',
+      icon: '🟦',
+      title: 'Bald for Base',
+      description: 'Create videos for the Bald for Base challenge. Make Brian Armstrong proud with your clever antics.',
+      gradient: 'linear-gradient(135deg, #0052FF 0%, #0039CC 100%)',
+      exampleVideo: baldForBaseVideos[baldForBaseVideoIndex],
+      exampleVideos: baldForBaseVideos,
+      videoIndex: baldForBaseVideoIndex,
+      setVideoIndex: setBaldForBaseVideoIndex
+    });
+
+    return options;
+  }, [promptVideoIndex, emojiVideoIndex, baldForBaseVideoIndex, isBatch, photoCount]);
 
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
 
   useEffect(() => {
+    let timeoutId;
     const handleResize = () => {
-      setWindowWidth(window.innerWidth);
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        setWindowWidth(window.innerWidth);
+      }, 150);
     };
     window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      clearTimeout(timeoutId);
+    };
   }, []);
 
   const isMobile = windowWidth < 768;
@@ -257,15 +394,18 @@ const VideoSelectionPopup = ({
               ? 'repeat(2, minmax(0, 1fr))' 
               : 'repeat(4, minmax(0, 1fr))',
             gap: isMobile ? '12px' : '20px',
-            overflow: 'auto',
+            overflowY: 'auto',
+            overflowX: 'hidden',
             flex: 1,
             padding: isMobile ? '0 4px 4px 4px' : '0 4px 4px 4px',
-            maxHeight: '100%',
+            minHeight: 0,
             alignItems: 'stretch',
             justifyContent: 'stretch',
             width: '100%',
-            minHeight: 0,
-            boxSizing: 'border-box'
+            boxSizing: 'border-box',
+            WebkitOverflowScrolling: 'touch',
+            touchAction: 'pan-y',
+            overscrollBehavior: 'contain'
           }}
         >
           {videoOptions.map((option, index) => {
@@ -330,9 +470,6 @@ const VideoSelectionPopup = ({
                     : isDisabled 
                       ? 'linear-gradient(135deg, #E5E7EB 0%, #D1D5DB 100%)'
                       : option.gradient,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
                   overflow: 'hidden',
                   position: 'relative',
                   isolation: 'isolate',
@@ -353,13 +490,39 @@ const VideoSelectionPopup = ({
                         zIndex: 1,
                         pointerEvents: 'none'
                       }} />
+                      {/* Preload video for seamless transitions */}
+                      {option.exampleVideos && (
+                        <video
+                          ref={(el) => {
+                            if (option.id === 'prompt' && el) {
+                              promptPreloadRefs.current[option.id] = el;
+                            } else if (option.id === 'emoji' && el) {
+                              emojiPreloadRefs.current[option.id] = el;
+                            } else if (option.id === 'bald-for-base' && el) {
+                              baldForBasePreloadRefs.current[option.id] = el;
+                            }
+                          }}
+                          preload="auto"
+                          muted
+                          playsInline
+                          style={{
+                            position: 'absolute',
+                            width: 0,
+                            height: 0,
+                            opacity: 0,
+                            pointerEvents: 'none'
+                          }}
+                        />
+                      )}
                       <video
-                        key={option.exampleVideos ? `${option.id}-video-${option.videoIndex}` : option.id}
+                        key={option.id}
                         ref={(el) => {
                           if (option.id === 'prompt' && el) {
                             promptVideoRefs.current[option.id] = el;
                           } else if (option.id === 'emoji' && el) {
                             emojiVideoRefs.current[option.id] = el;
+                          } else if (option.id === 'bald-for-base' && el) {
+                            baldForBaseVideoRefs.current[option.id] = el;
                           }
                         }}
                         src={option.exampleVideo}
@@ -367,18 +530,77 @@ const VideoSelectionPopup = ({
                         loop={!option.exampleVideos}
                         muted
                         playsInline
+                        preload="auto"
                         onEnded={() => {
                           if (option.exampleVideos && option.setVideoIndex) {
-                            const nextIndex = (option.videoIndex + 1) % option.exampleVideos.length;
-                            option.setVideoIndex(nextIndex);
+                            const currentVideoEl = option.id === 'prompt' 
+                              ? promptVideoRefs.current[option.id]
+                              : option.id === 'emoji'
+                              ? emojiVideoRefs.current[option.id]
+                              : baldForBaseVideoRefs.current[option.id];
+                            const preloadEl = option.id === 'prompt'
+                              ? promptPreloadRefs.current[option.id]
+                              : option.id === 'emoji'
+                              ? emojiPreloadRefs.current[option.id]
+                              : baldForBasePreloadRefs.current[option.id];
+                            
+                            // Check if preload is ready (readyState 4 = HAVE_ENOUGH_DATA)
+                            // Use readyState >= 4 for seamless playback
+                            if (currentVideoEl && preloadEl && preloadEl.readyState >= 4) {
+                              // Next video is fully ready, swap seamlessly without React re-render
+                              const nextIndex = (option.videoIndex + 1) % option.exampleVideos.length;
+                              // Mark as manual transition to prevent useEffect from interfering
+                              isManualTransition.current[option.id] = true;
+                              // Update src directly to avoid React re-render delay
+                              currentVideoEl.src = preloadEl.src;
+                              currentVideoEl.currentTime = 0;
+                              // Ensure video plays immediately - don't wait for load event
+                              const playPromise = currentVideoEl.play();
+                              if (playPromise !== undefined) {
+                                playPromise.catch(() => {});
+                              }
+                              // Update state for next preload
+                              option.setVideoIndex(nextIndex);
+                            } else if (currentVideoEl && preloadEl && preloadEl.readyState >= 2) {
+                              // Video has some data, try to play but might have brief delay
+                              const nextIndex = (option.videoIndex + 1) % option.exampleVideos.length;
+                              isManualTransition.current[option.id] = true;
+                              currentVideoEl.src = preloadEl.src;
+                              currentVideoEl.currentTime = 0;
+                              // Wait for canplay event before playing
+                              const playWhenReady = () => {
+                                currentVideoEl.play().catch(() => {});
+                                currentVideoEl.removeEventListener('canplay', playWhenReady);
+                              };
+                              currentVideoEl.addEventListener('canplay', playWhenReady);
+                              currentVideoEl.load();
+                              option.setVideoIndex(nextIndex);
+                            } else {
+                              // Fallback: update state (will cause delay but ensures progression)
+                              const nextIndex = (option.videoIndex + 1) % option.exampleVideos.length;
+                              option.setVideoIndex(nextIndex);
+                            }
+                          }
+                        }}
+                        onLoadedData={() => {
+                          // Only play if video is actually paused and not already playing
+                          const videoEl = option.id === 'prompt'
+                            ? promptVideoRefs.current[option.id]
+                            : option.id === 'emoji'
+                            ? emojiVideoRefs.current[option.id]
+                            : baldForBaseVideoRefs.current[option.id];
+                          if (videoEl && videoEl.paused && videoEl.readyState >= 2) {
+                            videoEl.play().catch(() => {});
                           }
                         }}
                         style={{
                           width: '100%',
                           height: '100%',
-                          objectFit: 'contain',
+                          objectFit: 'cover',
                           display: 'block',
-                          position: 'relative',
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
                           zIndex: 0
                         }}
                       />
@@ -531,19 +753,26 @@ const VideoSelectionPopup = ({
             transform: scale(1);
           }
         }
-        /* Hide scrollbar but allow scrolling */
+        /* Scrollbar styling - visible on iOS for better UX */
         .video-selection-grid::-webkit-scrollbar {
-          width: 4px;
+          width: 6px;
         }
         .video-selection-grid::-webkit-scrollbar-track {
-          background: transparent;
+          background: rgba(0, 0, 0, 0.05);
+          border-radius: 3px;
         }
         .video-selection-grid::-webkit-scrollbar-thumb {
-          background: rgba(0, 0, 0, 0.2);
-          border-radius: 2px;
+          background: rgba(0, 0, 0, 0.3);
+          border-radius: 3px;
         }
         .video-selection-grid::-webkit-scrollbar-thumb:hover {
-          background: rgba(0, 0, 0, 0.3);
+          background: rgba(0, 0, 0, 0.4);
+        }
+        /* Ensure scrolling works on iOS */
+        @supports (-webkit-overflow-scrolling: touch) {
+          .video-selection-grid {
+            -webkit-overflow-scrolling: touch;
+          }
         }
       `}</style>
     </div>,
