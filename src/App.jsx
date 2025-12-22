@@ -7673,6 +7673,44 @@ const App = () => {
     setCameraManuallyStarted(true); // User explicitly chose to take a photo
   };
 
+  // Helper function to pre-load an image from a blob URL before showing ImageAdjuster
+  // This prevents race conditions on mobile Safari where canvas.toBlob() is called
+  // before the image fully decodes, causing React error #310
+  const preloadImageBeforeAdjuster = async (blobUrl, context = 'unknown') => {
+    console.log(`[PRELOAD START] Context: ${context}, BlobURL: ${blobUrl.substring(0, 50)}...`);
+    const startTime = Date.now();
+    
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      
+      img.onload = () => {
+        const loadTime = Date.now() - startTime;
+        console.log(`[PRELOAD SUCCESS] Context: ${context}, Time: ${loadTime}ms`);
+        console.log(`[PRELOAD SUCCESS] Image dimensions: ${img.naturalWidth}x${img.naturalHeight}`);
+        console.log(`[PRELOAD SUCCESS] Image complete: ${img.complete}`);
+        console.log(`[PRELOAD SUCCESS] Image src: ${img.src.substring(0, 50)}...`);
+        
+        // Keep the image reference alive until adjuster loads it
+        // by attaching it to window temporarily (mobile Safari workaround)
+        window.__preloadImg = img;
+        window.__preloadContext = context;
+        window.__preloadTime = Date.now();
+        
+        resolve();
+      };
+      
+      img.onerror = (error) => {
+        const errorTime = Date.now() - startTime;
+        console.error(`[PRELOAD FAILED] Context: ${context}, Time: ${errorTime}ms`, error);
+        console.error(`[PRELOAD FAILED] BlobURL: ${blobUrl.substring(0, 50)}...`);
+        reject(error);
+      };
+      
+      console.log(`[PRELOAD SETTING SRC] Context: ${context}`);
+      img.src = blobUrl;
+    });
+  };
+
   // Handler to show existing camera photo in ImageAdjuster
   const handleShowExistingCameraPhoto = async () => {
     if (!lastCameraPhoto) {
@@ -7703,10 +7741,36 @@ const App = () => {
     if (lastCameraPhoto.blob) {
       // We have the blob - can reopen the adjuster
       const newTempUrl = URL.createObjectURL(lastCameraPhoto.blob);
+      
+      // Pre-load the image before showing adjuster to prevent race conditions on mobile
+      console.log('[HANDLE_SHOW_EXISTING_CAMERA] Starting preload for blob');
+      try {
+        await preloadImageBeforeAdjuster(newTempUrl, 'handleShowExistingCameraPhoto-blob');
+        console.log('[HANDLE_SHOW_EXISTING_CAMERA] Preload complete, setting state');
+      } catch (error) {
+        console.error('[HANDLE_SHOW_EXISTING_CAMERA] Preload failed:', error);
+        URL.revokeObjectURL(newTempUrl);
+        alert('Failed to load previous photo. Please take a new photo.');
+        return;
+      }
+      
+      console.log('[HANDLE_SHOW_EXISTING_CAMERA] Setting currentUploadedImageUrl and showing adjuster');
+      console.log('[HANDLE_SHOW_EXISTING_CAMERA] BlobURL being set:', newTempUrl.substring(0, 50) + '...');
       setCurrentUploadedImageUrl(newTempUrl);
       setCurrentUploadedSource('camera');
       setLastAdjustedPhoto(lastCameraPhoto); // Also update lastAdjustedPhoto
+      console.log('[HANDLE_SHOW_EXISTING_CAMERA] About to call setShowImageAdjuster(true)');
       setShowImageAdjuster(true);
+      console.log('[HANDLE_SHOW_EXISTING_CAMERA] ImageAdjuster should now be visible');
+      console.log('[HANDLE_SHOW_EXISTING_CAMERA] Preload image still exists:', !!window.__preloadImg);
+      
+      // Clean up the preload reference after a short delay
+      setTimeout(() => {
+        console.log('[HANDLE_SHOW_EXISTING_CAMERA] Cleaning up preload reference');
+        delete window.__preloadImg;
+        delete window.__preloadContext;
+        delete window.__preloadTime;
+      }, 2000);
     } else if (lastCameraPhoto.dataUrl || lastCameraPhoto.imageUrl) {
       // We have the dataUrl/imageUrl from state - convert back to blob
       try {
@@ -7725,9 +7789,26 @@ const App = () => {
         setLastCameraPhoto(updatedPhotoData);
         setLastAdjustedPhoto(updatedPhotoData);
         
+        // Pre-load the image before showing adjuster to prevent race conditions on mobile
+        try {
+          await preloadImageBeforeAdjuster(newTempUrl);
+        } catch (error) {
+          console.error('Failed to pre-load camera photo from dataUrl:', error);
+          URL.revokeObjectURL(newTempUrl);
+          alert('Failed to restore previous camera photo. Taking a new photo...');
+          setLastCameraPhoto(null);
+          await handleTakePhotoOption();
+          return;
+        }
+        
         setCurrentUploadedImageUrl(newTempUrl);
         setCurrentUploadedSource('camera');
         setShowImageAdjuster(true);
+        
+        // Clean up the preload reference after a short delay
+        setTimeout(() => {
+          delete window.__preloadImg;
+        }, 2000);
       } catch (error) {
         console.error('Failed to restore camera photo from dataUrl:', error);
         alert('Failed to restore previous camera photo. Taking a new photo...');
@@ -7771,10 +7852,26 @@ const App = () => {
     if (lastUploadedPhoto.blob) {
       // We have the blob - can reopen the adjuster
       const newTempUrl = URL.createObjectURL(lastUploadedPhoto.blob);
+      
+      // Pre-load the image before showing adjuster to prevent race conditions on mobile
+      try {
+        await preloadImageBeforeAdjuster(newTempUrl);
+      } catch (error) {
+        console.error('Failed to pre-load uploaded photo:', error);
+        URL.revokeObjectURL(newTempUrl);
+        alert('Failed to load previous photo. Please upload a new photo.');
+        return;
+      }
+      
       setCurrentUploadedImageUrl(newTempUrl);
       setCurrentUploadedSource('upload');
       setLastAdjustedPhoto(lastUploadedPhoto); // Also update lastAdjustedPhoto with current adjustments
       setShowImageAdjuster(true);
+      
+      // Clean up the preload reference after a short delay
+      setTimeout(() => {
+        delete window.__preloadImg;
+      }, 2000);
     } else if (lastUploadedPhoto.dataUrl) {
       // We have the dataUrl from localStorage - convert back to blob
       try {
@@ -7792,9 +7889,25 @@ const App = () => {
         setLastUploadedPhoto(updatedPhotoData);
         setLastAdjustedPhoto(updatedPhotoData);
         
+        // Pre-load the image before showing adjuster to prevent race conditions on mobile
+        try {
+          await preloadImageBeforeAdjuster(newTempUrl);
+        } catch (error) {
+          console.error('Failed to pre-load uploaded photo from dataUrl:', error);
+          URL.revokeObjectURL(newTempUrl);
+          alert('Failed to restore previous upload. Please upload a new photo.');
+          setLastUploadedPhoto(null);
+          return;
+        }
+        
         setCurrentUploadedImageUrl(newTempUrl);
         setCurrentUploadedSource('upload');
         setShowImageAdjuster(true);
+        
+        // Clean up the preload reference after a short delay
+        setTimeout(() => {
+          delete window.__preloadImg;
+        }, 2000);
       } catch (error) {
         console.error('Failed to restore image from dataUrl:', error);
         alert('Failed to restore previous photo. Please upload a new photo.');
@@ -8967,27 +9080,14 @@ const App = () => {
         // Create the blob URL first - we'll reuse it for both pre-load and adjuster
         const tempUrl = URL.createObjectURL(blob);
         
-        // Pre-load the image into browser cache before showing adjuster
-        // This prevents race conditions on mobile Safari where canvas.toBlob() 
-        // is called before the image fully decodes
-        // IMPORTANT: We reuse the same blob URL to avoid memory leaks and ensure
-        // the image data stays alive on mobile browsers
-        await new Promise((resolve, reject) => {
-          const img = new Image();
-          img.onload = () => {
-            console.log('✅ Einstein image pre-loaded successfully');
-            // Keep the image reference alive until adjuster is shown
-            // by attaching it to window temporarily (mobile Safari workaround)
-            window.__einsteinPreloadImg = img;
-            resolve();
-          };
-          img.onerror = (error) => {
-            console.error('❌ Einstein image pre-load failed:', error);
-            URL.revokeObjectURL(tempUrl); // Clean up on error
-            reject(error);
-          };
-          img.src = tempUrl;
-        });
+        // Pre-load the image before showing adjuster to prevent race conditions on mobile
+        try {
+          await preloadImageBeforeAdjuster(tempUrl);
+        } catch (error) {
+          console.error('Failed to pre-load Einstein fallback:', error);
+          URL.revokeObjectURL(tempUrl);
+          return;
+        }
         
         // Einstein is just a fallback - don't save it to state
         // Only the adjusted version will be saved when user confirms
@@ -8996,9 +9096,8 @@ const App = () => {
         setShowImageAdjuster(true);
         
         // Clean up the preload reference after a short delay
-        // (enough time for ImageAdjuster to load the image)
         setTimeout(() => {
-          delete window.__einsteinPreloadImg;
+          delete window.__preloadImg;
         }, 2000);
         
         return;
@@ -9011,9 +9110,25 @@ const App = () => {
     if (lastCameraPhoto.blob) {
       // We have the blob - can reopen the adjuster
       const newTempUrl = URL.createObjectURL(lastCameraPhoto.blob);
+      
+      // Pre-load the image before showing adjuster to prevent race conditions on mobile
+      try {
+        await preloadImageBeforeAdjuster(newTempUrl);
+      } catch (error) {
+        console.error('Failed to pre-load camera photo in thumbnail click:', error);
+        URL.revokeObjectURL(newTempUrl);
+        alert('Failed to load previous photo. Please take a new photo.');
+        return;
+      }
+      
       setCurrentUploadedImageUrl(newTempUrl);
       setCurrentUploadedSource(lastCameraPhoto.source);
       setShowImageAdjuster(true);
+      
+      // Clean up the preload reference after a short delay
+      setTimeout(() => {
+        delete window.__preloadImg;
+      }, 2000);
     } else if (lastCameraPhoto.dataUrl) {
       // We have the dataUrl from localStorage - convert back to blob
       try {
@@ -9028,9 +9143,25 @@ const App = () => {
           imageUrl: newTempUrl
         });
         
+        // Pre-load the image before showing adjuster to prevent race conditions on mobile
+        try {
+          await preloadImageBeforeAdjuster(newTempUrl);
+        } catch (error) {
+          console.error('Failed to pre-load camera photo from dataUrl in thumbnail click:', error);
+          URL.revokeObjectURL(newTempUrl);
+          alert('Failed to restore previous photo. Please take a new photo.');
+          setLastCameraPhoto(null);
+          return;
+        }
+        
         setCurrentUploadedImageUrl(newTempUrl);
         setCurrentUploadedSource(lastCameraPhoto.source);
         setShowImageAdjuster(true);
+        
+        // Clean up the preload reference after a short delay
+        setTimeout(() => {
+          delete window.__preloadImg;
+        }, 2000);
       } catch (error) {
         console.error('Failed to restore image from dataUrl:', error);
         alert('Failed to restore previous photo. Please take a new photo.');
@@ -9066,27 +9197,15 @@ const App = () => {
         // Create the blob URL first - we'll reuse it for both pre-load and adjuster
         const tempUrl = URL.createObjectURL(blob);
         
-        // Pre-load the image into browser cache before showing adjuster
-        // This prevents race conditions on mobile Safari where canvas.toBlob() 
-        // is called before the image fully decodes
-        // IMPORTANT: We reuse the same blob URL to avoid memory leaks and ensure
-        // the image data stays alive on mobile browsers
-        await new Promise((resolve, reject) => {
-          const img = new Image();
-          img.onload = () => {
-            console.log('✅ Einstein image pre-loaded successfully');
-            // Keep the image reference alive until adjuster is shown
-            // by attaching it to window temporarily (mobile Safari workaround)
-            window.__einsteinPreloadImg = img;
-            resolve();
-          };
-          img.onerror = (error) => {
-            console.error('❌ Einstein image pre-load failed:', error);
-            URL.revokeObjectURL(tempUrl); // Clean up on error
-            reject(error);
-          };
-          img.src = tempUrl;
-        });
+        // Pre-load the image before showing adjuster to prevent race conditions on mobile
+        try {
+          await preloadImageBeforeAdjuster(tempUrl);
+        } catch (error) {
+          console.error('Failed to pre-load Einstein fallback:', error);
+          URL.revokeObjectURL(tempUrl);
+          alert('Failed to load photo. Please take a new photo.');
+          return;
+        }
         
         // Einstein is just a fallback - don't save it to state
         // Only the adjusted version will be saved when user confirms
@@ -9095,9 +9214,8 @@ const App = () => {
         setShowImageAdjuster(true);
         
         // Clean up the preload reference after a short delay
-        // (enough time for ImageAdjuster to load the image)
         setTimeout(() => {
-          delete window.__einsteinPreloadImg;
+          delete window.__preloadImg;
         }, 2000);
         
         return;
@@ -9111,9 +9229,37 @@ const App = () => {
     if (lastAdjustedPhoto.blob) {
       // We have the blob - can reopen the adjuster
       const newTempUrl = URL.createObjectURL(lastAdjustedPhoto.blob);
+      
+      // Pre-load the image before showing adjuster to prevent race conditions on mobile
+      // This is critical - without pre-loading, mobile Safari may call canvas.toBlob()
+      // before the image fully decodes, causing React error #310
+      console.log('[HANDLE_OPEN_IMAGE_ADJUSTER_FOR_NEXT_BATCH] Starting preload for blob');
+      try {
+        await preloadImageBeforeAdjuster(newTempUrl, 'handleOpenImageAdjusterForNextBatch-blob');
+        console.log('[HANDLE_OPEN_IMAGE_ADJUSTER_FOR_NEXT_BATCH] Preload complete, setting state');
+      } catch (error) {
+        console.error('[HANDLE_OPEN_IMAGE_ADJUSTER_FOR_NEXT_BATCH] Preload failed:', error);
+        URL.revokeObjectURL(newTempUrl);
+        alert('Failed to load previous photo. Please take a new photo.');
+        return;
+      }
+      
+      console.log('[HANDLE_OPEN_IMAGE_ADJUSTER_FOR_NEXT_BATCH] Setting currentUploadedImageUrl and showing adjuster');
+      console.log('[HANDLE_OPEN_IMAGE_ADJUSTER_FOR_NEXT_BATCH] BlobURL being set:', newTempUrl.substring(0, 50) + '...');
       setCurrentUploadedImageUrl(newTempUrl);
       setCurrentUploadedSource(lastAdjustedPhoto.source);
+      console.log('[HANDLE_OPEN_IMAGE_ADJUSTER_FOR_NEXT_BATCH] About to call setShowImageAdjuster(true)');
       setShowImageAdjuster(true);
+      console.log('[HANDLE_OPEN_IMAGE_ADJUSTER_FOR_NEXT_BATCH] ImageAdjuster should now be visible');
+      console.log('[HANDLE_OPEN_IMAGE_ADJUSTER_FOR_NEXT_BATCH] Preload image still exists:', !!window.__preloadImg);
+      
+      // Clean up the preload reference after a short delay
+      setTimeout(() => {
+        console.log('[HANDLE_OPEN_IMAGE_ADJUSTER_FOR_NEXT_BATCH] Cleaning up preload reference');
+        delete window.__preloadImg;
+        delete window.__preloadContext;
+        delete window.__preloadTime;
+      }, 2000);
     } else if (lastAdjustedPhoto.dataUrl) {
       // We have the dataUrl from localStorage - convert back to blob
       try {
@@ -9128,9 +9274,27 @@ const App = () => {
           imageUrl: newTempUrl
         });
         
+        // Pre-load the image before showing adjuster to prevent race conditions on mobile
+        // This is critical - without pre-loading, mobile Safari may call canvas.toBlob()
+        // before the image fully decodes, causing React error #310
+        try {
+          await preloadImageBeforeAdjuster(newTempUrl);
+        } catch (error) {
+          console.error('Failed to pre-load adjusted photo from dataUrl:', error);
+          URL.revokeObjectURL(newTempUrl);
+          alert('Failed to restore previous photo. Please take a new photo.');
+          setLastAdjustedPhoto(null);
+          return;
+        }
+        
         setCurrentUploadedImageUrl(newTempUrl);
         setCurrentUploadedSource(lastAdjustedPhoto.source);
         setShowImageAdjuster(true);
+        
+        // Clean up the preload reference after a short delay
+        setTimeout(() => {
+          delete window.__preloadImg;
+        }, 2000);
       } catch (error) {
         console.error('Failed to restore image from dataUrl:', error);
         alert('Failed to restore previous photo. Please take a new photo.');

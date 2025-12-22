@@ -1042,6 +1042,40 @@ const PhotoGallery = ({
   // State for video overlay - track which photo's video is playing by photo ID (for easter egg videos)
   const [activeVideoPhotoId, setActiveVideoPhotoId] = useState(null);
   const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
+  const animeVideoRef = useRef(null);
+
+  // Anime video playlist - update video source when index changes (gapless transitions)
+  useEffect(() => {
+    const animeVideos = [
+      `${urls.assetUrl}/videos/sogni-photobooth-anime1990s-raw.mp4`,
+      `${urls.assetUrl}/videos/sogni-photobooth-anime1990s-raw2.mp4`
+    ];
+    
+    if (animeVideoRef.current && animeVideos[currentVideoIndex]) {
+      const video = animeVideoRef.current;
+      const newSrc = animeVideos[currentVideoIndex];
+      
+      // Only update if the source is different to avoid unnecessary reloads
+      if (video.src !== newSrc && !video.src.endsWith(newSrc.split('/').pop())) {
+        // Pause and reset before changing source
+        video.pause();
+        video.currentTime = 0;
+        
+        // Set new source and load
+        video.src = newSrc;
+        video.load();
+        
+        // Play after video is ready (using canplay event) - seamless transition
+        const playWhenReady = () => {
+          if (animeVideoRef.current && animeVideoRef.current.src === newSrc) {
+            animeVideoRef.current.play().catch(() => {});
+          }
+        };
+        
+        video.addEventListener('canplay', playWhenReady, { once: true });
+      }
+    }
+  }, [currentVideoIndex]);
   
   // State for AI-generated video playback (separate from easter egg videos)
   // Use a Set to allow multiple videos to play simultaneously (since videos are muted)
@@ -9733,6 +9767,7 @@ const PhotoGallery = ({
                 {/* Video Overlay - Only show for styles with video easter eggs when video is enabled */}
                 {((isSelected && !isPromptSelectorMode) || (isPromptSelectorMode && photo.isGalleryImage)) && hasVideoEasterEgg(photo.promptKey) && (activeVideoPhotoId === (photo.id || photo.promptKey)) && (
                   <video
+                    ref={photo.promptKey === 'anime1990s' ? animeVideoRef : null}
                     src={(() => {
                       if (photo.promptKey === 'jazzSaxophonist') {
                         return `${urls.assetUrl}/videos/sogni-photobooth-video-demo_832x1216.mp4`;
@@ -9772,6 +9807,7 @@ const PhotoGallery = ({
                     autoPlay
                     loop={photo.promptKey !== 'anime1990s'}
                     playsInline
+                    preload="metadata"
                     onEnded={() => {
                       if (photo.promptKey === 'anime1990s') {
                         const animeVideos = [
@@ -9779,6 +9815,7 @@ const PhotoGallery = ({
                           `${urls.assetUrl}/videos/sogni-photobooth-anime1990s-raw2.mp4`
                         ];
                         const nextIndex = (currentVideoIndex + 1) % animeVideos.length;
+                        // Just update state - useEffect will handle the src change seamlessly
                         setCurrentVideoIndex(nextIndex);
                       }
                     }}
