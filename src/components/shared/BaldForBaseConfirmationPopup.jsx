@@ -43,18 +43,14 @@ const BaldForBaseConfirmationPopup = ({
     return () => window.removeEventListener('resize', checkScreenWidth);
   }, []);
 
-  // Reset video index and source when popup becomes visible
+  // Reset video index when popup becomes visible
   useEffect(() => {
     if (visible) {
       setCurrentVideoIndex(0);
       setVideoError(null);
-      // Reset video source and auto-play the first video when popup opens
+      // Auto-play the first video when popup opens
       if (videoRef.current) {
         const video = videoRef.current;
-        const firstVideoUrl = videoUrls[0];
-        console.log('Loading first video:', firstVideoUrl);
-        video.src = firstVideoUrl;
-        video.load(); // Force reload
         video.currentTime = 0;
         // Small delay to ensure video is ready
         setTimeout(() => {
@@ -71,10 +67,9 @@ const BaldForBaseConfirmationPopup = ({
   const handleVideoEnd = () => {
     const nextIndex = (currentVideoIndex + 1) % videoUrls.length;
     setCurrentVideoIndex(nextIndex);
+    // Video src will update automatically via React, just play it
     if (videoRef.current) {
       const video = videoRef.current;
-      video.src = videoUrls[nextIndex];
-      video.load(); // Force reload
       // Small delay to ensure video is ready
       setTimeout(() => {
         video.play().catch(err => {
@@ -458,13 +453,13 @@ const BaldForBaseConfirmationPopup = ({
                     muted
                     playsInline
                     loop={false}
-                    preload="auto"
-                    crossOrigin="anonymous"
+                    preload="metadata"
                     onEnded={handleVideoEnd}
                     onError={handleVideoError}
                     onLoadedData={handleVideoLoaded}
                     onCanPlay={handleVideoLoaded}
                     onClick={handleVideoClick}
+                    key={currentVideoIndex}
                     style={{
                       width: '100%',
                       height: '100%',
@@ -540,13 +535,13 @@ const BaldForBaseConfirmationPopup = ({
                 muted
                 playsInline
                 loop={false}
-                preload="auto"
-                crossOrigin="anonymous"
+                preload="metadata"
                 onEnded={handleVideoEnd}
                 onError={handleVideoError}
                 onLoadedData={handleVideoLoaded}
                 onCanPlay={handleVideoLoaded}
                 onClick={handleVideoClick}
+                key={currentVideoIndex}
                 style={{
                   width: '100%',
                   height: '100%',

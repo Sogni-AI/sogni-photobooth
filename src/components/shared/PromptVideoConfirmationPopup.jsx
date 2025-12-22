@@ -20,7 +20,8 @@ const PromptVideoConfirmationPopup = ({
   isBatch = false,
   itemCount = 1
 }) => {
-  const [prompt, setPrompt] = useState('');
+  const [positivePrompt, setPositivePrompt] = useState('');
+  const [negativePrompt, setNegativePrompt] = useState('slow motion, talking, blurry, low quality, static, deformed overexposed, blurred details, worst quality, low quality, JPEG compression, ugly, still picture, walking backwards');
   const [error, setError] = useState('');
 
   const formatCost = (tokenCost, usdCost) => {
@@ -39,20 +40,21 @@ const PromptVideoConfirmationPopup = ({
   };
 
   const handleConfirm = () => {
-    if (!prompt.trim()) {
+    if (!positivePrompt.trim()) {
       setError('Please enter a prompt');
       return;
     }
-    if (prompt.trim().length < 10) {
+    if (positivePrompt.trim().length < 10) {
       setError('Prompt must be at least 10 characters');
       return;
     }
     setError('');
-    onConfirm(prompt.trim());
+    onConfirm(positivePrompt.trim(), negativePrompt.trim());
   };
 
   const handleClose = () => {
-    setPrompt('');
+    setPositivePrompt('');
+    setNegativePrompt('slow motion, talking, blurry, low quality, static, deformed overexposed, blurred details, worst quality, low quality, JPEG compression, ugly, still picture, walking backwards');
     setError('');
     onClose();
   };
@@ -142,8 +144,8 @@ const PromptVideoConfirmationPopup = ({
           </div>
         </div>
 
-        {/* Prompt Input */}
-        <div style={{ marginBottom: '20px' }}>
+        {/* Positive Prompt Input */}
+        <div style={{ marginBottom: '16px' }}>
           <label style={{
             display: 'block',
             color: 'rgba(255, 255, 255, 0.9)',
@@ -151,15 +153,15 @@ const PromptVideoConfirmationPopup = ({
             fontWeight: '600',
             marginBottom: '8px'
           }}>
-            Enter your video prompt:
+            ✨ Motion Prompt:
           </label>
           <textarea
-            value={prompt}
+            value={positivePrompt}
             onChange={(e) => {
-              setPrompt(e.target.value);
+              setPositivePrompt(e.target.value);
               setError('');
             }}
-            placeholder="Describe the motion or transformation you want to see in the video..."
+            placeholder="E.g., subject tilts head and smiles warmly at camera..."
             style={{
               width: '100%',
               minHeight: '100px',
@@ -198,8 +200,48 @@ const PromptVideoConfirmationPopup = ({
             fontSize: '11px',
             marginTop: '6px'
           }}>
-            {prompt.length} characters {prompt.length < 10 ? `(minimum 10)` : ''}
+            {positivePrompt.length} characters {positivePrompt.length < 10 ? `(minimum 10)` : ''}
           </div>
+        </div>
+
+        {/* Negative Prompt Input */}
+        <div style={{ marginBottom: '20px' }}>
+          <label style={{
+            display: 'block',
+            color: 'rgba(255, 255, 255, 0.9)',
+            fontSize: '14px',
+            fontWeight: '600',
+            marginBottom: '8px'
+          }}>
+            🚫 Avoid (Optional):
+          </label>
+          <textarea
+            value={negativePrompt}
+            onChange={(e) => setNegativePrompt(e.target.value)}
+            placeholder="Things to avoid in the video..."
+            style={{
+              width: '100%',
+              minHeight: '70px',
+              padding: '12px',
+              borderRadius: '12px',
+              border: '2px solid rgba(255, 255, 255, 0.2)',
+              background: 'rgba(255, 255, 255, 0.1)',
+              color: 'white',
+              fontSize: '14px',
+              fontFamily: 'inherit',
+              resize: 'vertical',
+              outline: 'none',
+              transition: 'all 0.2s ease'
+            }}
+            onFocus={(e) => {
+              e.currentTarget.style.border = '2px solid rgba(255, 255, 255, 0.4)';
+              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)';
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.border = '2px solid rgba(255, 255, 255, 0.2)';
+              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+            }}
+          />
         </div>
 
         {/* Action Buttons */}
@@ -238,38 +280,38 @@ const PromptVideoConfirmationPopup = ({
           <button
             type="button"
             onClick={handleConfirm}
-            disabled={loading || !prompt.trim() || prompt.trim().length < 10}
+            disabled={loading || !positivePrompt.trim() || positivePrompt.trim().length < 10}
             style={{
               flex: 2,
               padding: '14px',
               borderRadius: '12px',
               border: 'none',
-              background: loading || !prompt.trim() || prompt.trim().length < 10 
+              background: loading || !positivePrompt.trim() || positivePrompt.trim().length < 10 
                 ? 'rgba(255, 255, 255, 0.3)' 
                 : 'white',
-              color: loading || !prompt.trim() || prompt.trim().length < 10 
+              color: loading || !positivePrompt.trim() || positivePrompt.trim().length < 10 
                 ? 'rgba(255, 255, 255, 0.7)' 
                 : '#8B5CF6',
               fontSize: '15px',
               fontWeight: '700',
-              cursor: loading || !prompt.trim() || prompt.trim().length < 10 
+              cursor: loading || !positivePrompt.trim() || positivePrompt.trim().length < 10 
                 ? 'not-allowed' 
                 : 'pointer',
               transition: 'all 0.2s ease',
-              boxShadow: loading || !prompt.trim() || prompt.trim().length < 10 
+              boxShadow: loading || !positivePrompt.trim() || positivePrompt.trim().length < 10 
                 ? 'none' 
                 : '0 4px 15px rgba(255, 255, 255, 0.3)',
               touchAction: 'manipulation'
             }}
             onMouseOver={(e) => {
-              if (!loading && prompt.trim() && prompt.trim().length >= 10) {
+              if (!loading && positivePrompt.trim() && positivePrompt.trim().length >= 10) {
                 e.currentTarget.style.background = 'rgba(255, 255, 255, 0.95)';
                 e.currentTarget.style.transform = 'translateY(-2px)';
                 e.currentTarget.style.boxShadow = '0 6px 20px rgba(255, 255, 255, 0.4)';
               }
             }}
             onMouseOut={(e) => {
-              if (!loading && prompt.trim() && prompt.trim().length >= 10) {
+              if (!loading && positivePrompt.trim() && positivePrompt.trim().length >= 10) {
                 e.currentTarget.style.background = 'white';
                 e.currentTarget.style.transform = 'translateY(0)';
                 e.currentTarget.style.boxShadow = '0 4px 15px rgba(255, 255, 255, 0.3)';

@@ -38,8 +38,9 @@ import { hasSeenVideoIntro, hasGeneratedVideo, formatVideoDuration, hasSeenVideo
 import VideoIntroPopup from './VideoIntroPopup.tsx';
 import { playSonicLogo, warmUpAudio } from '../../utils/sonicLogos';
 import CustomVideoPromptPopup from './CustomVideoPromptPopup';
-import BaseHeroConfirmationPopup from './BaseHeroConfirmationPopup';
+import BaldForBaseConfirmationPopup from './BaldForBaseConfirmationPopup';
 import PromptVideoConfirmationPopup from './PromptVideoConfirmationPopup';
+import VideoSelectionPopup from './VideoSelectionPopup';
 import TransitionVideoCompleteNotification from './TransitionVideoCompleteNotification';
 import ConfettiCelebration from './ConfettiCelebration';
 
@@ -855,7 +856,6 @@ const PhotoGallery = ({
 
   // Video generation state
   const [showVideoDropdown, setShowVideoDropdown] = useState(false);
-  const [showVideoOptionsList, setShowVideoOptionsList] = useState(false); // List of video options (Motion Video, BASE Hero, etc.)
   const [showVideoIntroPopup, setShowVideoIntroPopup] = useState(false);
   const [showVideoNewBadge, setShowVideoNewBadge] = useState(() => !hasGeneratedVideo());
   const [showCustomVideoPromptPopup, setShowCustomVideoPromptPopup] = useState(false);
@@ -875,11 +875,13 @@ const PhotoGallery = ({
   const [showBatchCustomVideoPromptPopup, setShowBatchCustomVideoPromptPopup] = useState(false);
   const [selectedBatchMotionCategory, setSelectedBatchMotionCategory] = useState(null);
   const [showTransitionVideoPopup, setShowTransitionVideoPopup] = useState(false); // Popup before transition video generation
-  const [showBaseHeroPopup, setShowBaseHeroPopup] = useState(false); // Popup before BASE Hero video generation (single)
-  const [showBatchBaseHeroPopup, setShowBatchBaseHeroPopup] = useState(false); // Popup before BASE Hero video generation (batch)
+  const [showBaldForBasePopup, setShowBaldForBasePopup] = useState(false); // Popup before Bald for Base video generation (single)
+  const [showBatchBaldForBasePopup, setShowBatchBaldForBasePopup] = useState(false); // Popup before Bald for Base video generation (batch)
   const [showPromptVideoPopup, setShowPromptVideoPopup] = useState(false); // Popup before Prompt Video generation (single)
   const [showBatchPromptVideoPopup, setShowBatchPromptVideoPopup] = useState(false); // Popup before Prompt Video generation (batch)
-  const [autoTriggerBaseHeroAfterGeneration, setAutoTriggerBaseHeroAfterGeneration] = useState(false); // Auto-trigger Base Hero after photo generation
+  const [showVideoSelectionPopup, setShowVideoSelectionPopup] = useState(false); // New video selection popup
+  const [isVideoSelectionBatch, setIsVideoSelectionBatch] = useState(false); // Track if selection popup is from batch
+  const [autoTriggerBaldForBaseAfterGeneration, setAutoTriggerBaldForBaseAfterGeneration] = useState(false); // Auto-trigger Bald for Base after photo generation
   const [hasSeenGenerationStart, setHasSeenGenerationStart] = useState(false); // Track if we've seen generation start
   const previousPhotoCountRef = useRef(0); // Track previous photo count to detect when new photos are added
 
@@ -924,27 +926,27 @@ const PhotoGallery = ({
     jobCount: loadedPhotosCount
   });
 
-  // BASE Hero video cost estimation (single) - enabled when popup is shown, always 5 seconds
-  const { loading: baseHeroLoading, cost: baseHeroCostRaw, costInUSD: baseHeroUSD } = useVideoCostEstimation({
+  // Bald for Base video cost estimation (single) - enabled when popup is shown, always 5 seconds
+  const { loading: baldForBaseLoading, cost: baldForBaseCostRaw, costInUSD: baldForBaseUSD } = useVideoCostEstimation({
     imageWidth: desiredWidth || 768,
     imageHeight: desiredHeight || 1024,
     resolution: settings.videoResolution || '480p',
     quality: settings.videoQuality || 'fast',
     fps: settings.videoFramerate || 16,
-    duration: 5, // BASE Hero videos are always 5 seconds
-    enabled: isAuthenticated && selectedPhoto !== null && showBaseHeroPopup,
+    duration: 5, // Bald for Base videos are always 5 seconds
+    enabled: isAuthenticated && selectedPhoto !== null && showBaldForBasePopup,
     photoId: selectedPhotoIndex
   });
 
-  // BASE Hero video cost estimation (batch) - enabled when popup is shown, always 5 seconds
-  const { loading: batchBaseHeroLoading, cost: batchBaseHeroCostRaw, costInUSD: batchBaseHeroUSD } = useVideoCostEstimation({
+  // Bald for Base video cost estimation (batch) - enabled when popup is shown, always 5 seconds
+  const { loading: batchBaldForBaseLoading, cost: batchBaldForBaseCostRaw, costInUSD: batchBaldForBaseUSD } = useVideoCostEstimation({
     imageWidth: desiredWidth || 768,
     imageHeight: desiredHeight || 1024,
     resolution: settings.videoResolution || '480p',
     quality: settings.videoQuality || 'fast',
     fps: settings.videoFramerate || 16,
-    duration: 5, // BASE Hero videos are always 5 seconds
-    enabled: isAuthenticated && loadedPhotosCount > 0 && showBatchBaseHeroPopup,
+    duration: 5, // Bald for Base videos are always 5 seconds
+    enabled: isAuthenticated && loadedPhotosCount > 0 && showBatchBaldForBasePopup,
     jobCount: loadedPhotosCount
   });
 
@@ -1251,29 +1253,23 @@ const PhotoGallery = ({
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (e) => {
-      if (showMoreDropdown && !e.target.closest('.batch-action-button') && !e.target.closest('.more-dropdown-menu')) {
+      if (showMoreDropdown && !e.target.closest('.batch-download-button-container') && !e.target.closest('.more-dropdown-menu')) {
         setShowMoreDropdown(false);
       }
-      if (showBatchActionDropdown && !e.target.closest('.batch-action-dropdown-container') && !e.target.closest('.batch-action-mode-dropdown')) {
-        setShowBatchActionDropdown(false);
-      }
-      if (showBatchVideoDropdown && !e.target.closest('.batch-action-button') && !e.target.closest('.batch-video-dropdown')) {
+      if (showBatchVideoDropdown && !e.target.closest('.batch-video-button-container') && !e.target.closest('.batch-video-dropdown')) {
         setShowBatchVideoDropdown(false);
       }
       if (showBatchVideoTip && !e.target.closest('.batch-video-tip-tooltip')) {
         setShowBatchVideoTip(false);
         markBatchVideoTipShown();
       }
-      if (showVideoOptionsList && !e.target.closest('.video-options-list-dropdown') && !e.target.closest('.video-generate-btn')) {
-        setShowVideoOptionsList(false);
-      }
     };
 
-    if (showMoreDropdown || showBatchActionDropdown || showBatchVideoDropdown || showBatchVideoTip || showVideoOptionsList) {
+    if (showMoreDropdown || showBatchVideoDropdown || showBatchVideoTip) {
       document.addEventListener('click', handleClickOutside);
       return () => document.removeEventListener('click', handleClickOutside);
     }
-  }, [showMoreDropdown, showBatchActionDropdown, showBatchVideoDropdown, showBatchVideoTip, showVideoOptionsList]);
+  }, [showMoreDropdown, showBatchVideoDropdown, showBatchVideoTip]);
   
   // Refs for dropdown animation buttons to prevent re-triggering animations
   const enhanceButton1Ref = useRef(null);
@@ -1837,9 +1833,18 @@ const PhotoGallery = ({
 
   // Handle Video button click
   const handleVideoButtonClick = useCallback(() => {
-    // Show the video options list instead of the video dropdown directly
-    setShowVideoOptionsList(prev => !prev);
-  }, []);
+    // Show the video selection popup
+    if (isAuthenticated) {
+      setIsVideoSelectionBatch(false);
+      setShowVideoSelectionPopup(true);
+    } else {
+      showToast({
+        title: 'Authentication Required',
+        message: 'Please sign in to generate videos.',
+        type: 'info'
+      });
+    }
+  }, [isAuthenticated, showToast]);
 
   // Handle video intro popup dismiss
   const handleVideoIntroDismiss = useCallback(() => {
@@ -2156,43 +2161,43 @@ const PhotoGallery = ({
     img.src = imageUrl;
   }, [videoTargetPhotoIndex, selectedPhotoIndex, selectedSubIndex, desiredWidth, desiredHeight, sogniClient, setPhotos, settings.videoResolution, settings.videoQuality, photos, showToast]);
 
-  // Check for Base Hero deep link on mount and route changes
+  // Check for Bald for Base deep link on mount and route changes
   useEffect(() => {
     // Use a ref to track if we've already handled this route to avoid duplicate triggers
-    const handledRouteKey = 'baseHeroDeepLinkHandled';
+    const handledRouteKey = 'baldForBaseDeepLinkHandled';
     
-    const checkBaseHeroDeepLink = () => {
+    const checkBaldForBaseDeepLink = () => {
       // Check both sessionStorage flag and current route pathname
-      const baseHeroDeepLink = sessionStorage.getItem('baseHeroDeepLink');
-      const isBaseHeroRoute = window.location.pathname === '/event/base-hero';
+      const baldForBaseDeepLink = sessionStorage.getItem('baldForBaseDeepLink');
+      const isBaldForBaseRoute = window.location.pathname === '/event/bald-for-base';
       
       // Skip if we've already handled this route visit (unless it's a new sessionStorage flag)
       const alreadyHandled = sessionStorage.getItem(handledRouteKey) === window.location.pathname;
-      if (alreadyHandled && !baseHeroDeepLink) {
+      if (alreadyHandled && !baldForBaseDeepLink) {
         return;
       }
       
-      if (baseHeroDeepLink === 'true' || isBaseHeroRoute) {
+      if (baldForBaseDeepLink === 'true' || isBaldForBaseRoute) {
         // Mark this route as handled
         sessionStorage.setItem(handledRouteKey, window.location.pathname);
         
         // Clear the sessionStorage flag if it exists
-        if (baseHeroDeepLink === 'true') {
-          sessionStorage.removeItem('baseHeroDeepLink');
+        if (baldForBaseDeepLink === 'true') {
+          sessionStorage.removeItem('baldForBaseDeepLink');
         }
         
-        // Always show the Base Hero popup, regardless of whether user has photos
-        setShowBatchBaseHeroPopup(true);
+        // Always show the Bald for Base popup, regardless of whether user has photos
+        setShowBatchBaldForBasePopup(true);
       }
     };
     
     // Check immediately
-    checkBaseHeroDeepLink();
+    checkBaldForBaseDeepLink();
     
     // Also listen for route changes (popstate for back/forward, and custom pushState)
     const handleRouteChange = () => {
       // Small delay to ensure route has updated
-      setTimeout(checkBaseHeroDeepLink, 100);
+      setTimeout(checkBaldForBaseDeepLink, 100);
     };
     
     window.addEventListener('popstate', handleRouteChange);
@@ -2212,16 +2217,16 @@ const PhotoGallery = ({
 
   // Check for sessionStorage flag on mount and when photos change
   useEffect(() => {
-    const sessionFlag = sessionStorage.getItem('baseHeroAutoTrigger');
-    if (sessionFlag === 'true' && !autoTriggerBaseHeroAfterGeneration) {
-      setAutoTriggerBaseHeroAfterGeneration(true);
-      sessionStorage.removeItem('baseHeroAutoTrigger');
+    const sessionFlag = sessionStorage.getItem('baldForBaseAutoTrigger');
+    if (sessionFlag === 'true' && !autoTriggerBaldForBaseAfterGeneration) {
+      setAutoTriggerBaldForBaseAfterGeneration(true);
+      sessionStorage.removeItem('baldForBaseAutoTrigger');
     }
-  }, [photos, autoTriggerBaseHeroAfterGeneration]);
+  }, [photos, autoTriggerBaldForBaseAfterGeneration]);
 
-  // Auto-trigger Base Hero after photo generation completes
+  // Auto-trigger Bald for Base after photo generation completes
   useEffect(() => {
-    if (!autoTriggerBaseHeroAfterGeneration) {
+    if (!autoTriggerBaldForBaseAfterGeneration) {
       // Reset the flag if auto-trigger is disabled
       if (hasSeenGenerationStart) {
         setHasSeenGenerationStart(false);
@@ -2259,7 +2264,7 @@ const PhotoGallery = ({
     const shouldShowPopup = canShowPopup && (hasSeenGenerationStart || photosWereAdded);
     
     if (shouldShowPopup) {
-      setAutoTriggerBaseHeroAfterGeneration(false);
+      setAutoTriggerBaldForBaseAfterGeneration(false);
       setHasSeenGenerationStart(false);
       previousPhotoCountRef.current = 0;
       
@@ -2268,7 +2273,7 @@ const PhotoGallery = ({
         // User is not logged in - show error toast instead of popup
         showToast({
           title: '🔐 Sign In Required',
-          message: 'Please sign up or log in to create Base Hero videos. Video generation requires an account.',
+          message: 'Please sign up or log in to create Bald for Base videos. Video generation requires an account.',
           type: 'error',
           timeout: 6000
         });
@@ -2277,26 +2282,26 @@ const PhotoGallery = ({
       
       // Small delay to ensure UI is ready
       setTimeout(() => {
-        setShowBatchBaseHeroPopup(true);
+        setShowBatchBaldForBasePopup(true);
         showToast({
-          title: '🟦 Ready for Base Hero!',
-          message: 'Your photos are ready! Click Generate to create your Base Hero videos.',
+          title: '🟦 Ready for Bald for Base!',
+          message: 'Your photos are ready! Click Generate to create your Bald for Base videos.',
           type: 'success',
           timeout: 4000
         });
       }, 500);
     }
-  }, [isGenerating, photos, autoTriggerBaseHeroAfterGeneration, hasSeenGenerationStart, showToast, isAuthenticated]);
+  }, [isGenerating, photos, autoTriggerBaldForBaseAfterGeneration, hasSeenGenerationStart, showToast, isAuthenticated]);
 
-  // Handle BASE Hero video generation (single)
-  const handleBaseHeroVideo = useCallback(async () => {
+  // Handle Bald for Base video generation (single)
+  const handleBaldForBaseVideo = useCallback(async () => {
     setShowVideoOptionsList(false);
-    setShowBaseHeroPopup(true);
+    setShowBaldForBasePopup(true);
   }, []);
 
-  // Handle BASE Hero video generation execution (single)
-  const handleBaseHeroVideoExecute = useCallback(async () => {
-    setShowBaseHeroPopup(false);
+  // Handle Bald for Base video generation execution (single)
+  const handleBaldForBaseVideoExecute = useCallback(async () => {
+    setShowBaldForBasePopup(false);
     
     // Check if user has photos - if not, redirect to generation workflow
     const loadedPhotos = photos.filter(
@@ -2306,11 +2311,11 @@ const PhotoGallery = ({
     if (loadedPhotos.length === 0) {
       showToast({
         title: '📸 Photos Needed',
-        message: 'Please generate some photos first. We\'ll automatically create your Base Hero videos after!',
+        message: 'Please generate some photos first. We\'ll automatically create your Bald for Base videos after!',
         type: 'info',
         timeout: 5000
       });
-      setAutoTriggerBaseHeroAfterGeneration(true);
+      setAutoTriggerBaldForBaseAfterGeneration(true);
       // Navigate back to camera/start menu
       if (handleBackToCamera) {
         handleBackToCamera();
@@ -2367,7 +2372,7 @@ const PhotoGallery = ({
         resolution: settings.videoResolution || '480p',
         quality: settings.videoQuality || 'fast',
         fps: settings.videoFramerate || 16,
-        duration: 5, // BASE Hero videos are always 5 seconds
+        duration: 5, // Bald for Base videos are always 5 seconds
         positivePrompt: BASE_HERO_PROMPT,
         negativePrompt: settings.videoNegativePrompt || '',
         tokenType: tokenType,
@@ -2378,7 +2383,7 @@ const PhotoGallery = ({
           setPlayingGeneratedVideoIds(prev => new Set([...prev, generatingPhotoId]));
           const videoMessage = getRandomVideoMessage();
 
-          console.log('[VIDEO TOAST] BASE Hero video generation completed:', {
+          console.log('[VIDEO TOAST] Bald for Base video generation completed:', {
             generatingPhotoId,
             generatingPhotoIndex,
             videoUrl
@@ -2411,7 +2416,7 @@ const PhotoGallery = ({
           });
         },
         onError: (error) => {
-          console.error('[VIDEO] BASE Hero video generation error:', error);
+          console.error('[VIDEO] Bald for Base video generation error:', error);
           showToast({
             title: 'Video Generation Failed',
             message: error.message || 'Failed to generate video. Please try again.',
@@ -2419,7 +2424,7 @@ const PhotoGallery = ({
           });
         },
         onOutOfCredits: () => {
-          console.log('[VIDEO] Triggering out of credits popup from BASE Hero video generation');
+          console.log('[VIDEO] Triggering out of credits popup from Bald for Base video generation');
           if (onOutOfCredits) {
             onOutOfCredits();
           }
@@ -2437,7 +2442,7 @@ const PhotoGallery = ({
   }, []);
 
   // Handle Prompt Video generation execution (single)
-  const handlePromptVideoExecute = useCallback(async (prompt) => {
+  const handlePromptVideoExecute = useCallback(async (positivePrompt, negativePrompt) => {
     setShowPromptVideoPopup(false);
     
     // Pre-warm audio for iOS
@@ -2490,8 +2495,8 @@ const PhotoGallery = ({
         quality: settings.videoQuality || 'fast',
         fps: settings.videoFramerate || 16,
         duration: settings.videoDuration || 5,
-        positivePrompt: prompt,
-        negativePrompt: settings.videoNegativePrompt || '',
+        positivePrompt: positivePrompt,
+        negativePrompt: negativePrompt || '',
         tokenType: tokenType,
         onComplete: (videoUrl) => {
           // Play sonic logo before auto-play (respects sound settings)
@@ -2531,15 +2536,59 @@ const PhotoGallery = ({
     img.src = imageUrl;
   }, [videoTargetPhotoIndex, selectedPhotoIndex, selectedSubIndex, sogniClient, setPhotos, settings.videoResolution, settings.videoQuality, settings.videoFramerate, settings.videoDuration, settings.videoNegativePrompt, settings.soundEnabled, photos, showToast, tokenType, onOutOfCredits, setPlayingGeneratedVideoIds, setSelectedPhotoIndex, setShowVideoNewBadge]);
 
-  // Handle batch BASE Hero video generation
-  const handleBatchBaseHeroVideo = useCallback(async () => {
+  // Handle video type selection from VideoSelectionPopup
+  const handleVideoTypeSelection = useCallback((videoType) => {
+    setShowVideoSelectionPopup(false);
+    
+    if (isVideoSelectionBatch) {
+      // Batch mode
+      switch (videoType) {
+        case 'prompt':
+          setShowBatchPromptVideoPopup(true);
+          break;
+        case 'emoji':
+          setBatchActionMode('video');
+          setShowBatchVideoDropdown(true);
+          break;
+        case 'bald-for-base':
+          setShowBatchBaldForBasePopup(true);
+          break;
+        case 'batch-transition':
+          setShowTransitionVideoPopup(true);
+          break;
+        default:
+          break;
+      }
+    } else {
+      // Single mode
+      switch (videoType) {
+        case 'prompt':
+          setShowPromptVideoPopup(true);
+          break;
+        case 'emoji':
+          setShowVideoDropdown(true);
+          break;
+        case 'bald-for-base':
+          setShowBaldForBasePopup(true);
+          break;
+        case 'transition':
+          setShowTransitionVideoPopup(true);
+          break;
+        default:
+          break;
+      }
+    }
+  }, [isVideoSelectionBatch]);
+
+  // Handle batch Bald for Base video generation
+  const handleBatchBaldForBaseVideo = useCallback(async () => {
     setShowBatchVideoDropdown(false);
-    setShowBatchBaseHeroPopup(true);
+          setShowBatchBaldForBasePopup(true);
   }, []);
 
-  // Handle batch BASE Hero video generation execution
-  const handleBatchBaseHeroVideoExecute = useCallback(async () => {
-    setShowBatchBaseHeroPopup(false);
+  // Handle batch Bald for Base video generation execution
+  const handleBatchBaldForBaseVideoExecute = useCallback(async () => {
+    setShowBatchBaldForBasePopup(false);
     
     // Get all loaded photos (excluding hidden/discarded ones)
     const loadedPhotos = photos.filter(
@@ -2550,11 +2599,11 @@ const PhotoGallery = ({
       // Show toast and navigate to intro/start menu
       showToast({
         title: '📸 Photos Needed',
-        message: 'Please generate some photos first. We\'ll automatically create your Base Hero videos after!',
+        message: 'Please generate some photos first. We\'ll automatically create your Bald for Base videos after!',
         type: 'info',
         timeout: 5000
       });
-      setAutoTriggerBaseHeroAfterGeneration(true);
+      setAutoTriggerBaldForBaseAfterGeneration(true);
       // Navigate back to camera/start menu (intro page)
       if (handleBackToCamera) {
         handleBackToCamera();
@@ -2570,8 +2619,8 @@ const PhotoGallery = ({
 
     // Show toast for batch generation
     showToast({
-      title: '🟦 Batch BASE Hero Generation',
-      message: `Starting BASE Hero video generation for ${loadedPhotos.length} image${loadedPhotos.length > 1 ? 's' : ''}...`,
+      title: '🟦 Batch Bald for Base Generation',
+      message: `Starting Bald for Base video generation for ${loadedPhotos.length} image${loadedPhotos.length > 1 ? 's' : ''}...`,
       type: 'info',
       timeout: 3000
     });
@@ -2615,7 +2664,7 @@ const PhotoGallery = ({
           resolution: settings.videoResolution || '480p',
           quality: settings.videoQuality || 'fast',
           fps: settings.videoFramerate || 16,
-          duration: 5, // BASE Hero videos are always 5 seconds
+          duration: 5, // Bald for Base videos are always 5 seconds
           positivePrompt: BASE_HERO_PROMPT,
           negativePrompt: settings.videoNegativePrompt || '',
           tokenType: tokenType,
@@ -2637,7 +2686,7 @@ const PhotoGallery = ({
             if (successCount === loadedPhotos.length) {
               showToast({
                 title: '🎉 Batch Complete!',
-                message: `Successfully generated ${successCount} BASE Hero video${successCount > 1 ? 's' : ''}!`,
+                message: `Successfully generated ${successCount} Bald for Base video${successCount > 1 ? 's' : ''}!`,
                 type: 'success',
                 timeout: 5000
               });
@@ -2645,7 +2694,7 @@ const PhotoGallery = ({
           },
           onError: (error) => {
             errorCount++;
-            console.error(`[BATCH BASE HERO] Video ${i + 1} failed:`, error);
+            console.error(`[BATCH BALD FOR BASE] Video ${i + 1} failed:`, error);
             
             if (errorCount === loadedPhotos.length) {
               showToast({
@@ -2656,7 +2705,7 @@ const PhotoGallery = ({
             }
           },
           onOutOfCredits: () => {
-            console.log('[VIDEO] Triggering out of credits popup from batch BASE Hero video generation');
+            console.log('[VIDEO] Triggering out of credits popup from batch Bald for Base video generation');
             if (onOutOfCredits) {
               onOutOfCredits();
             }
@@ -2675,7 +2724,7 @@ const PhotoGallery = ({
   }, []);
 
   // Handle batch Prompt Video generation execution
-  const handleBatchPromptVideoExecute = useCallback(async (prompt) => {
+  const handleBatchPromptVideoExecute = useCallback(async (positivePrompt, negativePrompt) => {
     setShowBatchPromptVideoPopup(false);
     
     // Pre-warm audio for iOS
@@ -2746,8 +2795,8 @@ const PhotoGallery = ({
           quality: settings.videoQuality || 'fast',
           fps: settings.videoFramerate || 16,
           duration: settings.videoDuration || 5,
-          positivePrompt: prompt,
-          negativePrompt: settings.videoNegativePrompt || '',
+          positivePrompt: positivePrompt,
+          negativePrompt: negativePrompt || '',
           tokenType: tokenType,
           onComplete: (videoUrl) => {
             successCount++;
@@ -6129,7 +6178,7 @@ const PhotoGallery = ({
         />
       )}
 
-      {/* Bottom right button container - holds both Download and New Batch buttons */}
+      {/* Bottom right button container - holds separate Download and Video buttons */}
       {!isPromptSelectorMode && selectedPhotoIndex === null && photos && photos.length > 0 && photos.filter(p => !p.hidden && !p.error && p.images && p.images.length > 0).length > 0 && (
         <div style={{ 
           position: 'fixed', 
@@ -6140,8 +6189,9 @@ const PhotoGallery = ({
           alignItems: 'center',
           zIndex: 10000000 
         }}>
+          {/* Download Button - Standalone */}
           <div 
-            className="batch-action-dropdown-container" 
+            className="batch-download-button-container" 
             style={{ 
               position: 'relative',
               background: 'linear-gradient(135deg, #ff5252, #e53935)',
@@ -6163,57 +6213,31 @@ const PhotoGallery = ({
             }}
           >
             <button
-              className="batch-action-button batch-action-button-main"
+              className="batch-action-button batch-download-button"
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
-                // Close mode selection dropdown when clicking main button
-                setShowBatchActionDropdown(false);
                 // Hide download tip when button is clicked
                 if (showDownloadTip) {
                   setShowDownloadTip(false);
                 }
-                if (batchActionMode === 'download') {
-                  // Check if any photos have videos - if so, download videos as zip
-                  const currentPhotosArray = isPromptSelectorMode ? filteredPhotos : photos;
-                  const photosWithVideos = currentPhotosArray.filter(
-                    photo => !photo.hidden && !photo.loading && !photo.generating && !photo.error && photo.videoUrl && !photo.isOriginal
-                  );
+                // Check if any photos have videos - if so, download videos as zip
+                const currentPhotosArray = isPromptSelectorMode ? filteredPhotos : photos;
+                const photosWithVideos = currentPhotosArray.filter(
+                  photo => !photo.hidden && !photo.loading && !photo.generating && !photo.error && photo.videoUrl && !photo.isOriginal
+                );
 
-                  if (photosWithVideos.length > 0) {
-                    // Check if these are transition videos - if so, concatenate instead of zipping
-                    if (isTransitionMode && transitionVideoQueue.length > 0) {
-                      handleDownloadTransitionVideo();
-                    } else {
-                      // Normal video batch: download as zip
-                      handleDownloadAllVideos();
-                    }
+                if (photosWithVideos.length > 0) {
+                  // Check if these are transition videos - if so, concatenate instead of zipping
+                  if (isTransitionMode && transitionVideoQueue.length > 0) {
+                    handleDownloadTransitionVideo();
                   } else {
-                    // Show download options dropdown for images
-                    setShowMoreDropdown(prev => !prev);
+                    // Normal video batch: download as zip
+                    handleDownloadAllVideos();
                   }
-                } else if (batchActionMode === 'video') {
-                  // Show video dropdown to select emoji
-                  if (isAuthenticated) {
-                    setShowBatchVideoDropdown(prev => !prev);
-                  } else {
-                    showToast({
-                      title: 'Authentication Required',
-                      message: 'Please sign in to generate videos.',
-                      type: 'info'
-                    });
-                  }
-                } else if (batchActionMode === 'transition') {
-                  // Show transition video popup for configuration before generating
-                  if (isAuthenticated) {
-                    setShowTransitionVideoPopup(true);
-                  } else {
-                    showToast({
-                      title: 'Authentication Required',
-                      message: 'Please sign in to generate transition videos.',
-                      type: 'info'
-                    });
-                  }
+                } else {
+                  // Show download options dropdown for images
+                  setShowMoreDropdown(prev => !prev);
                 }
               }}
               disabled={isBulkDownloading}
@@ -6223,7 +6247,7 @@ const PhotoGallery = ({
                 color: 'white',
                 padding: '6px 14px',
                 paddingBottom: '8px',
-                borderRadius: '0',
+                borderRadius: '8px',
                 cursor: isBulkDownloading ? 'not-allowed' : 'pointer',
                 opacity: isBulkDownloading ? 0.6 : 1,
                 fontSize: '15px',
@@ -6240,15 +6264,9 @@ const PhotoGallery = ({
                 zIndex: 1,
                 minHeight: '40px'
               }}
-              title={
-                batchActionMode === 'video' 
-                  ? 'Generate videos for all images' 
-                  : batchActionMode === 'transition'
-                  ? 'Generate transition videos for all images'
-                  : 'Download all images'
-              }
+              title="Download all images"
             >
-              {showDownloadTip && batchActionMode === 'download' && (
+              {showDownloadTip && (
                 <div
                   style={{
                     position: 'absolute',
@@ -6285,360 +6303,11 @@ const PhotoGallery = ({
                   />
                 </div>
               )}
-              <span>
-                {batchActionMode === 'video' 
-                  ? '🎥' 
-                  : batchActionMode === 'transition'
-                  ? '🔀'
-                  : '⬇️'}
-              </span>
-              <span>
-                {batchActionMode === 'video' 
-                  ? '' 
-                  : batchActionMode === 'transition'
-                  ? ''
-                  : ''}
-              </span>
-            </button>
-            <button
-              className="batch-action-button batch-action-button-dropdown"
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                // Close any open dropdowns (like download dropdown) when opening mode selection
-                setShowMoreDropdown(false);
-                setShowBatchActionDropdown(prev => !prev);
-              }}
-              disabled={isBulkDownloading}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                borderLeft: '1px solid rgba(255, 255, 255, 0.15)',
-                color: 'white',
-                padding: '8px 8px',
-                paddingBottom: '10px',
-                borderRadius: '0',
-                cursor: isBulkDownloading ? 'not-allowed' : 'pointer',
-                opacity: isBulkDownloading ? 0.6 : 1,
-                fontSize: '16px',
-                fontFamily: '"Permanent Marker", cursive',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                transition: 'all 0.2s ease',
-                pointerEvents: 'auto',
-                position: 'relative',
-                zIndex: 1,
-                minHeight: '44px'
-              }}
-              title="Switch between Download and Video"
-            >
-              <span>▼</span>
+              <span>⬇️</span>
             </button>
             
-            {/* Mode selection dropdown - portaled to document.body for proper z-index stacking */}
-            {showBatchActionDropdown && !isBulkDownloading && (() => {
-              // Count loaded photos (excluding originals and hidden/discarded ones)
-              const currentPhotosArray = isPromptSelectorMode ? filteredPhotos : photos;
-              const loadedPhotosCount = currentPhotosArray.filter(
-                photo => !photo.hidden && !photo.loading && !photo.generating && !photo.error && photo.images && photo.images.length > 0 && !photo.isOriginal
-              ).length;
-              const canUseVideo = loadedPhotosCount > 0;
-
-              return createPortal(
-                <div
-                  className="batch-action-mode-dropdown"
-                  style={{
-                    position: 'fixed',
-                    bottom: '90px',
-                    right: '32px',
-                    background: 'rgba(255, 255, 255, 0.98)',
-                    borderRadius: '8px',
-                    boxShadow: '0 4px 16px rgba(0,0,0,0.2)',
-                    overflow: 'hidden',
-                    minWidth: '150px',
-                    animation: 'fadeIn 0.2s ease-out',
-                    zIndex: 10000001
-                  }}
-                >
-                  {/* Header */}
-                  <div style={{
-                    padding: '10px 16px',
-                    background: 'rgba(255, 82, 82, 0.08)',
-                    borderBottom: '1px solid rgba(0, 0, 0, 0.08)',
-                    fontFamily: '"Permanent Marker", cursive',
-                    fontSize: '13px',
-                    fontWeight: '600',
-                    color: '#555',
-                    textAlign: 'center',
-                    letterSpacing: '0.5px'
-                  }}>
-                    Batch Action
-                  </div>
-                  <button
-                    className="batch-action-mode-option"
-                    onClick={() => {
-                      setBatchActionMode('download');
-                      setShowBatchActionDropdown(false);
-                      // DON'T reset transition mode - we need to remember it for download
-                      
-                      // Auto-execute download action if switching from another mode
-                      if (batchActionMode !== 'download') {
-                        // Check if any photos have videos - if so, download videos
-                        const currentPhotosArray = isPromptSelectorMode ? filteredPhotos : photos;
-                        const photosWithVideos = currentPhotosArray.filter(
-                          photo => !photo.hidden && !photo.loading && !photo.generating && !photo.error && photo.videoUrl && !photo.isOriginal
-                        );
-
-                        if (photosWithVideos.length > 0) {
-                          // Check if these are transition videos - if so, concatenate instead of zipping
-                          if (isTransitionMode && transitionVideoQueue.length > 0) {
-                            handleDownloadTransitionVideo();
-                          } else {
-                            // Normal video batch: download as zip
-                            handleDownloadAllVideos();
-                          }
-                        } else {
-                          // Show download options dropdown for images
-                          setShowMoreDropdown(true);
-                        }
-                      }
-                    }}
-                    style={{
-                      width: '100%',
-                      padding: '12px 16px',
-                      border: 'none',
-                      background: batchActionMode === 'download' ? 'rgba(255, 82, 82, 0.1)' : 'transparent',
-                      color: '#333',
-                      fontSize: '14px',
-                      fontWeight: batchActionMode === 'download' ? '600' : 'normal',
-                      textAlign: 'left',
-                      cursor: 'pointer',
-                      transition: 'background 0.2s ease',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px'
-                    }}
-                    onMouseOver={(e) => {
-                      if (batchActionMode !== 'download') {
-                        e.currentTarget.style.background = 'rgba(255, 82, 82, 0.1)';
-                      }
-                    }}
-                    onMouseOut={(e) => {
-                      if (batchActionMode !== 'download') {
-                        e.currentTarget.style.background = 'transparent';
-                      }
-                    }}
-                  >
-                    <span>⬇️</span> Download All
-                    {batchActionMode === 'download' && <span style={{ marginLeft: 'auto' }}>✓</span>}
-                  </button>
-                  {canUseVideo && (
-                    <>
-                      <button
-                        className="batch-action-mode-option"
-                        onClick={() => {
-                          setBatchActionMode('video');
-                          setShowBatchActionDropdown(false);
-                          // Reset transition mode when switching away
-                          setIsTransitionMode(false);
-                          setTransitionVideoQueue([]);
-                          setCurrentVideoIndexByPhoto({});
-                          setAllTransitionVideosComplete(false);
-                          
-                          // Clean up music state when leaving transition mode
-                          if (appliedMusic?.audioUrl) {
-                            URL.revokeObjectURL(appliedMusic.audioUrl);
-                          }
-                          setAppliedMusic(null);
-                          setIsInlineAudioMuted(false);
-                          if (inlineAudioRef.current) {
-                            inlineAudioRef.current.pause();
-                          }
-                          
-                          // Auto-execute video action if switching from another mode
-                          if (batchActionMode !== 'video') {
-                            // Show video dropdown to select emoji
-                            // Use setTimeout to avoid click outside handler closing it immediately
-                            if (isAuthenticated) {
-                              setTimeout(() => {
-                                setShowBatchVideoDropdown(true);
-                              }, 10);
-                            } else {
-                              showToast({
-                                title: 'Authentication Required',
-                                message: 'Please sign in to generate videos.',
-                                type: 'info'
-                              });
-                            }
-                          }
-                        }}
-                        style={{
-                          width: '100%',
-                          padding: '12px 16px',
-                          border: 'none',
-                          background: batchActionMode === 'video' ? 'rgba(139, 92, 246, 0.1)' : 'transparent',
-                          color: '#333',
-                          fontSize: '14px',
-                          fontWeight: batchActionMode === 'video' ? '600' : 'normal',
-                          textAlign: 'left',
-                          cursor: 'pointer',
-                          transition: 'background 0.2s ease',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '8px'
-                        }}
-                        onMouseOver={(e) => {
-                          if (batchActionMode !== 'video') {
-                            e.currentTarget.style.background = 'rgba(139, 92, 246, 0.1)';
-                          }
-                        }}
-                        onMouseOut={(e) => {
-                          if (batchActionMode !== 'video') {
-                            e.currentTarget.style.background = 'transparent';
-                          }
-                        }}
-                      >
-                        <span>🎥💫</span> Motion Video
-                        {batchActionMode === 'video' && <span style={{ marginLeft: 'auto' }}>✓</span>}
-                      </button>
-                      <button
-                        className="batch-action-mode-option"
-                        onClick={() => {
-                          setBatchActionMode('transition');
-                          setShowBatchActionDropdown(false);
-                          
-                          // Show transition video popup for configuration if switching from another mode
-                          if (batchActionMode !== 'transition') {
-                            if (isAuthenticated) {
-                              setShowTransitionVideoPopup(true);
-                            } else {
-                              showToast({
-                                title: 'Authentication Required',
-                                message: 'Please sign in to generate transition videos.',
-                                type: 'info'
-                              });
-                            }
-                          }
-                        }}
-                        style={{
-                          width: '100%',
-                          padding: '12px 16px',
-                          border: 'none',
-                          background: batchActionMode === 'transition' ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
-                          color: '#333',
-                          fontSize: '14px',
-                          fontWeight: batchActionMode === 'transition' ? '600' : 'normal',
-                          textAlign: 'left',
-                          cursor: 'pointer',
-                          transition: 'background 0.2s ease',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '8px'
-                        }}
-                        onMouseOver={(e) => {
-                          if (batchActionMode !== 'transition') {
-                            e.currentTarget.style.background = 'rgba(59, 130, 246, 0.1)';
-                          }
-                        }}
-                        onMouseOut={(e) => {
-                          if (batchActionMode !== 'transition') {
-                            e.currentTarget.style.background = 'transparent';
-                          }
-                        }}
-                      >
-                        <span>🔀</span> Transition Video
-                        {batchActionMode === 'transition' && <span style={{ marginLeft: 'auto' }}>✓</span>}
-                      </button>
-                      <button
-                        className="batch-action-mode-option"
-                        onClick={() => {
-                          setShowBatchActionDropdown(false);
-                          
-                          // Show BASE Hero confirmation popup
-                          if (isAuthenticated) {
-                            setShowBatchBaseHeroPopup(true);
-                          } else {
-                            showToast({
-                              title: 'Authentication Required',
-                              message: 'Please sign in to generate BASE Hero videos.',
-                              type: 'info'
-                            });
-                          }
-                        }}
-                        style={{
-                          width: '100%',
-                          padding: '12px 16px',
-                          border: 'none',
-                          background: 'transparent',
-                          color: '#333',
-                          fontSize: '14px',
-                          fontWeight: 'normal',
-                          textAlign: 'left',
-                          cursor: 'pointer',
-                          transition: 'background 0.2s ease',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '8px'
-                        }}
-                        onMouseOver={(e) => {
-                          e.currentTarget.style.background = 'rgba(0, 82, 255, 0.1)';
-                        }}
-                        onMouseOut={(e) => {
-                          e.currentTarget.style.background = 'transparent';
-                        }}
-                      >
-                        <span>🟦</span> BASE Hero
-                      </button>
-                      <button
-                        className="batch-action-mode-option"
-                        onClick={() => {
-                          setShowBatchActionDropdown(false);
-                          
-                          // Show Prompt Video confirmation popup
-                          if (isAuthenticated) {
-                            setShowBatchPromptVideoPopup(true);
-                          } else {
-                            showToast({
-                              title: 'Authentication Required',
-                              message: 'Please sign in to generate prompt videos.',
-                              type: 'info'
-                            });
-                          }
-                        }}
-                        style={{
-                          width: '100%',
-                          padding: '12px 16px',
-                          border: 'none',
-                          background: 'transparent',
-                          color: '#333',
-                          fontSize: '14px',
-                          fontWeight: 'normal',
-                          textAlign: 'left',
-                          cursor: 'pointer',
-                          transition: 'background 0.2s ease',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '8px'
-                        }}
-                        onMouseOver={(e) => {
-                          e.currentTarget.style.background = 'rgba(139, 92, 246, 0.1)';
-                        }}
-                        onMouseOut={(e) => {
-                          e.currentTarget.style.background = 'transparent';
-                        }}
-                      >
-                        <span>✨</span> Prompt Video
-                      </button>
-                    </>
-                  )}
-                </div>,
-                document.body
-              );
-            })()}
-
-            {/* Download options dropdown (when in download mode) */}
-            {showMoreDropdown && !isBulkDownloading && batchActionMode === 'download' && (
+            {/* Download options dropdown */}
+            {showMoreDropdown && !isBulkDownloading && (
               <div
                 className="more-dropdown-menu"
                 style={{
@@ -6708,6 +6377,77 @@ const PhotoGallery = ({
                 </button>
               </div>
             )}
+          </div>
+
+          {/* Video Button - Standalone with camera icon (RED) */}
+          <div 
+            className="batch-video-button-container" 
+            style={{ 
+              position: 'relative',
+              background: 'linear-gradient(135deg, #ff5252, #e53935)',
+              borderRadius: '8px',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+              transition: 'all 0.2s ease',
+              display: 'inline-flex',
+              overflow: 'visible'
+            }}
+            onMouseEnter={(e) => {
+              if (!isBulkDownloading) {
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.25)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)';
+            }}
+          >
+            <button
+              className="batch-action-button batch-video-button"
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                // Show video selection popup
+                if (isAuthenticated) {
+                  setIsVideoSelectionBatch(true);
+                  setShowVideoSelectionPopup(true);
+                } else {
+                  showToast({
+                    title: 'Authentication Required',
+                    message: 'Please sign in to generate videos.',
+                    type: 'info'
+                  });
+                }
+              }}
+              disabled={isBulkDownloading}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: 'white',
+                padding: '6px 14px',
+                paddingBottom: '8px',
+                borderRadius: '8px',
+                cursor: isBulkDownloading ? 'not-allowed' : 'pointer',
+                opacity: isBulkDownloading ? 0.6 : 1,
+                fontSize: '15px',
+                fontWeight: '600',
+                fontFamily: '"Permanent Marker", cursive',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
+                transition: 'all 0.2s ease',
+                whiteSpace: 'nowrap',
+                pointerEvents: 'auto',
+                position: 'relative',
+                zIndex: 1,
+                minHeight: '40px'
+              }}
+              title="Generate videos for all images"
+            >
+              <span>🎥</span>
+            </button>
+          </div>
               
           {/* Progress indicator for downloads - portaled for proper z-index */}
           {(isBulkDownloading || readyTransitionVideo) && bulkDownloadProgress.message && createPortal(
@@ -6786,8 +6526,11 @@ const PhotoGallery = ({
               onClick={() => {
                 setShowBatchVideoTip(false);
                 markBatchVideoTipShown();
-                // Also open the dropdown to show the video mode
-                setShowBatchActionDropdown(true);
+                // Also open the video dropdown
+                if (isAuthenticated) {
+                  setBatchActionMode('video');
+                  setShowBatchVideoDropdown(true);
+                }
               }}
             >
               <div style={{
@@ -6814,7 +6557,6 @@ const PhotoGallery = ({
               }} />
             </div>
           )}
-          </div>
 
           {/* New Batch button - inside the same container */}
           {((!isGenerating && selectedPhotoIndex === null) || (isGenerating && showMoreButtonDuringGeneration && selectedPhotoIndex === null)) && (
@@ -7554,190 +7296,6 @@ const PhotoGallery = ({
                   {selectedPhoto.videoError}
                 </div>
               )}
-
-              {/* Video Options List Portal - shows list of video options before opening specific video popup */}
-              {showVideoOptionsList && (() => {
-                // Calculate position relative to video button
-                let dropdownStyle = {
-                  position: 'fixed',
-                  background: 'rgba(255, 255, 255, 0.98)',
-                  borderRadius: '8px',
-                  boxShadow: '0 4px 16px rgba(0,0,0,0.2)',
-                  overflow: 'hidden',
-                  minWidth: '200px',
-                  animation: 'fadeIn 0.2s ease-out',
-                  zIndex: 10000001
-                };
-
-                if (window.innerWidth < 768) {
-                  // Mobile: center at top
-                  dropdownStyle = {
-                    ...dropdownStyle,
-                    top: '10px',
-                    left: '50%',
-                    transform: 'translateX(-50%)'
-                  };
-                } else if (videoButtonRef.current) {
-                  // Desktop: position above the video button, screen-aware
-                  const buttonRect = videoButtonRef.current.getBoundingClientRect();
-                  const dropdownWidth = 200; // minWidth
-                  const dropdownHeight = 120; // approximate height
-                  const spacing = 8; // space above button
-                  
-                  // Calculate desired position
-                  let left = buttonRect.left;
-                  let bottom = window.innerHeight - buttonRect.top + spacing;
-                  
-                  // Ensure dropdown doesn't go off the right edge
-                  if (left + dropdownWidth > window.innerWidth) {
-                    left = window.innerWidth - dropdownWidth - 16; // 16px padding from edge
-                  }
-                  
-                  // Ensure dropdown doesn't go off the left edge
-                  if (left < 16) {
-                    left = 16;
-                  }
-                  
-                  // Ensure dropdown doesn't go off the top edge (if button is near top)
-                  if (bottom + dropdownHeight > window.innerHeight) {
-                    bottom = window.innerHeight - dropdownHeight - 16;
-                  }
-                  
-                  dropdownStyle = {
-                    ...dropdownStyle,
-                    bottom: `${bottom}px`,
-                    left: `${left}px`,
-                    transform: 'none'
-                  };
-                } else {
-                  // Fallback: position at bottom right like batch action
-                  dropdownStyle = {
-                    ...dropdownStyle,
-                    bottom: '90px',
-                    right: '32px'
-                  };
-                }
-
-                return createPortal(
-                  <div
-                    className="video-options-list-dropdown"
-                    style={dropdownStyle}
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    {/* Header */}
-                    <div style={{
-                      padding: '10px 16px',
-                      background: 'rgba(139, 92, 246, 0.08)',
-                      borderBottom: '1px solid rgba(0, 0, 0, 0.08)',
-                      fontFamily: '"Permanent Marker", cursive',
-                      fontSize: '13px',
-                      fontWeight: '600',
-                      color: '#555',
-                      textAlign: 'center',
-                      letterSpacing: '0.5px'
-                    }}>
-                      Video Options
-                    </div>
-                    
-                    {/* Motion Video Option */}
-                    <button
-                      className="video-option-button"
-                      onClick={() => {
-                        setShowVideoOptionsList(false);
-                        setShowVideoDropdown(true);
-                      }}
-                      style={{
-                        width: '100%',
-                        padding: '12px 16px',
-                        border: 'none',
-                        background: 'transparent',
-                        color: '#333',
-                        fontSize: '14px',
-                        fontWeight: 'normal',
-                        textAlign: 'left',
-                        cursor: 'pointer',
-                        transition: 'background 0.2s ease',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        borderBottom: '1px solid rgba(0, 0, 0, 0.05)'
-                      }}
-                      onMouseOver={(e) => {
-                        e.currentTarget.style.background = 'rgba(139, 92, 246, 0.1)';
-                      }}
-                      onMouseOut={(e) => {
-                        e.currentTarget.style.background = 'transparent';
-                      }}
-                    >
-                      <span>🎥</span>
-                      <span>Motion Video</span>
-                    </button>
-                    
-                    {/* BASE Hero Option */}
-                    <button
-                      className="video-option-button"
-                      onClick={handleBaseHeroVideo}
-                      style={{
-                        width: '100%',
-                        padding: '12px 16px',
-                        border: 'none',
-                        background: 'transparent',
-                        color: '#333',
-                        fontSize: '14px',
-                        fontWeight: 'normal',
-                        textAlign: 'left',
-                        cursor: 'pointer',
-                        transition: 'background 0.2s ease',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px'
-                      }}
-                      onMouseOver={(e) => {
-                        e.currentTarget.style.background = 'rgba(139, 92, 246, 0.1)';
-                      }}
-                      onMouseOut={(e) => {
-                        e.currentTarget.style.background = 'transparent';
-                      }}
-                    >
-                      <span>🟦</span>
-                      <span>BASE Hero</span>
-                    </button>
-                    <button
-                      className="video-option-button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handlePromptVideo();
-                      }}
-                      style={{
-                        width: '100%',
-                        padding: '12px 16px',
-                        border: 'none',
-                        background: 'transparent',
-                        color: '#333',
-                        fontSize: '14px',
-                        fontWeight: 'normal',
-                        textAlign: 'left',
-                        cursor: 'pointer',
-                        transition: 'background 0.2s ease',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        borderTop: '1px solid rgba(0, 0, 0, 0.08)'
-                      }}
-                      onMouseOver={(e) => {
-                        e.currentTarget.style.background = 'rgba(139, 92, 246, 0.1)';
-                      }}
-                      onMouseOut={(e) => {
-                        e.currentTarget.style.background = 'transparent';
-                      }}
-                    >
-                      <span>✨</span>
-                      <span>Prompt Video</span>
-                    </button>
-                  </div>,
-                  document.body
-                );
-              })()}
 
               {/* Video Dropdown Portal */}
               {showVideoDropdown && createPortal(
@@ -11697,108 +11255,6 @@ const PhotoGallery = ({
         document.body
       )}
 
-      {/* Video Options List Portal for Gallery Mode (when not in slideshow) */}
-      {showVideoOptionsList && videoTargetPhotoIndex !== null && selectedPhotoIndex === null && createPortal(
-        <div
-          className="video-options-list-dropdown"
-          style={{
-            position: 'fixed',
-            bottom: window.innerWidth < 768 ? 'auto' : '90px',
-            top: window.innerWidth < 768 ? '10px' : 'auto',
-            right: window.innerWidth < 768 ? 'auto' : '32px',
-            left: window.innerWidth < 768 ? '50%' : 'auto',
-            transform: window.innerWidth < 768 ? 'translateX(-50%)' : 'none',
-            background: 'rgba(255, 255, 255, 0.98)',
-            borderRadius: '8px',
-            boxShadow: '0 4px 16px rgba(0,0,0,0.2)',
-            overflow: 'hidden',
-            minWidth: '200px',
-            animation: 'fadeIn 0.2s ease-out',
-            zIndex: 10000001
-          }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          {/* Header */}
-          <div style={{
-            padding: '10px 16px',
-            background: 'rgba(139, 92, 246, 0.08)',
-            borderBottom: '1px solid rgba(0, 0, 0, 0.08)',
-            fontFamily: '"Permanent Marker", cursive',
-            fontSize: '13px',
-            fontWeight: '600',
-            color: '#555',
-            textAlign: 'center',
-            letterSpacing: '0.5px'
-          }}>
-            Video Options
-          </div>
-          
-          {/* Motion Video Option */}
-          <button
-            className="video-option-button"
-            onClick={() => {
-              setShowVideoOptionsList(false);
-              setShowVideoDropdown(true);
-            }}
-            style={{
-              width: '100%',
-              padding: '12px 16px',
-              border: 'none',
-              background: 'transparent',
-              color: '#333',
-              fontSize: '14px',
-              fontWeight: 'normal',
-              textAlign: 'left',
-              cursor: 'pointer',
-              transition: 'background 0.2s ease',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              borderBottom: '1px solid rgba(0, 0, 0, 0.05)'
-            }}
-            onMouseOver={(e) => {
-              e.currentTarget.style.background = 'rgba(139, 92, 246, 0.1)';
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.background = 'transparent';
-            }}
-          >
-            <span>🎥</span>
-            <span>Motion Video</span>
-          </button>
-          
-          {/* BASE Hero Option */}
-          <button
-            className="video-option-button"
-            onClick={handleBaseHeroVideo}
-            style={{
-              width: '100%',
-              padding: '12px 16px',
-              border: 'none',
-              background: 'transparent',
-              color: '#333',
-              fontSize: '14px',
-              fontWeight: 'normal',
-              textAlign: 'left',
-              cursor: 'pointer',
-              transition: 'background 0.2s ease',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px'
-            }}
-            onMouseOver={(e) => {
-              e.currentTarget.style.background = 'rgba(139, 92, 246, 0.1)';
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.background = 'transparent';
-            }}
-          >
-            <span>🟦</span>
-            <span>BASE Hero</span>
-          </button>
-        </div>,
-        document.body
-      )}
 
       {/* Video Dropdown Portal for Gallery Mode (when not in slideshow) */}
       {showVideoDropdown && videoTargetPhotoIndex !== null && selectedPhotoIndex === null && createPortal(
@@ -11970,79 +11426,6 @@ const PhotoGallery = ({
           </div>
           {renderMotionPicker(selectedBatchMotionCategory, setSelectedBatchMotionCategory, handleBatchGenerateVideo, setShowBatchVideoDropdown, setShowBatchCustomVideoPromptPopup)}
           
-          {/* BASE Hero Option Button */}
-          <div style={{
-            padding: '10px',
-            borderTop: '1px solid rgba(0, 0, 0, 0.1)',
-            display: 'flex',
-            justifyContent: 'center',
-            gap: '10px',
-            flexShrink: 0
-          }}>
-            <button
-              onClick={handleBatchBaseHeroVideo}
-              style={{
-                padding: '12px 24px',
-                border: 'none',
-                background: 'linear-gradient(135deg, #0052FF, #0052FF)',
-                color: 'white',
-                fontSize: '14px',
-                fontWeight: '700',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                boxShadow: '0 2px 8px rgba(0, 82, 255, 0.3)'
-              }}
-              onMouseOver={(e) => {
-                e.currentTarget.style.background = 'linear-gradient(135deg, #0066FF, #0066FF)';
-                e.currentTarget.style.transform = 'translateY(-2px)';
-                e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 82, 255, 0.4)';
-              }}
-              onMouseOut={(e) => {
-                e.currentTarget.style.background = 'linear-gradient(135deg, #0052FF, #0052FF)';
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 82, 255, 0.3)';
-              }}
-            >
-              <span>🟦</span>
-              <span>BASE Hero</span>
-            </button>
-            <button
-              onClick={handleBatchPromptVideo}
-              style={{
-                padding: '12px 24px',
-                border: 'none',
-                background: 'linear-gradient(135deg, #8B5CF6, #6D28D9)',
-                color: 'white',
-                fontSize: '14px',
-                fontWeight: '700',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                boxShadow: '0 2px 8px rgba(139, 92, 246, 0.3)'
-              }}
-              onMouseOver={(e) => {
-                e.currentTarget.style.background = 'linear-gradient(135deg, #9B6CF6, #7D38E9)';
-                e.currentTarget.style.transform = 'translateY(-2px)';
-                e.currentTarget.style.boxShadow = '0 4px 12px rgba(139, 92, 246, 0.4)';
-              }}
-              onMouseOut={(e) => {
-                e.currentTarget.style.background = 'linear-gradient(135deg, #8B5CF6, #6D28D9)';
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = '0 2px 8px rgba(139, 92, 246, 0.3)';
-              }}
-            >
-              <span>✨</span>
-              <span>Prompt Video</span>
-            </button>
-          </div>
-
           {/* Custom Prompt Button - Always visible below grid */}
           <div style={{
             padding: '10px',
@@ -12128,6 +11511,15 @@ const PhotoGallery = ({
         document.body
       )}
 
+      {/* Video Selection Popup */}
+      <VideoSelectionPopup
+        visible={showVideoSelectionPopup}
+        onSelectVideoType={handleVideoTypeSelection}
+        onClose={() => setShowVideoSelectionPopup(false)}
+        isBatch={isVideoSelectionBatch}
+        photoCount={loadedPhotosCount}
+      />
+
       {/* Custom Video Prompt Popup */}
       <CustomVideoPromptPopup
         visible={showCustomVideoPromptPopup}
@@ -12148,28 +11540,28 @@ const PhotoGallery = ({
         onClose={() => setShowBatchCustomVideoPromptPopup(false)}
       />
 
-      {/* BASE Hero Confirmation Popup (Single) */}
-      <BaseHeroConfirmationPopup
-        visible={showBaseHeroPopup}
-        onConfirm={handleBaseHeroVideoExecute}
-        onClose={() => setShowBaseHeroPopup(false)}
-        loading={baseHeroLoading}
-        costRaw={baseHeroCostRaw}
-        costUSD={baseHeroUSD}
+      {/* Bald for Base Confirmation Popup (Single) */}
+      <BaldForBaseConfirmationPopup
+        visible={showBaldForBasePopup}
+        onConfirm={handleBaldForBaseVideoExecute}
+        onClose={() => setShowBaldForBasePopup(false)}
+        loading={baldForBaseLoading}
+        costRaw={baldForBaseCostRaw}
+        costUSD={baldForBaseUSD}
         videoResolution={settings.videoResolution || '480p'}
         tokenType={tokenType}
         isBatch={false}
         itemCount={1}
       />
 
-      {/* BASE Hero Confirmation Popup (Batch) */}
-      <BaseHeroConfirmationPopup
-        visible={showBatchBaseHeroPopup}
-        onConfirm={handleBatchBaseHeroVideoExecute}
-        onClose={() => setShowBatchBaseHeroPopup(false)}
-        loading={batchBaseHeroLoading}
-        costRaw={batchBaseHeroCostRaw}
-        costUSD={batchBaseHeroUSD}
+      {/* Bald for Base Confirmation Popup (Batch) */}
+      <BaldForBaseConfirmationPopup
+        visible={showBatchBaldForBasePopup}
+        onConfirm={handleBatchBaldForBaseVideoExecute}
+        onClose={() => setShowBatchBaldForBasePopup(false)}
+        loading={batchBaldForBaseLoading}
+        costRaw={batchBaldForBaseCostRaw}
+        costUSD={batchBaldForBaseUSD}
         videoResolution={settings.videoResolution || '480p'}
         tokenType={tokenType}
         isBatch={true}

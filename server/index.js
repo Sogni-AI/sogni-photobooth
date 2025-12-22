@@ -300,23 +300,23 @@ const handleWinterRoute = (req, res) => {
   });
 };
 
-// Base Hero route handler (for /event/base-hero)
-const handleBaseHeroRoute = (req, res) => {
+// Bald for Base route handler (for /event/bald-for-base)
+const handleBaldForBaseRoute = (req, res) => {
   const indexPath = path.join(staticDir, 'index.html');
   const requestPath = req.path;
-  console.log(`[Base Hero Route] Attempting to read: ${indexPath} for path: ${requestPath}`);
+  console.log(`[Bald for Base Route] Attempting to read: ${indexPath} for path: ${requestPath}`);
 
   fs.readFile(indexPath, 'utf8', (err, html) => {
     if (err) {
-      console.error('[Base Hero Route] Error reading index.html:', err);
-      console.error('[Base Hero Route] Static dir:', staticDir);
-      console.error('[Base Hero Route] Index path:', indexPath);
+      console.error('[Bald for Base Route] Error reading index.html:', err);
+      console.error('[Bald for Base Route] Static dir:', staticDir);
+      console.error('[Bald for Base Route] Index path:', indexPath);
       return res.status(500).send('Error loading page: ' + err.message);
     }
 
-    console.log('[Base Hero Route] Successfully read index.html, injecting meta tags...');
+    console.log('[Bald for Base Route] Successfully read index.html, injecting meta tags...');
 
-    // Replace meta tags with Base Hero-specific content
+    // Replace meta tags with Bald for Base-specific content
     // Using simple global string replacement - same approach as Winter/Halloween
     let modifiedHtml = html;
 
@@ -326,28 +326,28 @@ const handleBaseHeroRoute = (req, res) => {
     const protocol = 'https';
     const baseUrl = `${protocol}://${host}`;
 
-    const baseHeroTitle = '🟦 BASE Hero Video Generator | Sogni AI Photobooth';
-    const baseHeroDesc = 'Create your own fun BASE Hero video! Share on X or Base App and tag @Sogni_Protocol for a chance at 100,000 SOGNI tokens. 5 winners selected on Jan 15.';
-    const baseHeroUrl = `${baseUrl}/event/base-hero`;
+    const baldForBaseTitle = '🟦 Bald for Base Video Generator | Sogni AI Photobooth';
+    const baldForBaseDesc = 'Create your own fun Bald for Base video! Share on X or Base App and tag @Sogni_Protocol for a chance at your share of 100,000 SOGNI tokens. 5 winners selected on Jan 15.';
+    const baldForBaseUrl = `${baseUrl}/event/bald-for-base`;
 
-    console.log(`[Base Hero Route] Using baseUrl: ${baseUrl}`);
+    console.log(`[Bald for Base Route] Using baseUrl: ${baseUrl}`);
 
     // Replace title - handle various formats
     modifiedHtml = modifiedHtml.replace(
       /<title>Sogni AI Photobooth \| Free AI Headshot Generator & Portrait Maker<\/title>/,
-      `<title>${baseHeroTitle}</title>`
+      `<title>${baldForBaseTitle}</title>`
     );
     
     // Replace og:title
     modifiedHtml = modifiedHtml.replace(
       /content="Sogni AI Photobooth \| Free AI Headshot Generator & Portrait Maker"/g,
-      `content="${baseHeroTitle}"`
+      `content="${baldForBaseTitle}"`
     );
     
     // Replace og:description - match the updated description format (includes video portraits)
     modifiedHtml = modifiedHtml.replace(
       /Create stunning AI headshots, portraits, and video portraits with Sogni Photobooth—your free AI portrait generator and anime PFP maker\. Transform your photos with 200\+ AI styles in seconds, or generate AI videos from your portraits!/g,
-      baseHeroDesc
+      baldForBaseDesc
     );
     
     // Note: We keep the default og:image (GitHub repository image) - only title/description change
@@ -355,7 +355,7 @@ const handleBaseHeroRoute = (req, res) => {
     // Replace og:url and twitter:url
     modifiedHtml = modifiedHtml.replace(
       /content="https:\/\/photobooth\.sogni\.ai\/"/g,
-      `content="${baseHeroUrl}"`
+      `content="${baldForBaseUrl}"`
     );
 
     // Set cache headers to prevent stale metadata
@@ -365,7 +365,7 @@ const handleBaseHeroRoute = (req, res) => {
       'Expires': '0'
     });
 
-    console.log('[Base Hero Route] Successfully injected meta tags and sent response');
+    console.log('[Bald for Base Route] Successfully injected meta tags and sent response');
     res.send(modifiedHtml);
   });
 };
@@ -511,7 +511,7 @@ if (!isLocalEnv) {
   app.get('/halloween', handleHalloweenRoute);
   app.get('/event/halloween', handleHalloweenRoute);
   app.get('/event/winter', handleWinterRoute);
-  app.get('/event/base-hero', handleBaseHeroRoute);
+  app.get('/event/bald-for-base', handleBaldForBaseRoute);
   app.get('/contest/vote', handleContestVoteRoute);
   app.get('/admin/moderate', handleAdminContestRoute);
   app.get('/challenge/gimi', handleGimiChallengeRoute);

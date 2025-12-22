@@ -36,8 +36,8 @@ const PageMetadata = () => {
         // Don't override Winter event metadata - it has custom Helmet tags
         skipUpdate: true
       },
-      '/event/base-hero': {
-        // Don't override Base Hero metadata - server handles meta tag injection
+      '/event/bald-for-base': {
+        // Don't override Bald for Base metadata - server handles meta tag injection
         skipUpdate: true
       },
       '/contest/vote': {

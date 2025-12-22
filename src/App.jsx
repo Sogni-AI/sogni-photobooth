@@ -66,7 +66,7 @@ import { useWallet } from './hooks/useWallet';
 import { isPremiumBoosted } from './services/walletService';
 import { estimateJobCost } from './hooks/useCostEstimation.ts';
 import TwitterShareModal from './components/shared/TwitterShareModal';
-import BaseHeroConfirmationPopup from './components/shared/BaseHeroConfirmationPopup';
+import BaldForBaseConfirmationPopup from './components/shared/BaldForBaseConfirmationPopup';
 
 import FriendlyErrorModal from './components/shared/FriendlyErrorModal';
 import { useToastContext } from './context/ToastContext';
@@ -970,8 +970,8 @@ const App = () => {
   const [showOutOfCreditsPopup, setShowOutOfCreditsPopup] = useState(false);
   const [lastJobCostEstimate, setLastJobCostEstimate] = useState(null);
   
-  // Base Hero popup state - rendered in App.jsx so it works independently of PhotoGallery
-  const [showBaseHeroPopup, setShowBaseHeroPopup] = useState(false);
+  // Bald for Base popup state - rendered in App.jsx so it works independently of PhotoGallery
+  const [showBaldForBasePopup, setShowBaldForBasePopup] = useState(false);
 
   // Stripe purchase modal state
   const [showStripePurchase, setShowStripePurchase] = useState(false);
@@ -1270,20 +1270,20 @@ const App = () => {
     const searchParam = url.searchParams.get('search');
     const referralParam = url.searchParams.get('referral');
     const galleryParam = url.searchParams.get('gallery');
-    const baseHeroParam = url.searchParams.get('baseHero');
+    const baldForBaseParam = url.searchParams.get('baldForBase');
     
-    // Handle Base Hero deep link - check both route and querystring for backwards compatibility
-    const isBaseHeroRoute = url.pathname === '/event/base-hero';
-    if (isBaseHeroRoute || baseHeroParam === 'true') {
+    // Handle Bald for Base deep link - check both route and querystring for backwards compatibility
+    const isBaldForBaseRoute = url.pathname === '/event/bald-for-base';
+    if (isBaldForBaseRoute || baldForBaseParam === 'true') {
       // Skip welcome screen if it's showing
       setShowSplashScreen(false);
       
       // Show the popup directly (rendered in App.jsx, independent of PhotoGallery)
-      setShowBaseHeroPopup(true);
+      setShowBaldForBasePopup(true);
       
       // If using querystring, remove parameter from URL to prevent re-triggering
-      if (baseHeroParam === 'true') {
-        url.searchParams.delete('baseHero');
+      if (baldForBaseParam === 'true') {
+        url.searchParams.delete('baldForBase');
         const newUrl = url.pathname + (url.search ? url.search : '');
         window.history.replaceState(window.history.state || {}, '', newUrl);
       }
@@ -3121,8 +3121,8 @@ const App = () => {
       shareUrl.pathname = '/event/halloween';
     } else if (settings.winterContext) {
       shareUrl.pathname = '/event/winter';
-    } else if (window.location.pathname === '/event/base-hero') {
-      shareUrl.pathname = '/event/base-hero';
+    } else if (window.location.pathname === '/event/bald-for-base') {
+      shareUrl.pathname = '/event/bald-for-base';
     }
     
     // Only add the prompt parameter if we have a hashtag and it's not from a custom prompt
@@ -4907,6 +4907,17 @@ const App = () => {
         const saved = getThemeGroupPreferences();
         const defaultState = getDefaultThemeGroupState();
         const latestThemeState = { ...defaultState, ...saved };
+        console.log('🎨 Generating with "One of each" - latest theme state from localStorage:', latestThemeState);
+        // Also log favorites to verify they're up to date
+        try {
+          const favorites = localStorage.getItem('sogni_favorite_images');
+          if (favorites) {
+            const favoriteIds = JSON.parse(favorites);
+            console.log('⭐ Current favorites count:', favoriteIds.length, 'favorites:', favoriteIds);
+          }
+        } catch (e) {
+          console.warn('Error reading favorites for logging:', e);
+        }
         finalPositivePrompt = getOneOfEachPrompts(latestThemeState, stylePrompts, numImages);
       } else {
         // Use the selected style prompt, but skip if it's blocked
@@ -8084,9 +8095,9 @@ const App = () => {
     setShowStartMenu(true);
   };
 
-  // Handle Base Hero popup generate button
-  const handleBaseHeroGenerate = useCallback(() => {
-    setShowBaseHeroPopup(false);
+  // Handle Bald for Base popup generate button
+  const handleBaldForBaseGenerate = useCallback(() => {
+    setShowBaldForBasePopup(false);
     
     // Check if user has photos
     const loadedPhotos = photos.filter(
@@ -8097,12 +8108,12 @@ const App = () => {
       // No photos - show toast and navigate to start menu
       showToast({
         title: '📸 Photos Needed',
-        message: 'Please generate some photos first. We\'ll automatically create your Base Hero videos after!',
+        message: 'Please generate some photos first. We\'ll automatically create your Bald for Base videos after!',
         type: 'info',
         timeout: 5000
       });
       // Set flag in sessionStorage so PhotoGallery can pick it up
-      sessionStorage.setItem('baseHeroAutoTrigger', 'true');
+      sessionStorage.setItem('baldForBaseAutoTrigger', 'true');
       // Navigate to start menu using handleBackToMenu
       handleBackToMenu();
       return;
@@ -8111,7 +8122,7 @@ const App = () => {
     // User has photos - PhotoGallery will handle the actual generation
     // For now, just show the photo grid and let PhotoGallery handle it
     setShowPhotoGrid(true);
-    // The PhotoGallery component will detect photos and show its own Base Hero popup
+    // The PhotoGallery component will detect photos and show its own Bald for Base popup
   }, [photos, showToast, handleBackToMenu]);
 
   // -------------------------
@@ -9034,6 +9045,14 @@ const App = () => {
 
   // Handle opening ImageAdjuster for next batch generation from PhotoGallery
   const handleOpenImageAdjusterForNextBatch = async () => {
+    // Refresh theme state from localStorage to ensure we have the latest selections
+    // This is important when user modifies selections in Vibe Explorer and then clicks "New Batch"
+    const saved = getThemeGroupPreferences();
+    const defaultState = getDefaultThemeGroupState();
+    const latestThemeState = { ...defaultState, ...saved };
+    setCurrentThemeState(latestThemeState);
+    console.log('🔄 Refreshed theme state from localStorage for new batch:', latestThemeState);
+    
     if (!lastAdjustedPhoto) {
       console.warn('No lastAdjustedPhoto available for next batch - loading Einstein fallback');
       // Load Einstein fallback just like handleThumbnailClick does
@@ -9808,11 +9827,11 @@ const App = () => {
         isGenerating={isGenerating}
       />
       
-      {/* Base Hero Popup - rendered in App.jsx so it works independently of PhotoGallery */}
-      <BaseHeroConfirmationPopup
-        visible={showBaseHeroPopup}
-        onConfirm={handleBaseHeroGenerate}
-        onClose={() => setShowBaseHeroPopup(false)}
+      {/* Bald for Base Popup - rendered in App.jsx so it works independently of PhotoGallery */}
+      <BaldForBaseConfirmationPopup
+        visible={showBaldForBasePopup}
+        onConfirm={handleBaldForBaseGenerate}
+        onClose={() => setShowBaldForBasePopup(false)}
         loading={false}
         costRaw={null}
         costUSD={null}
