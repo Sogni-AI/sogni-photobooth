@@ -14,8 +14,6 @@ const VideoSelectionPopup = ({
   isBatch = false,
   photoCount = 0
 }) => {
-  if (!visible) return null;
-
   const handleBackdropClick = (e) => {
     if (e.target === e.currentTarget) {
       onClose();
@@ -49,93 +47,107 @@ const VideoSelectionPopup = ({
   const promptVideoRefs = React.useRef({});
   const emojiVideoRefs = React.useRef({});
   const baldForBaseVideoRefs = React.useRef({});
-  // Preload refs for seamless video transitions
-  const promptPreloadRefs = React.useRef({});
-  const emojiPreloadRefs = React.useRef({});
-  const baldForBasePreloadRefs = React.useRef({});
-  // Track manual transitions to avoid useEffect conflicts
-  const isManualTransition = React.useRef({ prompt: false, emoji: false, 'bald-for-base': false });
+  const headerRef = React.useRef(null);
+  const gridContainerRef = React.useRef(null);
 
-  // Preload next video for seamless transitions
-  useEffect(() => {
-    // Preload next prompt video
-    if (promptVideos.length > 1) {
-      const nextPromptIndex = (promptVideoIndex + 1) % promptVideos.length;
-      const preloadEl = promptPreloadRefs.current['prompt'];
-      if (preloadEl) {
-        preloadEl.src = promptVideos[nextPromptIndex];
-        preloadEl.load();
-      }
-    }
-    // Preload next emoji video
-    if (emojiVideos.length > 1) {
-      const nextEmojiIndex = (emojiVideoIndex + 1) % emojiVideos.length;
-      const preloadEl = emojiPreloadRefs.current['emoji'];
-      if (preloadEl) {
-        preloadEl.src = emojiVideos[nextEmojiIndex];
-        preloadEl.load();
-      }
-    }
-    // Preload next Bald for Base video
-    if (baldForBaseVideos.length > 1) {
-      const nextBaldForBaseIndex = (baldForBaseVideoIndex + 1) % baldForBaseVideos.length;
-      const preloadEl = baldForBasePreloadRefs.current['bald-for-base'];
-      if (preloadEl) {
-        preloadEl.src = baldForBaseVideos[nextBaldForBaseIndex];
-        preloadEl.load();
-      }
-    }
-  }, [promptVideoIndex, emojiVideoIndex, baldForBaseVideoIndex]);
 
-  // Sync video src when index changes (skip if manual transition in progress)
-  // Optimized: only update if src actually changed
+  // Update video source when index changes - matching Bald For Base approach
   useEffect(() => {
-    if (isManualTransition.current.prompt) {
-      isManualTransition.current.prompt = false;
-      return;
-    }
     const promptVideoEl = promptVideoRefs.current['prompt'];
     if (promptVideoEl && promptVideos[promptVideoIndex]) {
-      const expectedSrc = promptVideos[promptVideoIndex];
-      // Simple check: only update if src doesn't match
-      if (promptVideoEl.src !== expectedSrc && !promptVideoEl.src.endsWith(expectedSrc.split('/').pop())) {
-        promptVideoEl.src = expectedSrc;
-        promptVideoEl.load();
-        promptVideoEl.play().catch(() => {});
+      const video = promptVideoEl;
+      const newSrc = promptVideos[promptVideoIndex];
+      
+      // Only update if the source is different to avoid unnecessary reloads
+      if (video.src !== newSrc && !video.src.endsWith(newSrc.split('/').pop())) {
+        // Pause and reset before changing source
+        video.pause();
+        video.currentTime = 0;
+        
+        // Set new source and load
+        video.src = newSrc;
+        video.load();
+        
+        // Play after video is ready - use canplaythrough on iOS for better reliability
+        const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+        const playWhenReady = () => {
+          if (promptVideoRefs.current['prompt'] && promptVideoRefs.current['prompt'].src === newSrc) {
+            const videoEl = promptVideoRefs.current['prompt'];
+            // On iOS, ensure readyState is sufficient before playing
+            if (isIOS && videoEl.readyState < 3) {
+              videoEl.addEventListener('canplaythrough', () => {
+                videoEl.play().catch(() => {});
+              }, { once: true });
+            } else {
+              videoEl.play().catch(() => {});
+            }
+          }
+        };
+        
+        // Use canplaythrough on iOS for more reliable playback, canplay on desktop
+        video.addEventListener(isIOS ? 'canplaythrough' : 'canplay', playWhenReady, { once: true });
       }
     }
   }, [promptVideoIndex]);
 
   useEffect(() => {
-    if (isManualTransition.current.emoji) {
-      isManualTransition.current.emoji = false;
-      return;
-    }
     const emojiVideoEl = emojiVideoRefs.current['emoji'];
     if (emojiVideoEl && emojiVideos[emojiVideoIndex]) {
-      const expectedSrc = emojiVideos[emojiVideoIndex];
-      // Simple check: only update if src doesn't match
-      if (emojiVideoEl.src !== expectedSrc && !emojiVideoEl.src.endsWith(expectedSrc.split('/').pop())) {
-        emojiVideoEl.src = expectedSrc;
-        emojiVideoEl.load();
-        emojiVideoEl.play().catch(() => {});
+      const video = emojiVideoEl;
+      const newSrc = emojiVideos[emojiVideoIndex];
+      
+      if (video.src !== newSrc && !video.src.endsWith(newSrc.split('/').pop())) {
+        video.pause();
+        video.currentTime = 0;
+        video.src = newSrc;
+        video.load();
+        
+        const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+        const playWhenReady = () => {
+          if (emojiVideoRefs.current['emoji'] && emojiVideoRefs.current['emoji'].src === newSrc) {
+            const videoEl = emojiVideoRefs.current['emoji'];
+            if (isIOS && videoEl.readyState < 3) {
+              videoEl.addEventListener('canplaythrough', () => {
+                videoEl.play().catch(() => {});
+              }, { once: true });
+            } else {
+              videoEl.play().catch(() => {});
+            }
+          }
+        };
+        
+        video.addEventListener(isIOS ? 'canplaythrough' : 'canplay', playWhenReady, { once: true });
       }
     }
   }, [emojiVideoIndex]);
 
   useEffect(() => {
-    if (isManualTransition.current['bald-for-base']) {
-      isManualTransition.current['bald-for-base'] = false;
-      return;
-    }
     const baldForBaseVideoEl = baldForBaseVideoRefs.current['bald-for-base'];
     if (baldForBaseVideoEl && baldForBaseVideos[baldForBaseVideoIndex]) {
-      const expectedSrc = baldForBaseVideos[baldForBaseVideoIndex];
-      // Simple check: only update if src doesn't match
-      if (baldForBaseVideoEl.src !== expectedSrc && !baldForBaseVideoEl.src.endsWith(expectedSrc.split('/').pop())) {
-        baldForBaseVideoEl.src = expectedSrc;
-        baldForBaseVideoEl.load();
-        baldForBaseVideoEl.play().catch(() => {});
+      const video = baldForBaseVideoEl;
+      const newSrc = baldForBaseVideos[baldForBaseVideoIndex];
+      
+      if (video.src !== newSrc && !video.src.endsWith(newSrc.split('/').pop())) {
+        video.pause();
+        video.currentTime = 0;
+        video.src = newSrc;
+        video.load();
+        
+        const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+        const playWhenReady = () => {
+          if (baldForBaseVideoRefs.current['bald-for-base'] && baldForBaseVideoRefs.current['bald-for-base'].src === newSrc) {
+            const videoEl = baldForBaseVideoRefs.current['bald-for-base'];
+            if (isIOS && videoEl.readyState < 3) {
+              videoEl.addEventListener('canplaythrough', () => {
+                videoEl.play().catch(() => {});
+              }, { once: true });
+            } else {
+              videoEl.play().catch(() => {});
+            }
+          }
+        };
+        
+        video.addEventListener(isIOS ? 'canplaythrough' : 'canplay', playWhenReady, { once: true });
       }
     }
   }, [baldForBaseVideoIndex]);
@@ -172,28 +184,6 @@ const VideoSelectionPopup = ({
         baldForBaseVideoEl.play().catch(err => {
           console.log('Video autoplay prevented:', err);
         });
-      }
-      // Preload first next videos
-      if (promptVideos.length > 1) {
-        const preloadEl = promptPreloadRefs.current['prompt'];
-        if (preloadEl) {
-          preloadEl.src = promptVideos[1];
-          preloadEl.load();
-        }
-      }
-      if (emojiVideos.length > 1) {
-        const preloadEl = emojiPreloadRefs.current['emoji'];
-        if (preloadEl) {
-          preloadEl.src = emojiVideos[1];
-          preloadEl.load();
-        }
-      }
-      if (baldForBaseVideos.length > 1) {
-        const preloadEl = baldForBasePreloadRefs.current['bald-for-base'];
-        if (preloadEl) {
-          preloadEl.src = baldForBaseVideos[1];
-          preloadEl.load();
-        }
       }
     }
   }, [visible]);
@@ -278,6 +268,31 @@ const VideoSelectionPopup = ({
   const isTablet = windowWidth >= 768 && windowWidth < 1024;
   const isDesktop = windowWidth >= 1024;
 
+  // Calculate grid height explicitly for iOS scrolling
+  useEffect(() => {
+    if (visible && headerRef.current && gridContainerRef.current) {
+      const updateGridHeight = () => {
+        const container = gridContainerRef.current?.parentElement;
+        const header = headerRef.current;
+        if (container && header) {
+          const containerHeight = container.clientHeight;
+          const headerHeight = header.offsetHeight;
+          const padding = isMobile ? 32 : 48; // Top + bottom padding
+          const availableHeight = containerHeight - headerHeight - padding;
+          if (gridContainerRef.current) {
+            gridContainerRef.current.style.maxHeight = `${availableHeight}px`;
+            gridContainerRef.current.style.height = `${availableHeight}px`;
+          }
+        }
+      };
+      updateGridHeight();
+      window.addEventListener('resize', updateGridHeight);
+      return () => window.removeEventListener('resize', updateGridHeight);
+    }
+  }, [visible, isMobile, windowWidth]);
+
+  if (!visible) return null;
+
   return createPortal(
     <div
       style={{
@@ -294,7 +309,8 @@ const VideoSelectionPopup = ({
         padding: isMobile ? '10px' : '20px',
         backdropFilter: 'blur(8px)',
         animation: 'fadeIn 0.2s ease',
-        overflow: 'hidden'
+        overflow: 'scroll',
+        WebkitOverflowScrolling: 'touch'
       }}
       onClick={handleBackdropClick}
     >
@@ -313,7 +329,8 @@ const VideoSelectionPopup = ({
           margin: 'auto',
           display: 'flex',
           flexDirection: 'column',
-          overflow: 'hidden'
+          overflow: 'scroll',
+          WebkitOverflowScrolling: 'touch'
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -354,7 +371,9 @@ const VideoSelectionPopup = ({
         </button>
 
         {/* Header */}
-        <div style={{ 
+        <div 
+          ref={headerRef}
+          style={{ 
           marginBottom: isMobile ? '16px' : '20px', 
           textAlign: 'center',
           flexShrink: 0,
@@ -387,25 +406,30 @@ const VideoSelectionPopup = ({
 
         {/* Video Options Grid - Artistic Gallery Layout */}
         <div 
+          ref={gridContainerRef}
           className="video-selection-grid"
           style={{
             display: 'grid',
             gridTemplateColumns: isMobile 
               ? 'repeat(2, minmax(0, 1fr))' 
               : 'repeat(4, minmax(0, 1fr))',
+            gridAutoRows: 'min-content',
             gap: isMobile ? '12px' : '20px',
-            overflowY: 'auto',
+            overflowY: 'scroll',
             overflowX: 'hidden',
             flex: 1,
             padding: isMobile ? '0 4px 4px 4px' : '0 4px 4px 4px',
             minHeight: 0,
-            alignItems: 'stretch',
+            alignItems: 'start',
             justifyContent: 'stretch',
             width: '100%',
             boxSizing: 'border-box',
             WebkitOverflowScrolling: 'touch',
             touchAction: 'pan-y',
-            overscrollBehavior: 'contain'
+            overscrollBehavior: 'contain',
+            // Force hardware acceleration for smooth scrolling on iOS
+            transform: 'translateZ(0)',
+            willChange: 'scroll-position'
           }}
         >
           {videoOptions.map((option, index) => {
@@ -439,9 +463,7 @@ const VideoSelectionPopup = ({
                   minWidth: 0,
                   maxWidth: '100%',
                   backdropFilter: 'blur(10px)',
-                  height: '100%',
-                  boxSizing: 'border-box',
-                  overflow: 'hidden'
+                  boxSizing: 'border-box'
                 }}
                 onMouseOver={(e) => {
                   if (!isDisabled) {
@@ -490,30 +512,7 @@ const VideoSelectionPopup = ({
                         zIndex: 1,
                         pointerEvents: 'none'
                       }} />
-                      {/* Preload video for seamless transitions */}
-                      {option.exampleVideos && (
-                        <video
-                          ref={(el) => {
-                            if (option.id === 'prompt' && el) {
-                              promptPreloadRefs.current[option.id] = el;
-                            } else if (option.id === 'emoji' && el) {
-                              emojiPreloadRefs.current[option.id] = el;
-                            } else if (option.id === 'bald-for-base' && el) {
-                              baldForBasePreloadRefs.current[option.id] = el;
-                            }
-                          }}
-                          preload="auto"
-                          muted
-                          playsInline
-                          style={{
-                            position: 'absolute',
-                            width: 0,
-                            height: 0,
-                            opacity: 0,
-                            pointerEvents: 'none'
-                          }}
-                        />
-                      )}
+                      {/* Single video element - simple approach matching Bald For Base popup */}
                       <video
                         key={option.id}
                         ref={(el) => {
@@ -527,77 +526,21 @@ const VideoSelectionPopup = ({
                         }}
                         src={option.exampleVideo}
                         autoPlay
-                        loop={!option.exampleVideos}
                         muted
                         playsInline
-                        preload="auto"
+                        preload="metadata"
+                        loop={!option.exampleVideos}
                         onEnded={() => {
                           if (option.exampleVideos && option.setVideoIndex) {
-                            const currentVideoEl = option.id === 'prompt' 
-                              ? promptVideoRefs.current[option.id]
-                              : option.id === 'emoji'
-                              ? emojiVideoRefs.current[option.id]
-                              : baldForBaseVideoRefs.current[option.id];
-                            const preloadEl = option.id === 'prompt'
-                              ? promptPreloadRefs.current[option.id]
-                              : option.id === 'emoji'
-                              ? emojiPreloadRefs.current[option.id]
-                              : baldForBasePreloadRefs.current[option.id];
-                            
-                            // Check if preload is ready (readyState 4 = HAVE_ENOUGH_DATA)
-                            // Use readyState >= 4 for seamless playback
-                            if (currentVideoEl && preloadEl && preloadEl.readyState >= 4) {
-                              // Next video is fully ready, swap seamlessly without React re-render
-                              const nextIndex = (option.videoIndex + 1) % option.exampleVideos.length;
-                              // Mark as manual transition to prevent useEffect from interfering
-                              isManualTransition.current[option.id] = true;
-                              // Update src directly to avoid React re-render delay
-                              currentVideoEl.src = preloadEl.src;
-                              currentVideoEl.currentTime = 0;
-                              // Ensure video plays immediately - don't wait for load event
-                              const playPromise = currentVideoEl.play();
-                              if (playPromise !== undefined) {
-                                playPromise.catch(() => {});
-                              }
-                              // Update state for next preload
-                              option.setVideoIndex(nextIndex);
-                            } else if (currentVideoEl && preloadEl && preloadEl.readyState >= 2) {
-                              // Video has some data, try to play but might have brief delay
-                              const nextIndex = (option.videoIndex + 1) % option.exampleVideos.length;
-                              isManualTransition.current[option.id] = true;
-                              currentVideoEl.src = preloadEl.src;
-                              currentVideoEl.currentTime = 0;
-                              // Wait for canplay event before playing
-                              const playWhenReady = () => {
-                                currentVideoEl.play().catch(() => {});
-                                currentVideoEl.removeEventListener('canplay', playWhenReady);
-                              };
-                              currentVideoEl.addEventListener('canplay', playWhenReady);
-                              currentVideoEl.load();
-                              option.setVideoIndex(nextIndex);
-                            } else {
-                              // Fallback: update state (will cause delay but ensures progression)
-                              const nextIndex = (option.videoIndex + 1) % option.exampleVideos.length;
-                              option.setVideoIndex(nextIndex);
-                            }
-                          }
-                        }}
-                        onLoadedData={() => {
-                          // Only play if video is actually paused and not already playing
-                          const videoEl = option.id === 'prompt'
-                            ? promptVideoRefs.current[option.id]
-                            : option.id === 'emoji'
-                            ? emojiVideoRefs.current[option.id]
-                            : baldForBaseVideoRefs.current[option.id];
-                          if (videoEl && videoEl.paused && videoEl.readyState >= 2) {
-                            videoEl.play().catch(() => {});
+                            const nextIndex = (option.videoIndex + 1) % option.exampleVideos.length;
+                            // Just update state - useEffect will handle the src change seamlessly
+                            option.setVideoIndex(nextIndex);
                           }
                         }}
                         style={{
                           width: '100%',
                           height: '100%',
                           objectFit: 'cover',
-                          display: 'block',
                           position: 'absolute',
                           top: 0,
                           left: 0,
@@ -682,11 +625,9 @@ const VideoSelectionPopup = ({
                     lineHeight: '1.4',
                     fontWeight: '400',
                     letterSpacing: '0.01em',
-                    display: '-webkit-box',
-                    WebkitLineClamp: isMobile ? 3 : 'none',
-                    WebkitBoxOrient: 'vertical',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis'
+                    display: 'block',
+                    overflow: 'visible',
+                    textOverflow: 'clip'
                   }}>
                     {option.description}
                   </p>
