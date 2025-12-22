@@ -254,10 +254,10 @@ const VideoSelectionPopup = ({
           style={{
             display: 'grid',
             gridTemplateColumns: isMobile 
-              ? '1fr' 
+              ? 'repeat(2, minmax(0, 1fr))' 
               : 'repeat(4, minmax(0, 1fr))',
-            gap: isMobile ? '20px' : '20px',
-            overflow: 'hidden',
+            gap: isMobile ? '12px' : '20px',
+            overflow: 'auto',
             flex: 1,
             padding: isMobile ? '0 4px 4px 4px' : '0 4px 4px 4px',
             maxHeight: '100%',
@@ -414,34 +414,39 @@ const VideoSelectionPopup = ({
 
                 {/* Content Section */}
                 <div style={{
-                  padding: isMobile ? '16px' : '16px',
+                  padding: isMobile ? '12px' : '16px',
                   display: 'flex',
                   flexDirection: 'column',
-                  gap: isMobile ? '8px' : '8px',
+                  gap: isMobile ? '6px' : '8px',
                   flex: '0 0 auto',
-                  background: 'transparent'
+                  background: 'transparent',
+                  minHeight: 0
                 }}>
                   {/* Title and Icon */}
                   <div style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: isMobile ? '8px' : '10px',
+                    gap: isMobile ? '6px' : '10px',
                     marginBottom: '2px'
                   }}>
                     <span style={{ 
-                      fontSize: isMobile ? '24px' : '28px',
-                      filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1))'
+                      fontSize: isMobile ? '20px' : '28px',
+                      filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1))',
+                      flexShrink: 0
                     }}>
                       {option.icon}
                     </span>
                     <h3 style={{
                       margin: 0,
                       color: isDisabled ? '#9CA3AF' : '#1a1a1a',
-                      fontSize: isMobile ? '18px' : '22px',
+                      fontSize: isMobile ? '16px' : '22px',
                       fontWeight: '700',
                       fontFamily: '"Permanent Marker", cursive',
                       letterSpacing: '-0.01em',
-                      lineHeight: '1.2'
+                      lineHeight: '1.2',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap'
                     }}>
                       {option.title}
                     </h3>
@@ -451,10 +456,15 @@ const VideoSelectionPopup = ({
                   <p style={{
                     margin: 0,
                     color: isDisabled ? '#9CA3AF' : '#666',
-                    fontSize: isMobile ? '13px' : '14px',
-                    lineHeight: '1.5',
+                    fontSize: isMobile ? '11px' : '14px',
+                    lineHeight: '1.4',
                     fontWeight: '400',
-                    letterSpacing: '0.01em'
+                    letterSpacing: '0.01em',
+                    display: '-webkit-box',
+                    WebkitLineClamp: isMobile ? 3 : 'none',
+                    WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis'
                   }}>
                     {option.description}
                   </p>
@@ -521,13 +531,19 @@ const VideoSelectionPopup = ({
             transform: scale(1);
           }
         }
-        /* No scrollbar - content must fit */
+        /* Hide scrollbar but allow scrolling */
         .video-selection-grid::-webkit-scrollbar {
-          display: none;
+          width: 4px;
         }
-        .video-selection-grid {
-          scrollbar-width: none;
-          -ms-overflow-style: none;
+        .video-selection-grid::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .video-selection-grid::-webkit-scrollbar-thumb {
+          background: rgba(0, 0, 0, 0.2);
+          border-radius: 2px;
+        }
+        .video-selection-grid::-webkit-scrollbar-thumb:hover {
+          background: rgba(0, 0, 0, 0.3);
         }
       `}</style>
     </div>,

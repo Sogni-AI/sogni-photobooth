@@ -48,36 +48,56 @@ const BaldForBaseConfirmationPopup = ({
     if (visible) {
       setCurrentVideoIndex(0);
       setVideoError(null);
-      // Auto-play the first video when popup opens
+      // Reset and prepare the first video when popup opens
       if (videoRef.current) {
         const video = videoRef.current;
+        video.src = videoUrls[0];
         video.currentTime = 0;
-        // Small delay to ensure video is ready
-        setTimeout(() => {
-          video.play().catch(err => {
-            console.log('Video autoplay prevented:', err);
-            setVideoError(err.message);
-          });
-        }, 100);
+        video.load();
+        // Let autoPlay handle the initial play to avoid conflicts
       }
     }
   }, [visible]);
 
+  // Update video source when index changes (without remounting)
+  useEffect(() => {
+    if (videoRef.current && videoUrls[currentVideoIndex]) {
+      const video = videoRef.current;
+      const newSrc = videoUrls[currentVideoIndex];
+      
+      // Only update if the source is different to avoid unnecessary reloads
+      if (video.src !== newSrc) {
+        // Pause and reset before changing source
+        video.pause();
+        video.currentTime = 0;
+        
+        // Set new source and load
+        video.src = newSrc;
+        video.load();
+        
+        // Play after video is ready (using canplay event)
+        const playWhenReady = () => {
+          if (videoRef.current && videoRef.current.src === newSrc) {
+            videoRef.current.play().catch(err => {
+              console.log('Video autoplay prevented:', err);
+              setVideoError(err.message);
+            });
+          }
+        };
+        
+        video.addEventListener('canplay', playWhenReady, { once: true });
+      }
+    }
+  }, [currentVideoIndex]);
+
   // Handle video end event - move to next video
   const handleVideoEnd = () => {
+    if (!videoRef.current) return;
+    
     const nextIndex = (currentVideoIndex + 1) % videoUrls.length;
+    
+    // Just update the state - useEffect will handle the src change
     setCurrentVideoIndex(nextIndex);
-    // Video src will update automatically via React, just play it
-    if (videoRef.current) {
-      const video = videoRef.current;
-      // Small delay to ensure video is ready
-      setTimeout(() => {
-        video.play().catch(err => {
-          console.log('Video autoplay prevented:', err);
-          setVideoError(err.message);
-        });
-      }, 100);
-    }
   };
 
   // Handle video errors
@@ -110,12 +130,8 @@ const BaldForBaseConfirmationPopup = ({
   // Handle video loaded
   const handleVideoLoaded = () => {
     setVideoError(null);
-    console.log('Video loaded successfully:', videoUrls[currentVideoIndex]);
-    if (videoRef.current) {
-      videoRef.current.play().catch(err => {
-        console.log('Video autoplay prevented after load:', err);
-      });
-    }
+    // Don't auto-play here - let the video element's autoPlay attribute handle it
+    // This prevents multiple play() calls that can cause issues
   };
 
   // Handle video click to go fullscreen
@@ -182,7 +198,7 @@ const BaldForBaseConfirmationPopup = ({
           width: '100%',
           height: isWideScreen ? 'auto' : '100%',
           maxHeight: isWideScreen ? '95vh' : '100vh',
-          overflow: isWideScreen ? 'auto' : 'hidden',
+          overflow: isWideScreen ? 'hidden' : 'hidden',
           display: 'flex',
           flexDirection: 'column',
           justifyContent: isWideScreen ? 'flex-start' : 'flex-start',
@@ -198,15 +214,14 @@ const BaldForBaseConfirmationPopup = ({
           alt="Sloth mascot with camera"
           style={{
             position: 'absolute',
-            left: isWideScreen ? '-17%' : '-21%',
-            top: isWideScreen ? '3%' : '-16%',
-            height: isWideScreen ? '240%' : '160%',
+            left: isWideScreen ? '-12%' : '-8%',
+            top: isWideScreen ? '1%' : '-16%',
+            height: isWideScreen ? '230%' : '160%',
             opacity: 0.85,
             zIndex: 1,
             pointerEvents: 'none',
-            animation: 'float 6s ease-in-out infinite',
             filter: 'drop-shadow(0 4px 12px rgba(0, 0, 0, 0.2))',
-            maxWidth: isWideScreen ? '100%' : '200%',
+            maxWidth: isWideScreen ? '100%' : '200%'
           }}
         />
         {/* Close button */}
@@ -244,135 +259,158 @@ const BaldForBaseConfirmationPopup = ({
           ×
         </button>
 
-        {/* Main Content Container */}
+        {/* Main Content Container - Single column for mobile, 2-column for desktop */}
         <div style={{
           display: 'flex',
           flexDirection: isWideScreen ? 'row' : 'column',
-          gap: isWideScreen ? '32px' : '0',
+          gap: isWideScreen ? '32px' : '16px',
           flex: 1,
           minHeight: 0,
-          overflow: isWideScreen ? 'visible' : 'auto',
+          overflow: isWideScreen ? 'visible' : 'hidden',
           alignItems: isWideScreen ? 'center' : 'stretch',
           justifyContent: isWideScreen ? 'flex-start' : 'flex-start',
-          padding: isWideScreen ? '0' : '0 20px',
+          padding: isWideScreen ? '0' : '0 45px',
+          paddingTop: isWideScreen ? '0' : '32px',
+          paddingBottom: isWideScreen ? '0' : (formatCost(costRaw, costUSD) && !loading ? '80px' : '100px'),
           position: 'relative',
           zIndex: 2
         }}>
-          {/* Marketing Content */}
-          <div 
-            className="bald-for-base-popup-content"
-            style={{
-              flex: isWideScreen ? '1 1 auto' : '1 1 auto',
-              display: 'flex',
-              flexDirection: 'column',
-              minWidth: 0,
-              position: 'relative',
-              gap: isWideScreen ? '20px' : '20px',
-              padding: isWideScreen ? '0 20px' : '30px',
-              paddingTop: isWideScreen ? '0' : '24px',
-              paddingBottom: isWideScreen ? '0' : '0'
-            }}
-          >
-            {/* Popup Title */}
+          {/* Popup Title - Mobile only */}
+          {!isWideScreen && (
             <div style={{
-              fontSize: isWideScreen ? '42px' : '36px',
+              fontSize: '36px',
               fontWeight: '800',
               color: 'white',
-              marginBottom: isWideScreen ? '8px' : '4px',
-              marginTop: isWideScreen ? '0' : '25px',
+              marginBottom: '8px',
+              marginTop: '0',
               lineHeight: '1.2',
               letterSpacing: '-0.02em',
-              textAlign: isWideScreen ? 'left' : 'center',
-              textShadow: isWideScreen ? '0 2px 12px rgba(0, 0, 0, 0.5), 0 1px 4px rgba(0, 0, 0, 0.4)' : '0 2px 12px rgba(0, 0, 0, 0.5), 0 1px 4px rgba(0, 0, 0, 0.4)'
+              textAlign: 'center',
+              textShadow: '0 2px 12px rgba(0, 0, 0, 0.5), 0 1px 4px rgba(0, 0, 0, 0.4)',
+              flexShrink: 0,
+              width: '100%'
             }}>
               SOGNI + BASE App
             </div>
+          )}
 
-            {/* Main Content Section */}
+          {/* Base App Preview Image - Mobile only */}
+          {!isWideScreen && (
             <div style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: isWideScreen ? '20px' : '20px',
-              flex: 1,
-              minHeight: 0
+              width: '100%',
+              margin: '0',
+              position: 'relative',
+              borderRadius: '16px',
+              overflow: 'hidden',
+              boxShadow: '0 8px 24px rgba(0, 0, 0, 0.3)',
+              background: 'rgba(0, 0, 0, 0.2)',
+              flexShrink: 0
             }}>
-              {/* Text Content */}
+              <img
+                src="/base-hero-wallet-metadata.png"
+                alt="Base App Preview"
+                style={{
+                  width: '100%',
+                  height: 'auto',
+                  display: 'block',
+                  objectFit: 'contain',
+                  borderRadius: '16px'
+                }}
+              />
+              <a
+                href="https://blog.base.org/baseapp"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  position: 'absolute',
+                  bottom: '12px',
+                  left: '12px',
+                  display: 'inline-block',
+                  padding: '8px 14px',
+                  background: 'rgba(0, 0, 0, 0.85)',
+                  borderRadius: '8px',
+                  color: 'white',
+                  fontSize: '12px',
+                  fontWeight: '600',
+                  textDecoration: 'none',
+                  border: '1px solid rgba(255, 255, 255, 0.3)',
+                  transition: 'all 0.2s ease',
+                  backdropFilter: 'blur(8px)'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.background = 'rgba(0, 0, 0, 0.95)';
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.background = 'rgba(0, 0, 0, 0.85)';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                }}
+              >
+                Learn More ↗
+              </a>
+            </div>
+          )}
+
+          {/* Desktop: Marketing Content */}
+          {isWideScreen && (
+            <div 
+              className="bald-for-base-popup-content"
+              style={{
+                flex: '1 1 auto',
+                display: 'flex',
+                flexDirection: 'column',
+                minWidth: 0,
+                position: 'relative',
+                gap: '20px',
+                padding: '0 20px',
+                overflow: 'visible',
+                maxHeight: 'none'
+              }}
+            >
+              {/* Popup Title - Desktop */}
+              <div style={{
+                fontSize: '42px',
+                fontWeight: '800',
+                color: 'white',
+                marginBottom: '8px',
+                marginTop: '0',
+                lineHeight: '1.2',
+                letterSpacing: '-0.02em',
+                textAlign: 'left',
+                textShadow: '0 2px 12px rgba(0, 0, 0, 0.5), 0 1px 4px rgba(0, 0, 0, 0.4)'
+              }}>
+                SOGNI + BASE App
+              </div>
+
+              {/* Main Content Section */}
               <div style={{
                 display: 'flex',
                 flexDirection: 'column',
-                gap: '16px'
+                gap: '20px',
+                flex: 1,
+                minHeight: 0
               }}>
-                {/* Base App Preview Image - Mobile: Full width, prominent */}
-                {!isWideScreen && (
-                  <div style={{
-                    width: '100%',
-                    margin: '0 0 12px 0',
-                    position: 'relative',
-                    borderRadius: '16px',
-                    overflow: 'hidden',
-                    boxShadow: '0 8px 24px rgba(0, 0, 0, 0.3)',
-                    background: 'rgba(0, 0, 0, 0.2)'
-                  }}>
-                    <img
-                      src="/base-hero-wallet-metadata.png"
-                      alt="Base App Preview"
-                      style={{
-                        width: '100%',
-                        height: 'auto',
-                        display: 'block',
-                        objectFit: 'contain',
-                      }}
-                    />
-                    <a
-                      href="https://blog.base.org/baseapp"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{
-                        position: 'absolute',
-                        bottom: '12px',
-                        left: '12px',
-                        display: 'inline-block',
-                        padding: '8px 14px',
-                        background: 'rgba(0, 0, 0, 0.85)',
-                        borderRadius: '8px',
-                        color: 'white',
-                        fontSize: '12px',
-                        fontWeight: '600',
-                        textDecoration: 'none',
-                        border: '1px solid rgba(255, 255, 255, 0.3)',
-                        transition: 'all 0.2s ease',
-                        backdropFilter: 'blur(8px)'
-                      }}
-                      onMouseOver={(e) => {
-                        e.currentTarget.style.background = 'rgba(0, 0, 0, 0.95)';
-                        e.currentTarget.style.transform = 'translateY(-2px)';
-                      }}
-                      onMouseOut={(e) => {
-                        e.currentTarget.style.background = 'rgba(0, 0, 0, 0.85)';
-                        e.currentTarget.style.transform = 'translateY(0)';
-                      }}
-                    >
-                      Learn More ↗
-                    </a>
-                  </div>
-                )}
-
-                <p style={{
-                  margin: 0,
-                  color: 'rgba(255, 255, 255, 0.98)',
-                  fontSize: isWideScreen ? '16px' : '15px',
-                  lineHeight: '1.6',
-                  textAlign: 'left',
-                  fontWeight: '400',
-                  textShadow: isWideScreen ? '0 1px 6px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3)' : '0 1px 6px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3)'
+                {/* Text Content */}
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '16px'
                 }}>
-                  Coinbase's Base App is now live and <a href="https://www.sogni.ai/super-apps" target="_blank" rel="noopener noreferrer" style={{ color: 'white', textDecoration: 'underline', fontWeight: '700' }}>Sogni.ai SuperApps</a> will be available in Base App soon.
-                  Share a Bald for Base video on X or Base, tag <a href="https://x.com/Sogni_Protocol" target="_blank" rel="noopener noreferrer" style={{ color: 'white', textDecoration: 'underline', fontWeight: '700' }}>@Sogni_Protocol</a> for a chance at your share of 100,000 SOGNI tokens!
-                </p>
-              </div>
+                  <p style={{
+                    margin: 0,
+                    color: 'rgba(255, 255, 255, 0.98)',
+                    fontSize: '16px',
+                    lineHeight: '1.6',
+                    textAlign: 'left',
+                    fontWeight: '400',
+                    textShadow: '0 1px 6px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3)'
+                  }}>
+                    Coinbase's Base App is now live and <a href="https://www.sogni.ai/super-apps" target="_blank" rel="noopener noreferrer" style={{ color: 'white', textDecoration: 'underline', fontWeight: '700' }}>Sogni.ai SuperApps</a> will be available in Base App soon.
+                    Share a Bald for Base video on X or Base, tag <a href="https://x.com/Sogni_Protocol" target="_blank" rel="noopener noreferrer" style={{ color: 'white', textDecoration: 'underline', fontWeight: '700' }}>@Sogni_Protocol</a> for a chance at your share of 100,000 SOGNI tokens!
+                  </p>
+                </div>
 
-              {/* Base App Preview Image - Desktop only */}
-              {isWideScreen && (
+                {/* Base App Preview Image - Desktop only */}
                 <div style={{
                   marginTop: '8px',
                   position: 'relative',
@@ -426,90 +464,105 @@ const BaldForBaseConfirmationPopup = ({
                     Learn More ↗
                   </a>
                 </div>
-              )}
+              </div>
+            </div>
+          )}
 
-              {/* Video Teaser - Mobile: Larger, more prominent */}
-              {!isWideScreen && (
-                <div style={{
+          {/* Mobile: Text Content */}
+          {!isWideScreen && (
+            <p style={{
+              margin: 0,
+              color: 'rgba(255, 255, 255, 0.98)',
+              fontSize: '13px',
+              lineHeight: '1.4',
+              textAlign: 'left',
+              fontWeight: '400',
+              textShadow: '0 1px 6px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3)',
+              flexShrink: 0
+            }}>
+              Coinbase's Base App is now live and <a href="https://www.sogni.ai/super-apps" target="_blank" rel="noopener noreferrer" style={{ color: 'white', textDecoration: 'underline', fontWeight: '700' }}>Sogni.ai SuperApps</a> will be available in Base App soon.
+              Share a Bald for Base video on X or Base, tag <a href="https://x.com/Sogni_Protocol" target="_blank" rel="noopener noreferrer" style={{ color: 'white', textDecoration: 'underline', fontWeight: '700' }}>@Sogni_Protocol</a> for a chance at your share of 100,000 SOGNI tokens!
+            </p>
+          )}
+
+          {/* Video Teaser - Mobile: Centered, smaller */}
+          {!isWideScreen && (
+            <div style={{
+              width: '160px',
+              margin: '0 auto',
+              aspectRatio: '2 / 3',
+              borderRadius: '16px',
+              overflow: 'hidden',
+              background: 'rgba(0, 0, 0, 0.4)',
+              boxShadow: '0 8px 8px rgba(0, 0, 0, 0.4)',
+              position: 'relative',
+              flexShrink: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 3,
+              border: '2px solid rgba(255, 255, 255, 0.15)'
+            }}>
+              <video
+                ref={videoRef}
+                src={videoUrls[currentVideoIndex]}
+                autoPlay
+                muted
+                playsInline
+                loop={false}
+                preload="metadata"
+                onEnded={handleVideoEnd}
+                onError={handleVideoError}
+                onLoadedData={handleVideoLoaded}
+                onClick={handleVideoClick}
+                style={{
                   width: '100%',
-                  maxWidth: '220px',
-                  aspectRatio: '2 / 3',
-                  borderRadius: '16px',
-                  overflow: 'hidden',
-                  background: 'rgba(0, 0, 0, 0.4)',
-                  boxShadow: '0 8px 8px rgba(0, 0, 0, 0.4)',
-                  position: 'relative',
-                  flexShrink: 0,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  margin: '8px auto 0',
-                  border: '2px solid rgba(255, 255, 255, 0.15)'
+                  height: '100%',
+                  display: 'block',
+                  objectFit: 'cover',
+                  objectPosition: 'center center',
+                  cursor: 'pointer',
+                  aspectRatio: '2 / 3'
+                }}
+              />
+              {videoError && (
+                <div style={{
+                  position: 'absolute',
+                  top: '50%',
+                  left: '50%',
+                  transform: 'translate(-50%, -50%)',
+                  color: 'white',
+                  fontSize: '12px',
+                  textAlign: 'center',
+                  padding: '12px',
+                  background: 'rgba(255, 0, 0, 0.8)',
+                  borderRadius: '8px',
+                  zIndex: 10
                 }}>
-                  <video
-                    ref={videoRef}
-                    src={videoUrls[currentVideoIndex]}
-                    autoPlay
-                    muted
-                    playsInline
-                    loop={false}
-                    preload="metadata"
-                    onEnded={handleVideoEnd}
-                    onError={handleVideoError}
-                    onLoadedData={handleVideoLoaded}
-                    onCanPlay={handleVideoLoaded}
-                    onClick={handleVideoClick}
-                    key={currentVideoIndex}
-                    style={{
-                      width: '100%',
-                      height: '100%',
-                      display: 'block',
-                      objectFit: 'cover',
-                      objectPosition: 'center center',
-                      cursor: 'pointer',
-                      aspectRatio: '2 / 3'
-                    }}
-                  />
-                  {videoError && (
-                    <div style={{
-                      position: 'absolute',
-                      top: '50%',
-                      left: '50%',
-                      transform: 'translate(-50%, -50%)',
-                      color: 'white',
-                      fontSize: '12px',
-                      textAlign: 'center',
-                      padding: '12px',
-                      background: 'rgba(255, 0, 0, 0.8)',
-                      borderRadius: '8px',
-                      zIndex: 10
-                    }}>
-                      Video Error
-                    </div>
-                  )}
-                  {/* Contest info overlay at bottom */}
-                  <div style={{
-                    position: 'absolute',
-                    bottom: 0,
-                    left: 0,
-                    right: 0,
-                    padding: '10px 12px',
-                    background: 'linear-gradient(to top, rgba(0, 0, 0, 0.85) 0%, rgba(0, 0, 0, 0.7) 70%, transparent 100%)',
-                    color: 'white',
-                    fontSize: '11px',
-                    textAlign: 'center',
-                    zIndex: 5,
-                    pointerEvents: 'none'
-                  }}>
-                    <div style={{ fontWeight: '700', marginBottom: '2px' }}>5 winners on Jan 15</div>
-                    <div style={{ fontSize: '10px', opacity: 0.9 }}>Tag and follow for updates</div>
-                  </div>
+                  {videoError}
                 </div>
               )}
+              {/* Contest info overlay at bottom */}
+              <div style={{
+                position: 'absolute',
+                bottom: 0,
+                left: 0,
+                right: 0,
+                padding: isWideScreen ? '12px 14px' : '10px 12px',
+                background: 'linear-gradient(to top, rgba(0, 0, 0, 0.85) 0%, rgba(0, 0, 0, 0.7) 70%, transparent 100%)',
+                color: 'white',
+                fontSize: isWideScreen ? '12px' : '11px',
+                textAlign: 'center',
+                zIndex: 5,
+                pointerEvents: 'none'
+              }}>
+                <div style={{ fontWeight: '700', marginBottom: '2px' }}>5 winners on Jan 15</div>
+                <div style={{ fontSize: isWideScreen ? '11px' : '10px', opacity: 0.9 }}>Tag and follow for updates</div>
+              </div>
             </div>
-          </div>
+          )}
 
-          {/* Video Teaser - Desktop only */}
+          {/* Video Teaser - Desktop */}
           {isWideScreen && (
             <div style={{
               flex: '0 0 auto',
@@ -539,9 +592,7 @@ const BaldForBaseConfirmationPopup = ({
                 onEnded={handleVideoEnd}
                 onError={handleVideoError}
                 onLoadedData={handleVideoLoaded}
-                onCanPlay={handleVideoLoaded}
                 onClick={handleVideoClick}
-                key={currentVideoIndex}
                 style={{
                   width: '100%',
                   height: '100%',
@@ -588,10 +639,60 @@ const BaldForBaseConfirmationPopup = ({
               </div>
             </div>
           )}
+
+          {/* Generate Button - Mobile only */}
+          {!isWideScreen && (
+            <button
+              type="button"
+              onClick={onConfirm}
+              disabled={loading}
+              style={{
+                width: '100%',
+                padding: '14px 20px',
+                borderRadius: '14px',
+                border: 'none',
+                background: loading ? 'rgba(0, 82, 255, 0.5)' : '#0052FF',
+                color: 'white',
+                fontSize: '14px',
+                fontWeight: '700',
+                cursor: loading ? 'not-allowed' : 'pointer',
+                transition: 'all 0.25s ease',
+                boxShadow: loading ? 'none' : '0 6px 24px rgba(0, 82, 255, 0.4)',
+                touchAction: 'manipulation',
+                letterSpacing: '-0.01em',
+                lineHeight: '1.4',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                flexShrink: 0
+              }}
+              onMouseOver={(e) => {
+                if (!loading) {
+                  e.currentTarget.style.background = '#0039CC';
+                  e.currentTarget.style.boxShadow = '0 8px 32px rgba(0, 82, 255, 0.5)';
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                }
+              }}
+              onMouseOut={(e) => {
+                if (!loading) {
+                  e.currentTarget.style.background = '#0052FF';
+                  e.currentTarget.style.boxShadow = '0 6px 24px rgba(0, 82, 255, 0.4)';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                }
+              }}
+            >
+              {loading 
+                ? '⏳ Calculating...' 
+                : isBatch && itemCount > 1
+                  ? `Generate ${itemCount} Videos ⚡️`
+                  : 'Generate Video ⚡️'
+              }
+            </button>
+          )}
         </div>
 
-        {/* Action Buttons */}
-        {isWideScreen ? (
+        {/* Action Buttons - Desktop only */}
+        {isWideScreen && (
           <div style={{
             display: 'flex',
             flexDirection: 'row',
@@ -639,62 +740,6 @@ const BaldForBaseConfirmationPopup = ({
                 if (!loading) {
                   e.currentTarget.style.background = '#FF1493';
                   e.currentTarget.style.boxShadow = '0 6px 24px rgba(255, 20, 147, 0.4)';
-                  e.currentTarget.style.transform = 'translateY(0)';
-                }
-              }}
-            >
-              {loading 
-                ? '⏳ Calculating...' 
-                : isBatch && itemCount > 1
-                  ? `Generate ${itemCount} Bald for Base Videos ⚡️`
-                  : 'Generate a Bald for Base Video ⚡️'
-              }
-            </button>
-          </div>
-        ) : (
-          <div style={{
-            display: 'flex',
-            gap: '12px',
-            marginTop: '20px',
-            marginBottom: formatCost(costRaw, costUSD) && !loading ? '70px' : '38px',
-            padding: '0 20px',
-            flexShrink: 0,
-            justifyContent: 'center',
-            position: 'relative',
-            zIndex: 3
-          }}>
-            <button
-              type="button"
-              onClick={onConfirm}
-              disabled={loading}
-              style={{
-                flex: 1,
-                maxWidth: '300px',
-                padding: '16px 24px',
-                borderRadius: '14px',
-                border: 'none',
-                background: loading ? 'rgba(0, 82, 255, 0.5)' : '#0052FF',
-                color: 'white',
-                fontSize: '15px',
-                fontWeight: '700',
-                cursor: loading ? 'not-allowed' : 'pointer',
-                transition: 'all 0.25s ease',
-                boxShadow: loading ? 'none' : '0 6px 24px rgba(0, 82, 255, 0.4)',
-                touchAction: 'manipulation',
-                letterSpacing: '-0.01em',
-                lineHeight: '1.4'
-              }}
-              onMouseOver={(e) => {
-                if (!loading) {
-                  e.currentTarget.style.background = '#0039CC';
-                  e.currentTarget.style.boxShadow = '0 8px 32px rgba(0, 82, 255, 0.5)';
-                  e.currentTarget.style.transform = 'translateY(-2px)';
-                }
-              }}
-              onMouseOut={(e) => {
-                if (!loading) {
-                  e.currentTarget.style.background = '#0052FF';
-                  e.currentTarget.style.boxShadow = '0 6px 24px rgba(0, 82, 255, 0.4)';
                   e.currentTarget.style.transform = 'translateY(0)';
                 }
               }}
@@ -807,14 +852,6 @@ const BaldForBaseConfirmationPopup = ({
           to {
             opacity: 1;
             transform: translateY(0);
-          }
-        }
-        @keyframes float {
-          0%, 100% {
-            transform: translateY(0px);
-          }
-          50% {
-            transform: translateY(-20px);
           }
         }
         /* Hide scrollbar but allow scrolling */
