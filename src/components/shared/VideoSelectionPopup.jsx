@@ -51,42 +51,27 @@ const VideoSelectionPopup = ({
   const gridContainerRef = React.useRef(null);
 
 
-  // Update video source when index changes - iOS optimized approach
+  // Update video source when index changes - simple approach with preloaded cache
   useEffect(() => {
     const promptVideoEl = promptVideoRefs.current['prompt'];
     if (promptVideoEl && promptVideos[promptVideoIndex]) {
       const video = promptVideoEl;
       const newSrc = promptVideos[promptVideoIndex];
       
-      // Only update if the source is different to avoid unnecessary reloads
       if (video.src !== newSrc && !video.src.endsWith(newSrc.split('/').pop())) {
-        // Pause before changing source
         video.pause();
-        
-        // On iOS, append fragment identifier to prompt immediate frame display
-        // Don't call load() - let browser handle it naturally to use cache
-        const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
-        const srcWithFragment = isIOS ? `${newSrc}#t=0.001` : newSrc;
-        video.src = srcWithFragment;
         video.currentTime = 0;
+        video.src = newSrc;
+        video.load();
         
-        // Try to play immediately - if cached, this should work
-        // Use loadeddata event which fires faster than canplay on cached videos
-        const tryPlay = () => {
-          if (promptVideoRefs.current['prompt'] && promptVideoRefs.current['prompt'].src.includes(newSrc)) {
+        // Play when ready - videos should be cached from preload
+        const playWhenReady = () => {
+          if (promptVideoRefs.current['prompt'] && promptVideoRefs.current['prompt'].src === newSrc) {
             promptVideoRefs.current['prompt'].play().catch(() => {});
           }
         };
         
-        // If already loaded (cached), play immediately
-        if (video.readyState >= 2) {
-          requestAnimationFrame(tryPlay);
-        } else {
-          // Wait for loadeddata which fires quickly for cached videos
-          video.addEventListener('loadeddata', tryPlay, { once: true });
-          // Fallback to canplay if loadeddata doesn't fire
-          video.addEventListener('canplay', tryPlay, { once: true });
-        }
+        video.addEventListener('canplay', playWhenReady, { once: true });
       }
     }
   }, [promptVideoIndex]);
@@ -99,23 +84,17 @@ const VideoSelectionPopup = ({
       
       if (video.src !== newSrc && !video.src.endsWith(newSrc.split('/').pop())) {
         video.pause();
-        const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
-        const srcWithFragment = isIOS ? `${newSrc}#t=0.001` : newSrc;
-        video.src = srcWithFragment;
         video.currentTime = 0;
+        video.src = newSrc;
+        video.load();
         
-        const tryPlay = () => {
-          if (emojiVideoRefs.current['emoji'] && emojiVideoRefs.current['emoji'].src.includes(newSrc)) {
+        const playWhenReady = () => {
+          if (emojiVideoRefs.current['emoji'] && emojiVideoRefs.current['emoji'].src === newSrc) {
             emojiVideoRefs.current['emoji'].play().catch(() => {});
           }
         };
         
-        if (video.readyState >= 2) {
-          requestAnimationFrame(tryPlay);
-        } else {
-          video.addEventListener('loadeddata', tryPlay, { once: true });
-          video.addEventListener('canplay', tryPlay, { once: true });
-        }
+        video.addEventListener('canplay', playWhenReady, { once: true });
       }
     }
   }, [emojiVideoIndex]);
@@ -128,34 +107,44 @@ const VideoSelectionPopup = ({
       
       if (video.src !== newSrc && !video.src.endsWith(newSrc.split('/').pop())) {
         video.pause();
-        const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
-        const srcWithFragment = isIOS ? `${newSrc}#t=0.001` : newSrc;
-        video.src = srcWithFragment;
         video.currentTime = 0;
+        video.src = newSrc;
+        video.load();
         
-        const tryPlay = () => {
-          if (baldForBaseVideoRefs.current['bald-for-base'] && baldForBaseVideoRefs.current['bald-for-base'].src.includes(newSrc)) {
+        const playWhenReady = () => {
+          if (baldForBaseVideoRefs.current['bald-for-base'] && baldForBaseVideoRefs.current['bald-for-base'].src === newSrc) {
             baldForBaseVideoRefs.current['bald-for-base'].play().catch(() => {});
           }
         };
         
-        if (video.readyState >= 2) {
-          requestAnimationFrame(tryPlay);
-        } else {
-          video.addEventListener('loadeddata', tryPlay, { once: true });
-          video.addEventListener('canplay', tryPlay, { once: true });
-        }
+        video.addEventListener('canplay', playWhenReady, { once: true });
       }
     }
   }, [baldForBaseVideoIndex]);
 
-  // Reset video indices when popup becomes visible
+  // Preload all videos when popup opens to ensure they're cached on iOS
   useEffect(() => {
     if (visible) {
       setPromptVideoIndex(0);
       setEmojiVideoIndex(0);
       setBaldForBaseVideoIndex(0);
-      // Reset prompt video source
+      
+      // Preload all videos in hidden elements to cache them on iOS
+      const allVideos = [...promptVideos, ...emojiVideos, ...baldForBaseVideos];
+      allVideos.forEach((videoUrl) => {
+        const preloadVideo = document.createElement('video');
+        preloadVideo.src = videoUrl;
+        preloadVideo.preload = 'auto';
+        preloadVideo.muted = true;
+        preloadVideo.style.display = 'none';
+        document.body.appendChild(preloadVideo);
+        // Remove after a short delay to allow caching
+        setTimeout(() => {
+          document.body.removeChild(preloadVideo);
+        }, 1000);
+      });
+      
+      // Reset and play first videos
       const promptVideoEl = promptVideoRefs.current['prompt'];
       if (promptVideoEl) {
         promptVideoEl.src = promptVideos[0];
@@ -164,7 +153,6 @@ const VideoSelectionPopup = ({
           console.log('Video autoplay prevented:', err);
         });
       }
-      // Reset emoji video source
       const emojiVideoEl = emojiVideoRefs.current['emoji'];
       if (emojiVideoEl) {
         emojiVideoEl.src = emojiVideos[0];
@@ -173,7 +161,6 @@ const VideoSelectionPopup = ({
           console.log('Video autoplay prevented:', err);
         });
       }
-      // Reset Bald for Base video source
       const baldForBaseVideoEl = baldForBaseVideoRefs.current['bald-for-base'];
       if (baldForBaseVideoEl) {
         baldForBaseVideoEl.src = baldForBaseVideos[0];

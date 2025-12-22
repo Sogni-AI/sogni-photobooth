@@ -43,44 +43,52 @@ const BaldForBaseConfirmationPopup = ({
     return () => window.removeEventListener('resize', checkScreenWidth);
   }, []);
 
-  // Reset video index when popup becomes visible
+  // Preload all videos and reset when popup becomes visible
   useEffect(() => {
     if (visible) {
       setCurrentVideoIndex(0);
       setVideoError(null);
+      
+      // Preload all videos in hidden elements to cache them on iOS
+      videoUrls.forEach((videoUrl) => {
+        const preloadVideo = document.createElement('video');
+        preloadVideo.src = videoUrl;
+        preloadVideo.preload = 'auto';
+        preloadVideo.muted = true;
+        preloadVideo.style.display = 'none';
+        document.body.appendChild(preloadVideo);
+        setTimeout(() => {
+          if (document.body.contains(preloadVideo)) {
+            document.body.removeChild(preloadVideo);
+          }
+        }, 1000);
+      });
+      
       // Reset and prepare the first video when popup opens
       if (videoRef.current) {
         const video = videoRef.current;
         video.src = videoUrls[0];
         video.currentTime = 0;
         video.load();
-        // Let autoPlay handle the initial play to avoid conflicts
       }
     }
   }, [visible]);
 
-  // Update video source when index changes - iOS optimized approach
+  // Update video source when index changes - simple approach with preloaded cache
   useEffect(() => {
     if (videoRef.current && videoUrls[currentVideoIndex]) {
       const video = videoRef.current;
       const newSrc = videoUrls[currentVideoIndex];
       
-      // Only update if the source is different to avoid unnecessary reloads
       if (video.src !== newSrc) {
-        // Pause before changing source
         video.pause();
-        
-        // On iOS, append fragment identifier to prompt immediate frame display
-        // Don't call load() - let browser handle it naturally to use cache
-        const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
-        const srcWithFragment = isIOS ? `${newSrc}#t=0.001` : newSrc;
-        video.src = srcWithFragment;
         video.currentTime = 0;
+        video.src = newSrc;
+        video.load();
         
-        // Try to play immediately - if cached, this should work
-        // Use loadeddata event which fires faster than canplay on cached videos
-        const tryPlay = () => {
-          if (videoRef.current && videoRef.current.src.includes(newSrc)) {
+        // Play when ready - videos should be cached from preload
+        const playWhenReady = () => {
+          if (videoRef.current && videoRef.current.src === newSrc) {
             videoRef.current.play().catch(err => {
               console.log('Video autoplay prevented:', err);
               setVideoError(err.message);
@@ -88,15 +96,7 @@ const BaldForBaseConfirmationPopup = ({
           }
         };
         
-        // If already loaded (cached), play immediately
-        if (video.readyState >= 2) {
-          requestAnimationFrame(tryPlay);
-        } else {
-          // Wait for loadeddata which fires quickly for cached videos
-          video.addEventListener('loadeddata', tryPlay, { once: true });
-          // Fallback to canplay if loadeddata doesn't fire
-          video.addEventListener('canplay', tryPlay, { once: true });
-        }
+        video.addEventListener('canplay', playWhenReady, { once: true });
       }
     }
   }, [currentVideoIndex]);
