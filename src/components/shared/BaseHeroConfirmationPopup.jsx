@@ -123,6 +123,27 @@ const BaseHeroConfirmationPopup = ({
     }
   };
 
+  // Handle video click to go fullscreen
+  const handleVideoClick = () => {
+    if (videoRef.current) {
+      // Set objectFit to 'contain' to maintain aspect ratio in fullscreen
+      videoRef.current.style.objectFit = 'contain';
+      
+      // Request fullscreen
+      if (videoRef.current.requestFullscreen) {
+        videoRef.current.requestFullscreen().catch(err => {
+          console.log('Error attempting to enable fullscreen:', err);
+        });
+      } else if (videoRef.current.webkitRequestFullscreen) {
+        videoRef.current.webkitRequestFullscreen();
+      } else if (videoRef.current.mozRequestFullScreen) {
+        videoRef.current.mozRequestFullScreen();
+      } else if (videoRef.current.msRequestFullscreen) {
+        videoRef.current.msRequestFullscreen();
+      }
+    }
+  };
+
   const formatCost = (tokenCost, usdCost) => {
     if (!tokenCost || !usdCost) return null;
     // Format token cost to reasonable precision (max 2 decimal places)
@@ -240,7 +261,7 @@ const BaseHeroConfirmationPopup = ({
             className="base-hero-popup-content"
             style={{
               background: 'rgba(0, 0, 0, 0.4)', // Black background at 0.3 opacity
-              padding: isWideScreen ? '32px' : '36px 18px', // Padding around content
+              padding: isWideScreen ? '32px' : '18px', // Padding around content
               flex: isWideScreen ? '1 1 auto' : '0 0 auto', // Allow content to grow on desktop
               display: 'flex',
               flexDirection: 'column',
@@ -256,7 +277,7 @@ const BaseHeroConfirmationPopup = ({
           >
             {/* Popup Title - inside blue content area */}
             <div style={{
-              fontSize: isWideScreen ? '24px' : '22px',
+              fontSize: isWideScreen ? '28px' : '22px',
               fontWeight: '700',
               color: 'white',
               marginBottom: isWideScreen ? '24px' : '10px',
@@ -276,171 +297,254 @@ const BaseHeroConfirmationPopup = ({
               gap: isWideScreen ? '0' : '12px',
               justifyContent: isWideScreen ? 'flex-start' : 'center' // Start from top on desktop to avoid collision
             }}>
-              {/* Text content that flows around video on mobile */}
+              {/* Text content with Base image floating on mobile */}
               <div style={{
-                display: isWideScreen ? 'block' : 'flex',
-                flexDirection: isWideScreen ? 'column' : 'row',
-                gap: isWideScreen ? '0' : '12px',
-                alignItems: isWideScreen ? 'stretch' : 'flex-start', // Align to top for cleaner look
-                marginLeft: isWideScreen ? '0' : '0', // No margin - container padding handles it
-                marginRight: isWideScreen ? '0' : '0', // No margin - container padding handles it
-                marginTop: isWideScreen ? '0' : '0' // No top margin
+                display: 'block',
+                marginLeft: isWideScreen ? '0' : '0',
+                marginRight: isWideScreen ? '0' : '0',
+                marginTop: isWideScreen ? '0' : '0',
+                position: 'relative'
               }}>
-                {/* Text paragraphs */}
+                {/* First paragraph - full width on mobile */}
                 <div style={{
-                  flex: isWideScreen ? '1 1 auto' : '1 1 auto', // Use full width on desktop
                   minWidth: 0,
-                  paddingLeft: isWideScreen ? '12px' : '0', // No extra padding on mobile - container handles it
-                  paddingRight: isWideScreen ? '0' : '0', // No extra padding
-                  paddingTop: isWideScreen ? '0' : '0', // No extra padding
-                  marginTop: isWideScreen ? '0' : '0' // Ensure no collision with title
+                  paddingLeft: isWideScreen ? '12px' : '0',
+                  paddingRight: isWideScreen ? '0' : '0',
+                  paddingTop: isWideScreen ? '0' : '0',
+                  marginTop: isWideScreen ? '0' : '0',
+                  marginBottom: isWideScreen ? '0' : '12px'
                 }}>
                   <p style={{
                     margin: 0,
                     marginBottom: '12px',
                     color: 'rgba(255, 255, 255, 0.95)',
                     fontSize: isWideScreen ? '15px' : '13px',
-                    lineHeight: '1.55', // Slightly tighter line height
+                    lineHeight: '1.55',
                     textAlign: 'left',
-                    wordSpacing: '0.05em' // Slight word spacing to help with line breaks
+                    wordSpacing: '0.05em'
                   }}>
                     Coinbase's Base App is now live and <a href="https://www.sogni.ai/super-apps" target="_blank" rel="noopener noreferrer" style={{ color: 'white', textDecoration: 'underline', fontWeight: '700' }}>Sogni.ai SuperApps</a> will be available in Base App soon!
                   </p>
-                  <p style={{
-                    margin: 0,
-                    marginBottom: '12px',
-                    color: 'rgba(255, 255, 255, 0.9)',
-                    fontSize: isWideScreen ? '14px' : '13px',
-                    lineHeight: '1.55', // Slightly tighter line height
-                    textAlign: 'left',
-                    wordSpacing: '0.05em' // Slight word spacing to help with line breaks
-                  }}>
-                    To celebrate, share your own fun BASE Hero video on X or Base App and tag <a href="https://x.com/Sogni_Protocol" target="_blank" rel="noopener noreferrer" style={{ color: 'white', textDecoration: 'underline', fontWeight: '700' }}>@Sogni_Protocol</a> for a chance at 100,000 SOGNI tokens!
-                  </p>
-                  <p style={{
-                    margin: 0,
-                    color: 'rgba(255, 255, 255, 0.9)',
-                    fontSize: isWideScreen ? '14px' : '13px',
-                    lineHeight: '1.55', // Slightly tighter line height
-                    textAlign: 'left',
-                    wordSpacing: '0.05em' // Slight word spacing to help with line breaks
-                  }}>
-                    We'll be selecting <strong style={{ color: 'white' }}>5 winners on Jan 15.</strong> Tag and follow for updates.
-                  </p>
                 </div>
 
-                {/* Video Teaser - floats right on mobile, side-by-side on desktop */}
-                {!isWideScreen && (
-          <div style={{
-                    flex: '0 0 auto',
-                    width: '158px', // 5% bigger than before (was 150px)
-                    aspectRatio: '2/3',
-                    borderRadius: '0', // No rounded corners
-            overflow: 'hidden',
-            background: 'rgba(0, 0, 0, 0.3)',
-            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
-            position: 'relative',
-                    flexShrink: 0,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-                    marginLeft: '0', // No extra margin - container padding handles spacing
-                    marginTop: '0', // Better alignment
-                    zIndex: 3 // Ensure video appears above sloth
-          }}>
-            <video
-              ref={videoRef}
-              src={videoUrls[currentVideoIndex]}
-              autoPlay
-              muted
-              playsInline
-              loop={false}
-              preload="auto"
-              crossOrigin="anonymous"
-              onEnded={handleVideoEnd}
-              onError={handleVideoError}
-              onLoadedData={handleVideoLoaded}
-              onCanPlay={handleVideoLoaded}
-              style={{
-                width: '100%',
-                        height: '100%',
-                display: 'block',
-                        objectFit: 'cover',
-                        objectPosition: 'center center'
-              }}
-            />
-              {videoError && (
+                {/* Container for image float and remaining paragraphs */}
                 <div style={{
-                  position: 'absolute',
-                  top: '50%',
-                  left: '50%',
-                  transform: 'translate(-50%, -50%)',
-                  color: 'white',
-                        fontSize: '10px',
-                  textAlign: 'center',
-                        padding: '8px',
-                  background: 'rgba(255, 0, 0, 0.7)',
-                        borderRadius: '6px',
-                        zIndex: 10
+                  display: 'block',
+                  position: 'relative'
                 }}>
-                        Video Error
-                      </div>
-                    )}
+                  {/* Base App Preview Image - Mobile only, floats right so text flows around */}
+                  {!isWideScreen && (
+                    <div style={{
+                      float: 'right',
+                      marginLeft: '10px',
+                      marginBottom: '5px',
+                      marginTop: '0',
+                      position: 'relative',
+                      width: '220px',
+                      flexShrink: 0,
+                      zIndex: 3
+                    }}>
+                      <img
+                        src="/base-hero-wallet-metadata.png"
+                        alt="Base App Preview"
+                        style={{
+                          width: '220px',
+                          height: 'auto',
+                          display: 'block',
+                          maxHeight: '160px',
+                          objectFit: 'contain',
+                        }}
+                      />
+                      {/* Learn More button - tiny overlay on bottom left of image */}
+                      <a
+                        href="https://blog.base.org/baseapp"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          position: 'absolute',
+                          bottom: '4px',
+                          left: '4px',
+                          display: 'inline-block',
+                          padding: '4px 8px',
+                          background: 'rgba(0, 0, 0, 0.7)',
+                          borderRadius: '4px',
+                          color: 'white',
+                          fontSize: '9px',
+                          fontWeight: '600',
+                          textDecoration: 'none',
+                          border: '1px solid rgba(255, 255, 255, 0.3)',
+                          transition: 'all 0.2s ease',
+                          whiteSpace: 'nowrap',
+                          lineHeight: '1.2'
+                        }}
+                        onMouseOver={(e) => {
+                          e.currentTarget.style.background = 'rgba(0, 0, 0, 0.9)';
+                          e.currentTarget.style.transform = 'scale(1.05)';
+                        }}
+                        onMouseOut={(e) => {
+                          e.currentTarget.style.background = 'rgba(0, 0, 0, 0.7)';
+                          e.currentTarget.style.transform = 'scale(1)';
+                        }}
+                      >
+                        Learn More ↗
+                      </a>
+                    </div>
+                  )}
+                  
+                  {/* Remaining text paragraphs - will flow around the float */}
+                  <div style={{
+                    minWidth: 0,
+                    paddingLeft: isWideScreen ? '12px' : '0',
+                    paddingRight: isWideScreen ? '0' : '0',
+                    paddingTop: isWideScreen ? '0' : '0',
+                    marginTop: isWideScreen ? '0' : '0'
+                  }}>
+                    <p style={{
+                      margin: 0,
+                      marginBottom: '12px',
+                      color: 'rgba(255, 255, 255, 0.9)',
+                      fontSize: isWideScreen ? '14px' : '13px',
+                      lineHeight: '1.55',
+                      textAlign: 'left',
+                      wordSpacing: '0.05em'
+                    }}>
+                      To celebrate, share your own fun BASE Hero video on X or Base App and tag <a href="https://x.com/Sogni_Protocol" target="_blank" rel="noopener noreferrer" style={{ color: 'white', textDecoration: 'underline', fontWeight: '700' }}>@Sogni_Protocol</a> for a chance at 100,000 SOGNI tokens!
+                    </p>
+                    <p style={{
+                      margin: 0,
+                      marginBottom: isWideScreen ? '0' : '12px',
+                      color: 'rgba(255, 255, 255, 0.9)',
+                      fontSize: isWideScreen ? '14px' : '13px',
+                      lineHeight: '1.55',
+                      textAlign: 'left',
+                      wordSpacing: '0.05em'
+                    }}>
+                      We'll be selecting <strong style={{ color: 'white' }}>5 winners on Jan 15.</strong> Tag and follow for updates.
+                    </p>
+                  </div>
                 </div>
-              )}
               </div>
             </div>
 
-            {/* Base App Preview Image - below text content, inside blue content area */}
-            <div style={{
-              marginTop: isWideScreen ? '24px' : '20px', // More spacing on desktop to separate from text
-              marginLeft: isWideScreen ? '0' : '0', // No margin - container padding handles it
-              marginRight: isWideScreen ? '0' : '0', // No margin - container padding handles it
-              flexShrink: 0
-            }}>
-              <img
-                src="/base-hero-wallet-metadata.png"
-                alt="Base App Preview"
-                style={{
-                  width: isWideScreen ? '50%' : '75%',
-                  height: 'auto',
-                  display: 'block',
-                  maxHeight: isWideScreen ? '300px' : '180px',
-                  objectFit: 'contain',
-                  borderRadius: '12px' // Rounded corners - same as desktop
-                }}
-              />
-            </div>
+            {/* Base App Preview Image - Desktop only */}
+            {isWideScreen && (
+              <div style={{
+                marginTop: '24px',
+                marginLeft: '0',
+                marginRight: '0',
+                flexShrink: 0,
+                position: 'relative'
+              }}>
+                <img
+                  src="/base-hero-wallet-metadata.png"
+                  alt="Base App Preview"
+                  style={{
+                    width: '66%',
+                    height: 'auto',
+                    display: 'block',
+                    maxHeight: '300px',
+                    objectFit: 'contain',
+                    borderRadius: '12px'
+                  }}
+                />
+                {/* Learn More button - tiny overlay on bottom left of image (Desktop) */}
+                <a
+                  href="https://blog.base.org/baseapp"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    position: 'absolute',
+                    bottom: '8px',
+                    left: '8px',
+                    display: 'inline-block',
+                    padding: '6px 12px',
+                    background: 'rgba(0, 0, 0, 0.7)',
+                    borderRadius: '4px',
+                    color: 'white',
+                    fontSize: '11px',
+                    fontWeight: '600',
+                    textDecoration: 'none',
+                    border: '1px solid rgba(255, 255, 255, 0.3)',
+                    transition: 'all 0.2s ease',
+                    whiteSpace: 'nowrap',
+                    lineHeight: '1.2'
+                  }}
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.background = 'rgba(0, 0, 0, 0.9)';
+                    e.currentTarget.style.transform = 'scale(1.05)';
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.background = 'rgba(0, 0, 0, 0.7)';
+                    e.currentTarget.style.transform = 'scale(1)';
+                  }}
+                >
+                  Learn More ↗
+                </a>
+              </div>
+            )}
 
-            {/* Learn More button - below image */}
-            <a
-              href="https://blog.base.org/baseapp"
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                display: 'inline-block',
-                padding: isWideScreen ? '10px 20px' : '10px 18px',
-                background: 'rgba(255, 255, 255, 0.2)',
-                borderRadius: '8px',
-                color: 'white',
-                fontSize: isWideScreen ? '14px' : '13px',
-                fontWeight: '600',
-                textDecoration: 'none',
-                border: '1px solid rgba(255, 255, 255, 0.3)',
-                transition: 'all 0.2s ease',
-                alignSelf: 'start'
-              }}
-              onMouseOver={(e) => {
-                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.3)';
-                e.currentTarget.style.transform = 'translateY(-2px)';
-              }}
-              onMouseOut={(e) => {
-                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
-                e.currentTarget.style.transform = 'translateY(0)';
-              }}
-            >
-              Learn More About Base App ↗
-            </a>
+            {/* Video Teaser - Mobile only, below content, smaller size */}
+            {!isWideScreen && (
+              <div style={{
+                width: '200px',
+                aspectRatio: '2/3',
+                borderRadius: '0',
+                overflow: 'hidden',
+                background: 'rgba(0, 0, 0, 0.3)',
+                boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
+                position: 'relative',
+                flexShrink: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginLeft: 'auto',
+                marginRight: 'auto',
+                zIndex: 4, // Higher z-index so it can overlap image
+                clear: 'both' // Clear the float
+              }}>
+                <video
+                  ref={videoRef}
+                  src={videoUrls[currentVideoIndex]}
+                  autoPlay
+                  muted
+                  playsInline
+                  loop={false}
+                  preload="auto"
+                  crossOrigin="anonymous"
+                  onEnded={handleVideoEnd}
+                  onError={handleVideoError}
+                  onLoadedData={handleVideoLoaded}
+                  onCanPlay={handleVideoLoaded}
+                  onClick={handleVideoClick}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    display: 'block',
+                    objectFit: 'cover',
+                    objectPosition: 'center center',
+                    borderRadius: '12px',
+                    cursor: 'pointer'
+                  }}
+                />
+                {videoError && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '50%',
+                    left: '50%',
+                    transform: 'translate(-50%, -50%)',
+                    color: 'white',
+                    fontSize: '10px',
+                    textAlign: 'center',
+                    padding: '8px',
+                    background: 'rgba(255, 0, 0, 0.7)',
+                    borderRadius: '6px',
+                    zIndex: 10
+                  }}>
+                    Video Error
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Video Teaser - Desktop only (mobile version is inline above) */}
@@ -474,12 +578,15 @@ const BaseHeroConfirmationPopup = ({
               onError={handleVideoError}
               onLoadedData={handleVideoLoaded}
               onCanPlay={handleVideoLoaded}
+              onClick={handleVideoClick}
               style={{
                 width: '100%',
                 height: '100%',
                 display: 'block',
                 objectFit: 'cover', // Fill container completely
-                objectPosition: 'center center' // Center the video content
+                objectPosition: 'center center', // Center the video content
+                cursor: 'pointer',
+                borderRadius: '12px'
               }}
             />
             {videoError && (
