@@ -520,7 +520,7 @@ const BaseHeroConfirmationPopup = ({
           >
             {loading 
               ? '⏳ Calculating...' 
-              : isBatch 
+              : isBatch && itemCount > 1
                 ? `🟦 Generate ${itemCount} BASE Hero Videos ⚡️`
                 : '🟦 Generate BASE Hero Video ⚡️'
             }

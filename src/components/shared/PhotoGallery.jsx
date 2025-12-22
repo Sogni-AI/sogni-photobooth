@@ -40,6 +40,8 @@ import { playSonicLogo, warmUpAudio } from '../../utils/sonicLogos';
 import CustomVideoPromptPopup from './CustomVideoPromptPopup';
 import BaseHeroConfirmationPopup from './BaseHeroConfirmationPopup';
 import PromptVideoConfirmationPopup from './PromptVideoConfirmationPopup';
+import TransitionVideoCompleteNotification from './TransitionVideoCompleteNotification';
+import ConfettiCelebration from './ConfettiCelebration';
 
 // Random video completion messages
 const VIDEO_READY_MESSAGES = [
@@ -878,6 +880,8 @@ const PhotoGallery = ({
   const [showPromptVideoPopup, setShowPromptVideoPopup] = useState(false); // Popup before Prompt Video generation (single)
   const [showBatchPromptVideoPopup, setShowBatchPromptVideoPopup] = useState(false); // Popup before Prompt Video generation (batch)
   const [autoTriggerBaseHeroAfterGeneration, setAutoTriggerBaseHeroAfterGeneration] = useState(false); // Auto-trigger Base Hero after photo generation
+  const [hasSeenGenerationStart, setHasSeenGenerationStart] = useState(false); // Track if we've seen generation start
+  const previousPhotoCountRef = useRef(0); // Track previous photo count to detect when new photos are added
 
   // Video cost estimation - include selectedPhotoIndex to bust cache when switching photos
   const { loading: videoLoading, cost: videoCostRaw, costInUSD: videoUSD, refetch: refetchVideoCost } = useVideoCostEstimation({
@@ -1061,6 +1065,13 @@ const PhotoGallery = ({
   const [isGeneratingStitchedVideo, setIsGeneratingStitchedVideo] = useState(false);
   const [showDownloadTip, setShowDownloadTip] = useState(false);
   
+  // State for transition video complete notification
+  const [showTransitionVideoNotification, setShowTransitionVideoNotification] = useState(false);
+  const [transitionVideoNotificationCount, setTransitionVideoNotificationCount] = useState(0);
+  
+  // State for confetti celebration when transition video is ready
+  const [showTransitionConfetti, setShowTransitionConfetti] = useState(false);
+  
   // Refs to store functions so they're accessible in closures
   const generateStitchedVideoRef = useRef(null);
   const handleProceedDownloadRef = useRef(null);
@@ -1180,6 +1191,13 @@ const PhotoGallery = ({
 
     return () => clearInterval(etaCheckInterval);
   }, [photos]);
+
+  // Hide confetti immediately when background animations are disabled
+  useEffect(() => {
+    if (!backgroundAnimationsEnabled && showTransitionConfetti) {
+      setShowTransitionConfetti(false);
+    }
+  }, [backgroundAnimationsEnabled, showTransitionConfetti]);
 
   // Update theme group state when initialThemeGroupState prop changes
   useEffect(() => {
@@ -2138,61 +2156,137 @@ const PhotoGallery = ({
     img.src = imageUrl;
   }, [videoTargetPhotoIndex, selectedPhotoIndex, selectedSubIndex, desiredWidth, desiredHeight, sogniClient, setPhotos, settings.videoResolution, settings.videoQuality, photos, showToast]);
 
-  // Check for Base Hero deep link on mount
+  // Check for Base Hero deep link on mount and route changes
   useEffect(() => {
-    const baseHeroDeepLink = sessionStorage.getItem('baseHeroDeepLink');
-    if (baseHeroDeepLink === 'true') {
-      console.log('[Base Hero] Deep link detected, checking for photos');
-      sessionStorage.removeItem('baseHeroDeepLink');
+    // Use a ref to track if we've already handled this route to avoid duplicate triggers
+    const handledRouteKey = 'baseHeroDeepLinkHandled';
+    
+    const checkBaseHeroDeepLink = () => {
+      // Check both sessionStorage flag and current route pathname
+      const baseHeroDeepLink = sessionStorage.getItem('baseHeroDeepLink');
+      const isBaseHeroRoute = window.location.pathname === '/event/base-hero';
       
-      // Check if user has photos
-      const loadedPhotos = photos.filter(
-        photo => !photo.hidden && !photo.loading && !photo.generating && !photo.error && photo.images && photo.images.length > 0 && !photo.isOriginal
-      );
-      
-      if (loadedPhotos.length > 0) {
-        // User has photos, show batch Base Hero popup
-        console.log('[Base Hero] User has photos, showing batch popup');
-        setShowBatchBaseHeroPopup(true);
-      } else {
-        // No photos, set flag to auto-trigger after generation
-        console.log('[Base Hero] No photos found, will auto-trigger after generation');
-        setAutoTriggerBaseHeroAfterGeneration(true);
-        showToast({
-          title: '📸 Photos Needed',
-          message: 'Please generate some photos first, then we\'ll automatically create your Base Hero videos!',
-          type: 'info',
-          timeout: 5000
-        });
+      // Skip if we've already handled this route visit (unless it's a new sessionStorage flag)
+      const alreadyHandled = sessionStorage.getItem(handledRouteKey) === window.location.pathname;
+      if (alreadyHandled && !baseHeroDeepLink) {
+        return;
       }
-    }
+      
+      if (baseHeroDeepLink === 'true' || isBaseHeroRoute) {
+        // Mark this route as handled
+        sessionStorage.setItem(handledRouteKey, window.location.pathname);
+        
+        // Clear the sessionStorage flag if it exists
+        if (baseHeroDeepLink === 'true') {
+          sessionStorage.removeItem('baseHeroDeepLink');
+        }
+        
+        // Always show the Base Hero popup, regardless of whether user has photos
+        setShowBatchBaseHeroPopup(true);
+      }
+    };
+    
+    // Check immediately
+    checkBaseHeroDeepLink();
+    
+    // Also listen for route changes (popstate for back/forward, and custom pushState)
+    const handleRouteChange = () => {
+      // Small delay to ensure route has updated
+      setTimeout(checkBaseHeroDeepLink, 100);
+    };
+    
+    window.addEventListener('popstate', handleRouteChange);
+    
+    // Intercept pushState to detect route changes
+    const originalPushState = window.history.pushState;
+    window.history.pushState = function(...args) {
+      originalPushState.apply(window.history, args);
+      handleRouteChange();
+    };
+    
+    return () => {
+      window.removeEventListener('popstate', handleRouteChange);
+      window.history.pushState = originalPushState;
+    };
   }, [photos, showToast]); // Run when photos or showToast changes
+
+  // Check for sessionStorage flag on mount and when photos change
+  useEffect(() => {
+    const sessionFlag = sessionStorage.getItem('baseHeroAutoTrigger');
+    if (sessionFlag === 'true' && !autoTriggerBaseHeroAfterGeneration) {
+      setAutoTriggerBaseHeroAfterGeneration(true);
+      sessionStorage.removeItem('baseHeroAutoTrigger');
+    }
+  }, [photos, autoTriggerBaseHeroAfterGeneration]);
 
   // Auto-trigger Base Hero after photo generation completes
   useEffect(() => {
-    if (autoTriggerBaseHeroAfterGeneration && !isGenerating) {
-      // Check if we now have photos
-      const loadedPhotos = photos.filter(
-        photo => !photo.hidden && !photo.loading && !photo.generating && !photo.error && photo.images && photo.images.length > 0 && !photo.isOriginal
-      );
-      
-      if (loadedPhotos.length > 0) {
-        console.log('[Base Hero] Photos generated, auto-triggering batch Base Hero');
-        setAutoTriggerBaseHeroAfterGeneration(false);
-        
-        // Small delay to ensure UI is ready
-        setTimeout(() => {
-          setShowBatchBaseHeroPopup(true);
-          showToast({
-            title: '🟦 Ready for Base Hero!',
-            message: 'Your photos are ready! Click Generate to create your Base Hero videos.',
-            type: 'success',
-            timeout: 4000
-          });
-        }, 500);
+    if (!autoTriggerBaseHeroAfterGeneration) {
+      // Reset the flag if auto-trigger is disabled
+      if (hasSeenGenerationStart) {
+        setHasSeenGenerationStart(false);
       }
+      previousPhotoCountRef.current = 0;
+      return;
     }
-  }, [isGenerating, photos, autoTriggerBaseHeroAfterGeneration]);
+    
+    // Check if generation has started (any photos with generating/loading flags)
+    const currentlyGenerating = photos.some(
+      photo => !photo.hidden && (photo.generating || photo.loading)
+    );
+    
+    // Track when generation starts
+    if (currentlyGenerating && !hasSeenGenerationStart) {
+      setHasSeenGenerationStart(true);
+      return;
+    }
+    
+    // Check if we have completed photos
+    const loadedPhotos = photos.filter(
+      photo => !photo.hidden && !photo.loading && !photo.generating && !photo.error && photo.images && photo.images.length > 0 && !photo.isOriginal
+    );
+    
+    // Track if photos were added (generation happened)
+    const currentPhotoCount = loadedPhotos.length;
+    const photosWereAdded = currentPhotoCount > previousPhotoCountRef.current;
+    previousPhotoCountRef.current = currentPhotoCount;
+    
+    // Show popup if:
+    // 1. Nothing is currently generating (isGenerating is false AND no photos are generating/loading)
+    // 2. We have at least one completed photo
+    // 3. We've seen generation start OR photos were added (indicating generation happened)
+    const canShowPopup = !isGenerating && !currentlyGenerating && loadedPhotos.length > 0;
+    const shouldShowPopup = canShowPopup && (hasSeenGenerationStart || photosWereAdded);
+    
+    if (shouldShowPopup) {
+      setAutoTriggerBaseHeroAfterGeneration(false);
+      setHasSeenGenerationStart(false);
+      previousPhotoCountRef.current = 0;
+      
+      // Check if user is authenticated - videos require login
+      if (!isAuthenticated) {
+        // User is not logged in - show error toast instead of popup
+        showToast({
+          title: '🔐 Sign In Required',
+          message: 'Please sign up or log in to create Base Hero videos. Video generation requires an account.',
+          type: 'error',
+          timeout: 6000
+        });
+        return;
+      }
+      
+      // Small delay to ensure UI is ready
+      setTimeout(() => {
+        setShowBatchBaseHeroPopup(true);
+        showToast({
+          title: '🟦 Ready for Base Hero!',
+          message: 'Your photos are ready! Click Generate to create your Base Hero videos.',
+          type: 'success',
+          timeout: 4000
+        });
+      }, 500);
+    }
+  }, [isGenerating, photos, autoTriggerBaseHeroAfterGeneration, hasSeenGenerationStart, showToast, isAuthenticated]);
 
   // Handle BASE Hero video generation (single)
   const handleBaseHeroVideo = useCallback(async () => {
@@ -2453,6 +2547,7 @@ const PhotoGallery = ({
     );
 
     if (loadedPhotos.length === 0) {
+      // Show toast and navigate to intro/start menu
       showToast({
         title: '📸 Photos Needed',
         message: 'Please generate some photos first. We\'ll automatically create your Base Hero videos after!',
@@ -2460,7 +2555,7 @@ const PhotoGallery = ({
         timeout: 5000
       });
       setAutoTriggerBaseHeroAfterGeneration(true);
-      // Navigate back to camera/start menu
+      // Navigate back to camera/start menu (intro page)
       if (handleBackToCamera) {
         handleBackToCamera();
       }
@@ -3209,22 +3304,19 @@ const PhotoGallery = ({
           }
           
           if (successCount > 0 && errorCount === 0) {
-            const videoMessage = getRandomVideoMessage();
-            showToast({
-              title: videoMessage.title,
-              message: `All ${successCount} transition video${successCount > 1 ? 's' : ''} generated! Tap to view stitched video.`,
-              type: 'success',
-              timeout: 0,
-              autoClose: false,
-              onClick: () => {
-                // Generate stitched video and show in overlay
-                if (generateStitchedVideoRef.current) {
-                  generateStitchedVideoRef.current();
-                } else {
-                  console.error('[Toast] generateStitchedVideoRef.current is not available');
-                }
-              }
-            });
+            // Show impactful notification instead of simple toast
+            setTransitionVideoNotificationCount(successCount);
+            setShowTransitionVideoNotification(true);
+            
+            // Trigger confetti celebration if background animations are enabled
+            if (backgroundAnimationsEnabled) {
+              // Reset confetti state first, then trigger new animation
+              setShowTransitionConfetti(false);
+              // Small delay to ensure state reset
+              setTimeout(() => {
+                setShowTransitionConfetti(true);
+              }, 300);
+            }
           } else if (successCount > 0) {
             showToast({
               title: 'Partial Success',
@@ -6168,7 +6260,7 @@ const PhotoGallery = ({
                     backgroundColor: 'rgba(0, 0, 0, 0.9)',
                     color: '#fff',
                     borderRadius: '8px',
-                    fontSize: '13px',
+                    fontSize: '12px',
                     fontWeight: '500',
                     whiteSpace: 'nowrap',
                     boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
@@ -6177,7 +6269,7 @@ const PhotoGallery = ({
                     animation: 'fadeIn 0.3s ease-out'
                   }}
                 >
-                  Click here to download your video! ⬇️
+                  Click here to download your video
                   <div
                     style={{
                       position: 'absolute',
@@ -12081,7 +12173,7 @@ const PhotoGallery = ({
         videoResolution={settings.videoResolution || '480p'}
         tokenType={tokenType}
         isBatch={true}
-        itemCount={loadedPhotosCount}
+        itemCount={Math.max(loadedPhotosCount, 1)}
       />
 
       {/* Prompt Video Confirmation Popup (Single) */}
@@ -12240,6 +12332,30 @@ const PhotoGallery = ({
         </div>,
         document.body
       )}
+
+      {/* Confetti Celebration for Transition Video Completion */}
+      <ConfettiCelebration
+        isVisible={showTransitionConfetti && backgroundAnimationsEnabled}
+        onComplete={() => setShowTransitionConfetti(false)}
+      />
+
+      {/* Transition Video Complete Notification */}
+      <TransitionVideoCompleteNotification
+        isVisible={showTransitionVideoNotification}
+        videoCount={transitionVideoNotificationCount}
+        onViewVideo={() => {
+          // Generate stitched video and show in overlay
+          if (generateStitchedVideoRef.current) {
+            generateStitchedVideoRef.current();
+          } else {
+            console.error('[Notification] generateStitchedVideoRef.current is not available');
+          }
+          setShowTransitionVideoNotification(false);
+        }}
+        onDismiss={() => {
+          setShowTransitionVideoNotification(false);
+        }}
+      />
 
       {/* Loading overlay for stitched video generation */}
       {isGeneratingStitchedVideo && createPortal(

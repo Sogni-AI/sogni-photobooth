@@ -38,6 +38,9 @@ const AppRouter = () => {
       sessionStorage.setItem('winter-page-visited', 'true'); // Mark winter page as visited
       return 'winter';
     }
+    if (pathname === '/event/base-hero') {
+      return 'main'; // Base Hero uses main app, just triggers deep link
+    }
     if (pathname === '/challenge/gimi') {
       return 'gimi-challenge';
     }
@@ -86,6 +89,8 @@ const AppRouter = () => {
       } else if (hash === '#winter' || pathname === '/winter' || pathname === '/event/winter') {
         sessionStorage.setItem('winter-page-visited', 'true'); // Mark winter page as visited
         setCurrentRoute('winter');
+      } else if (pathname === '/event/base-hero') {
+        setCurrentRoute('main'); // Base Hero uses main app, just triggers deep link
       } else if (pathname === '/challenge/gimi') {
         setCurrentRoute('gimi-challenge');
       } else {

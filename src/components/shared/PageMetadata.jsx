@@ -36,6 +36,10 @@ const PageMetadata = () => {
         // Don't override Winter event metadata - it has custom Helmet tags
         skipUpdate: true
       },
+      '/event/base-hero': {
+        // Don't override Base Hero metadata - server handles meta tag injection
+        skipUpdate: true
+      },
       '/contest/vote': {
         title: '🎃 Halloween Contest - Vote Now! | Sogni AI Photobooth',
         description: 'Vote for your favorite AI-generated Halloween photos! Browse amazing AI art created by the community and support your favorites by voting.',

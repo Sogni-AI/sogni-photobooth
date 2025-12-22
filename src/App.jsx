@@ -66,6 +66,7 @@ import { useWallet } from './hooks/useWallet';
 import { isPremiumBoosted } from './services/walletService';
 import { estimateJobCost } from './hooks/useCostEstimation.ts';
 import TwitterShareModal from './components/shared/TwitterShareModal';
+import BaseHeroConfirmationPopup from './components/shared/BaseHeroConfirmationPopup';
 
 import FriendlyErrorModal from './components/shared/FriendlyErrorModal';
 import { useToastContext } from './context/ToastContext';
@@ -968,6 +969,9 @@ const App = () => {
   // Add state for out of credits popup
   const [showOutOfCreditsPopup, setShowOutOfCreditsPopup] = useState(false);
   const [lastJobCostEstimate, setLastJobCostEstimate] = useState(null);
+  
+  // Base Hero popup state - rendered in App.jsx so it works independently of PhotoGallery
+  const [showBaseHeroPopup, setShowBaseHeroPopup] = useState(false);
 
   // Stripe purchase modal state
   const [showStripePurchase, setShowStripePurchase] = useState(false);
@@ -1268,14 +1272,21 @@ const App = () => {
     const galleryParam = url.searchParams.get('gallery');
     const baseHeroParam = url.searchParams.get('baseHero');
     
-    // Handle Base Hero deep link - store in sessionStorage for PhotoGallery to pick up
-    if (baseHeroParam === 'true') {
-      console.log('[Base Hero] Deep link detected, setting flag for auto-trigger');
-      sessionStorage.setItem('baseHeroDeepLink', 'true');
-      // Remove parameter from URL to prevent re-triggering
-      url.searchParams.delete('baseHero');
-      const newUrl = url.pathname + (url.search ? url.search : '');
-      window.history.replaceState(window.history.state || {}, '', newUrl);
+    // Handle Base Hero deep link - check both route and querystring for backwards compatibility
+    const isBaseHeroRoute = url.pathname === '/event/base-hero';
+    if (isBaseHeroRoute || baseHeroParam === 'true') {
+      // Skip welcome screen if it's showing
+      setShowSplashScreen(false);
+      
+      // Show the popup directly (rendered in App.jsx, independent of PhotoGallery)
+      setShowBaseHeroPopup(true);
+      
+      // If using querystring, remove parameter from URL to prevent re-triggering
+      if (baseHeroParam === 'true') {
+        url.searchParams.delete('baseHero');
+        const newUrl = url.pathname + (url.search ? url.search : '');
+        window.history.replaceState(window.history.state || {}, '', newUrl);
+      }
     }
     
     // Handle referral parameter - track the referring user
@@ -3110,6 +3121,8 @@ const App = () => {
       shareUrl.pathname = '/event/halloween';
     } else if (settings.winterContext) {
       shareUrl.pathname = '/event/winter';
+    } else if (window.location.pathname === '/event/base-hero') {
+      shareUrl.pathname = '/event/base-hero';
     }
     
     // Only add the prompt parameter if we have a hashtag and it's not from a custom prompt
@@ -8071,6 +8084,36 @@ const App = () => {
     setShowStartMenu(true);
   };
 
+  // Handle Base Hero popup generate button
+  const handleBaseHeroGenerate = useCallback(() => {
+    setShowBaseHeroPopup(false);
+    
+    // Check if user has photos
+    const loadedPhotos = photos.filter(
+      photo => !photo.hidden && !photo.loading && !photo.generating && !photo.error && photo.images && photo.images.length > 0 && !photo.isOriginal
+    );
+    
+    if (loadedPhotos.length === 0) {
+      // No photos - show toast and navigate to start menu
+      showToast({
+        title: '📸 Photos Needed',
+        message: 'Please generate some photos first. We\'ll automatically create your Base Hero videos after!',
+        type: 'info',
+        timeout: 5000
+      });
+      // Set flag in sessionStorage so PhotoGallery can pick it up
+      sessionStorage.setItem('baseHeroAutoTrigger', 'true');
+      // Navigate to start menu using handleBackToMenu
+      handleBackToMenu();
+      return;
+    }
+    
+    // User has photos - PhotoGallery will handle the actual generation
+    // For now, just show the photo grid and let PhotoGallery handle it
+    setShowPhotoGrid(true);
+    // The PhotoGallery component will detect photos and show its own Base Hero popup
+  }, [photos, showToast, handleBackToMenu]);
+
   // -------------------------
   //   Generate more photos with the same settings
   // -------------------------
@@ -9763,6 +9806,20 @@ const App = () => {
         onRetryAll={handleRetryAllPhotos} 
         connectionState={connectionState}
         isGenerating={isGenerating}
+      />
+      
+      {/* Base Hero Popup - rendered in App.jsx so it works independently of PhotoGallery */}
+      <BaseHeroConfirmationPopup
+        visible={showBaseHeroPopup}
+        onConfirm={handleBaseHeroGenerate}
+        onClose={() => setShowBaseHeroPopup(false)}
+        loading={false}
+        costRaw={null}
+        costUSD={null}
+        videoResolution={settings.videoResolution || '480p'}
+        tokenType={walletTokenType}
+        isBatch={true}
+        itemCount={photos.filter(p => !p.hidden && !p.loading && !p.generating && !p.error && p.images && p.images.length > 0 && !p.isOriginal).length || 1}
       />
       
       {/* Add this section at the end, right before the closing tag */}

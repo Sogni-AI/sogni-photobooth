@@ -300,6 +300,82 @@ const handleWinterRoute = (req, res) => {
   });
 };
 
+// Base Hero route handler (for /event/base-hero)
+const handleBaseHeroRoute = (req, res) => {
+  const indexPath = path.join(staticDir, 'index.html');
+  const requestPath = req.path;
+  console.log(`[Base Hero Route] Attempting to read: ${indexPath} for path: ${requestPath}`);
+
+  fs.readFile(indexPath, 'utf8', (err, html) => {
+    if (err) {
+      console.error('[Base Hero Route] Error reading index.html:', err);
+      console.error('[Base Hero Route] Static dir:', staticDir);
+      console.error('[Base Hero Route] Index path:', indexPath);
+      return res.status(500).send('Error loading page: ' + err.message);
+    }
+
+    console.log('[Base Hero Route] Successfully read index.html, injecting meta tags...');
+
+    // Replace meta tags with Base Hero-specific content
+    // Using simple global string replacement - same approach as Winter/Halloween
+    let modifiedHtml = html;
+
+    // Use the request's host to support both staging and production
+    const host = req.get('host') || 'photobooth.sogni.ai';
+    // Always use https since we're behind nginx with SSL termination
+    const protocol = 'https';
+    const baseUrl = `${protocol}://${host}`;
+
+    const baseHeroTitle = '🟦 BASE Hero Video Generator | Sogni AI Photobooth';
+    const baseHeroDesc = 'Create your own fun BASE Hero video! Share on X or Base App and tag @Sogni_Protocol for a chance at 100,000 SOGNI tokens. 5 winners selected on Jan 15.';
+    const baseHeroUrl = `${baseUrl}/event/base-hero`;
+    const baseHeroImage = `${baseUrl}/base-hero-wallet-metadata.png`;
+
+    console.log(`[Base Hero Route] Using baseUrl: ${baseUrl}`);
+    console.log(`[Base Hero Route] Base Hero image URL: ${baseHeroImage}`);
+
+    // Replace title - handle various formats
+    modifiedHtml = modifiedHtml.replace(
+      /<title>Sogni AI Photobooth \| Free AI Headshot Generator & Portrait Maker<\/title>/,
+      `<title>${baseHeroTitle}</title>`
+    );
+    
+    // Replace og:title
+    modifiedHtml = modifiedHtml.replace(
+      /content="Sogni AI Photobooth \| Free AI Headshot Generator & Portrait Maker"/g,
+      `content="${baseHeroTitle}"`
+    );
+    
+    // Replace og:description - match the exact multi-line format
+    modifiedHtml = modifiedHtml.replace(
+      /Create stunning AI headshots and portraits with Sogni Photobooth—your free AI portrait generator and anime PFP maker\. Transform your photos with 200\+ AI styles in seconds!/g,
+      baseHeroDesc
+    );
+    
+    // Replace og:image - the GitHub repository image
+    modifiedHtml = modifiedHtml.replace(
+      /https:\/\/repository-images\.githubusercontent\.com\/945858402\/6ae0abb5-c7cc-42ba-9051-9d644e1f130a/g,
+      baseHeroImage
+    );
+    
+    // Replace og:url and twitter:url
+    modifiedHtml = modifiedHtml.replace(
+      /content="https:\/\/photobooth\.sogni\.ai\/"/g,
+      `content="${baseHeroUrl}"`
+    );
+
+    // Set cache headers to prevent stale metadata
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+
+    console.log('[Base Hero Route] Successfully injected meta tags and sent response');
+    res.send(modifiedHtml);
+  });
+};
+
 // Contest vote route handler with custom meta tags for social sharing
 const handleContestVoteRoute = (req, res) => {
   const indexPath = path.join(staticDir, 'index.html');
@@ -441,6 +517,7 @@ if (!isLocalEnv) {
   app.get('/halloween', handleHalloweenRoute);
   app.get('/event/halloween', handleHalloweenRoute);
   app.get('/event/winter', handleWinterRoute);
+  app.get('/event/base-hero', handleBaseHeroRoute);
   app.get('/contest/vote', handleContestVoteRoute);
   app.get('/admin/moderate', handleAdminContestRoute);
   app.get('/challenge/gimi', handleGimiChallengeRoute);
