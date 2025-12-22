@@ -59,7 +59,7 @@ const BaldForBaseConfirmationPopup = ({
     }
   }, [visible]);
 
-  // Update video source when index changes (without remounting)
+  // Update video source when index changes - optimized for iOS caching
   useEffect(() => {
     if (videoRef.current && videoUrls[currentVideoIndex]) {
       const video = videoRef.current;
@@ -71,21 +71,35 @@ const BaldForBaseConfirmationPopup = ({
         video.pause();
         video.currentTime = 0;
         
-        // Set new source and load
+        // Set new source
         video.src = newSrc;
-        video.load();
         
-        // Play after video is ready (using canplay event)
-        const playWhenReady = () => {
+        // On iOS, avoid calling load() if possible to prevent cache invalidation
+        // Use requestAnimationFrame to allow browser to process src change
+        requestAnimationFrame(() => {
           if (videoRef.current && videoRef.current.src === newSrc) {
-            videoRef.current.play().catch(err => {
-              console.log('Video autoplay prevented:', err);
-              setVideoError(err.message);
-            });
+            const videoEl = videoRef.current;
+            // If video is already ready (cached), play immediately
+            if (videoEl.readyState >= 3) {
+              videoEl.play().catch(err => {
+                console.log('Video autoplay prevented:', err);
+                setVideoError(err.message);
+              });
+            } else {
+              // Only call load() if not ready - this will trigger loading
+              videoEl.load();
+              const playWhenReady = () => {
+                if (videoRef.current && videoRef.current.src === newSrc) {
+                  videoRef.current.play().catch(err => {
+                    console.log('Video autoplay prevented:', err);
+                    setVideoError(err.message);
+                  });
+                }
+              };
+              videoEl.addEventListener('canplay', playWhenReady, { once: true });
+            }
           }
-        };
-        
-        video.addEventListener('canplay', playWhenReady, { once: true });
+        });
       }
     }
   }, [currentVideoIndex]);
@@ -510,7 +524,7 @@ const BaldForBaseConfirmationPopup = ({
                 muted
                 playsInline
                 loop={false}
-                preload="metadata"
+                preload="auto"
                 onEnded={handleVideoEnd}
                 onError={handleVideoError}
                 onLoadedData={handleVideoLoaded}
@@ -588,7 +602,7 @@ const BaldForBaseConfirmationPopup = ({
                 muted
                 playsInline
                 loop={false}
-                preload="metadata"
+                preload="auto"
                 onEnded={handleVideoEnd}
                 onError={handleVideoError}
                 onLoadedData={handleVideoLoaded}

@@ -51,7 +51,7 @@ const VideoSelectionPopup = ({
   const gridContainerRef = React.useRef(null);
 
 
-  // Update video source when index changes - matching Bald For Base approach
+  // Update video source when index changes - optimized for iOS caching
   useEffect(() => {
     const promptVideoEl = promptVideoRefs.current['prompt'];
     if (promptVideoEl && promptVideos[promptVideoIndex]) {
@@ -64,28 +64,30 @@ const VideoSelectionPopup = ({
         video.pause();
         video.currentTime = 0;
         
-        // Set new source and load
+        // Set new source
         video.src = newSrc;
-        video.load();
         
-        // Play after video is ready - use canplaythrough on iOS for better reliability
-        const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
-        const playWhenReady = () => {
+        // On iOS, avoid calling load() if possible to prevent cache invalidation
+        // Try playing immediately - if cached, it should work
+        // Use requestAnimationFrame to allow browser to process src change
+        requestAnimationFrame(() => {
           if (promptVideoRefs.current['prompt'] && promptVideoRefs.current['prompt'].src === newSrc) {
             const videoEl = promptVideoRefs.current['prompt'];
-            // On iOS, ensure readyState is sufficient before playing
-            if (isIOS && videoEl.readyState < 3) {
-              videoEl.addEventListener('canplaythrough', () => {
-                videoEl.play().catch(() => {});
-              }, { once: true });
-            } else {
+            // If video is already ready (cached), play immediately
+            if (videoEl.readyState >= 3) {
               videoEl.play().catch(() => {});
+            } else {
+              // Only call load() if not ready - this will trigger loading
+              videoEl.load();
+              const playWhenReady = () => {
+                if (promptVideoRefs.current['prompt'] && promptVideoRefs.current['prompt'].src === newSrc) {
+                  promptVideoRefs.current['prompt'].play().catch(() => {});
+                }
+              };
+              videoEl.addEventListener('canplay', playWhenReady, { once: true });
             }
           }
-        };
-        
-        // Use canplaythrough on iOS for more reliable playback, canplay on desktop
-        video.addEventListener(isIOS ? 'canplaythrough' : 'canplay', playWhenReady, { once: true });
+        });
       }
     }
   }, [promptVideoIndex]);
@@ -100,23 +102,23 @@ const VideoSelectionPopup = ({
         video.pause();
         video.currentTime = 0;
         video.src = newSrc;
-        video.load();
         
-        const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
-        const playWhenReady = () => {
+        requestAnimationFrame(() => {
           if (emojiVideoRefs.current['emoji'] && emojiVideoRefs.current['emoji'].src === newSrc) {
             const videoEl = emojiVideoRefs.current['emoji'];
-            if (isIOS && videoEl.readyState < 3) {
-              videoEl.addEventListener('canplaythrough', () => {
-                videoEl.play().catch(() => {});
-              }, { once: true });
-            } else {
+            if (videoEl.readyState >= 3) {
               videoEl.play().catch(() => {});
+            } else {
+              videoEl.load();
+              const playWhenReady = () => {
+                if (emojiVideoRefs.current['emoji'] && emojiVideoRefs.current['emoji'].src === newSrc) {
+                  emojiVideoRefs.current['emoji'].play().catch(() => {});
+                }
+              };
+              videoEl.addEventListener('canplay', playWhenReady, { once: true });
             }
           }
-        };
-        
-        video.addEventListener(isIOS ? 'canplaythrough' : 'canplay', playWhenReady, { once: true });
+        });
       }
     }
   }, [emojiVideoIndex]);
@@ -131,23 +133,23 @@ const VideoSelectionPopup = ({
         video.pause();
         video.currentTime = 0;
         video.src = newSrc;
-        video.load();
         
-        const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
-        const playWhenReady = () => {
+        requestAnimationFrame(() => {
           if (baldForBaseVideoRefs.current['bald-for-base'] && baldForBaseVideoRefs.current['bald-for-base'].src === newSrc) {
             const videoEl = baldForBaseVideoRefs.current['bald-for-base'];
-            if (isIOS && videoEl.readyState < 3) {
-              videoEl.addEventListener('canplaythrough', () => {
-                videoEl.play().catch(() => {});
-              }, { once: true });
-            } else {
+            if (videoEl.readyState >= 3) {
               videoEl.play().catch(() => {});
+            } else {
+              videoEl.load();
+              const playWhenReady = () => {
+                if (baldForBaseVideoRefs.current['bald-for-base'] && baldForBaseVideoRefs.current['bald-for-base'].src === newSrc) {
+                  baldForBaseVideoRefs.current['bald-for-base'].play().catch(() => {});
+                }
+              };
+              videoEl.addEventListener('canplay', playWhenReady, { once: true });
             }
           }
-        };
-        
-        video.addEventListener(isIOS ? 'canplaythrough' : 'canplay', playWhenReady, { once: true });
+        });
       }
     }
   }, [baldForBaseVideoIndex]);
@@ -528,7 +530,7 @@ const VideoSelectionPopup = ({
                         autoPlay
                         muted
                         playsInline
-                        preload="metadata"
+                        preload="auto"
                         loop={!option.exampleVideos}
                         onEnded={() => {
                           if (option.exampleVideos && option.setVideoIndex) {
