@@ -416,8 +416,8 @@ const BaldForBaseConfirmationPopup = ({
                     fontWeight: '400',
                     textShadow: '0 1px 6px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3)'
                   }}>
-                    Coinbase's Base App is now live and <a href="https://www.sogni.ai/super-apps" target="_blank" rel="noopener noreferrer" style={{ color: 'white', textDecoration: 'underline', fontWeight: '700' }}>Sogni.ai SuperApps</a> will be available in Base App soon.
-                    Share a Bald for Base video on X or Base, tag <a href="https://x.com/Sogni_Protocol" target="_blank" rel="noopener noreferrer" style={{ color: 'white', textDecoration: 'underline', fontWeight: '700' }}>@Sogni_Protocol</a> for a chance at your share of 100,000 SOGNI tokens!
+                    Sogni <a href="https://www.sogni.ai/super-apps" target="_blank" rel="noopener noreferrer" style={{ color: 'white', textDecoration: 'underline', fontWeight: '700' }}>SuperApps</a> will be going live in Coinbase's Base App soon.
+                    Share a Bald for Base video on X or Base, tag <a href="https://x.com/Sogni_Protocol" target="_blank" rel="noopener noreferrer" style={{ color: 'white', textDecoration: 'underline', fontWeight: '700' }}>@Sogni_Protocol</a> for a chance at your share of 100,000 SOGNI tokens! <strong>[Contest Starts in January]</strong> 
                   </p>
                 </div>
 
@@ -491,8 +491,8 @@ const BaldForBaseConfirmationPopup = ({
               textShadow: '0 1px 6px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3)',
               flexShrink: 0
             }}>
-              Coinbase's Base App is now live and <a href="https://www.sogni.ai/super-apps" target="_blank" rel="noopener noreferrer" style={{ color: 'white', textDecoration: 'underline', fontWeight: '700' }}>Sogni.ai SuperApps</a> will be available in Base App soon.
-              Share a Bald for Base video on X or Base, tag <a href="https://x.com/Sogni_Protocol" target="_blank" rel="noopener noreferrer" style={{ color: 'white', textDecoration: 'underline', fontWeight: '700' }}>@Sogni_Protocol</a> for a chance at your share of 100,000 SOGNI tokens!
+              Sogni <a href="https://www.sogni.ai/super-apps" target="_blank" rel="noopener noreferrer" style={{ color: 'white', textDecoration: 'underline', fontWeight: '700' }}>SuperApps</a> will be going live in Coinbase's Base App soon!
+              Share a Bald for Base video on X or Base, tag <a href="https://x.com/Sogni_Protocol" target="_blank" rel="noopener noreferrer" style={{ color: 'white', textDecoration: 'underline', fontWeight: '700' }}>@Sogni_Protocol</a> for a chance at your share of 100,000 SOGNI tokens! <strong>[Contest Starts in January]</strong> 
             </p>
           )}
 
@@ -567,8 +567,7 @@ const BaldForBaseConfirmationPopup = ({
                 zIndex: 5,
                 pointerEvents: 'none'
               }}>
-                <div style={{ fontWeight: '700', marginBottom: '2px' }}>5 winners on Jan 15</div>
-                <div style={{ fontSize: isWideScreen ? '11px' : '10px', opacity: 0.9 }}>Tag and follow for updates</div>
+                <div style={{ fontSize: isWideScreen ? '11px' : '10px', opacity: 0.9 }}>Contest Starts Jan 2025</div>
               </div>
             </div>
           )}
@@ -645,8 +644,7 @@ const BaldForBaseConfirmationPopup = ({
                 zIndex: 5,
                 pointerEvents: 'none'
               }}>
-                <div style={{ fontWeight: '700', marginBottom: '2px' }}>5 winners on Jan 15</div>
-                <div style={{ fontSize: '11px', opacity: 0.9 }}>Tag and follow for updates</div>
+                <div style={{ fontSize: '11px', opacity: 0.9 }}>Contest Starts in January 2025</div>
               </div>
             </div>
           )}

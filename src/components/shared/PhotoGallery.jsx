@@ -1268,6 +1268,9 @@ const PhotoGallery = ({
   // State for Download All button dropdown
   const [showMoreDropdown, setShowMoreDropdown] = useState(false);
 
+  // State for slideshow download button dropdown
+  const [showSlideshowDownloadDropdown, setShowSlideshowDownloadDropdown] = useState(false);
+
   // State for batch video mode tutorial tip
   const [showBatchVideoTip, setShowBatchVideoTip] = useState(false);
 
@@ -1297,13 +1300,16 @@ const PhotoGallery = ({
         setShowBatchVideoTip(false);
         markBatchVideoTipShown();
       }
+      if (showSlideshowDownloadDropdown && !e.target.closest('.slideshow-download-button-container') && !e.target.closest('.slideshow-download-dropdown')) {
+        setShowSlideshowDownloadDropdown(false);
+      }
     };
 
-    if (showMoreDropdown || showBatchVideoDropdown || showBatchVideoTip) {
+    if (showMoreDropdown || showBatchVideoDropdown || showBatchVideoTip || showSlideshowDownloadDropdown) {
       document.addEventListener('click', handleClickOutside);
       return () => document.removeEventListener('click', handleClickOutside);
     }
-  }, [showMoreDropdown, showBatchVideoDropdown, showBatchVideoTip]);
+  }, [showMoreDropdown, showBatchVideoDropdown, showBatchVideoTip, showSlideshowDownloadDropdown]);
   
   // Refs for dropdown animation buttons to prevent re-triggering animations
   const enhanceButton1Ref = useRef(null);
@@ -6850,44 +6856,105 @@ const PhotoGallery = ({
               />
             )}
 
-          {/* Download Framed Button - Hide in Vibe Explorer or when video exists */}
+          {/* Download Button with Dropdown - Hide in Vibe Explorer or when video exists */}
           {!isPromptSelectorMode && !selectedPhoto.videoUrl && (
-          <button
-            className="action-button download-btn"
-            onClick={(e) => {
-              handleDownloadPhoto(selectedPhotoIndex);
-              e.stopPropagation();
-            }}
-            disabled={
-              selectedPhoto.loading || 
-              selectedPhoto.enhancing ||
-              !selectedPhoto.images ||
-              selectedPhoto.images.length === 0
-            }
-          >
-            <span>⬇️</span>
-            <span>Framed</span>
-          </button>
-          )}
+            <div 
+              className="slideshow-download-button-container" 
+              style={{ 
+                position: 'relative',
+                display: 'inline-flex'
+              }}
+            >
+              <button
+                className="action-button download-btn"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowSlideshowDownloadDropdown(prev => !prev);
+                }}
+                disabled={
+                  selectedPhoto.loading || 
+                  selectedPhoto.enhancing ||
+                  !selectedPhoto.images ||
+                  selectedPhoto.images.length === 0
+                }
+              >
+                <span>⬇️</span>
+                <span>Download</span>
+              </button>
 
-          {/* Download Raw Button - Hide in Vibe Explorer or when video exists */}
-          {!isPromptSelectorMode && !selectedPhoto.videoUrl && (
-          <button
-            className="action-button download-raw-btn"
-            onClick={(e) => {
-              handleDownloadRawPhoto(selectedPhotoIndex);
-              e.stopPropagation();
-            }}
-            disabled={
-              selectedPhoto.loading || 
-              selectedPhoto.enhancing ||
-              !selectedPhoto.images ||
-              selectedPhoto.images.length === 0
-            }
-          >
-            <span>⬇️</span>
-            <span>Raw</span>
-          </button>
+              {/* Download options dropdown */}
+              {showSlideshowDownloadDropdown && (
+                <div
+                  className="slideshow-download-dropdown"
+                  style={{
+                    position: 'absolute',
+                    bottom: '50px',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    background: 'rgba(255, 255, 255, 0.98)',
+                    borderRadius: '8px',
+                    boxShadow: '0 4px 16px rgba(0,0,0,0.2)',
+                    overflow: 'hidden',
+                    minWidth: '200px',
+                    animation: 'fadeIn 0.2s ease-out',
+                    zIndex: 10000001
+                  }}
+                >
+                  <button
+                    className="more-dropdown-option"
+                    onClick={() => {
+                      handleDownloadRawPhoto(selectedPhotoIndex);
+                      setShowSlideshowDownloadDropdown(false);
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '12px 16px',
+                      border: 'none',
+                      background: 'transparent',
+                      color: '#333',
+                      fontSize: '14px',
+                      fontWeight: 'normal',
+                      textAlign: 'left',
+                      cursor: 'pointer',
+                      transition: 'background 0.2s ease',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px'
+                    }}
+                    onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255, 82, 82, 0.1)'}
+                    onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
+                  >
+                    <span>⬇️</span> Download Raw
+                  </button>
+                  <button
+                    className="more-dropdown-option"
+                    onClick={() => {
+                      handleDownloadPhoto(selectedPhotoIndex);
+                      setShowSlideshowDownloadDropdown(false);
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '12px 16px',
+                      border: 'none',
+                      background: 'transparent',
+                      color: '#333',
+                      fontSize: '14px',
+                      fontWeight: 'normal',
+                      textAlign: 'left',
+                      cursor: 'pointer',
+                      transition: 'background 0.2s ease',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px'
+                    }}
+                    onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255, 82, 82, 0.1)'}
+                    onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
+                  >
+                    <span>🖼️</span> Download Framed
+                  </button>
+                </div>
+              )}
+            </div>
           )}
 
           {/* Download Video Button - Show when video exists (replaces Framed/Raw buttons) */}
