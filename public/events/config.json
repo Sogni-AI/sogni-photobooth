@@ -2,6 +2,17 @@
   "version": "1.0",
   "defaultTheme": null,
   "themes": {
+    "mandela": {
+      "label": "Mandela",
+      "defaultAspectRatio": "narrow",
+      "framePadding": { "top": 0, "left": 0, "right": 0, "bottom": 34 },
+      "tweetTemplate": "Just took my photo at the @sogni_protocol AI Photobooth at Mandela Club! https://photobooth.sogni.ai",
+      "frames": {
+        "narrow": [
+          "/events/mandela/narrow_1.png"
+        ]
+      }
+    },
     "function1": {
       "label": "Function 1",
       "defaultAspectRatio": "narrow",
