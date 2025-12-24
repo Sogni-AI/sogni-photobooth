@@ -6346,76 +6346,111 @@ const PhotoGallery = ({
               <span>⬇️</span>
             </button>
             
-            {/* Download options dropdown */}
-            {showMoreDropdown && !isBulkDownloading && (
-              <div
-                className="more-dropdown-menu"
-                style={{
-                  position: 'absolute',
-                  bottom: '50px',
-                  right: '0',
-                  background: 'rgba(255, 255, 255, 0.98)',
-                  borderRadius: '8px',
-                  boxShadow: '0 4px 16px rgba(0,0,0,0.2)',
-                  overflow: 'hidden',
-                  minWidth: '200px',
-                  animation: 'fadeIn 0.2s ease-out',
-                  zIndex: 10000001
-                }}
-              >
-                <button
-                  className="more-dropdown-option"
-                  onClick={() => {
-                    handleDownloadAll(false);
-                    setShowMoreDropdown(false);
-                  }}
+            {/* Download options dropdown - portaled to escape stacking context */}
+            {showMoreDropdown && !isBulkDownloading && createPortal(
+              (
+                <div
+                  className="more-dropdown-menu"
                   style={{
-                    width: '100%',
-                    padding: '12px 16px',
-                    border: 'none',
-                    background: 'transparent',
-                    color: '#333',
-                    fontSize: '14px',
-                    fontWeight: 'normal',
-                    textAlign: 'left',
-                    cursor: 'pointer',
-                    transition: 'background 0.2s ease',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px'
+                    position: 'fixed',
+                    bottom: (() => {
+                      // Position dropdown above the batch download button
+                      const batchButton = document.querySelector('.batch-download-button-container');
+                      if (batchButton) {
+                        const rect = batchButton.getBoundingClientRect();
+                        return window.innerHeight - rect.top + 10; // 10px gap above the button
+                      }
+                      return 88; // fallback
+                    })(),
+                    left: (() => {
+                      // Position dropdown aligned with the batch download button (right-aligned)
+                      const batchButton = document.querySelector('.batch-download-button-container');
+                      if (batchButton) {
+                        const rect = batchButton.getBoundingClientRect();
+                        const dropdownWidth = 200;
+                        let leftPos = rect.right - dropdownWidth; // Align right edge of dropdown with right edge of button
+                        
+                        // Ensure dropdown doesn't go off-screen
+                        if (leftPos < 10) leftPos = 10;
+                        if (leftPos + dropdownWidth > window.innerWidth - 10) {
+                          leftPos = window.innerWidth - dropdownWidth - 10;
+                        }
+                        
+                        return leftPos;
+                      }
+                      return 'auto'; // fallback
+                    })(),
+                    right: (() => {
+                      // Only use right if button not found
+                      const batchButton = document.querySelector('.batch-download-button-container');
+                      return batchButton ? 'auto' : '20px'; // fallback
+                    })(),
+                    transform: 'none',
+                    background: 'rgba(255, 255, 255, 0.98)',
+                    borderRadius: '8px',
+                    boxShadow: '0 4px 16px rgba(0,0,0,0.2)',
+                    overflow: 'hidden',
+                    minWidth: '200px',
+                    animation: 'fadeIn 0.2s ease-out',
+                    zIndex: 9999999
                   }}
-                  onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255, 82, 82, 0.1)'}
-                  onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
+                  onClick={(e) => e.stopPropagation()}
                 >
-                  <span>⬇️</span> Download All Raw
-                </button>
-                <button
-                  className="more-dropdown-option"
-                  onClick={() => {
-                    handleDownloadAll(true);
-                    setShowMoreDropdown(false);
-                  }}
-                  style={{
-                    width: '100%',
-                    padding: '12px 16px',
-                    border: 'none',
-                    background: 'transparent',
-                    color: '#333',
-                    fontSize: '14px',
-                    fontWeight: 'normal',
-                    textAlign: 'left',
-                    cursor: 'pointer',
-                    transition: 'background 0.2s ease',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px'
-                  }}
-                  onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255, 82, 82, 0.1)'}
-                  onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
-                >
-                  <span>🖼️</span> Download All Framed
-                </button>
-              </div>
+                  <button
+                    className="more-dropdown-option"
+                    onClick={() => {
+                      handleDownloadAll(false);
+                      setShowMoreDropdown(false);
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '12px 16px',
+                      border: 'none',
+                      background: 'transparent',
+                      color: '#333',
+                      fontSize: '14px',
+                      fontWeight: 'normal',
+                      textAlign: 'left',
+                      cursor: 'pointer',
+                      transition: 'background 0.2s ease',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px'
+                    }}
+                    onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255, 82, 82, 0.1)'}
+                    onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
+                  >
+                    <span>⬇️</span> Download All Raw
+                  </button>
+                  <button
+                    className="more-dropdown-option"
+                    onClick={() => {
+                      handleDownloadAll(true);
+                      setShowMoreDropdown(false);
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '12px 16px',
+                      border: 'none',
+                      background: 'transparent',
+                      color: '#333',
+                      fontSize: '14px',
+                      fontWeight: 'normal',
+                      textAlign: 'left',
+                      cursor: 'pointer',
+                      transition: 'background 0.2s ease',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px'
+                    }}
+                    onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255, 82, 82, 0.1)'}
+                    onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
+                  >
+                    <span>🖼️</span> Download All Framed
+                  </button>
+                </div>
+              ),
+              document.body
             )}
           </div>
 
@@ -6882,77 +6917,109 @@ const PhotoGallery = ({
                 <span>Download</span>
               </button>
 
-              {/* Download options dropdown */}
-              {showSlideshowDownloadDropdown && (
-                <div
-                  className="slideshow-download-dropdown"
-                  style={{
-                    position: 'absolute',
-                    bottom: '50px',
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    background: 'rgba(255, 255, 255, 0.98)',
-                    borderRadius: '8px',
-                    boxShadow: '0 4px 16px rgba(0,0,0,0.2)',
-                    overflow: 'hidden',
-                    minWidth: '200px',
-                    animation: 'fadeIn 0.2s ease-out',
-                    zIndex: 10000001
-                  }}
-                >
-                  <button
-                    className="more-dropdown-option"
-                    onClick={() => {
-                      handleDownloadRawPhoto(selectedPhotoIndex);
-                      setShowSlideshowDownloadDropdown(false);
-                    }}
+              {/* Download options dropdown - portaled to escape stacking context */}
+              {showSlideshowDownloadDropdown && createPortal(
+                (
+                  <div
+                    className="slideshow-download-dropdown"
                     style={{
-                      width: '100%',
-                      padding: '12px 16px',
-                      border: 'none',
-                      background: 'transparent',
-                      color: '#333',
-                      fontSize: '14px',
-                      fontWeight: 'normal',
-                      textAlign: 'left',
-                      cursor: 'pointer',
-                      transition: 'background 0.2s ease',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px'
+                      position: 'fixed',
+                      bottom: (() => {
+                        // Position dropdown above the download button
+                        const downloadButton = document.querySelector('.slideshow-download-button-container');
+                        if (downloadButton) {
+                          const rect = downloadButton.getBoundingClientRect();
+                          return window.innerHeight - rect.top + 10; // 10px gap above the button
+                        }
+                        return 88; // fallback
+                      })(),
+                      left: (() => {
+                        // Position dropdown aligned with the download button
+                        const downloadButton = document.querySelector('.slideshow-download-button-container');
+                        if (downloadButton) {
+                          const rect = downloadButton.getBoundingClientRect();
+                          const dropdownWidth = 200;
+                          let leftPos = rect.left + (rect.width / 2) - (dropdownWidth / 2);
+                          
+                          // Ensure dropdown doesn't go off-screen
+                          if (leftPos < 10) leftPos = 10;
+                          if (leftPos + dropdownWidth > window.innerWidth - 10) {
+                            leftPos = window.innerWidth - dropdownWidth - 10;
+                          }
+                          
+                          return leftPos;
+                        }
+                        return '50%'; // fallback
+                      })(),
+                      transform: (() => {
+                        const downloadButton = document.querySelector('.slideshow-download-button-container');
+                        return downloadButton ? 'none' : 'translateX(-50%)'; // Only center if no button found
+                      })(),
+                      background: 'rgba(255, 255, 255, 0.98)',
+                      borderRadius: '8px',
+                      boxShadow: '0 4px 16px rgba(0,0,0,0.2)',
+                      overflow: 'hidden',
+                      minWidth: '200px',
+                      animation: 'fadeIn 0.2s ease-out',
+                      zIndex: 9999999
                     }}
-                    onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255, 82, 82, 0.1)'}
-                    onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
+                    onClick={(e) => e.stopPropagation()}
                   >
-                    <span>⬇️</span> Download Raw
-                  </button>
-                  <button
-                    className="more-dropdown-option"
-                    onClick={() => {
-                      handleDownloadPhoto(selectedPhotoIndex);
-                      setShowSlideshowDownloadDropdown(false);
-                    }}
-                    style={{
-                      width: '100%',
-                      padding: '12px 16px',
-                      border: 'none',
-                      background: 'transparent',
-                      color: '#333',
-                      fontSize: '14px',
-                      fontWeight: 'normal',
-                      textAlign: 'left',
-                      cursor: 'pointer',
-                      transition: 'background 0.2s ease',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px'
-                    }}
-                    onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255, 82, 82, 0.1)'}
-                    onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
-                  >
-                    <span>🖼️</span> Download Framed
-                  </button>
-                </div>
+                    <button
+                      className="more-dropdown-option"
+                      onClick={() => {
+                        handleDownloadRawPhoto(selectedPhotoIndex);
+                        setShowSlideshowDownloadDropdown(false);
+                      }}
+                      style={{
+                        width: '100%',
+                        padding: '12px 16px',
+                        border: 'none',
+                        background: 'transparent',
+                        color: '#333',
+                        fontSize: '14px',
+                        fontWeight: 'normal',
+                        textAlign: 'left',
+                        cursor: 'pointer',
+                        transition: 'background 0.2s ease',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
+                      }}
+                      onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255, 82, 82, 0.1)'}
+                      onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
+                    >
+                      <span>⬇️</span> Download Raw
+                    </button>
+                    <button
+                      className="more-dropdown-option"
+                      onClick={() => {
+                        handleDownloadPhoto(selectedPhotoIndex);
+                        setShowSlideshowDownloadDropdown(false);
+                      }}
+                      style={{
+                        width: '100%',
+                        padding: '12px 16px',
+                        border: 'none',
+                        background: 'transparent',
+                        color: '#333',
+                        fontSize: '14px',
+                        fontWeight: 'normal',
+                        textAlign: 'left',
+                        cursor: 'pointer',
+                        transition: 'background 0.2s ease',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
+                      }}
+                      onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255, 82, 82, 0.1)'}
+                      onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
+                    >
+                      <span>🖼️</span> Download Framed
+                    </button>
+                  </div>
+                ),
+                document.body
               )}
             </div>
           )}

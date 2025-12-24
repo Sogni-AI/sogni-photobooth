@@ -4,7 +4,7 @@
   "description": "Capture and transform your photos with AI styles - Slothicorn Edition",
   "start_url": "/",
   "display": "standalone",
-  "orientation": "portrait-primary",
+  "orientation": "any",
   "theme_color": "#000000",
   "background_color": "#000000",
   "scope": "/",
