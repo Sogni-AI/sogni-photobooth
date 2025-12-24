@@ -30,10 +30,10 @@ const upload = multer({
   }
 });
 
-// Cleanup old images (older than 48 hours)
+// Cleanup old images (older than 1 hour)
 const cleanupOldImages = () => {
   try {
-    const twoDaysAgo = Date.now() - (48 * 60 * 60 * 1000); // 48 hours in milliseconds
+    const oneHourAgo = Date.now() - (60 * 60 * 1000); // 1 hour in milliseconds
     
     if (!fs.existsSync(UPLOADS_DIR)) {
       return;
@@ -51,7 +51,7 @@ const cleanupOldImages = () => {
         continue;
       }
       
-      if (stats.mtime.getTime() < twoDaysAgo) {
+      if (stats.mtime.getTime() < oneHourAgo) {
         try {
           fs.unlinkSync(filePath);
           deletedCount++;
@@ -118,7 +118,7 @@ router.post('/upload', upload.single('image'), (req, res) => {
       imageUrl: imageUrl,
       filename: filename,
       size: req.file.size,
-      expiresAt: new Date(Date.now() + (48 * 60 * 60 * 1000)).toISOString()
+      expiresAt: new Date(Date.now() + (60 * 60 * 1000)).toISOString()
     });
     
   } catch (error) {
@@ -207,11 +207,11 @@ router.get('/:filename', (req, res) => {
       return res.status(403).json({ error: 'Access denied' });
     }
     
-    // Check if file is expired (older than 48 hours)
+    // Check if file is expired (older than 1 hour)
     const stats = fs.statSync(filePath);
-    const twoDaysAgo = Date.now() - (48 * 60 * 60 * 1000);
+    const oneHourAgo = Date.now() - (60 * 60 * 1000);
     
-    if (stats.mtime.getTime() < twoDaysAgo) {
+    if (stats.mtime.getTime() < oneHourAgo) {
       console.log(`[Image Hosting] Image expired, deleting: ${filename}`);
       fs.unlinkSync(filePath);
       return res.status(404).json({ error: 'Not found' });
@@ -304,8 +304,8 @@ router.get('/info/:filename', (req, res) => {
     }
     
     const stats = fs.statSync(filePath);
-    const twoDaysAgo = Date.now() - (48 * 60 * 60 * 1000);
-    const isExpired = stats.mtime.getTime() < twoDaysAgo;
+    const oneHourAgo = Date.now() - (60 * 60 * 1000);
+    const isExpired = stats.mtime.getTime() < oneHourAgo;
     
     // Set security headers
     res.setHeader('X-Robots-Tag', 'noindex, nofollow, noarchive, nosnippet');
@@ -319,7 +319,7 @@ router.get('/info/:filename', (req, res) => {
       filename: filename,
       size: stats.size,
       uploadedAt: stats.mtime.toISOString(),
-      expiresAt: new Date(stats.mtime.getTime() + (48 * 60 * 60 * 1000)).toISOString(),
+      expiresAt: new Date(stats.mtime.getTime() + (60 * 60 * 1000)).toISOString(),
       isExpired: isExpired,
       url: `${apiDomain}/api/images/${filename}`
     });
