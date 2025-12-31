@@ -104,6 +104,7 @@ export interface ArchiveProject {
     name: string;
   };
   hidden?: boolean;
+  scheduledDelete?: boolean;
 }
 
 export interface ArchiveJob {

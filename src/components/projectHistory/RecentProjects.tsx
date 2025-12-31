@@ -26,7 +26,8 @@ function RecentProjects({ sogniClient, onClose }: RecentProjectsProps) {
     error,
     loadMore,
     refresh,
-    hideJob
+    hideJob,
+    deleteProject
   } = useProjectHistory({ sogniClient });
 
   // Initial fetch on mount
@@ -51,6 +52,13 @@ function RecentProjects({ sogniClient, onClose }: RecentProjectsProps) {
   const handleCloseSlideshow = useCallback(() => {
     setSlideshow(null);
   }, []);
+
+  const handleDeleteProject = useCallback(async (projectId: string) => {
+    const success = await deleteProject(projectId);
+    if (!success) {
+      alert('Failed to delete project. Please try again.');
+    }
+  }, [deleteProject]);
 
   return (
     <div className="recent-projects-page">
@@ -105,8 +113,17 @@ function RecentProjects({ sogniClient, onClose }: RecentProjectsProps) {
                     ({project.numberOfMedia} {pluralize(project.numberOfMedia, project.type === 'video' ? 'video' : 'image')})
                   </span>
                 </div>
-                <div className="recent-project-date">
-                  Created {timeAgo(project.createdAt)}
+                <div className="recent-project-actions">
+                  <div className="recent-project-date">
+                    Created {timeAgo(project.createdAt)}
+                  </div>
+                  <button
+                    className="recent-project-delete-btn"
+                    onClick={() => handleDeleteProject(project.id)}
+                    title="Delete project"
+                  >
+                    🗑️
+                  </button>
                 </div>
               </div>
               <div className="recent-project-jobs">

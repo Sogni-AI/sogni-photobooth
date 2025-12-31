@@ -13,6 +13,21 @@ import type {
 // 24 hours TTL for projects
 const PROJECT_TTL = 24 * 60 * 60 * 1000;
 
+// Get Sogni API URL based on environment
+function getSogniRestUrl() {
+  const hostname = window.location.hostname;
+  const isLocalDev = hostname === 'localhost' || hostname === '127.0.0.1';
+  const isStaging = hostname.includes('staging');
+  
+  if (isLocalDev) {
+    return 'https://api-local.sogni.ai';
+  } else if (isStaging) {
+    return 'https://api-staging.sogni.ai';
+  }
+  
+  return 'https://api.sogni.ai';
+}
+
 // Fetch 10 jobs at a time
 const PAGE_SIZE = 10;
 
@@ -279,9 +294,47 @@ export function useProjectHistory({ sogniClient }: UseProjectHistoryOptions) {
     });
   }, []);
 
-  // Get visible projects (filter out hidden)
+  // Delete a project
+  const deleteProject = useCallback(async (projectId: string) => {
+    if (!sogniClient) {
+      console.error('Cannot delete project: not authenticated');
+      return false;
+    }
+
+    try {
+      // Make a direct DELETE request to the Sogni API
+      // Use credentials: 'include' to send cookies with the request
+      const apiUrl = getSogniRestUrl();
+      const response = await fetch(`${apiUrl}/v1/projects/${projectId}`, {
+        method: 'DELETE',
+        credentials: 'include',
+        headers: {
+          'Accept': 'application/json',
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to delete project: ${response.status} ${response.statusText}`);
+      }
+      
+      // Mark project as scheduled for deletion
+      setState(prev => {
+        const projects = prev.projects.map(p =>
+          p.id === projectId ? { ...p, scheduledDelete: true } : p
+        );
+        return { ...prev, projects };
+      });
+      
+      return true;
+    } catch (error) {
+      console.error('Failed to delete project:', error);
+      return false;
+    }
+  }, [sogniClient]);
+
+  // Get visible projects (filter out hidden and scheduled for deletion)
   const visibleProjects = state.projects.filter(p => {
-    if (p.hidden) return false;
+    if (p.hidden || p.scheduledDelete) return false;
     // Check if at least one job is visible (not hidden, not failed, and not canceled)
     return p.jobs.some(j => !j.hidden && j.status !== 'failed' && j.status !== 'canceled');
   });
@@ -291,7 +344,8 @@ export function useProjectHistory({ sogniClient }: UseProjectHistoryOptions) {
     visibleProjects,
     refresh,
     loadMore,
-    hideJob
+    hideJob,
+    deleteProject
   };
 }
 

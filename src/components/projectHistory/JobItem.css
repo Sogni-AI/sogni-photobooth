@@ -46,7 +46,7 @@
   width: auto;
   height: 320px;
   object-fit: contain;
-  background: #000;
+  background: transparent;
 }
 
 /* Video Play/Pause Button - Small and subtle */
