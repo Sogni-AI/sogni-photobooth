@@ -1942,7 +1942,9 @@ const App = () => {
     // Set non-model settings first
     updateSetting('selectedStyle', style); 
     if (style === 'custom') {
-      updateSetting('positivePrompt', ''); 
+      // Don't clear the prompt when switching to custom style
+      // The user may have already entered a custom prompt, or may want to keep
+      // the previous prompt to edit it. This preserves custom prompts after generation.
     } else {
       const prompt = stylePrompts[style] || '';
       updateSetting('positivePrompt', prompt); 
@@ -2220,7 +2222,7 @@ const App = () => {
     // Update style and URL for deep linking
     updateSetting('selectedStyle', promptKey);
     if (promptKey === 'custom') {
-      updateSetting('positivePrompt', ''); 
+      // Don't clear the prompt when switching to custom - preserve any existing custom prompt
     } else {
       const prompt = stylePrompts[promptKey] || '';
       updateSetting('positivePrompt', prompt);
@@ -2324,8 +2326,8 @@ const App = () => {
 
   const handleCustomFromSampleGallery = () => {
     // For Sample Gallery mode - just switch to custom style
+    // Don't clear the prompt - preserve any existing custom prompt
     updateSetting('selectedStyle', 'custom');
-    updateSetting('positivePrompt', '');
     setCurrentHashtag('SogniPhotobooth'); // Use #SogniPhotobooth for custom prompts
     updateSetting('halloweenContext', false); // Clear Halloween context (user is manually entering custom mode)
     // Update URL (custom will clear the prompt parameter)
@@ -2336,11 +2338,11 @@ const App = () => {
 
   // Update handlePositivePromptChange to use updateSetting
   const handlePositivePromptChange = (value) => {
-    updateSetting('positivePrompt', value); 
+    updateSetting('positivePrompt', value);
     if (selectedStyle !== 'custom') {
       const currentPrompt = stylePrompts[selectedStyle] || '';
       if (value !== currentPrompt) {
-        updateSetting('selectedStyle', 'custom'); 
+        updateSetting('selectedStyle', 'custom');
         // Clear the URL parameter when switching to custom
         updateUrlWithPrompt(null);
         setCurrentHashtag('SogniPhotobooth'); // Use #SogniPhotobooth for custom prompts

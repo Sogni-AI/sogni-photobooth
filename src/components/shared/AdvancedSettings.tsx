@@ -268,13 +268,11 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
     visible,
     onClose,
     autoFocusPositivePrompt = false,
-    positivePrompt = '',
+    // Values now read from settings context directly to avoid stale props after generation
+    // positivePrompt, stylePrompt, negativePrompt, seed - using settings.xxx instead
     onPositivePromptChange,
-    stylePrompt = '',
     onStylePromptChange,
-    negativePrompt = '',
     onNegativePromptChange,
-    seed = '',
     onSeedChange,
     modelOptions = [],
     selectedModel = '',
@@ -312,8 +310,7 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
     onTezDevThemeChange,
     outputFormat = 'jpg',
     onOutputFormatChange,
-    sensitiveContentFilter = false,
-    onSensitiveContentFilterChange,
+    // sensitiveContentFilter now read from settings context directly
     showSplashOnInactivity = false,
     onShowSplashOnInactivityChange,
   } = props;
@@ -363,7 +360,8 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
   const currentAspectRatio = aspectRatio || settings.aspectRatio;
   const currentTezDevTheme = tezdevTheme || settings.tezdevTheme;
   const currentOutputFormat = outputFormat || settings.outputFormat;
-  const currentSensitiveContentFilter = sensitiveContentFilter !== undefined ? sensitiveContentFilter : settings.sensitiveContentFilter;
+  // Always use settings from context to avoid stale props issue after image generation
+  const currentSensitiveContentFilter = settings.sensitiveContentFilter;
   
   // State for collapsible Advanced Model Settings section
   const [showAdvancedModelSettings, setShowAdvancedModelSettings] = React.useState(false);
@@ -574,12 +572,9 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
   };
 
   const handleSensitiveContentFilterChange = (enabled: boolean) => {
-    // Use the provided handler or fallback to context
-    if (onSensitiveContentFilterChange) {
-      onSensitiveContentFilterChange(enabled);
-    } else {
-      updateSetting('sensitiveContentFilter', enabled);
-    }
+    // Always use context's updateSetting to avoid stale props issue after image generation
+    // The prop handler pattern was causing inputs to become unresponsive
+    updateSetting('sensitiveContentFilter', enabled);
   };
 
 
@@ -913,8 +908,16 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
                   ref={positivePromptRef}
                   className="custom-style-input"
                   placeholder="Describe what you want to see..."
-                  value={positivePrompt}
-                  onChange={(e) => onPositivePromptChange?.(e.target.value)}
+                  value={settings.positivePrompt || ''}
+                  onChange={(e) => {
+                    // Use prop handler if available (for extra logic like auto-switching to custom style)
+                    // Otherwise fall back to context's updateSetting
+                    if (onPositivePromptChange) {
+                      onPositivePromptChange(e.target.value);
+                    } else {
+                      updateSetting('positivePrompt', e.target.value);
+                    }
+                  }}
                   rows={3}
                   style={{
                     border: autoFocusPositivePrompt ? '2px solid #3b82f6' : undefined,
@@ -933,8 +936,14 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
                 <textarea
                   className="custom-style-input"
                   placeholder="Additional style modifier (optional, appended to positive prompt)"
-                  value={stylePrompt}
-                  onChange={(e) => onStylePromptChange?.(e.target.value)}
+                  value={settings.stylePrompt || ''}
+                  onChange={(e) => {
+                    if (onStylePromptChange) {
+                      onStylePromptChange(e.target.value);
+                    } else {
+                      updateSetting('stylePrompt', e.target.value);
+                    }
+                  }}
                   rows={2}
                   autoComplete="off"
                   autoCapitalize="off"
@@ -948,8 +957,14 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
                 <textarea
                   className="custom-style-input"
                   placeholder="lowres, worst quality, low quality"
-                  value={negativePrompt}
-                  onChange={(e) => onNegativePromptChange?.(e.target.value)}
+                  value={settings.negativePrompt || ''}
+                  onChange={(e) => {
+                    if (onNegativePromptChange) {
+                      onNegativePromptChange(e.target.value);
+                    } else {
+                      updateSetting('negativePrompt', e.target.value);
+                    }
+                  }}
                   rows={2}
                   autoComplete="off"
                   autoCapitalize="off"
@@ -966,8 +981,14 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
                   max={4294967295}
                   className="custom-style-input"
                   placeholder="Random"
-                  value={seed}
-                  onChange={(e) => onSeedChange?.(e.target.value)}
+                  value={settings.seed || ''}
+                  onChange={(e) => {
+                    if (onSeedChange) {
+                      onSeedChange(e.target.value);
+                    } else {
+                      updateSetting('seed', e.target.value);
+                    }
+                  }}
                 />
               </div>
             </div>
