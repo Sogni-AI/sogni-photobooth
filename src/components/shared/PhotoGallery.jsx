@@ -6261,24 +6261,8 @@ const PhotoGallery = ({
                 if (showDownloadTip) {
                   setShowDownloadTip(false);
                 }
-                // Check if any photos have videos - if so, download videos as zip
-                const currentPhotosArray = isPromptSelectorMode ? filteredPhotos : photos;
-                const photosWithVideos = currentPhotosArray.filter(
-                  photo => !photo.hidden && !photo.loading && !photo.generating && !photo.error && photo.videoUrl && !photo.isOriginal
-                );
-
-                if (photosWithVideos.length > 0) {
-                  // Check if these are transition videos - if so, concatenate instead of zipping
-                  if (isTransitionMode && transitionVideoQueue.length > 0) {
-                    handleDownloadTransitionVideo();
-                  } else {
-                    // Normal video batch: download as zip
-                    handleDownloadAllVideos();
-                  }
-                } else {
-                  // Show download options dropdown for images
-                  setShowMoreDropdown(prev => !prev);
-                }
+                // Always show download options dropdown
+                setShowMoreDropdown(prev => !prev);
               }}
               disabled={isBulkDownloading}
               style={{
@@ -6448,6 +6432,51 @@ const PhotoGallery = ({
                   >
                     <span>🖼️</span> Download All Framed
                   </button>
+                  {(() => {
+                    // Check if any photos have videos
+                    const currentPhotosArray = isPromptSelectorMode ? filteredPhotos : photos;
+                    const photosWithVideos = currentPhotosArray.filter(
+                      photo => !photo.hidden && !photo.loading && !photo.generating && !photo.error && photo.videoUrl && !photo.isOriginal
+                    );
+                    
+                    if (photosWithVideos.length > 0) {
+                      return (
+                        <button
+                          className="more-dropdown-option"
+                          onClick={() => {
+                            setShowMoreDropdown(false);
+                            // Check if these are transition videos - if so, concatenate instead of zipping
+                            if (isTransitionMode && transitionVideoQueue.length > 0) {
+                              handleDownloadTransitionVideo();
+                            } else {
+                              // Normal video batch: download as zip
+                              handleDownloadAllVideos();
+                            }
+                          }}
+                          style={{
+                            width: '100%',
+                            padding: '12px 16px',
+                            border: 'none',
+                            background: 'transparent',
+                            color: '#333',
+                            fontSize: '14px',
+                            fontWeight: 'normal',
+                            textAlign: 'left',
+                            cursor: 'pointer',
+                            transition: 'background 0.2s ease',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px'
+                          }}
+                          onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255, 82, 82, 0.1)'}
+                          onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
+                        >
+                          <span>🎬</span> Download All Videos
+                        </button>
+                      );
+                    }
+                    return null;
+                  })()}
                 </div>
               ),
               document.body
@@ -6891,8 +6920,8 @@ const PhotoGallery = ({
               />
             )}
 
-          {/* Download Button with Dropdown - Hide in Vibe Explorer or when video exists */}
-          {!isPromptSelectorMode && !selectedPhoto.videoUrl && (
+          {/* Download Button with Dropdown - Always show in slideshow (not Vibe Explorer) */}
+          {!isPromptSelectorMode && (
             <div 
               className="slideshow-download-button-container" 
               style={{ 
@@ -6909,8 +6938,7 @@ const PhotoGallery = ({
                 disabled={
                   selectedPhoto.loading || 
                   selectedPhoto.enhancing ||
-                  !selectedPhoto.images ||
-                  selectedPhoto.images.length === 0
+                  (!selectedPhoto.images || selectedPhoto.images.length === 0) && !selectedPhoto.videoUrl
                 }
               >
                 <span>⬇️</span>
@@ -7017,25 +7045,39 @@ const PhotoGallery = ({
                     >
                       <span>🖼️</span> Download Framed
                     </button>
+                    {selectedPhoto.videoUrl && (
+                      <button
+                        className="more-dropdown-option"
+                        onClick={() => {
+                          handleDownloadVideo();
+                          setShowSlideshowDownloadDropdown(false);
+                        }}
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          border: 'none',
+                          background: 'transparent',
+                          color: '#333',
+                          fontSize: '14px',
+                          fontWeight: 'normal',
+                          textAlign: 'left',
+                          cursor: 'pointer',
+                          transition: 'background 0.2s ease',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px'
+                        }}
+                        onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255, 82, 82, 0.1)'}
+                        onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
+                      >
+                        <span>🎬</span> Download Video
+                      </button>
+                    )}
                   </div>
                 ),
                 document.body
               )}
             </div>
-          )}
-
-          {/* Download Video Button - Show when video exists (replaces Framed/Raw buttons) */}
-          {!isPromptSelectorMode && selectedPhoto.videoUrl && (
-          <button
-            className="action-button download-video-btn"
-            onClick={(e) => {
-              handleDownloadVideo();
-              e.stopPropagation();
-            }}
-          >
-            <span>⬇️</span>
-            <span>Video</span>
-          </button>
           )}
 
           {/* Video Button - Show in Vibe Explorer slideshow for styles with videos */}
