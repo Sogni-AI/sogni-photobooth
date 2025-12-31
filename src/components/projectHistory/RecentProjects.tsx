@@ -11,9 +11,10 @@ import './RecentProjects.css';
 interface RecentProjectsProps {
   sogniClient: SogniClient | null;
   onClose: () => void;
+  onReuseProject?: (projectId: string) => void;
 }
 
-function RecentProjects({ sogniClient, onClose }: RecentProjectsProps) {
+function RecentProjects({ sogniClient, onClose, onReuseProject }: RecentProjectsProps) {
   const [slideshow, setSlideshow] = useState<{ project: ArchiveProject; jobId: string } | null>(
     null
   );
@@ -59,6 +60,13 @@ function RecentProjects({ sogniClient, onClose }: RecentProjectsProps) {
       alert('Failed to delete project. Please try again.');
     }
   }, [deleteProject]);
+
+  const handleReuseProject = useCallback((projectId: string) => {
+    if (onReuseProject) {
+      onReuseProject(projectId);
+      onClose();
+    }
+  }, [onReuseProject, onClose]);
 
   return (
     <div className="recent-projects-page">
@@ -117,6 +125,15 @@ function RecentProjects({ sogniClient, onClose }: RecentProjectsProps) {
                   <div className="recent-project-date">
                     Created {timeAgo(project.createdAt)}
                   </div>
+                  {project.type === 'image' && (
+                    <button
+                      className="recent-project-reuse-btn"
+                      onClick={() => handleReuseProject(project.id)}
+                      title="Load images into Photo Gallery"
+                    >
+                      Reuse
+                    </button>
+                  )}
                   <button
                     className="recent-project-delete-btn"
                     onClick={() => handleDeleteProject(project.id)}

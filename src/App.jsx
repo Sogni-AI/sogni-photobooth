@@ -8215,6 +8215,144 @@ const App = () => {
     setShowStartMenu(true);
   };
 
+  // Helper to download image as blob URL (to avoid CORS issues with S3 signed URLs)
+  const downloadImageAsBlob = (url) => {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('GET', url);
+      xhr.responseType = 'blob';
+
+      xhr.onload = () => {
+        if (xhr.status === 200) {
+          const blob = xhr.response;
+          const blobUrl = URL.createObjectURL(blob);
+          resolve(blobUrl);
+        } else {
+          reject(new Error(`Download failed: ${xhr.status}`));
+        }
+      };
+
+      xhr.onerror = () => reject(new Error('Network error'));
+      xhr.send();
+    });
+  };
+
+  // Handle reusing a project from Recent Projects - loads images into Photo Gallery
+  const handleReuseProject = useCallback(async (projectId) => {
+    if (!sogniClient) return;
+
+    try {
+      // Fetch the project details from job history
+      const walletAddress = sogniClient.account?.currentAccount?.walletAddress;
+      if (!walletAddress) {
+        showToast({
+          title: 'Error',
+          message: 'No wallet address found. Please sign in.',
+          type: 'error'
+        });
+        return;
+      }
+
+      const response = await sogniClient.apiClient.rest.get('/v1/jobs/list', {
+        role: 'artist',
+        address: walletAddress,
+        limit: 100,
+        offset: 0
+      });
+
+      const { jobs } = response.data;
+
+      // Find all jobs for this project
+      const projectJobs = jobs.filter(job => job.parentRequest.id === projectId);
+
+      if (projectJobs.length === 0) {
+        showToast({
+          title: 'Project Not Found',
+          message: 'Could not load project images.',
+          type: 'error'
+        });
+        return;
+      }
+
+      // Filter to completed jobs (API returns 'jobCompleted' status)
+      const completedJobs = projectJobs.filter(job =>
+        job.status === 'jobCompleted' && !job.triggeredNSFWFilter
+      );
+
+      if (completedJobs.length === 0) {
+        showToast({
+          title: 'No Completed Images',
+          message: 'This project has no completed images available.',
+          type: 'error'
+        });
+        return;
+      }
+
+      // Convert jobs to photo objects - download images as blobs to avoid CORS issues
+      const loadedPhotos = await Promise.all(
+        completedJobs.map(async (job, index) => {
+          try {
+            // Get the signed S3 URL
+            const s3Url = await sogniClient.projects.downloadUrl({
+              jobId: projectId,
+              imageId: job.imgID,
+              type: 'complete'
+            });
+
+            // Download image as blob and create blob URL
+            const blobUrl = await downloadImageAsBlob(s3Url);
+
+            return {
+              id: job.imgID,
+              generating: false,
+              loading: false,
+              images: [blobUrl],
+              originalDataUrl: blobUrl,
+              newlyArrived: false,
+              isOriginal: false,
+              hidden: false,
+              sourceType: 'history',
+              // Assign frame numbers for equal distribution (1-6)
+              taipeiFrameNumber: (index % 6) + 1,
+              framePadding: 0
+            };
+          } catch (error) {
+            console.error('Failed to load job:', job.imgID, error);
+            return null;
+          }
+        })
+      );
+
+      // Filter out any failed loads
+      const validPhotos = loadedPhotos.filter(photo => photo !== null);
+
+      if (validPhotos.length === 0) {
+        showToast({
+          title: 'No Images Available',
+          message: 'Could not load any images from this project. The images may have expired.',
+          type: 'error'
+        });
+        return;
+      }
+
+      // Load photos into the gallery
+      setPhotos(validPhotos);
+      setRegularPhotos(validPhotos);
+
+      // Show photo grid
+      setShowPhotoGrid(true);
+      setShowStartMenu(false);
+      stopCamera();
+    } catch (error) {
+      console.error('Failed to load project:', error);
+      showToast({
+        title: 'Error',
+        message: 'Failed to load project. Please try again.',
+        type: 'error'
+      });
+    }
+  }, [sogniClient, showToast, stopCamera]);
+
   // Handle Bald for Base popup generate button
   const handleBaldForBaseGenerate = useCallback(() => {
     setShowBaldForBasePopup(false);
@@ -10309,6 +10447,7 @@ const App = () => {
         <RecentProjects
           sogniClient={sogniClient}
           onClose={() => setShowRecentProjects(false)}
+          onReuseProject={handleReuseProject}
         />
       )}
     </>
