@@ -635,6 +635,20 @@ export class FrontendSogniClientAdapter {
         }
         throw new Error('Cost estimation not available on this client');
       },
+      // Forward downloadUrl to the real client's projects API (for project history media)
+      downloadUrl: async (params: { jobId: string; imageId: string; type: string }) => {
+        if (this.realClient.projects && typeof (this.realClient.projects as any).downloadUrl === 'function') {
+          return (this.realClient.projects as any).downloadUrl(params);
+        }
+        throw new Error('downloadUrl not available on this client');
+      },
+      // Forward mediaDownloadUrl to the real client's projects API (for project history videos)
+      mediaDownloadUrl: async (params: { jobId: string; id: string; type: string }) => {
+        if (this.realClient.projects && typeof (this.realClient.projects as any).mediaDownloadUrl === 'function') {
+          return (this.realClient.projects as any).mediaDownloadUrl(params);
+        }
+        throw new Error('mediaDownloadUrl not available on this client');
+      },
       on: (event: string, callback: (...args: any[]) => void) => {
         // Forward to the real client's projects if it has an 'on' method
         if (this.realClient.projects && typeof (this.realClient.projects as any).on === 'function') {

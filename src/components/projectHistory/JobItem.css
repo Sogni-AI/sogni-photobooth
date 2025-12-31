@@ -1,0 +1,165 @@
+/* ============================================
+   Job Item - Clean Grid Style
+   ============================================ */
+
+.job-item {
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+  border-radius: 0;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  background: rgba(26, 26, 46, 0.1);
+  height: 320px;
+  width: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.job-item:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.job-item-media {
+  display: block;
+  width: auto;
+  height: 320px;
+  object-fit: contain;
+  animation: jobItemFadeIn 0.3s ease;
+}
+
+/* Video-specific wrapper */
+.job-item-video-wrapper {
+  position: relative;
+  width: auto;
+  height: 320px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: jobItemFadeIn 0.3s ease;
+}
+
+.job-item-video {
+  display: block;
+  width: auto;
+  height: 320px;
+  object-fit: contain;
+  background: #000;
+}
+
+/* Video Play/Pause Button - Small and subtle */
+.job-item-video-btn {
+  position: absolute;
+  bottom: 6px;
+  right: 6px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.5);
+  border: none;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 10;
+  transition: all 0.2s ease;
+  color: white;
+}
+
+.job-item-video-btn:hover {
+  background: rgba(0, 0, 0, 0.75);
+  transform: scale(1.1);
+}
+
+.job-item-video-btn svg {
+  width: 12px;
+  height: 12px;
+  fill: currentColor;
+}
+
+/* Loading Placeholder */
+.job-item-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  height: 100%;
+  background: rgba(26, 26, 46, 0.1);
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 0.75rem;
+  text-align: center;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+.job-item-placeholder-error {
+  background: linear-gradient(135deg, #4a2a2a 0%, #2e1a1a 100%);
+  color: #ff8a8a;
+}
+
+.job-item-placeholder-warning {
+  background: linear-gradient(135deg, #4a3a2a 0%, #2e2a1a 100%);
+  color: #ffb86b;
+}
+
+.job-item-spinner {
+  width: 24px;
+  height: 24px;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-top-color: rgba(255, 255, 255, 0.8);
+  border-radius: 50%;
+  animation: jobItemSpin 1s linear infinite;
+}
+
+@keyframes jobItemSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes jobItemFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.job-item-error-icon,
+.job-item-warning-icon,
+.job-item-nsfw-icon {
+  font-size: 1.25rem;
+}
+
+.job-item-status {
+  font-size: 0.6875rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Mobile adjustments */
+@media (max-width: 600px) {
+  .job-item-video-btn {
+    width: 24px;
+    height: 24px;
+    bottom: 4px;
+    right: 4px;
+  }
+
+  .job-item-video-btn svg {
+    width: 10px;
+    height: 10px;
+  }
+
+  .job-item-placeholder {
+    font-size: 0.6875rem;
+    padding: 12px;
+  }
+
+  .job-item-spinner {
+    width: 20px;
+    height: 20px;
+  }
+}

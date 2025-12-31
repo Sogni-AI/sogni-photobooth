@@ -88,6 +88,7 @@ import ConfettiCelebration from './components/shared/ConfettiCelebration';
 import { subscribeToConnectionState, getCurrentConnectionState } from './services/api';
 import StripePurchase from './components/stripe/StripePurchase.tsx';
 import { ApiProvider } from './hooks/useSogniApi.ts';
+import { RecentProjects } from './components/projectHistory';
 
 
 
@@ -976,6 +977,9 @@ const App = () => {
 
   // Stripe purchase modal state
   const [showStripePurchase, setShowStripePurchase] = useState(false);
+
+  // Recent Projects panel state
+  const [showRecentProjects, setShowRecentProjects] = useState(false);
 
   // Add state for login upsell popup (for non-authenticated users who've used their demo render)
   const [showLoginUpsellPopup, setShowLoginUpsellPopup] = useState(false);
@@ -9514,9 +9518,10 @@ const App = () => {
               display: 'flex',
               alignItems: 'center',
             }}>
-            <AuthStatus 
+            <AuthStatus
               onPurchaseClick={authState.isAuthenticated && authState.authMode === 'frontend' ? () => setShowStripePurchase(true) : undefined}
               onSignupComplete={triggerSignupCelebration}
+              onHistoryClick={authState.isAuthenticated && authState.authMode === 'frontend' ? () => setShowRecentProjects(true) : undefined}
               textColor={showStartMenu ? "#000000" : "#ffffff"}
               playRandomFlashSound={playRandomFlashSound}
             />
@@ -10295,6 +10300,14 @@ const App = () => {
             }}
           />
         </ApiProvider>
+      )}
+
+      {/* Recent Projects Panel */}
+      {showRecentProjects && (
+        <RecentProjects
+          sogniClient={sogniClient}
+          onClose={() => setShowRecentProjects(false)}
+        />
       )}
     </>
   );

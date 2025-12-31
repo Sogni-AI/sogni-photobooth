@@ -21,11 +21,12 @@ const formatTimeRemaining = (ms: number): string => {
 interface AuthStatusProps {
   onPurchaseClick?: () => void;
   onSignupComplete?: () => void;
+  onHistoryClick?: () => void;
   textColor?: string;
   playRandomFlashSound?: () => void;
 }
 
-export const AuthStatus: React.FC<AuthStatusProps> = ({ onPurchaseClick, onSignupComplete, textColor = '#ffffff', playRandomFlashSound }) => {
+export const AuthStatus: React.FC<AuthStatusProps> = ({ onPurchaseClick, onSignupComplete, onHistoryClick, textColor = '#ffffff', playRandomFlashSound }) => {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [loginModalMode, setLoginModalMode] = useState<LoginModalMode>('login');
@@ -797,6 +798,64 @@ export const AuthStatus: React.FC<AuthStatusProps> = ({ onPurchaseClick, onSignu
                 </div>
               </div>
             </>
+          )}
+
+          {/* Recent Projects Button - only show when NOT in demo mode */}
+          {authMode !== 'demo' && onHistoryClick && (
+            <div style={{
+              marginTop: '8px',
+              paddingTop: '8px',
+              borderTop: '1px solid rgba(255, 255, 255, 0.1)'
+            }}>
+              <button
+                onClick={() => {
+                  setShowUserMenu(false);
+                  onHistoryClick();
+                }}
+                style={{
+                  width: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  border: '1px solid rgba(114, 227, 242, 0.3)',
+                  background: 'rgba(114, 227, 242, 0.1)',
+                  color: '#72e3f2',
+                  cursor: 'pointer',
+                  borderRadius: '8px',
+                  padding: '10px 12px',
+                  fontSize: '13px',
+                  fontWeight: '500',
+                  outline: 'none',
+                  transition: 'all 0.2s'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.background = 'rgba(114, 227, 242, 0.2)';
+                  e.currentTarget.style.borderColor = 'rgba(114, 227, 242, 0.5)';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.background = 'rgba(114, 227, 242, 0.1)';
+                  e.currentTarget.style.borderColor = 'rgba(114, 227, 242, 0.3)';
+                }}
+              >
+                {/* History Icon */}
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <circle cx="12" cy="12" r="10" />
+                  <polyline points="12 6 12 12 16 14" />
+                </svg>
+                Recent Projects
+              </button>
+            </div>
           )}
 
           {/* Logout Button - Discrete */}
