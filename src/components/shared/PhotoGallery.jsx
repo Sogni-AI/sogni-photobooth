@@ -1275,6 +1275,9 @@ const PhotoGallery = ({
   // State for slideshow download button dropdown
   const [showSlideshowDownloadDropdown, setShowSlideshowDownloadDropdown] = useState(false);
 
+  // State for batch share button dropdown
+  const [showBatchShareDropdown, setShowBatchShareDropdown] = useState(false);
+
   // State for batch video mode tutorial tip
   const [showBatchVideoTip, setShowBatchVideoTip] = useState(false);
 
@@ -7063,20 +7066,154 @@ const PhotoGallery = ({
                   className="batch-share-button-container"
                   style={{
                     position: 'relative',
+                    background: 'linear-gradient(135deg, #ff5252, #e53935)',
+                    borderRadius: '8px',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                    transition: 'all 0.2s ease',
                     display: 'inline-flex',
                     overflow: 'visible'
                   }}
+                  onMouseEnter={(e) => {
+                    if (!isBulkDownloading) {
+                      e.currentTarget.style.transform = 'translateY(-2px)';
+                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.25)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)';
+                  }}
                 >
-                  <ShareMenu
-                    onShareToTwitter={handleShareStitchedVideoToTwitter}
-                    onShareViaWebShare={handleShareStitchedVideoViaWebShare}
-                    onSubmitToGallery={() => {}} // Not applicable for stitched video
-                    showWebShare={isWebShareSupported()}
-                    isMobileDevice={isMobile()}
+                  <button
+                    className="batch-action-button batch-share-button"
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowBatchShareDropdown(prev => !prev);
+                    }}
                     disabled={isBulkDownloading}
-                    hasPromptKey={false}
-                    tezdevTheme={tezdevTheme}
-                  />
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      color: 'white',
+                      padding: '6px 14px',
+                      paddingBottom: '8px',
+                      borderRadius: '8px',
+                      cursor: isBulkDownloading ? 'not-allowed' : 'pointer',
+                      opacity: isBulkDownloading ? 0.6 : 1,
+                      fontSize: '15px',
+                      fontWeight: '600',
+                      fontFamily: '"Permanent Marker", cursive',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                      transition: 'all 0.2s ease',
+                      whiteSpace: 'nowrap',
+                      pointerEvents: 'auto',
+                      position: 'relative',
+                      zIndex: 1,
+                      minHeight: '40px'
+                    }}
+                    title="Share stitched video"
+                  >
+                    <svg fill="currentColor" width="18" height="18" viewBox="0 0 24 24">
+                      <path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92c0-1.61-1.31-2.92-2.92-2.92zM18 4c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zM6 13c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm12 7.02c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1z"/>
+                    </svg>
+                  </button>
+
+                  {/* Share dropdown - portaled to escape stacking context */}
+                  {showBatchShareDropdown && createPortal(
+                    <div
+                      style={{
+                        position: 'fixed',
+                        bottom: (() => {
+                          const shareButton = document.querySelector('.batch-share-button-container');
+                          if (!shareButton) return '90px';
+                          const rect = shareButton.getBoundingClientRect();
+                          return `${window.innerHeight - rect.top + 8}px`;
+                        })(),
+                        right: (() => {
+                          const shareButton = document.querySelector('.batch-share-button-container');
+                          return shareButton ? 'auto' : '20px';
+                        })(),
+                        transform: 'none',
+                        background: 'rgba(255, 255, 255, 0.98)',
+                        borderRadius: '8px',
+                        boxShadow: '0 4px 16px rgba(0,0,0,0.2)',
+                        overflow: 'hidden',
+                        minWidth: '200px',
+                        animation: 'fadeIn 0.2s ease-out',
+                        zIndex: 9999999
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {!isMobile() && (
+                        <button
+                          className="share-dropdown-option"
+                          onClick={() => {
+                            setShowBatchShareDropdown(false);
+                            handleShareStitchedVideoToTwitter();
+                          }}
+                          style={{
+                            width: '100%',
+                            padding: '12px 16px',
+                            border: 'none',
+                            background: 'transparent',
+                            color: '#333',
+                            fontSize: '14px',
+                            fontWeight: 'normal',
+                            textAlign: 'left',
+                            cursor: 'pointer',
+                            transition: 'background 0.2s ease',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px'
+                          }}
+                          onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255, 82, 82, 0.1)'}
+                          onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
+                        >
+                          <svg fill="currentColor" width="16" height="16" viewBox="0 0 24 24">
+                            <path d="M22.46 6c-.77.35-1.6.58-2.46.67.9-.53 1.59-1.37 1.92-2.38-.84.5-1.78.86-2.79 1.07C18.27 4.49 17.01 4 15.63 4c-2.38 0-4.31 1.94-4.31 4.31 0 .34.04.67.11.99C7.83 9.09 4.16 7.19 1.69 4.23-.07 6.29.63 8.43 2.49 9.58c-.71-.02-1.38-.22-1.97-.54v.05c0 2.09 1.49 3.83 3.45 4.23-.36.1-.74.15-1.14.15-.28 0-.55-.03-.81-.08.55 1.71 2.14 2.96 4.03 3-1.48 1.16-3.35 1.85-5.37 1.85-.35 0-.69-.02-1.03-.06 1.92 1.23 4.2 1.95 6.67 1.95 8.01 0 12.38-6.63 12.38-12.38 0-.19 0-.38-.01-.56.85-.61 1.58-1.37 2.16-2.24z"/>
+                          </svg>
+                          Share to Twitter
+                        </button>
+                      )}
+
+                      {isWebShareSupported() && (
+                        <button
+                          className="share-dropdown-option"
+                          onClick={() => {
+                            setShowBatchShareDropdown(false);
+                            handleShareStitchedVideoViaWebShare();
+                          }}
+                          style={{
+                            width: '100%',
+                            padding: '12px 16px',
+                            border: 'none',
+                            background: 'transparent',
+                            color: '#333',
+                            fontSize: '14px',
+                            fontWeight: 'normal',
+                            textAlign: 'left',
+                            cursor: 'pointer',
+                            transition: 'background 0.2s ease',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px'
+                          }}
+                          onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255, 82, 82, 0.1)'}
+                          onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
+                        >
+                          <svg fill="currentColor" width="16" height="16" viewBox="0 0 24 24">
+                            <path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92c0-1.61-1.31-2.92-2.92-2.92zM18 4c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zM6 13c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm12 7.02c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1z"/>
+                          </svg>
+                          Share...
+                        </button>
+                      )}
+                    </div>,
+                    document.body
+                  )}
                 </div>
               );
             }
