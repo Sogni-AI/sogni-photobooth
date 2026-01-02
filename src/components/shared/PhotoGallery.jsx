@@ -1100,7 +1100,11 @@ const PhotoGallery = ({
   const [stitchedVideoUrl, setStitchedVideoUrl] = useState(null);
   const [isGeneratingStitchedVideo, setIsGeneratingStitchedVideo] = useState(false);
   const [showDownloadTip, setShowDownloadTip] = useState(false);
-  
+
+  // State for caching stitched video blob (works with any workflow, not just transition mode)
+  const [cachedStitchedVideoBlob, setCachedStitchedVideoBlob] = useState(null);
+  const [cachedStitchedVideoPhotosHash, setCachedStitchedVideoPhotosHash] = useState(null);
+
   // State for transition video complete notification
   const [showTransitionVideoNotification, setShowTransitionVideoNotification] = useState(false);
   const [transitionVideoNotificationCount, setTransitionVideoNotificationCount] = useState(0);
@@ -1386,7 +1390,7 @@ const PhotoGallery = ({
         }
       });
       setFramedImageUrls({});
-      
+
       // Also clean up transition/music state when new batch detected
       console.log('Clearing transition and music state due to new photo batch');
       setIsTransitionMode(false);
@@ -1404,6 +1408,10 @@ const PhotoGallery = ({
       setSelectedPresetId(null);
       setIsLoadingPreset(false);
       // Note: appliedMusic cleanup is handled in handleMoreButtonClick to properly revoke URL
+
+      // Clear stitched video cache for new batch
+      setCachedStitchedVideoBlob(null);
+      setCachedStitchedVideoPhotosHash(null);
     }
     
     // Update the previous length ref
@@ -1543,7 +1551,11 @@ const PhotoGallery = ({
     setBatchActionMode('download'); // Reset to default mode
     setSelectedPresetId(null);
     setIsLoadingPreset(false);
-    
+
+    // Clear stitched video cache for new batch
+    setCachedStitchedVideoBlob(null);
+    setCachedStitchedVideoPhotosHash(null);
+
     // Stop any playing audio
     if (inlineAudioRef.current) {
       inlineAudioRef.current.pause();
@@ -4027,6 +4039,186 @@ const PhotoGallery = ({
     }
   }, [photos, filteredPhotos, isPromptSelectorMode, isBulkDownloading, settings.videoDuration, settings.videoResolution, settings.videoFramerate, getStyleDisplayText, setIsBulkDownloading, setBulkDownloadProgress]);
 
+  // Handle stitching all videos into one concatenated video (works with any workflow)
+  const handleStitchAllVideos = useCallback(async () => {
+    if (isBulkDownloading) {
+      console.log('Bulk download already in progress');
+      return;
+    }
+
+    try {
+      // Get the correct photos array based on mode
+      const currentPhotosArray = isPromptSelectorMode ? filteredPhotos : photos;
+
+      // Get photos with videos (excluding hidden/discarded ones)
+      const photosWithVideos = currentPhotosArray.filter(
+        photo => !photo.hidden && !photo.loading && !photo.generating && !photo.error && photo.videoUrl && !photo.isOriginal
+      );
+
+      if (photosWithVideos.length === 0) {
+        showToast({
+          title: 'No Videos',
+          message: 'No videos available to stitch.',
+          type: 'info'
+        });
+        return;
+      }
+
+      if (photosWithVideos.length === 1) {
+        showToast({
+          title: 'Single Video',
+          message: 'Need at least 2 videos to stitch together. Use "Download All Videos" for a single video.',
+          type: 'info'
+        });
+        return;
+      }
+
+      // Generate hash of photo IDs to check cache validity
+      const photosHash = photosWithVideos.map(p => p.id).sort().join('-');
+
+      // Check if we have a cached stitched video for these exact photos
+      if (cachedStitchedVideoBlob && cachedStitchedVideoPhotosHash === photosHash) {
+        console.log('[Stitch All] Using cached stitched video');
+
+        // Download the cached version immediately
+        const timestamp = new Date().toISOString().split('T')[0];
+        const filename = `sogni-photobooth-stitched-${timestamp}.mp4`;
+
+        // On mobile, use share API
+        const isMobileDevice = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) ||
+                               (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+        if (isMobileDevice && navigator.share) {
+          try {
+            const file = new File([cachedStitchedVideoBlob], filename, { type: 'video/mp4' });
+            await navigator.share({
+              files: [file],
+              title: 'My Sogni Photobooth Video',
+              text: 'Check out my stitched video from Sogni AI Photobooth!'
+            });
+          } catch (shareError) {
+            if (shareError.name !== 'AbortError') {
+              console.error('Share failed:', shareError);
+            }
+          }
+        } else {
+          // Desktop - download directly
+          const blobUrl = URL.createObjectURL(cachedStitchedVideoBlob);
+          const link = document.createElement('a');
+          link.href = blobUrl;
+          link.download = filename;
+          link.style.display = 'none';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+
+          showToast({
+            title: 'Download Complete',
+            message: 'Stitched video downloaded successfully!',
+            type: 'success'
+          });
+        }
+        return;
+      }
+
+      // No cached version - generate stitched video
+      setIsBulkDownloading(true);
+      setIsGeneratingStitchedVideo(true);
+      setBulkDownloadProgress({ current: 0, total: photosWithVideos.length, message: 'Stitching videos...' });
+
+      const startTime = performance.now();
+      console.log(`[Stitch All] Processing ${photosWithVideos.length} videos`);
+
+      // Prepare videos array in order
+      const videosToStitch = photosWithVideos.map((photo, index) => ({
+        url: photo.videoUrl,
+        filename: `video-${index + 1}.mp4`
+      }));
+
+      // Concatenate videos into one seamless video
+      const concatenatedBlob = await concatenateVideos(
+        videosToStitch,
+        (current, total, message) => {
+          setBulkDownloadProgress({ current, total, message });
+        },
+        null // No audio for non-transition stitching
+      );
+
+      const elapsedMs = performance.now() - startTime;
+      const elapsedSec = (elapsedMs / 1000).toFixed(2);
+      console.log(`[Stitch All] ✅ Complete! ${videosToStitch.length} videos → ${(concatenatedBlob.size / 1024 / 1024).toFixed(2)}MB in ${elapsedSec}s`);
+
+      // Cache the stitched video for future downloads
+      setCachedStitchedVideoBlob(concatenatedBlob);
+      setCachedStitchedVideoPhotosHash(photosHash);
+
+      // Download the stitched video
+      const timestamp = new Date().toISOString().split('T')[0];
+      const filename = `sogni-photobooth-stitched-${timestamp}.mp4`;
+
+      // On mobile, use share API
+      const isMobileDevice = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) ||
+                             (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+      if (isMobileDevice && navigator.share) {
+        setBulkDownloadProgress({
+          current: videosToStitch.length,
+          total: videosToStitch.length,
+          message: 'Ready! Tap to save video'
+        });
+
+        // Store for mobile share button
+        setReadyTransitionVideo({ blob: concatenatedBlob, filename });
+      } else {
+        // Desktop - download immediately
+        const blobUrl = URL.createObjectURL(concatenatedBlob);
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = filename;
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+
+        setBulkDownloadProgress({
+          current: videosToStitch.length,
+          total: videosToStitch.length,
+          message: 'Download complete!'
+        });
+      }
+
+      setIsGeneratingStitchedVideo(false);
+
+      // Reset after a delay
+      setTimeout(() => {
+        setIsBulkDownloading(false);
+        setBulkDownloadProgress({ current: 0, total: 0, message: '' });
+      }, 3000);
+
+    } catch (error) {
+      console.error('[Stitch All] Error:', error);
+      setIsGeneratingStitchedVideo(false);
+      setBulkDownloadProgress({
+        current: 0,
+        total: 0,
+        message: `Error: ${error.message}`
+      });
+
+      showToast({
+        title: 'Stitch Failed',
+        message: 'Failed to stitch videos. Please try downloading individually instead.',
+        type: 'error'
+      });
+
+      setTimeout(() => {
+        setIsBulkDownloading(false);
+        setBulkDownloadProgress({ current: 0, total: 0, message: '' });
+      }, 3000);
+    }
+  }, [photos, filteredPhotos, isPromptSelectorMode, isBulkDownloading, cachedStitchedVideoBlob, cachedStitchedVideoPhotosHash, showToast, setIsBulkDownloading, setBulkDownloadProgress]);
+
   // Handle sharing the ready transition video (called from button click to preserve user gesture)
   const handleShareTransitionVideo = useCallback(async () => {
     if (!readyTransitionVideo) return;
@@ -6472,6 +6664,50 @@ const PhotoGallery = ({
                           onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
                         >
                           <span>🎬</span> Download All Videos
+                        </button>
+                      );
+                    }
+                    return null;
+                  })()}
+                  {(() => {
+                    // Check if we have at least 2 videos to stitch
+                    const currentPhotosArray = isPromptSelectorMode ? filteredPhotos : photos;
+                    const photosWithVideos = currentPhotosArray.filter(
+                      photo => !photo.hidden && !photo.loading && !photo.generating && !photo.error && photo.videoUrl && !photo.isOriginal
+                    );
+
+                    // Only show stitch option if there are 2+ videos and NOT in transition mode
+                    // (transition mode already stitches automatically)
+                    if (photosWithVideos.length >= 2 && !isTransitionMode) {
+                      const photosHash = photosWithVideos.map(p => p.id).sort().join('-');
+                      const hasCachedStitch = cachedStitchedVideoBlob && cachedStitchedVideoPhotosHash === photosHash;
+
+                      return (
+                        <button
+                          className="more-dropdown-option"
+                          onClick={() => {
+                            setShowMoreDropdown(false);
+                            handleStitchAllVideos();
+                          }}
+                          style={{
+                            width: '100%',
+                            padding: '12px 16px',
+                            border: 'none',
+                            background: 'transparent',
+                            color: '#333',
+                            fontSize: '14px',
+                            fontWeight: 'normal',
+                            textAlign: 'left',
+                            cursor: 'pointer',
+                            transition: 'background 0.2s ease',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px'
+                          }}
+                          onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255, 82, 82, 0.1)'}
+                          onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
+                        >
+                          <span>🎞️</span> {hasCachedStitch ? 'Download Stitched Video' : 'Stitch All Videos'}
                         </button>
                       );
                     }
