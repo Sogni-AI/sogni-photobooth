@@ -21,6 +21,7 @@ import {
 } from '../constants/videoSettings';
 import { Photo } from '../types/index';
 import { trackVideoGeneration } from './frontendAnalytics';
+import { fetchWithRetry } from '../utils/index';
 
 type SogniClient = {
   projects: {
@@ -949,7 +950,11 @@ function isMobile(): boolean {
 export async function downloadVideo(videoUrl: string, filename?: string): Promise<void> {
   const finalFilename = filename || `sogni-video-${Date.now()}.mp4`;
 
-  const response = await fetch(videoUrl);
+  const response = await fetchWithRetry(videoUrl, undefined, {
+    context: 'Video Download',
+    maxRetries: 2,
+    initialDelay: 1000
+  });
   if (!response.ok) throw new Error(`Download failed: ${response.statusText}`);
 
   const blob = await response.blob();

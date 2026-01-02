@@ -1,9 +1,11 @@
 /**
  * Video Concatenation using MP4Box.js
  * Fast client-side MP4 container stitching without re-encoding
- * 
+ *
  * Supports optional M4A audio track muxing (Beta feature)
  */
+
+import { fetchWithRetry } from './index';
 
 /**
  * @param {Array} videos - Array of {url, filename} objects
@@ -18,7 +20,11 @@ export async function concatenateVideos(videos, onProgress = null, audioOptions 
 
   if (videos.length === 1 && !audioOptions) {
     if (onProgress) onProgress(1, 1, 'Downloading video...');
-    const response = await fetch(videos[0].url);
+    const response = await fetchWithRetry(videos[0].url, undefined, {
+      context: 'Video Download',
+      maxRetries: 2,
+      initialDelay: 1000
+    });
     return await response.blob();
   }
 
@@ -28,32 +34,36 @@ export async function concatenateVideos(videos, onProgress = null, audioOptions 
   for (let i = 0; i < videos.length; i++) {
     if (onProgress) onProgress(i, videos.length, `Downloading ${i + 1}/${videos.length}...`);
     try {
-      const response = await fetch(videos[i].url);
+      const response = await fetchWithRetry(videos[i].url, undefined, {
+        context: `Video ${i + 1} Download`,
+        maxRetries: 2,
+        initialDelay: 1000
+      });
       if (!response.ok) {
         throw new Error(`Failed to download video ${i + 1}: ${response.status} ${response.statusText}`);
       }
-      
+
       const contentType = response.headers.get('content-type') || '';
       if (!contentType.includes('video') && !contentType.includes('mp4') && contentType !== '') {
         console.warn(`Video ${i + 1} has unexpected content-type: ${contentType}`);
       }
-      
+
       const buffer = await response.arrayBuffer();
       if (!buffer || buffer.byteLength === 0) {
         throw new Error(`Video ${i + 1} downloaded but is empty`);
       }
-      
+
       // Verify it's actually an MP4 by checking for ftyp box at the start
       const view = new DataView(buffer, 0, Math.min(12, buffer.byteLength));
       const size = view.getUint32(0);
       const type = String.fromCharCode(
         view.getUint8(4), view.getUint8(5), view.getUint8(6), view.getUint8(7)
       );
-      
+
       if (type !== 'ftyp' || size < 8) {
         throw new Error(`Video ${i + 1} is not a valid MP4 file (missing ftyp box)`);
       }
-      
+
       videoBuffers.push(buffer);
     } catch (error) {
       throw new Error(`Error downloading video ${i + 1} (${videos[i].url}): ${error.message}`);

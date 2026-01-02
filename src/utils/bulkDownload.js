@@ -1,5 +1,5 @@
 import JSZip from 'jszip';
-import { isMobile } from './index';
+import { isMobile, fetchWithRetry } from './index';
 
 /**
  * Downloads multiple images as a ZIP file
@@ -32,8 +32,12 @@ export async function downloadImagesAsZip(images, zipFilename = 'sogni-photoboot
           onProgress(i, totalImages, `Adding image ${i + 1} of ${totalImages}...`);
         }
 
-        // Fetch the image as a blob
-        const response = await fetch(image.url);
+        // Fetch the image as a blob with retry for transient CORS errors
+        const response = await fetchWithRetry(image.url, undefined, {
+          context: `Image ${i + 1} Download`,
+          maxRetries: 2,
+          initialDelay: 1000
+        });
         if (!response.ok) {
           console.warn(`Failed to fetch image ${i + 1}: ${image.filename}`);
           continue;
@@ -230,8 +234,12 @@ export async function downloadVideosAsZip(videos, zipFilename = 'sogni-photoboot
           onProgress(i, totalVideos, `Adding video ${i + 1} of ${totalVideos}...`);
         }
 
-        // Fetch the video as a blob
-        const response = await fetch(video.url);
+        // Fetch the video as a blob with retry for transient CORS errors
+        const response = await fetchWithRetry(video.url, undefined, {
+          context: `Video ${i + 1} Download`,
+          maxRetries: 2,
+          initialDelay: 1000
+        });
         if (!response.ok) {
           console.warn(`Failed to fetch video ${i + 1}: ${video.filename}`);
           continue;
