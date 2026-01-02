@@ -4403,18 +4403,15 @@ const PhotoGallery = ({
       // Generate hash of photo IDs to check cache validity
       const photosHash = photosWithVideos.map(p => p.id).sort().join('-');
 
-      let videoUrl = null;
+      let videoBlob = null;
 
       // Check for cached stitched video
       if (cachedStitchedVideoBlob && cachedStitchedVideoPhotosHash === photosHash) {
         console.log('[Twitter Share Stitched] Using cached stitched video');
-        videoUrl = URL.createObjectURL(cachedStitchedVideoBlob);
+        videoBlob = cachedStitchedVideoBlob;
       } else if (readyTransitionVideo?.blob && isTransitionMode && transitionVideoQueue.length >= 2) {
         console.log('[Twitter Share Stitched] Using cached transition video');
-        videoUrl = URL.createObjectURL(readyTransitionVideo.blob);
-      } else if (stitchedVideoUrl && isTransitionMode) {
-        console.log('[Twitter Share Stitched] Using stitched video URL');
-        videoUrl = stitchedVideoUrl;
+        videoBlob = readyTransitionVideo.blob;
       } else {
         // Need to stitch first
         console.log('[Twitter Share Stitched] Stitching videos before sharing to Twitter...');
@@ -4427,7 +4424,7 @@ const PhotoGallery = ({
           filename: `video-${index + 1}.mp4`
         }));
 
-        const concatenatedBlob = await concatenateVideos(
+        videoBlob = await concatenateVideos(
           videosToStitch,
           (current, total, message) => {
             setBulkDownloadProgress({ current, total, message });
@@ -4436,21 +4433,37 @@ const PhotoGallery = ({
         );
 
         // Cache the stitched video
-        setCachedStitchedVideoBlob(concatenatedBlob);
+        setCachedStitchedVideoBlob(videoBlob);
         setCachedStitchedVideoPhotosHash(photosHash);
 
-        videoUrl = URL.createObjectURL(concatenatedBlob);
         setIsGeneratingStitchedVideo(false);
         setIsBulkDownloading(false);
         setBulkDownloadProgress({ current: 0, total: 0, message: '' });
       }
 
-      // Open Twitter share modal with the stitched video URL
+      // Convert blob to data URL so the backend can process it
+      // (blob URLs are browser-local and can't be accessed by the server)
+      console.log('[Twitter Share Stitched] Converting video blob to data URL...');
+      setIsBulkDownloading(true);
+      setBulkDownloadProgress({ current: 0, total: 1, message: 'Preparing video for Twitter...' });
+
+      const videoDataUrl = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.onerror = () => reject(new Error('Failed to convert video'));
+        reader.readAsDataURL(videoBlob);
+      });
+
+      console.log('[Twitter Share Stitched] Video converted, data URL length:', videoDataUrl.length);
+      setIsBulkDownloading(false);
+      setBulkDownloadProgress({ current: 0, total: 0, message: '' });
+
+      // Open Twitter share modal with the stitched video data URL
       // Use handleShareToX from props with a synthetic photo object containing the video
       // Custom statusText for stitched videos
       const syntheticPhoto = {
         id: 'stitched-video',
-        videoUrl: videoUrl,
+        videoUrl: videoDataUrl, // Use data URL instead of blob URL
         images: photosWithVideos[0]?.images || [], // Use first photo's image as fallback
         statusText: 'Just created this video with @sogni_protocol AI photobooth. Pretty sweet.'
         // Note: Omitting promptKey so it doesn't generate a hashtag in the share message
@@ -4470,7 +4483,7 @@ const PhotoGallery = ({
         type: 'error'
       });
     }
-  }, [photos, filteredPhotos, isPromptSelectorMode, cachedStitchedVideoBlob, cachedStitchedVideoPhotosHash, readyTransitionVideo, isTransitionMode, transitionVideoQueue, stitchedVideoUrl, handleShareToX, showToast, setIsBulkDownloading, setBulkDownloadProgress]);
+  }, [photos, filteredPhotos, isPromptSelectorMode, cachedStitchedVideoBlob, cachedStitchedVideoPhotosHash, readyTransitionVideo, isTransitionMode, transitionVideoQueue, handleShareToX, showToast, setIsBulkDownloading, setBulkDownloadProgress]);
 
   // Handle sharing stitched video via Web Share API
   const handleShareStitchedVideoViaWebShare = useCallback(async () => {
