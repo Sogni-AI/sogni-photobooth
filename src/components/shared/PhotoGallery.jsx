@@ -1275,6 +1275,9 @@ const PhotoGallery = ({
   // State for slideshow download button dropdown
   const [showSlideshowDownloadDropdown, setShowSlideshowDownloadDropdown] = useState(false);
 
+  // State for batch share button dropdown (stitched video share menu)
+  const [showBatchShareDropdown, setShowBatchShareDropdown] = useState(false);
+
   // State for batch video mode tutorial tip
   const [showBatchVideoTip, setShowBatchVideoTip] = useState(false);
 
@@ -4219,6 +4222,265 @@ const PhotoGallery = ({
     }
   }, [photos, filteredPhotos, isPromptSelectorMode, isBulkDownloading, cachedStitchedVideoBlob, cachedStitchedVideoPhotosHash, showToast, setIsBulkDownloading, setBulkDownloadProgress]);
 
+  // Handle sharing stitched video - stitches if needed, then shares via Web Share API
+  const handleShareStitchedVideo = useCallback(async () => {
+    if (isBulkDownloading) {
+      console.log('Bulk operation already in progress');
+      return;
+    }
+
+    try {
+      // Get the correct photos array based on mode
+      const currentPhotosArray = isPromptSelectorMode ? filteredPhotos : photos;
+
+      // Get photos with videos (excluding hidden/discarded ones)
+      const photosWithVideos = currentPhotosArray.filter(
+        photo => !photo.hidden && !photo.loading && !photo.generating && !photo.error && photo.videoUrl && !photo.isOriginal
+      );
+
+      if (photosWithVideos.length === 0) {
+        showToast({
+          title: 'No Videos',
+          message: 'No videos available to share.',
+          type: 'info'
+        });
+        return;
+      }
+
+      if (photosWithVideos.length === 1) {
+        showToast({
+          title: 'Single Video',
+          message: 'Need at least 2 videos to create a stitched video for sharing.',
+          type: 'info'
+        });
+        return;
+      }
+
+      // Generate hash of photo IDs to check cache validity
+      const photosHash = photosWithVideos.map(p => p.id).sort().join('-');
+
+      let videoBlob;
+
+      // Check for cached stitched video - first check general cache, then transition video cache
+      if (cachedStitchedVideoBlob && cachedStitchedVideoPhotosHash === photosHash) {
+        console.log('[Share Stitched] Using cached stitched video');
+        videoBlob = cachedStitchedVideoBlob;
+      } else if (readyTransitionVideo?.blob && isTransitionMode && transitionVideoQueue.length >= 2) {
+        // In transition mode, use the ready transition video if available
+        console.log('[Share Stitched] Using cached transition video');
+        videoBlob = readyTransitionVideo.blob;
+      } else if (stitchedVideoUrl && isTransitionMode) {
+        // If we have a stitched video URL from the overlay, fetch the blob
+        console.log('[Share Stitched] Fetching blob from stitched video URL');
+        try {
+          const response = await fetch(stitchedVideoUrl);
+          videoBlob = await response.blob();
+        } catch (fetchError) {
+          console.log('[Share Stitched] Could not fetch from stitchedVideoUrl, will stitch fresh');
+          videoBlob = null;
+        }
+      }
+
+      if (!videoBlob) {
+        // Need to stitch the videos first
+        console.log('[Share Stitched] Stitching videos before sharing...');
+        setIsBulkDownloading(true);
+        setIsGeneratingStitchedVideo(true);
+        setBulkDownloadProgress({ current: 0, total: photosWithVideos.length, message: 'Stitching videos for sharing...' });
+
+        const startTime = performance.now();
+
+        // Prepare videos array in order
+        const videosToStitch = photosWithVideos.map((photo, index) => ({
+          url: photo.videoUrl,
+          filename: `video-${index + 1}.mp4`
+        }));
+
+        // Concatenate videos into one seamless video
+        const concatenatedBlob = await concatenateVideos(
+          videosToStitch,
+          (current, total, message) => {
+            setBulkDownloadProgress({ current, total, message });
+          },
+          null // No audio for non-transition stitching
+        );
+
+        const elapsedMs = performance.now() - startTime;
+        console.log(`[Share Stitched] ✅ Stitching complete in ${(elapsedMs / 1000).toFixed(2)}s`);
+
+        // Cache the stitched video
+        setCachedStitchedVideoBlob(concatenatedBlob);
+        setCachedStitchedVideoPhotosHash(photosHash);
+
+        videoBlob = concatenatedBlob;
+        setIsGeneratingStitchedVideo(false);
+        setIsBulkDownloading(false);
+        setBulkDownloadProgress({ current: 0, total: 0, message: '' });
+      }
+
+      // Now share the video
+      const timestamp = new Date().toISOString().split('T')[0];
+      const filename = `sogni-photobooth-stitched-${timestamp}.mp4`;
+
+      // Check if Web Share API is available and supports files
+      if (navigator.share && navigator.canShare) {
+        const file = new File([videoBlob], filename, { type: 'video/mp4' });
+
+        if (navigator.canShare({ files: [file] })) {
+          try {
+            await navigator.share({
+              files: [file],
+              title: 'My Sogni Photobooth Video',
+              text: 'Check out my stitched video from Sogni AI Photobooth!'
+            });
+            console.log('[Share Stitched] Successfully shared via Web Share API');
+
+            showToast({
+              title: 'Shared!',
+              message: 'Your stitched video was shared successfully.',
+              type: 'success'
+            });
+            return;
+          } catch (shareError) {
+            if (shareError.name === 'AbortError') {
+              console.log('[Share Stitched] User cancelled share');
+              return;
+            }
+            console.log('[Share Stitched] Web Share completed with potential error:', shareError);
+            return;
+          }
+        }
+      }
+
+      // Fallback: Web Share not available - download the video instead
+      console.log('[Share Stitched] Web Share not available, falling back to download');
+      const blobUrl = URL.createObjectURL(videoBlob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = filename;
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+
+      showToast({
+        title: 'Downloaded',
+        message: 'Web Share not available on this device. Video downloaded instead.',
+        type: 'info'
+      });
+
+    } catch (error) {
+      console.error('[Share Stitched] Error:', error);
+      setIsGeneratingStitchedVideo(false);
+      setIsBulkDownloading(false);
+      setBulkDownloadProgress({ current: 0, total: 0, message: '' });
+
+      showToast({
+        title: 'Share Failed',
+        message: 'Failed to share stitched video. Please try again.',
+        type: 'error'
+      });
+    }
+  }, [photos, filteredPhotos, isPromptSelectorMode, isBulkDownloading, cachedStitchedVideoBlob, cachedStitchedVideoPhotosHash, readyTransitionVideo, isTransitionMode, transitionVideoQueue, stitchedVideoUrl, showToast, setIsBulkDownloading, setBulkDownloadProgress]);
+
+  // Handle sharing stitched video to Twitter - stitch if needed, then open Twitter share modal
+  const handleShareStitchedVideoToTwitter = useCallback(async () => {
+    try {
+      // Get the correct photos array based on mode
+      const currentPhotosArray = isPromptSelectorMode ? filteredPhotos : photos;
+      const photosWithVideos = currentPhotosArray.filter(
+        photo => !photo.hidden && !photo.loading && !photo.generating && !photo.error && photo.videoUrl && !photo.isOriginal
+      );
+
+      if (photosWithVideos.length < 2) {
+        showToast({
+          title: 'Not Enough Videos',
+          message: 'Need at least 2 videos to create a stitched video.',
+          type: 'info'
+        });
+        return;
+      }
+
+      // Generate hash of photo IDs to check cache validity
+      const photosHash = photosWithVideos.map(p => p.id).sort().join('-');
+
+      let videoUrl = null;
+
+      // Check for cached stitched video
+      if (cachedStitchedVideoBlob && cachedStitchedVideoPhotosHash === photosHash) {
+        console.log('[Twitter Share Stitched] Using cached stitched video');
+        videoUrl = URL.createObjectURL(cachedStitchedVideoBlob);
+      } else if (readyTransitionVideo?.blob && isTransitionMode && transitionVideoQueue.length >= 2) {
+        console.log('[Twitter Share Stitched] Using cached transition video');
+        videoUrl = URL.createObjectURL(readyTransitionVideo.blob);
+      } else if (stitchedVideoUrl && isTransitionMode) {
+        console.log('[Twitter Share Stitched] Using stitched video URL');
+        videoUrl = stitchedVideoUrl;
+      } else {
+        // Need to stitch first
+        console.log('[Twitter Share Stitched] Stitching videos before sharing to Twitter...');
+        setIsBulkDownloading(true);
+        setIsGeneratingStitchedVideo(true);
+        setBulkDownloadProgress({ current: 0, total: photosWithVideos.length, message: 'Stitching videos for Twitter...' });
+
+        const videosToStitch = photosWithVideos.map((photo, index) => ({
+          url: photo.videoUrl,
+          filename: `video-${index + 1}.mp4`
+        }));
+
+        const concatenatedBlob = await concatenateVideos(
+          videosToStitch,
+          (current, total, message) => {
+            setBulkDownloadProgress({ current, total, message });
+          },
+          null
+        );
+
+        // Cache the stitched video
+        setCachedStitchedVideoBlob(concatenatedBlob);
+        setCachedStitchedVideoPhotosHash(photosHash);
+
+        videoUrl = URL.createObjectURL(concatenatedBlob);
+        setIsGeneratingStitchedVideo(false);
+        setIsBulkDownloading(false);
+        setBulkDownloadProgress({ current: 0, total: 0, message: '' });
+      }
+
+      // Open Twitter share modal with the stitched video URL
+      // Use handleShareToX from props with a synthetic photo object containing the video
+      const syntheticPhoto = {
+        id: 'stitched-video',
+        videoUrl: videoUrl,
+        images: photosWithVideos[0]?.images || [], // Use first photo's image as fallback
+        promptKey: 'stitched-video',
+        statusText: '#SogniPhotobooth'
+      };
+
+      handleShareToX(0, syntheticPhoto);
+      setShowBatchShareDropdown(false);
+
+    } catch (error) {
+      console.error('[Twitter Share Stitched] Error:', error);
+      setIsGeneratingStitchedVideo(false);
+      setIsBulkDownloading(false);
+      setBulkDownloadProgress({ current: 0, total: 0, message: '' });
+
+      showToast({
+        title: 'Share Failed',
+        message: 'Failed to prepare stitched video for Twitter. Please try again.',
+        type: 'error'
+      });
+    }
+  }, [photos, filteredPhotos, isPromptSelectorMode, cachedStitchedVideoBlob, cachedStitchedVideoPhotosHash, readyTransitionVideo, isTransitionMode, transitionVideoQueue, stitchedVideoUrl, handleShareToX, showToast, setIsBulkDownloading, setBulkDownloadProgress]);
+
+  // Handle sharing stitched video via Web Share API
+  const handleShareStitchedVideoViaWebShare = useCallback(async () => {
+    // This just calls the existing handleShareStitchedVideo function
+    await handleShareStitchedVideo();
+    setShowBatchShareDropdown(false);
+  }, [handleShareStitchedVideo]);
+
   // Handle sharing the ready transition video (called from button click to preserve user gesture)
   const handleShareTransitionVideo = useCallback(async () => {
     if (!readyTransitionVideo) return;
@@ -6630,20 +6892,15 @@ const PhotoGallery = ({
                     const photosWithVideos = currentPhotosArray.filter(
                       photo => !photo.hidden && !photo.loading && !photo.generating && !photo.error && photo.videoUrl && !photo.isOriginal
                     );
-                    
+
                     if (photosWithVideos.length > 0) {
                       return (
                         <button
                           className="more-dropdown-option"
                           onClick={() => {
                             setShowMoreDropdown(false);
-                            // Check if these are transition videos - if so, concatenate instead of zipping
-                            if (isTransitionMode && transitionVideoQueue.length > 0) {
-                              handleDownloadTransitionVideo();
-                            } else {
-                              // Normal video batch: download as zip
-                              handleDownloadAllVideos();
-                            }
+                            // Always download as ZIP (individual videos)
+                            handleDownloadAllVideos();
                           }}
                           style={{
                             width: '100%',
@@ -6676,18 +6933,26 @@ const PhotoGallery = ({
                       photo => !photo.hidden && !photo.loading && !photo.generating && !photo.error && photo.videoUrl && !photo.isOriginal
                     );
 
-                    // Only show stitch option if there are 2+ videos and NOT in transition mode
-                    // (transition mode already stitches automatically)
-                    if (photosWithVideos.length >= 2 && !isTransitionMode) {
+                    // Show stitch option when there are 2+ videos (in any mode)
+                    // In transition mode, use the cached transition video
+                    if (photosWithVideos.length >= 2) {
+                      // Check for cached stitched video - either from manual stitch or transition workflow
                       const photosHash = photosWithVideos.map(p => p.id).sort().join('-');
-                      const hasCachedStitch = cachedStitchedVideoBlob && cachedStitchedVideoPhotosHash === photosHash;
+                      const hasCachedStitch = (cachedStitchedVideoBlob && cachedStitchedVideoPhotosHash === photosHash) ||
+                                              (isTransitionMode && (readyTransitionVideo?.blob || stitchedVideoUrl || allTransitionVideosComplete));
 
                       return (
                         <button
                           className="more-dropdown-option"
                           onClick={() => {
                             setShowMoreDropdown(false);
-                            handleStitchAllVideos();
+                            // In transition mode, use the transition video download (uses cached video)
+                            // In non-transition mode, use the general stitch function
+                            if (isTransitionMode && transitionVideoQueue.length > 0) {
+                              handleDownloadTransitionVideo();
+                            } else {
+                              handleStitchAllVideos();
+                            }
                           }}
                           style={{
                             width: '100%',
@@ -6788,7 +7053,174 @@ const PhotoGallery = ({
               <span>🎥</span>
             </button>
           </div>
-              
+
+          {/* Share Button - Shows when there are 2+ videos to stitch and share */}
+          {(() => {
+            const currentPhotosArray = isPromptSelectorMode ? filteredPhotos : photos;
+            const photosWithVideos = currentPhotosArray.filter(
+              photo => !photo.hidden && !photo.loading && !photo.generating && !photo.error && photo.videoUrl && !photo.isOriginal
+            );
+            // Show share button when there are 2+ videos
+            if (photosWithVideos.length >= 2) {
+              const photosHash = photosWithVideos.map(p => p.id).sort().join('-');
+              // Check for cached stitched video - either from manual stitch or transition workflow
+              const hasCachedStitch = (cachedStitchedVideoBlob && cachedStitchedVideoPhotosHash === photosHash) ||
+                                      (isTransitionMode && (readyTransitionVideo?.blob || stitchedVideoUrl || allTransitionVideosComplete));
+
+              return (
+                <div
+                  className="batch-share-button-container"
+                  style={{
+                    position: 'relative',
+                    background: 'linear-gradient(135deg, #ff5252, #e53935)',
+                    borderRadius: '8px',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                    transition: 'all 0.2s ease',
+                    display: 'inline-flex',
+                    overflow: 'visible'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isBulkDownloading) {
+                      e.currentTarget.style.transform = 'translateY(-2px)';
+                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.25)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)';
+                  }}
+                >
+                  <button
+                    className="batch-action-button batch-share-button"
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowBatchShareDropdown(prev => !prev);
+                    }}
+                    disabled={isBulkDownloading}
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      color: 'white',
+                      padding: '6px 14px',
+                      paddingBottom: '8px',
+                      borderRadius: '8px',
+                      cursor: isBulkDownloading ? 'not-allowed' : 'pointer',
+                      opacity: isBulkDownloading ? 0.6 : 1,
+                      fontSize: '15px',
+                      fontWeight: '600',
+                      fontFamily: '"Permanent Marker", cursive',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                      transition: 'all 0.2s ease',
+                      whiteSpace: 'nowrap',
+                      pointerEvents: 'auto',
+                      position: 'relative',
+                      zIndex: 1,
+                      minHeight: '40px'
+                    }}
+                    title="Share stitched video"
+                  >
+                    <svg fill="currentColor" width="18" height="18" viewBox="0 0 24 24">
+                      <path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92c0-1.61-1.31-2.92-2.92-2.92zM18 4c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zM6 13c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm12 7.02c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1z"/>
+                    </svg>
+                  </button>
+
+                  {/* Share dropdown menu - portaled to escape stacking context */}
+                  {showBatchShareDropdown && createPortal(
+                    <div
+                      style={{
+                        position: 'fixed',
+                        bottom: (() => {
+                          const shareButton = document.querySelector('.batch-share-button-container');
+                          if (!shareButton) return '90px';
+                          const rect = shareButton.getBoundingClientRect();
+                          return `${window.innerHeight - rect.top + 8}px`;
+                        })(),
+                        right: (() => {
+                          const shareButton = document.querySelector('.batch-share-button-container');
+                          return shareButton ? 'auto' : '20px';
+                        })(),
+                        transform: 'none',
+                        background: 'rgba(255, 255, 255, 0.98)',
+                        borderRadius: '8px',
+                        boxShadow: '0 4px 16px rgba(0,0,0,0.2)',
+                        overflow: 'hidden',
+                        minWidth: '200px',
+                        animation: 'fadeIn 0.2s ease-out',
+                        zIndex: 9999999
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <button
+                        className="share-dropdown-option"
+                        onClick={() => {
+                          handleShareStitchedVideoToTwitter();
+                        }}
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          border: 'none',
+                          background: 'transparent',
+                          color: '#333',
+                          fontSize: '14px',
+                          fontWeight: 'normal',
+                          textAlign: 'left',
+                          cursor: 'pointer',
+                          transition: 'background 0.2s ease',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px'
+                        }}
+                        onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255, 82, 82, 0.1)'}
+                        onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
+                      >
+                        <svg fill="currentColor" width="16" height="16" viewBox="0 0 24 24">
+                          <path d="M22.46 6c-.77.35-1.6.58-2.46.67.9-.53 1.59-1.37 1.92-2.38-.84.5-1.78.86-2.79 1.07C18.27 4.49 17.01 4 15.63 4c-2.38 0-4.31 1.94-4.31 4.31 0 .34.04.67.11.99C7.83 9.09 4.16 7.19 1.69 4.23-.07 6.29.63 8.43 2.49 9.58c-.71-.02-1.38-.22-1.97-.54v.05c0 2.09 1.49 3.83 3.45 4.23-.36.1-.74.15-1.14.15-.28 0-.55-.03-.81-.08.55 1.71 2.14 2.96 4.03 3-1.48 1.16-3.35 1.85-5.37 1.85-.35 0-.69-.02-1.03-.06 1.92 1.23 4.2 1.95 6.67 1.95 8.01 0 12.38-6.63 12.38-12.38 0-.19 0-.38-.01-.56.85-.61 1.58-1.37 2.16-2.24z"/>
+                        </svg>
+                        Share to X (Twitter)
+                      </button>
+                      {isWebShareSupported() && (
+                        <button
+                          className="share-dropdown-option"
+                          onClick={() => {
+                            handleShareStitchedVideoViaWebShare();
+                          }}
+                          style={{
+                            width: '100%',
+                            padding: '12px 16px',
+                            border: 'none',
+                            background: 'transparent',
+                            color: '#333',
+                            fontSize: '14px',
+                            fontWeight: 'normal',
+                            textAlign: 'left',
+                            cursor: 'pointer',
+                            transition: 'background 0.2s ease',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px'
+                          }}
+                          onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255, 82, 82, 0.1)'}
+                          onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
+                        >
+                          <svg fill="currentColor" width="16" height="16" viewBox="0 0 24 24">
+                            <path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92c0-1.61-1.31-2.92-2.92-2.92zM18 4c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zM6 13c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm12 7.02c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1z"/>
+                          </svg>
+                          Share...
+                        </button>
+                      )}
+                    </div>,
+                    document.body
+                  )}
+                </div>
+              );
+            }
+            return null;
+          })()}
+
           {/* Progress indicator for downloads - portaled for proper z-index */}
           {(isBulkDownloading || readyTransitionVideo) && bulkDownloadProgress.message && createPortal(
             <div
