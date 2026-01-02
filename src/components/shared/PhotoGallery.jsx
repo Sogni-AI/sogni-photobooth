@@ -12823,6 +12823,137 @@ const PhotoGallery = ({
         document.body
       )}
 
+      {/* Stitched Video QR Code Overlay - Shows QR code for stitched video sharing */}
+      {qrCodeData && qrCodeData.isStitchedVideo && createPortal(
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.85)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10000002,
+            cursor: 'pointer'
+          }}
+          onClick={onCloseQR}
+        >
+          <div
+            style={{
+              backgroundColor: 'white',
+              padding: '24px',
+              borderRadius: '16px',
+              textAlign: 'center',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+              maxWidth: '90vw'
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            <h3 style={{
+              margin: '0 0 8px 0',
+              color: '#333',
+              fontSize: '20px',
+              fontWeight: '600'
+            }}>
+              Scan to Share
+            </h3>
+            <p style={{
+              margin: '0 0 20px 0',
+              color: '#666',
+              fontSize: '14px'
+            }}>
+              Your stitched video is ready to share!
+            </p>
+
+            {qrCodeData.isLoading || qrCodeDataUrl === 'loading' ? (
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                margin: '0 auto 20px auto',
+                width: '250px',
+                height: '250px',
+                border: '2px solid #eee',
+                borderRadius: '12px',
+                justifyContent: 'center',
+                backgroundColor: '#f9f9f9'
+              }}>
+                <div style={{
+                  width: '48px',
+                  height: '48px',
+                  border: '4px solid #e3e3e3',
+                  borderTop: '4px solid #1DA1F2',
+                  borderRadius: '50%',
+                  animation: 'spin 1s linear infinite',
+                  marginBottom: '16px'
+                }}></div>
+                <div style={{
+                  color: '#666',
+                  fontSize: '14px',
+                  fontWeight: '500'
+                }}>
+                  Generating QR Code...
+                </div>
+              </div>
+            ) : qrCodeDataUrl ? (
+              <img
+                src={qrCodeDataUrl}
+                alt="QR Code for sharing stitched video"
+                style={{
+                  display: 'block',
+                  margin: '0 auto 20px auto',
+                  border: '2px solid #eee',
+                  borderRadius: '12px',
+                  width: '250px',
+                  height: '250px'
+                }}
+              />
+            ) : (
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                margin: '0 auto 20px auto',
+                width: '250px',
+                height: '250px',
+                border: '2px solid #eee',
+                borderRadius: '12px',
+                justifyContent: 'center',
+                backgroundColor: '#f9f9f9'
+              }}>
+                <div style={{
+                  color: '#999',
+                  fontSize: '14px'
+                }}>
+                  Loading...
+                </div>
+              </div>
+            )}
+
+            <button
+              onClick={onCloseQR}
+              style={{
+                background: 'linear-gradient(135deg, #ff5252, #e53935)',
+                color: 'white',
+                border: 'none',
+                padding: '12px 32px',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: '16px',
+                fontWeight: '600',
+                fontFamily: '"Permanent Marker", cursive'
+              }}
+            >
+              Close
+            </button>
+          </div>
+        </div>,
+        document.body
+      )}
+
       {/* Confetti Celebration for Transition Video Completion */}
       <ConfettiCelebration
         isVisible={showTransitionConfetti && backgroundAnimationsEnabled}
