@@ -4479,25 +4479,212 @@ const PhotoGallery = ({
 
   // Handle sharing stitched video via QR Code
   const handleShareStitchedVideoQRCode = useCallback(async () => {
-    // For stitched videos, show a toast that this feature is coming soon
-    // QR code sharing typically requires the video to be uploaded first
-    showToast({
-      title: 'Coming Soon',
-      message: 'QR Code sharing for stitched videos will be available soon.',
-      type: 'info'
-    });
-  }, [showToast]);
+    // Use the handleShareQRCode prop if available, passing index 0 with synthetic photo
+    if (handleShareQRCode) {
+      // Get videos for thumbnail
+      const currentPhotosArray = isPromptSelectorMode ? filteredPhotos : photos;
+      const photosWithVideos = currentPhotosArray.filter(
+        photo => !photo.hidden && !photo.loading && !photo.generating && !photo.error && photo.videoUrl && !photo.isOriginal
+      );
 
-  // Handle submitting stitched video to gallery
-  const handleSubmitStitchedVideoToGallery = useCallback(async () => {
-    // For stitched videos, show a toast that this feature is coming soon
-    // This will submit to the "Stitched Videos" category in the future
-    showToast({
-      title: 'Coming Soon',
-      message: 'Stitched video gallery submissions will be available soon in the "Stitched Videos" category.',
-      type: 'info'
-    });
-  }, [showToast]);
+      if (photosWithVideos.length < 2) {
+        showToast({
+          title: 'Not Enough Videos',
+          message: 'Need at least 2 videos to share.',
+          type: 'info'
+        });
+        return;
+      }
+
+      // Call the QR code handler with the first photo's index
+      // The QR code will link to the photobooth app
+      handleShareQRCode(0);
+    } else {
+      showToast({
+        title: 'QR Code Unavailable',
+        message: 'QR Code sharing is not available in this context.',
+        type: 'info'
+      });
+    }
+  }, [handleShareQRCode, isPromptSelectorMode, filteredPhotos, photos, showToast]);
+
+  // State for stitched video gallery submission
+  const [showStitchedGalleryConfirm, setShowStitchedGalleryConfirm] = useState(false);
+  const [stitchedGallerySubmissionPending, setStitchedGallerySubmissionPending] = useState(false);
+
+  // Handle submitting stitched video to gallery - shows confirmation popup
+  const handleSubmitStitchedVideoToGallery = useCallback(() => {
+    // Get videos to check if we have enough
+    const currentPhotosArray = isPromptSelectorMode ? filteredPhotos : photos;
+    const photosWithVideos = currentPhotosArray.filter(
+      photo => !photo.hidden && !photo.loading && !photo.generating && !photo.error && photo.videoUrl && !photo.isOriginal
+    );
+
+    if (photosWithVideos.length < 2) {
+      showToast({
+        title: 'Not Enough Videos',
+        message: 'Need at least 2 videos to submit a stitched video.',
+        type: 'info'
+      });
+      return;
+    }
+
+    // Show confirmation popup
+    setShowStitchedGalleryConfirm(true);
+  }, [isPromptSelectorMode, filteredPhotos, photos, showToast]);
+
+  // Handle stitched video gallery submission confirm
+  const handleStitchedGallerySubmitConfirm = useCallback(async () => {
+    if (stitchedGallerySubmissionPending) return;
+
+    setStitchedGallerySubmissionPending(true);
+    setShowStitchedGalleryConfirm(false);
+
+    try {
+      // Get videos
+      const currentPhotosArray = isPromptSelectorMode ? filteredPhotos : photos;
+      const photosWithVideos = currentPhotosArray.filter(
+        photo => !photo.hidden && !photo.loading && !photo.generating && !photo.error && photo.videoUrl && !photo.isOriginal
+      );
+
+      if (photosWithVideos.length < 2) {
+        throw new Error('Not enough videos');
+      }
+
+      // Generate hash of photo IDs to check cache validity
+      const photosHash = photosWithVideos.map(p => p.id).sort().join('-');
+
+      let videoBlob = null;
+
+      // Check for cached stitched video
+      if (cachedStitchedVideoBlob && cachedStitchedVideoPhotosHash === photosHash) {
+        console.log('[Gallery Submit Stitched] Using cached stitched video');
+        videoBlob = cachedStitchedVideoBlob;
+      } else if (readyTransitionVideo?.blob && isTransitionMode && transitionVideoQueue.length >= 2) {
+        console.log('[Gallery Submit Stitched] Using cached transition video');
+        videoBlob = readyTransitionVideo.blob;
+      } else {
+        // Need to stitch the videos first
+        console.log('[Gallery Submit Stitched] Stitching videos before submission...');
+        showToast({
+          title: 'Preparing Video',
+          message: 'Stitching videos for submission...',
+          type: 'info'
+        });
+
+        const videosToStitch = photosWithVideos.map((photo, index) => ({
+          url: photo.videoUrl,
+          filename: `video-${index + 1}.mp4`
+        }));
+
+        videoBlob = await concatenateVideos(
+          videosToStitch,
+          null,
+          null
+        );
+
+        // Cache the stitched video
+        setCachedStitchedVideoBlob(videoBlob);
+        setCachedStitchedVideoPhotosHash(photosHash);
+      }
+
+      // Get thumbnail from first photo
+      const thumbnailUrl = photosWithVideos[0]?.images?.[0];
+      let imageDataUrl = thumbnailUrl;
+
+      // Convert thumbnail to data URL if it's a blob
+      if (thumbnailUrl && thumbnailUrl.startsWith('blob:')) {
+        try {
+          const response = await fetch(thumbnailUrl);
+          const blob = await response.blob();
+          imageDataUrl = await new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result);
+            reader.readAsDataURL(blob);
+          });
+        } catch (err) {
+          console.error('Failed to convert thumbnail to data URL:', err);
+        }
+      }
+
+      // Convert video blob to data URL
+      let videoDataUrl = null;
+      try {
+        videoDataUrl = await new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result);
+          reader.readAsDataURL(videoBlob);
+        });
+      } catch (err) {
+        console.error('Failed to convert video to data URL:', err);
+        throw new Error('Failed to prepare video for submission');
+      }
+
+      // Build metadata for stitched video
+      const metadata = {
+        model: 'multiple', // Stitched videos may contain multiple models
+        promptKey: 'stitched-video',
+        promptText: 'Stitched Video',
+        isVideo: true,
+        isStitchedVideo: true,
+        videoCount: photosWithVideos.length,
+        // Video-specific metadata from settings
+        videoResolution: settings.videoResolution || '480p',
+        videoFramerate: settings.videoFramerate || 16,
+        videoDuration: photosWithVideos.length * (settings.videoDuration || 5) // Approximate total duration
+      };
+
+      // Submit to gallery API
+      const response = await fetch('/api/contest/gallery-submissions/entry', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          imageUrl: imageDataUrl,
+          videoUrl: videoDataUrl,
+          isVideo: true,
+          promptKey: 'stitched-video',
+          username: user?.username,
+          address: user?.address,
+          metadata
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to submit to gallery');
+      }
+
+      const data = await response.json();
+      console.log('Stitched video gallery submission successful:', data);
+
+      // Show success toast notification
+      showToast({
+        type: 'success',
+        title: '✨ Successfully submitted to gallery!',
+        message: 'Your stitched video will be reviewed by moderators.',
+        timeout: 5000
+      });
+
+    } catch (error) {
+      console.error('Error submitting stitched video to gallery:', error);
+
+      showToast({
+        type: 'error',
+        title: '❌ Submission Failed',
+        message: 'Failed to submit stitched video to gallery. Please try again.',
+        timeout: 5000
+      });
+    } finally {
+      setStitchedGallerySubmissionPending(false);
+    }
+  }, [isPromptSelectorMode, filteredPhotos, photos, cachedStitchedVideoBlob, cachedStitchedVideoPhotosHash, readyTransitionVideo, isTransitionMode, transitionVideoQueue, settings, user, showToast, stitchedGallerySubmissionPending]);
+
+  // Handle stitched video gallery submission cancel
+  const handleStitchedGallerySubmitCancel = useCallback(() => {
+    setShowStitchedGalleryConfirm(false);
+  }, []);
 
   // Handle sharing the ready transition video (called from button click to preserve user gesture)
   const handleShareTransitionVideo = useCallback(async () => {
@@ -12395,6 +12582,23 @@ const PhotoGallery = ({
         promptKey={selectedPhotoIndex !== null && photos[selectedPhotoIndex] ? (photos[selectedPhotoIndex].promptKey || photos[selectedPhotoIndex].selectedStyle) : null}
         imageUrl={selectedPhotoIndex !== null && photos[selectedPhotoIndex] && photos[selectedPhotoIndex].images ? photos[selectedPhotoIndex].images[selectedSubIndex || 0] : null}
         videoUrl={selectedPhotoIndex !== null && photos[selectedPhotoIndex] ? photos[selectedPhotoIndex].videoUrl : null}
+      />
+
+      {/* Stitched Video Gallery Submission Confirmation Modal */}
+      <GallerySubmissionConfirm
+        isOpen={showStitchedGalleryConfirm}
+        onConfirm={handleStitchedGallerySubmitConfirm}
+        onCancel={handleStitchedGallerySubmitCancel}
+        promptKey="stitched-video"
+        imageUrl={(() => {
+          const currentPhotosArray = isPromptSelectorMode ? filteredPhotos : photos;
+          const photosWithVideos = currentPhotosArray.filter(
+            photo => !photo.hidden && !photo.loading && !photo.generating && !photo.error && photo.videoUrl && !photo.isOriginal
+          );
+          return photosWithVideos[0]?.images?.[0] || null;
+        })()}
+        videoUrl={null}
+        isStitchedVideo={true}
       />
 
       {/* Music Modal for Transition Video Download (Beta) */}

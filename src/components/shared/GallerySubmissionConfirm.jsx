@@ -14,7 +14,8 @@ const GallerySubmissionConfirm = ({
   onCancel,
   promptKey,
   imageUrl,
-  videoUrl
+  videoUrl,
+  isStitchedVideo = false
 }) => {
   const [polaroidPreview, setPolaroidPreview] = useState(null);
   const [isGeneratingPreview, setIsGeneratingPreview] = useState(false);
@@ -97,12 +98,18 @@ const GallerySubmissionConfirm = ({
           )}
           
           <p className="gallery-confirm-message">
-            Submit this {isVideo ? 'video' : 'photo'} to <strong>{promptDisplayName}</strong>'s public gallery?
+            {isStitchedVideo
+              ? 'Submit this stitched video to the public gallery?'
+              : <>Submit this {isVideo ? 'video' : 'photo'} to <strong>{promptDisplayName}</strong>'s public gallery?</>
+            }
           </p>
           
           <p className="gallery-confirm-note">
             Your {isVideo ? 'video' : 'image'} will be reviewed by moderators before appearing in the gallery.
-            If approved, other users will see it as an example when browsing this style.
+            {isStitchedVideo
+              ? ' If approved, your stitched video will be visible to other users.'
+              : ' If approved, other users will see it as an example when browsing this style.'
+            }
           </p>
         </div>
         
@@ -134,7 +141,8 @@ GallerySubmissionConfirm.propTypes = {
   onCancel: PropTypes.func.isRequired,
   promptKey: PropTypes.string,
   imageUrl: PropTypes.string,
-  videoUrl: PropTypes.string
+  videoUrl: PropTypes.string,
+  isStitchedVideo: PropTypes.bool
 };
 
 export default GallerySubmissionConfirm;
