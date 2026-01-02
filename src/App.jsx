@@ -3073,6 +3073,111 @@ const App = () => {
       });
     }
   };
+
+  // Handle Stitched Video QR Code sharing
+  const handleStitchedVideoQRShare = async (videoBlob, thumbnailUrl) => {
+    console.log('🔗 Stitched Video QR Share - Starting QR code generation');
+
+    if (!videoBlob) {
+      console.error('No video blob provided for QR sharing');
+      return;
+    }
+
+    // Show QR code immediately with loading state for better UX
+    setQrCodeData({
+      shareUrl: 'loading',
+      photoIndex: 'stitched', // Special marker for stitched videos
+      isLoading: true,
+      isStitchedVideo: true
+    });
+
+    try {
+      console.log('🔗 Starting stitched video share creation process...');
+
+      // Convert video blob to data URL for upload
+      let videoDataUrl;
+      try {
+        videoDataUrl = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result);
+          reader.onerror = reject;
+          reader.readAsDataURL(videoBlob);
+        });
+      } catch (err) {
+        throw new Error('Failed to prepare video for upload');
+      }
+
+      // Convert thumbnail to permanent URL
+      let permanentThumbnailUrl = thumbnailUrl;
+      if (thumbnailUrl && thumbnailUrl.startsWith('blob:')) {
+        console.log('🔗 Converting thumbnail blob URL to permanent URL...');
+        permanentThumbnailUrl = await ensurePermanentUrl(thumbnailUrl);
+        console.log('🔗 Thumbnail uploaded, permanent URL:', permanentThumbnailUrl);
+      }
+
+      // Generate a unique sharing ID
+      const shareId = `share-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      const currentUrl = new URL(window.location.href);
+      const baseUrl = currentUrl.origin;
+      const mobileShareUrl = `${baseUrl}/mobile-share/${shareId}`;
+
+      // Create share data for stitched video
+      const shareData = {
+        shareId,
+        photoIndex: -1, // Special marker for stitched video
+        videoUrl: videoDataUrl, // Send the video as data URL
+        imageUrl: permanentThumbnailUrl,
+        isVideo: true,
+        isStitchedVideo: true,
+        tezdevTheme,
+        aspectRatio,
+        timestamp: Date.now(),
+        twitterMessage: 'Just created this video with @sogni_protocol AI photobooth. Pretty sweet.',
+        styleName: 'stitched-video',
+        videoDuration: 0, // Unknown for stitched
+        videoResolution: settings.videoResolution || '480p',
+        videoFramerate: settings.videoFramerate || 16
+      };
+
+      console.log('🔗 Sending stitched video share data to backend...');
+      const response = await fetch('/api/mobile-share/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(shareData),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('🔗 Backend error response:', errorText);
+        throw new Error(`Failed to create stitched video mobile share: ${response.status}`);
+      }
+
+      console.log('🔗 Stitched video mobile share created successfully');
+
+      // Set QR code data
+      setQrCodeData({
+        shareUrl: mobileShareUrl,
+        photoIndex: 'stitched',
+        isLoading: false,
+        isStitchedVideo: true
+      });
+
+    } catch (error) {
+      console.error('Error creating stitched video mobile share:', error);
+
+      // Clear loading state on error
+      setQrCodeData(null);
+
+      // Show error
+      setBackendError({
+        type: 'kiosk_mode_error',
+        title: '🔗 QR Code Generation Failed',
+        message: 'Unable to generate QR code for stitched video sharing. Please try using the "Share..." option instead.',
+        details: error.message,
+        canRetry: false
+      });
+    }
+  };
   
   // Add a handler for the actual sharing with custom message
   const handleTwitterShare = async (customMessage, submitToContest = false) => {
@@ -4341,9 +4446,9 @@ const App = () => {
     setPhotoGalleryFramedImageCache(framedImageCache);
   }, []);
 
-  // Clear QR code when navigating between photos
+  // Clear QR code when navigating between photos (but not for stitched video QR codes)
   useEffect(() => {
-    if (qrCodeData && qrCodeData.photoIndex !== selectedPhotoIndex) {
+    if (qrCodeData && qrCodeData.photoIndex !== selectedPhotoIndex && !qrCodeData.isStitchedVideo) {
       console.log('Clearing QR code due to photo navigation');
       setQrCodeData(null);
     }
@@ -7273,6 +7378,7 @@ const App = () => {
                 handleShareToX={handleShareToX}
                 handleShareViaWebShare={handleShareViaWebShare}
                 handleShareQRCode={handleKioskModeShare}
+                handleStitchedVideoQRShare={handleStitchedVideoQRShare}
                 slothicornAnimationEnabled={slothicornAnimationEnabled}
                 backgroundAnimationsEnabled={backgroundAnimationsEnabled}
                 tezdevTheme={tezdevTheme}
@@ -9984,6 +10090,7 @@ const App = () => {
           handleShareToX={handleShareToX}
           handleShareViaWebShare={handleShareViaWebShare}
           handleShareQRCode={handleKioskModeShare}
+          handleStitchedVideoQRShare={handleStitchedVideoQRShare}
           slothicornAnimationEnabled={slothicornAnimationEnabled}
           backgroundAnimationsEnabled={backgroundAnimationsEnabled}
           tezdevTheme={tezdevTheme}

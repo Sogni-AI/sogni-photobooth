@@ -751,6 +751,7 @@ const PhotoGallery = ({
   handleShareToX,
   handleShareViaWebShare,
   handleShareQRCode,
+  handleStitchedVideoQRShare,
   slothicornAnimationEnabled,
   backgroundAnimationsEnabled = false,
   tezdevTheme = 'off',
@@ -4479,15 +4480,83 @@ const PhotoGallery = ({
 
   // Handle sharing stitched video via QR Code
   const handleShareStitchedVideoQRCode = useCallback(async () => {
-    // QR code sharing for stitched videos requires uploading the video first
-    // which is a large file operation. For now, suggest using the Share... option instead.
-    showToast({
-      title: 'Use Share Option',
-      message: 'For stitched videos, please use "Share..." to share via AirDrop, Messages, or other apps.',
-      type: 'info',
-      timeout: 5000
-    });
-  }, [showToast]);
+    if (!handleStitchedVideoQRShare) {
+      showToast({
+        title: 'QR Code Unavailable',
+        message: 'QR Code sharing is not available in this context.',
+        type: 'info'
+      });
+      return;
+    }
+
+    // Get videos
+    const currentPhotosArray = isPromptSelectorMode ? filteredPhotos : photos;
+    const photosWithVideos = currentPhotosArray.filter(
+      photo => !photo.hidden && !photo.loading && !photo.generating && !photo.error && photo.videoUrl && !photo.isOriginal
+    );
+
+    if (photosWithVideos.length < 2) {
+      showToast({
+        title: 'Not Enough Videos',
+        message: 'Need at least 2 videos to share.',
+        type: 'info'
+      });
+      return;
+    }
+
+    // Generate hash of photo IDs to check cache validity
+    const photosHash = photosWithVideos.map(p => p.id).sort().join('-');
+
+    let videoBlob = null;
+
+    // Check for cached stitched video
+    if (cachedStitchedVideoBlob && cachedStitchedVideoPhotosHash === photosHash) {
+      console.log('[QR Share Stitched] Using cached stitched video');
+      videoBlob = cachedStitchedVideoBlob;
+    } else if (readyTransitionVideo?.blob && isTransitionMode && transitionVideoQueue.length >= 2) {
+      console.log('[QR Share Stitched] Using cached transition video');
+      videoBlob = readyTransitionVideo.blob;
+    } else {
+      // Need to stitch the videos first
+      console.log('[QR Share Stitched] Stitching videos for QR share...');
+      showToast({
+        title: 'Preparing Video',
+        message: 'Stitching videos for sharing...',
+        type: 'info'
+      });
+
+      try {
+        const videosToStitch = photosWithVideos.map((photo, index) => ({
+          url: photo.videoUrl,
+          filename: `video-${index + 1}.mp4`
+        }));
+
+        videoBlob = await concatenateVideos(
+          videosToStitch,
+          null,
+          null
+        );
+
+        // Cache the stitched video
+        setCachedStitchedVideoBlob(videoBlob);
+        setCachedStitchedVideoPhotosHash(photosHash);
+      } catch (error) {
+        console.error('[QR Share Stitched] Failed to stitch videos:', error);
+        showToast({
+          title: 'Error',
+          message: 'Failed to prepare video for sharing.',
+          type: 'error'
+        });
+        return;
+      }
+    }
+
+    // Get thumbnail from first photo
+    const thumbnailUrl = photosWithVideos[0]?.images?.[0] || null;
+
+    // Call the App.jsx handler to create QR code
+    await handleStitchedVideoQRShare(videoBlob, thumbnailUrl);
+  }, [handleStitchedVideoQRShare, isPromptSelectorMode, filteredPhotos, photos, cachedStitchedVideoBlob, cachedStitchedVideoPhotosHash, readyTransitionVideo, isTransitionMode, transitionVideoQueue, showToast]);
 
   // State for stitched video gallery submission
   const [showStitchedGalleryConfirm, setShowStitchedGalleryConfirm] = useState(false);
@@ -12834,6 +12903,7 @@ PhotoGallery.propTypes = {
   handleShareToX: PropTypes.func.isRequired,
   handleShareViaWebShare: PropTypes.func,
   handleShareQRCode: PropTypes.func,
+  handleStitchedVideoQRShare: PropTypes.func,
   slothicornAnimationEnabled: PropTypes.bool.isRequired,
   backgroundAnimationsEnabled: PropTypes.bool,
   tezdevTheme: PropTypes.string,
