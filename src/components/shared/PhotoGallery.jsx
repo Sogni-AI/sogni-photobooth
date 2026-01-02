@@ -4477,6 +4477,28 @@ const PhotoGallery = ({
     await handleShareStitchedVideo();
   }, [handleShareStitchedVideo]);
 
+  // Handle sharing stitched video via QR Code
+  const handleShareStitchedVideoQRCode = useCallback(async () => {
+    // For stitched videos, show a toast that this feature is coming soon
+    // QR code sharing typically requires the video to be uploaded first
+    showToast({
+      title: 'Coming Soon',
+      message: 'QR Code sharing for stitched videos will be available soon.',
+      type: 'info'
+    });
+  }, [showToast]);
+
+  // Handle submitting stitched video to gallery
+  const handleSubmitStitchedVideoToGallery = useCallback(async () => {
+    // For stitched videos, show a toast that this feature is coming soon
+    // This will submit to the "Stitched Videos" category in the future
+    showToast({
+      title: 'Coming Soon',
+      message: 'Stitched video gallery submissions will be available soon in the "Stitched Videos" category.',
+      type: 'info'
+    });
+  }, [showToast]);
+
   // Handle sharing the ready transition video (called from button click to preserve user gesture)
   const handleShareTransitionVideo = useCallback(async () => {
     if (!readyTransitionVideo) return;
@@ -7084,11 +7106,12 @@ const PhotoGallery = ({
                   <ShareMenu
                     onShareToTwitter={handleShareStitchedVideoToTwitter}
                     onShareViaWebShare={handleShareStitchedVideoViaWebShare}
-                    onSubmitToGallery={() => {}} // Not applicable for stitched video
+                    onShareQRCode={handleShareStitchedVideoQRCode}
+                    onSubmitToGallery={handleSubmitStitchedVideoToGallery}
                     showWebShare={isWebShareSupported()}
                     isMobileDevice={isMobile()}
                     disabled={isBulkDownloading}
-                    hasPromptKey={false}
+                    hasPromptKey={true}
                     tezdevTheme={tezdevTheme}
                   />
                 </div>
