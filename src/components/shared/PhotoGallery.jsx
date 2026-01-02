@@ -4446,12 +4446,12 @@ const PhotoGallery = ({
 
       // Open Twitter share modal with the stitched video URL
       // Use handleShareToX from props with a synthetic photo object containing the video
-      // Set statusText to #SogniPhotobooth and omit promptKey to avoid "#stitched-video" in message
+      // Custom statusText for stitched videos
       const syntheticPhoto = {
         id: 'stitched-video',
         videoUrl: videoUrl,
         images: photosWithVideos[0]?.images || [], // Use first photo's image as fallback
-        statusText: '#SogniPhotobooth'
+        statusText: 'Just created this video with @sogni_protocol AI photobooth. Pretty sweet.'
         // Note: Omitting promptKey so it doesn't generate a hashtag in the share message
       };
 
@@ -6968,7 +6968,7 @@ const PhotoGallery = ({
                           onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255, 82, 82, 0.1)'}
                           onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
                         >
-                          <span>🎞️</span> {hasCachedStitch ? 'Download Stitched Video' : 'Stitch All Videos'}
+                          <span>🎞️</span> Download Stitched Video
                         </button>
                       );
                     }
