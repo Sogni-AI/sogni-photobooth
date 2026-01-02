@@ -4446,12 +4446,13 @@ const PhotoGallery = ({
 
       // Open Twitter share modal with the stitched video URL
       // Use handleShareToX from props with a synthetic photo object containing the video
+      // Set statusText to #SogniPhotobooth and omit promptKey to avoid "#stitched-video" in message
       const syntheticPhoto = {
         id: 'stitched-video',
         videoUrl: videoUrl,
         images: photosWithVideos[0]?.images || [], // Use first photo's image as fallback
-        promptKey: 'stitched-video',
         statusText: '#SogniPhotobooth'
+        // Note: Omitting promptKey so it doesn't generate a hashtag in the share message
       };
 
       handleShareToX(0, syntheticPhoto);
