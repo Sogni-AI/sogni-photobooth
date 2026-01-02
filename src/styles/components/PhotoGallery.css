@@ -53,6 +53,50 @@
   }
 }
 
+/* Style ShareMenu button inside batch-share-button-container to match other batch buttons */
+.batch-share-button-container .action-button.twitter-btn {
+  background: transparent !important;
+  border: none !important;
+  color: white !important;
+  padding: 6px 14px !important;
+  padding-bottom: 8px !important;
+  border-radius: 8px !important;
+  cursor: pointer !important;
+  font-size: 15px !important;
+  font-weight: 600 !important;
+  font-family: "Permanent Marker", cursive !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  transition: all 0.2s ease !important;
+  white-space: nowrap !important;
+  pointer-events: auto !important;
+  position: relative !important;
+  z-index: 1 !important;
+  min-height: 40px !important;
+  box-shadow: none !important;
+}
+
+.batch-share-button-container .action-button.twitter-btn:disabled {
+  opacity: 0.6 !important;
+  cursor: not-allowed !important;
+}
+
+.batch-share-button-container .action-button.twitter-btn svg {
+  width: 18px !important;
+  height: 18px !important;
+}
+
+/* Hide the text "Share" from ShareMenu button */
+.batch-share-button-container .action-button.twitter-btn {
+  font-size: 0 !important;
+}
+
+.batch-share-button-container .action-button.twitter-btn svg {
+  font-size: initial !important;
+}
+
 /* One-time development to high exposure */
 @keyframes polaroid-develop {
   0% {
