@@ -4479,41 +4479,23 @@ const PhotoGallery = ({
 
   // Handle sharing stitched video via QR Code
   const handleShareStitchedVideoQRCode = useCallback(async () => {
-    // Use the handleShareQRCode prop if available, passing index 0 with synthetic photo
-    if (handleShareQRCode) {
-      // Get videos for thumbnail
-      const currentPhotosArray = isPromptSelectorMode ? filteredPhotos : photos;
-      const photosWithVideos = currentPhotosArray.filter(
-        photo => !photo.hidden && !photo.loading && !photo.generating && !photo.error && photo.videoUrl && !photo.isOriginal
-      );
-
-      if (photosWithVideos.length < 2) {
-        showToast({
-          title: 'Not Enough Videos',
-          message: 'Need at least 2 videos to share.',
-          type: 'info'
-        });
-        return;
-      }
-
-      // Call the QR code handler with the first photo's index
-      // The QR code will link to the photobooth app
-      handleShareQRCode(0);
-    } else {
-      showToast({
-        title: 'QR Code Unavailable',
-        message: 'QR Code sharing is not available in this context.',
-        type: 'info'
-      });
-    }
-  }, [handleShareQRCode, isPromptSelectorMode, filteredPhotos, photos, showToast]);
+    // QR code sharing for stitched videos requires uploading the video first
+    // which is a large file operation. For now, suggest using the Share... option instead.
+    showToast({
+      title: 'Use Share Option',
+      message: 'For stitched videos, please use "Share..." to share via AirDrop, Messages, or other apps.',
+      type: 'info',
+      timeout: 5000
+    });
+  }, [showToast]);
 
   // State for stitched video gallery submission
   const [showStitchedGalleryConfirm, setShowStitchedGalleryConfirm] = useState(false);
   const [stitchedGallerySubmissionPending, setStitchedGallerySubmissionPending] = useState(false);
+  const [stitchedVideoPreviewUrl, setStitchedVideoPreviewUrl] = useState(null);
 
   // Handle submitting stitched video to gallery - shows confirmation popup
-  const handleSubmitStitchedVideoToGallery = useCallback(() => {
+  const handleSubmitStitchedVideoToGallery = useCallback(async () => {
     // Get videos to check if we have enough
     const currentPhotosArray = isPromptSelectorMode ? filteredPhotos : photos;
     const photosWithVideos = currentPhotosArray.filter(
@@ -4529,9 +4511,62 @@ const PhotoGallery = ({
       return;
     }
 
+    // Generate hash of photo IDs to check cache validity
+    const photosHash = photosWithVideos.map(p => p.id).sort().join('-');
+
+    let videoBlob = null;
+
+    // Check for cached stitched video to show in preview
+    if (cachedStitchedVideoBlob && cachedStitchedVideoPhotosHash === photosHash) {
+      console.log('[Gallery Submit] Using cached stitched video for preview');
+      videoBlob = cachedStitchedVideoBlob;
+    } else if (readyTransitionVideo?.blob && isTransitionMode && transitionVideoQueue.length >= 2) {
+      console.log('[Gallery Submit] Using cached transition video for preview');
+      videoBlob = readyTransitionVideo.blob;
+    } else {
+      // Need to stitch the videos first for preview
+      console.log('[Gallery Submit] Stitching videos for preview...');
+      showToast({
+        title: 'Preparing Preview',
+        message: 'Stitching videos...',
+        type: 'info'
+      });
+
+      try {
+        const videosToStitch = photosWithVideos.map((photo, index) => ({
+          url: photo.videoUrl,
+          filename: `video-${index + 1}.mp4`
+        }));
+
+        videoBlob = await concatenateVideos(
+          videosToStitch,
+          null,
+          null
+        );
+
+        // Cache the stitched video for later use
+        setCachedStitchedVideoBlob(videoBlob);
+        setCachedStitchedVideoPhotosHash(photosHash);
+      } catch (error) {
+        console.error('[Gallery Submit] Failed to stitch videos for preview:', error);
+        showToast({
+          title: 'Error',
+          message: 'Failed to prepare video preview.',
+          type: 'error'
+        });
+        return;
+      }
+    }
+
+    // Create blob URL for preview
+    if (videoBlob) {
+      const previewUrl = URL.createObjectURL(videoBlob);
+      setStitchedVideoPreviewUrl(previewUrl);
+    }
+
     // Show confirmation popup
     setShowStitchedGalleryConfirm(true);
-  }, [isPromptSelectorMode, filteredPhotos, photos, showToast]);
+  }, [isPromptSelectorMode, filteredPhotos, photos, showToast, cachedStitchedVideoBlob, cachedStitchedVideoPhotosHash, readyTransitionVideo, isTransitionMode, transitionVideoQueue]);
 
   // Handle stitched video gallery submission confirm
   const handleStitchedGallerySubmitConfirm = useCallback(async () => {
@@ -4678,13 +4713,23 @@ const PhotoGallery = ({
       });
     } finally {
       setStitchedGallerySubmissionPending(false);
+      // Clean up the preview URL
+      if (stitchedVideoPreviewUrl) {
+        URL.revokeObjectURL(stitchedVideoPreviewUrl);
+        setStitchedVideoPreviewUrl(null);
+      }
     }
-  }, [isPromptSelectorMode, filteredPhotos, photos, cachedStitchedVideoBlob, cachedStitchedVideoPhotosHash, readyTransitionVideo, isTransitionMode, transitionVideoQueue, settings, user, showToast, stitchedGallerySubmissionPending]);
+  }, [isPromptSelectorMode, filteredPhotos, photos, cachedStitchedVideoBlob, cachedStitchedVideoPhotosHash, readyTransitionVideo, isTransitionMode, transitionVideoQueue, settings, user, showToast, stitchedGallerySubmissionPending, stitchedVideoPreviewUrl]);
 
   // Handle stitched video gallery submission cancel
   const handleStitchedGallerySubmitCancel = useCallback(() => {
     setShowStitchedGalleryConfirm(false);
-  }, []);
+    // Revoke the preview blob URL to free memory
+    if (stitchedVideoPreviewUrl) {
+      URL.revokeObjectURL(stitchedVideoPreviewUrl);
+      setStitchedVideoPreviewUrl(null);
+    }
+  }, [stitchedVideoPreviewUrl]);
 
   // Handle sharing the ready transition video (called from button click to preserve user gesture)
   const handleShareTransitionVideo = useCallback(async () => {
@@ -12597,7 +12642,7 @@ const PhotoGallery = ({
           );
           return photosWithVideos[0]?.images?.[0] || null;
         })()}
-        videoUrl={null}
+        videoUrl={stitchedVideoPreviewUrl}
         isStitchedVideo={true}
       />
 
