@@ -902,6 +902,23 @@ html body .photo-action-buttons .action-button,
     transform: scale(1) !important;
   }
   
+  /* Adjust positioning for mobile - more spacing between icons */
+  .photo-motion-btn-batch {
+    right: 100px !important;
+  }
+  
+  .photo-favorite-btn-batch {
+    right: 68px !important;
+  }
+  
+  .photo-refresh-btn {
+    right: 36px !important;
+  }
+  
+  .photo-hide-btn {
+    right: 4px !important;
+  }
+  
   /* Keep block button hidden on mobile - desktop only feature */
   .photo-block-btn-batch {
     opacity: 0 !important;

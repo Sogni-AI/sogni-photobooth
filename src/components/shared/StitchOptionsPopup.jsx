@@ -165,17 +165,25 @@ const StitchOptionsPopup = ({
                 {generationProgress.message}
               </div>
 
-              {/* Countdown Timer - show max ETA from all active transitions */}
-              {generationProgress.phase === 'generating' && generationProgress.maxETA > 0 && (
+              {/* Countdown Timer - always show during generating phase to prevent layout shift */}
+              {generationProgress.phase === 'generating' && (
                 <div style={{
                   fontSize: '28px',
                   fontWeight: '700',
                   color: '#ffeb3b',
                   marginBottom: '12px',
                   fontFamily: '"Permanent Marker", cursive',
-                  textShadow: '0 2px 8px rgba(255, 235, 59, 0.4)'
+                  textShadow: '0 2px 8px rgba(255, 235, 59, 0.4)',
+                  minHeight: '36px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
                 }}>
-                  ⏱️ {Math.ceil(generationProgress.maxETA)}s
+                  {generationProgress.maxETA > 0 ? (
+                    <>⏱️ {Math.ceil(generationProgress.maxETA)}s</>
+                  ) : (
+                    <span style={{ fontSize: '20px', opacity: 0.6 }}>⏱️ ...</span>
+                  )}
                 </div>
               )}
 
