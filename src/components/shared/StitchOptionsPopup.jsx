@@ -183,17 +183,24 @@ const StitchOptionsPopup = ({
                 }}>
                   {generationProgress.transitionStatus.map((status, i) => {
                     const eta = generationProgress.transitionETAs?.[i];
-                    const hasETA = eta > 0;
+                    const hasETA = eta != null && eta > 0;
                     
-                    // Keep track of last known ETA to avoid flickering (only while generating)
-                    if (status === 'generating' && hasETA) {
-                      lastKnownETAsRef.current[i] = eta;
+                    // Cache ETA while generating - use memoization to avoid render mutations
+                    let displayETA = null;
+                    if (status === 'generating') {
+                      if (hasETA) {
+                        lastKnownETAsRef.current[i] = eta;
+                        displayETA = eta;
+                      } else {
+                        // Use cached value if no fresh ETA
+                        displayETA = lastKnownETAsRef.current[i];
+                      }
+                    } else if (status === 'complete' || status === 'failed') {
+                      // Clear cache for completed/failed transitions
+                      if (lastKnownETAsRef.current[i] !== undefined) {
+                        delete lastKnownETAsRef.current[i];
+                      }
                     }
-                    // Clear cached ETA when complete
-                    if (status === 'complete') {
-                      delete lastKnownETAsRef.current[i];
-                    }
-                    const displayETA = (status === 'generating') ? (hasETA ? eta : lastKnownETAsRef.current[i]) : null;
                     
                     // Determine what to show inside the box
                     let content;
@@ -202,7 +209,7 @@ const StitchOptionsPopup = ({
                     } else if (status === 'failed') {
                       content = <span style={{ fontSize: '18px' }}>✕</span>;
                     } else if (status === 'generating') {
-                      if (displayETA) {
+                      if (displayETA != null && displayETA > 0) {
                         content = (
                           <span style={{ 
                             fontSize: '16px', 
