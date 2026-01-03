@@ -11628,57 +11628,55 @@ const PhotoGallery = ({
                         </svg>
                       </button>
                     )}
-                    {/* Favorite heart button - show for batch-generated images */}
-                    {photo.promptKey && (photo.stylePrompt || photo.positivePrompt) && (
-                      <button
-                        className="photo-favorite-btn-batch"
-                        onMouseDown={(e) => {
-                          e.stopPropagation();
-                          handleFavoriteToggle(getPhotoId(photo));
-                        }}
-                        style={{
-                          position: 'absolute',
-                          top: '4px',
-                          right: '52px',
-                          background: isPhotoFavorited(photo) ? 'rgba(255, 71, 87, 0.9)' : 'rgba(0, 0, 0, 0.7)',
-                          color: 'white',
-                          border: 'none',
-                          width: '20px',
-                          height: '20px',
-                          borderRadius: '50%',
-                          fontSize: '11px',
-                          fontWeight: 'bold',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          zIndex: 999,
-                          boxShadow: '0 1px 3px rgba(0,0,0,0.5)',
-                          opacity: '0'
-                        }}
-                        onMouseOver={(e) => {
-                          e.currentTarget.style.opacity = '1';
-                        }}
-                        onMouseOut={(e) => {
-                          const photoId = photo.promptKey || photo.id || (photo.images && photo.images[0]);
-                          const currentlyFavorited = favoriteImageIds.includes(photoId);
-                          e.currentTarget.style.opacity = currentlyFavorited ? '1' : '0';
-                        }}
-                        title={isPhotoFavorited(photo) ? "Remove from favorites" : "Add to favorites"}
-                      >
-                        {isPhotoFavorited(photo) ? (
-                          <svg width="12" height="12" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path fill="#ffffff" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-                          </svg>
-                        ) : (
-                          <svg width="12" height="12" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path fill="none" stroke="#ffffff" strokeWidth="2" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-                          </svg>
-                        )}
-                      </button>
-                    )}
-                    {/* Motion video button - show for batch-generated images */}
-                    {photo.promptKey && (photo.stylePrompt || photo.positivePrompt) && (
+                    {/* Favorite heart button - always show for batch-generated images */}
+                    <button
+                      className="photo-favorite-btn-batch"
+                      onMouseDown={(e) => {
+                        e.stopPropagation();
+                        handleFavoriteToggle(getPhotoId(photo));
+                      }}
+                      style={{
+                        position: 'absolute',
+                        top: '4px',
+                        right: '52px',
+                        background: isPhotoFavorited(photo) ? 'rgba(255, 71, 87, 0.9)' : 'rgba(0, 0, 0, 0.7)',
+                        color: 'white',
+                        border: 'none',
+                        width: '20px',
+                        height: '20px',
+                        borderRadius: '50%',
+                        fontSize: '11px',
+                        fontWeight: 'bold',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        zIndex: 999,
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.5)',
+                        opacity: '0'
+                      }}
+                      onMouseOver={(e) => {
+                        e.currentTarget.style.opacity = '1';
+                      }}
+                      onMouseOut={(e) => {
+                        const photoId = photo.promptKey || photo.id || (photo.images && photo.images[0]);
+                        const currentlyFavorited = favoriteImageIds.includes(photoId);
+                        e.currentTarget.style.opacity = currentlyFavorited ? '1' : '0';
+                      }}
+                      title={isPhotoFavorited(photo) ? "Remove from favorites" : "Add to favorites"}
+                    >
+                      {isPhotoFavorited(photo) ? (
+                        <svg width="12" height="12" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                          <path fill="#ffffff" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                        </svg>
+                      ) : (
+                        <svg width="12" height="12" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                          <path fill="none" stroke="#ffffff" strokeWidth="2" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                        </svg>
+                      )}
+                    </button>
+                    {/* Motion video button - show for batch-generated images, hide during video generation */}
+                    {!photo.generatingVideo && (photo.positivePrompt || photo.stylePrompt) && (
                       <button
                         className="photo-motion-btn-batch"
                         onClick={(e) => {
@@ -11699,39 +11697,31 @@ const PhotoGallery = ({
                           borderRadius: '50%',
                           fontSize: '11px',
                           fontWeight: 'bold',
-                          cursor: photo.generatingVideo ? 'wait' : 'pointer',
+                          cursor: 'pointer',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
                           zIndex: 999,
                           boxShadow: '0 1px 3px rgba(0,0,0,0.5)',
-                          opacity: photo.generatingVideo ? '0.6' : '0',
+                          opacity: '0',
                           transform: 'scale(0.8)',
                           transition: 'all 0.2s ease'
                         }}
                         onMouseOver={(e) => {
-                          if (!photo.generatingVideo) {
-                            e.currentTarget.style.background = 'rgba(139, 92, 246, 0.9)';
-                            e.currentTarget.style.transform = 'scale(1)';
-                            e.currentTarget.style.opacity = '1';
-                          }
+                          e.currentTarget.style.background = 'rgba(139, 92, 246, 0.9)';
+                          e.currentTarget.style.transform = 'scale(1)';
+                          e.currentTarget.style.opacity = '1';
                         }}
                         onMouseOut={(e) => {
                           e.currentTarget.style.background = 'rgba(0, 0, 0, 0.7)';
                           e.currentTarget.style.transform = 'scale(0.8)';
-                          e.currentTarget.style.opacity = photo.generatingVideo ? '0.6' : '0';
+                          e.currentTarget.style.opacity = '0';
                         }}
-                        title={photo.generatingVideo ? "Generating video..." : "Generate motion video"}
+                        title="Generate motion video"
                       >
-                        {photo.generatingVideo ? (
-                          <svg width="11" height="11" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style={{ animation: 'spin 1s linear infinite' }}>
-                            <path fill="none" stroke="#ffffff" strokeWidth="2" d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83"/>
-                          </svg>
-                        ) : (
-                          <svg width="11" height="11" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path fill="#ffffff" d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/>
-                          </svg>
-                        )}
+                        <svg width="11" height="11" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                          <path fill="#ffffff" d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/>
+                        </svg>
                       </button>
                     )}
                     {/* Refresh button - only show if photo has a prompt */}

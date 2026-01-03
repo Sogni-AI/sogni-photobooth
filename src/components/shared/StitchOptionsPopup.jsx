@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import PropTypes from 'prop-types';
 
@@ -17,6 +17,8 @@ const StitchOptionsPopup = ({
   generationProgress = null, // { phase, current, total, message, transitionStatus }
   hasCachedVideo = false
 }) => {
+  // Keep track of last known ETAs to avoid flickering back to spinner
+  const lastKnownETAsRef = useRef({});
 
   const handleBackdropClick = (e) => {
     if (e.target === e.currentTarget && !isGenerating) {
@@ -178,6 +180,12 @@ const StitchOptionsPopup = ({
                     const eta = generationProgress.transitionETAs?.[i];
                     const hasETA = eta > 0;
                     
+                    // Keep track of last known ETA to avoid flickering
+                    if (hasETA) {
+                      lastKnownETAsRef.current[i] = eta;
+                    }
+                    const displayETA = hasETA ? eta : lastKnownETAsRef.current[i];
+                    
                     return (
                       <div
                         key={i}
@@ -205,18 +213,18 @@ const StitchOptionsPopup = ({
                             : 'none',
                           padding: '4px'
                         }}
-                        title={`Transition ${i + 1}: ${status}${hasETA ? ` (${Math.ceil(eta)}s remaining)` : ''}`}
+                        title={`Transition ${i + 1}: ${status}${displayETA ? ` (${Math.ceil(displayETA)}s remaining)` : ''}`}
                       >
                         {status === 'complete' && <span style={{ fontSize: '18px' }}>✓</span>}
                         {status === 'generating' && (
                           <>
-                            {hasETA ? (
+                            {displayETA ? (
                               <span style={{ 
                                 fontSize: '16px', 
                                 fontWeight: '700',
                                 fontFamily: '"Permanent Marker", cursive'
                               }}>
-                                {Math.ceil(eta)}s
+                                {Math.ceil(displayETA)}s
                               </span>
                             ) : (
                               <div style={{
