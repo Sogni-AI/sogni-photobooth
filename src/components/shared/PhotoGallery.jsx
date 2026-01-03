@@ -1481,6 +1481,37 @@ const PhotoGallery = ({
     }
   }, [showBatchVideoTip]);
 
+  // Show infinite loop stitch tip when batch videos complete (non-transition mode)
+  useEffect(() => {
+    // Only show in non-transition mode
+    if (isTransitionMode || transitionVideoQueue.length > 0) {
+      return;
+    }
+
+    // Check if we have at least 2 completed videos (ready to stitch)
+    const currentPhotosArray = isPromptSelectorMode ? filteredPhotos : photos;
+    const completedVideos = currentPhotosArray.filter(
+      photo => !photo.hidden && !photo.loading && !photo.generating && !photo.error && photo.videoUrl && !photo.isOriginal
+    );
+
+    // Check if any videos are currently generating
+    const hasGeneratingVideo = currentPhotosArray.some(photo => photo.generatingVideo);
+
+    // Show tip if we have 2+ completed videos and nothing is generating
+    if (completedVideos.length >= 2 && !hasGeneratingVideo && !showDownloadTip && !showInfiniteLoopPreview) {
+      // Delay showing the tip by 1.5 seconds after completion
+      const showTimer = setTimeout(() => {
+        setShowDownloadTip(true);
+        // Auto-hide after 10 seconds
+        setTimeout(() => {
+          setShowDownloadTip(false);
+        }, 10000);
+      }, 1500);
+
+      return () => clearTimeout(showTimer);
+    }
+  }, [photos, filteredPhotos, isPromptSelectorMode, isTransitionMode, transitionVideoQueue, showDownloadTip, showInfiniteLoopPreview]);
+
   // Clear framed image cache when aspect ratio changes
   useEffect(() => {
     // Clean up existing blob URLs
@@ -7448,21 +7479,26 @@ const PhotoGallery = ({
                     bottom: '100%',
                     left: '50%',
                     transform: 'translateX(-50%)',
-                    marginBottom: '8px',
-                    padding: '8px 12px',
-                    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+                    marginBottom: '12px',
+                    padding: '12px 16px',
+                    background: 'linear-gradient(135deg, #9333ea, #7c3aed)',
                     color: '#fff',
-                    borderRadius: '8px',
-                    fontSize: '12px',
-                    fontWeight: '500',
+                    borderRadius: '12px',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, sans-serif',
                     whiteSpace: 'nowrap',
-                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+                    boxShadow: '0 8px 24px rgba(147, 51, 234, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1) inset',
                     zIndex: 10000,
                     pointerEvents: 'none',
-                    animation: 'fadeIn 0.3s ease-out'
+                    animation: 'fadeInBounce 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55)',
+                    letterSpacing: '0.01em'
                   }}
                 >
-                  Click here to download your video
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '18px' }}>♾️</span>
+                    <span>Stitch videos together in a loop?</span>
+                  </div>
                   <div
                     style={{
                       position: 'absolute',
@@ -7471,9 +7507,9 @@ const PhotoGallery = ({
                       transform: 'translateX(-50%)',
                       width: 0,
                       height: 0,
-                      borderLeft: '6px solid transparent',
-                      borderRight: '6px solid transparent',
-                      borderTop: '6px solid rgba(0, 0, 0, 0.9)'
+                      borderLeft: '8px solid transparent',
+                      borderRight: '8px solid transparent',
+                      borderTop: '8px solid #7c3aed'
                     }}
                   />
                 </div>

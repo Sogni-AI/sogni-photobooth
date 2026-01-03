@@ -40,6 +40,24 @@
   100% { transform: rotate(360deg); }
 }
 
+@keyframes fadeInBounce {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(10px) scale(0.9);
+  }
+  60% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(-5px) scale(1.02);
+  }
+  80% {
+    transform: translateX(-50%) translateY(2px) scale(0.98);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+}
+
 /* Subtle loading animation - affects the entire polaroid frame */
 @keyframes subtle-frame-pulse {
   0% {
