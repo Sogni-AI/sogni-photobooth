@@ -43,6 +43,8 @@ import PromptVideoConfirmationPopup from './PromptVideoConfirmationPopup';
 import VideoSelectionPopup from './VideoSelectionPopup';
 import TransitionVideoCompleteNotification from './TransitionVideoCompleteNotification';
 import ConfettiCelebration from './ConfettiCelebration';
+import StitchOptionsPopup from './StitchOptionsPopup';
+import { extractLastFrame } from '../../utils/videoFrameExtraction';
 
 // Random video completion messages
 const VIDEO_READY_MESSAGES = [
@@ -885,6 +887,15 @@ const PhotoGallery = ({
   const [autoTriggerBaldForBaseAfterGeneration, setAutoTriggerBaldForBaseAfterGeneration] = useState(false); // Auto-trigger Bald for Base after photo generation
   const [hasSeenGenerationStart, setHasSeenGenerationStart] = useState(false); // Track if we've seen generation start
   const previousPhotoCountRef = useRef(0); // Track previous photo count to detect when new photos are added
+
+  // Stitch Options Popup state (for Infinite Loop feature)
+  const [showStitchOptionsPopup, setShowStitchOptionsPopup] = useState(false);
+  const [isGeneratingInfiniteLoop, setIsGeneratingInfiniteLoop] = useState(false);
+  const [infiniteLoopProgress, setInfiniteLoopProgress] = useState(null); // { phase, current, total, message, transitionStatus }
+  const [cachedInfiniteLoopBlob, setCachedInfiniteLoopBlob] = useState(null);
+  const [cachedInfiniteLoopHash, setCachedInfiniteLoopHash] = useState(null);
+  const [showInfiniteLoopPreview, setShowInfiniteLoopPreview] = useState(false);
+  const infiniteLoopVideoRef = useRef(null);
 
   // Video cost estimation - include selectedPhotoIndex to bust cache when switching photos
   const { loading: videoLoading, cost: videoCostRaw, costInUSD: videoUSD, refetch: refetchVideoCost } = useVideoCostEstimation({
@@ -4220,6 +4231,329 @@ const PhotoGallery = ({
     }
   }, [photos, filteredPhotos, isPromptSelectorMode, isBulkDownloading, cachedStitchedVideoBlob, cachedStitchedVideoPhotosHash, showToast, setIsBulkDownloading, setBulkDownloadProgress]);
 
+  // Handle Infinite Loop Stitch - generates AI transitions between videos for seamless looping
+  const handleInfiniteLoopStitch = useCallback(async (transitionDuration = 3) => {
+    if (isBulkDownloading || isGeneratingInfiniteLoop) {
+      console.log('[Infinite Loop] Already in progress');
+      return;
+    }
+
+    try {
+      // Get the correct photos array based on mode
+      const currentPhotosArray = isPromptSelectorMode ? filteredPhotos : photos;
+
+      // Get photos with videos (excluding hidden/discarded ones)
+      const photosWithVideos = currentPhotosArray.filter(
+        photo => !photo.hidden && !photo.loading && !photo.generating && !photo.error && photo.videoUrl && !photo.isOriginal
+      );
+
+      if (photosWithVideos.length < 2) {
+        showToast({
+          title: 'Not Enough Videos',
+          message: 'Need at least 2 videos for Infinite Loop.',
+          type: 'info'
+        });
+        setShowStitchOptionsPopup(false);
+        return;
+      }
+
+      // Generate hash to check for cached version
+      const photosHash = photosWithVideos.map(p => p.id + '-' + p.videoUrl).join('|') + `-dur${transitionDuration}`;
+
+      // Check if we have a cached version
+      if (cachedInfiniteLoopBlob && cachedInfiniteLoopHash === photosHash) {
+        console.log('[Infinite Loop] Using cached version');
+        setShowStitchOptionsPopup(false);
+        setShowInfiniteLoopPreview(true);
+        return;
+      }
+
+      console.log(`[Infinite Loop] Starting with ${photosWithVideos.length} videos, ${transitionDuration}s transitions`);
+
+      const transitionCount = photosWithVideos.length;
+
+      // Initialize transition status for parallel tracking
+      const initialTransitionStatus = Array(transitionCount).fill('pending');
+
+      setIsGeneratingInfiniteLoop(true);
+      setInfiniteLoopProgress({
+        phase: 'extracting',
+        current: 0,
+        total: photosWithVideos.length,
+        message: 'Preparing to extract video frames...',
+        transitionStatus: initialTransitionStatus
+      });
+
+      // Phase 1: Extract last frame from each video (in parallel)
+      const framePromises = photosWithVideos.map((photo, i) =>
+        extractLastFrame(photo.videoUrl).then(frame => {
+          console.log(`[Infinite Loop] Extracted frame ${i + 1}: ${frame.width}x${frame.height}`);
+          return { index: i, frame };
+        })
+      );
+
+      // Update progress as frames complete
+      let extractedCount = 0;
+      const lastFrames = new Array(photosWithVideos.length);
+
+      for (const promise of framePromises) {
+        try {
+          const result = await promise;
+          lastFrames[result.index] = result.frame;
+          extractedCount++;
+          setInfiniteLoopProgress(prev => ({
+            ...prev,
+            current: extractedCount,
+            message: `Extracting frames ${extractedCount}/${photosWithVideos.length}...`
+          }));
+        } catch (error) {
+          console.error(`[Infinite Loop] Frame extraction failed:`, error);
+          showToast({
+            title: 'Frame Extraction Failed',
+            message: 'Could not extract frames from videos. Please try again.',
+            type: 'error'
+          });
+          setIsGeneratingInfiniteLoop(false);
+          setInfiniteLoopProgress(null);
+          setShowStitchOptionsPopup(false);
+          return;
+        }
+      }
+
+      // Helper to load an image as buffer
+      const loadImageAsBuffer = async (url) => {
+        return new Promise((resolve, reject) => {
+          const img = new Image();
+          if (url.startsWith('http')) {
+            img.crossOrigin = 'anonymous';
+          }
+
+          img.onload = async () => {
+            const width = img.naturalWidth || img.width;
+            const height = img.naturalHeight || img.height;
+
+            try {
+              if (url.startsWith('blob:')) {
+                const response = await fetch(url);
+                if (response.ok) {
+                  const imageBlob = await response.blob();
+                  const arrayBuffer = await imageBlob.arrayBuffer();
+                  const imageBuffer = new Uint8Array(arrayBuffer);
+                  resolve({ buffer: imageBuffer, width, height });
+                  return;
+                }
+              }
+
+              const canvas = document.createElement('canvas');
+              canvas.width = width;
+              canvas.height = height;
+              const ctx = canvas.getContext('2d');
+              ctx.drawImage(img, 0, 0);
+
+              canvas.toBlob((blob) => {
+                if (blob) {
+                  blob.arrayBuffer().then(arrayBuffer => {
+                    const imageBuffer = new Uint8Array(arrayBuffer);
+                    resolve({ buffer: imageBuffer, width, height });
+                  }).catch(reject);
+                } else {
+                  reject(new Error('Failed to convert canvas to blob'));
+                }
+              }, 'image/png');
+            } catch (error) {
+              reject(error);
+            }
+          };
+
+          img.onerror = () => reject(new Error('Failed to load image'));
+          img.src = url;
+        });
+      };
+
+      // Use the transition prompt from settings
+      const motionPrompt = settings.videoTransitionPrompt || DEFAULT_SETTINGS.videoTransitionPrompt;
+      const negativePrompt = settings.videoNegativePrompt || '';
+
+      // Phase 2: Generate ALL transition videos in parallel
+      const transitionStatus = [...initialTransitionStatus];
+      const generatedTransitionUrls = new Array(transitionCount);
+      let completedTransitions = 0;
+      let failedTransition = null;
+
+      setInfiniteLoopProgress({
+        phase: 'generating',
+        current: 0,
+        total: transitionCount,
+        message: `Generating ${transitionCount} transitions in parallel...`,
+        transitionStatus: transitionStatus.map(() => 'generating')
+      });
+
+      // Pre-load all destination images
+      const endImages = await Promise.all(
+        photosWithVideos.map((photo, i) => {
+          const nextIndex = (i + 1) % photosWithVideos.length;
+          const nextPhoto = photosWithVideos[nextIndex];
+          const nextImageUrl = nextPhoto.enhancedImageUrl || nextPhoto.images?.[0] || nextPhoto.originalDataUrl;
+          return loadImageAsBuffer(nextImageUrl);
+        })
+      );
+
+      // Create all transition generation promises
+      const transitionPromises = lastFrames.map((startFrame, i) => {
+        const nextIndex = (i + 1) % photosWithVideos.length;
+        const endImage = endImages[i];
+
+        console.log(`[Infinite Loop] Starting transition ${i + 1}: video ${i + 1} → photo ${nextIndex + 1}`);
+
+        return new Promise((resolve, reject) => {
+          const tempPhotoId = `infinite-loop-transition-${i}-${Date.now()}`;
+
+          generateVideo({
+            photo: { id: tempPhotoId, images: [], generatingVideo: false },
+            photoIndex: 0,
+            subIndex: 0,
+            imageWidth: startFrame.width,
+            imageHeight: startFrame.height,
+            sogniClient,
+            setPhotos: () => {},
+            resolution: settings.videoResolution || '480p',
+            quality: settings.videoQuality || 'fast',
+            fps: settings.videoFramerate || 16,
+            duration: transitionDuration,
+            positivePrompt: motionPrompt,
+            negativePrompt: negativePrompt,
+            tokenType: tokenType,
+            referenceImage: startFrame.buffer,
+            referenceImageEnd: endImage.buffer,
+            onComplete: (videoUrl) => {
+              console.log(`[Infinite Loop] Transition ${i + 1} complete: ${videoUrl}`);
+              resolve({ index: i, url: videoUrl });
+            },
+            onError: (error) => {
+              console.error(`[Infinite Loop] Transition ${i + 1} failed:`, error);
+              reject({ index: i, error });
+            }
+          });
+        });
+      });
+
+      // Handle completions as they come in
+      const results = await Promise.allSettled(transitionPromises);
+
+      for (const result of results) {
+        if (result.status === 'fulfilled') {
+          const { index, url } = result.value;
+          generatedTransitionUrls[index] = url;
+          transitionStatus[index] = 'complete';
+          completedTransitions++;
+          playSonicLogo(settings.soundEnabled);
+        } else {
+          const { index } = result.reason;
+          transitionStatus[index] = 'failed';
+          failedTransition = index;
+        }
+
+        setInfiniteLoopProgress({
+          phase: 'generating',
+          current: completedTransitions,
+          total: transitionCount,
+          message: `${completedTransitions}/${transitionCount} transitions complete`,
+          transitionStatus: [...transitionStatus]
+        });
+      }
+
+      // Check for failures
+      if (failedTransition !== null) {
+        showToast({
+          title: 'Some Transitions Failed',
+          message: `Transition ${failedTransition + 1} failed. Please try again.`,
+          type: 'error'
+        });
+        setIsGeneratingInfiniteLoop(false);
+        setInfiniteLoopProgress(null);
+        setShowStitchOptionsPopup(false);
+        return;
+      }
+
+      // Phase 3: Stitch all videos together
+      setInfiniteLoopProgress({
+        phase: 'stitching',
+        current: 0,
+        total: photosWithVideos.length + transitionCount,
+        message: 'Stitching all videos together...',
+        transitionStatus
+      });
+
+      // Build the final video sequence: video1, trans1, video2, trans2, ..., videoN, transN
+      const allVideosToStitch = [];
+      for (let i = 0; i < photosWithVideos.length; i++) {
+        allVideosToStitch.push({
+          url: photosWithVideos[i].videoUrl,
+          filename: `video-${i + 1}.mp4`
+        });
+        allVideosToStitch.push({
+          url: generatedTransitionUrls[i],
+          filename: `transition-${i + 1}.mp4`
+        });
+      }
+
+      console.log(`[Infinite Loop] Stitching ${allVideosToStitch.length} videos`);
+
+      const concatenatedBlob = await concatenateVideos(
+        allVideosToStitch,
+        (current, total, message) => {
+          setInfiniteLoopProgress(prev => ({
+            ...prev,
+            phase: 'stitching',
+            current,
+            total,
+            message
+          }));
+        },
+        null
+      );
+
+      // Cache the result
+      setCachedInfiniteLoopBlob(concatenatedBlob);
+      setCachedInfiniteLoopHash(photosHash);
+
+      // Phase 4: Show preview
+      setInfiniteLoopProgress({
+        phase: 'complete',
+        current: 1,
+        total: 1,
+        message: 'Infinite loop ready!',
+        transitionStatus
+      });
+
+      showToast({
+        title: '♾️ Infinite Loop Complete!',
+        message: `Created seamless loop with ${photosWithVideos.length} videos and ${transitionCount} AI transitions.`,
+        type: 'success',
+        timeout: 5000
+      });
+
+      // Show the preview after a short delay
+      setTimeout(() => {
+        setIsGeneratingInfiniteLoop(false);
+        setInfiniteLoopProgress(null);
+        setShowStitchOptionsPopup(false);
+        setShowInfiniteLoopPreview(true);
+      }, 1500);
+
+    } catch (error) {
+      console.error('[Infinite Loop] Error:', error);
+      showToast({
+        title: 'Infinite Loop Failed',
+        message: error.message || 'Failed to create infinite loop. Please try again.',
+        type: 'error'
+      });
+      setIsGeneratingInfiniteLoop(false);
+      setInfiniteLoopProgress(null);
+      setShowStitchOptionsPopup(false);
+    }
+  }, [photos, filteredPhotos, isPromptSelectorMode, isBulkDownloading, isGeneratingInfiniteLoop, sogniClient, settings, tokenType, showToast, cachedInfiniteLoopBlob, cachedInfiniteLoopHash]);
+
   // Handle sharing stitched video - stitches if needed, then shares via Web Share API
   const handleShareStitchedVideo = useCallback(async () => {
     if (isBulkDownloading) {
@@ -7279,11 +7613,11 @@ const PhotoGallery = ({
                           onClick={() => {
                             setShowMoreDropdown(false);
                             // In transition mode, use the transition video download (uses cached video)
-                            // In non-transition mode, use the general stitch function
+                            // In non-transition mode, show stitch options popup for Simple vs Infinite Loop
                             if (isTransitionMode && transitionVideoQueue.length > 0) {
                               handleDownloadTransitionVideo();
                             } else {
-                              handleStitchAllVideos();
+                              setShowStitchOptionsPopup(true);
                             }
                           }}
                           style={{
@@ -11897,6 +12231,250 @@ const PhotoGallery = ({
         onDismiss={handleVideoIntroDismiss}
         onProceed={handleVideoIntroProceed}
       />
+
+      {/* Stitch Options Popup - Choose between Simple Stitch and Infinite Loop */}
+      <StitchOptionsPopup
+        visible={showStitchOptionsPopup}
+        onClose={() => {
+          if (!isGeneratingInfiniteLoop) {
+            setShowStitchOptionsPopup(false);
+            setInfiniteLoopProgress(null);
+          }
+        }}
+        onSimpleStitch={() => {
+          setShowStitchOptionsPopup(false);
+          handleStitchAllVideos();
+        }}
+        onInfiniteLoop={(duration) => {
+          handleInfiniteLoopStitch(duration);
+        }}
+        onDownloadCached={() => {
+          setShowStitchOptionsPopup(false);
+          setShowInfiniteLoopPreview(true);
+        }}
+        videoCount={(() => {
+          const currentPhotosArray = isPromptSelectorMode ? filteredPhotos : photos;
+          return currentPhotosArray.filter(
+            photo => !photo.hidden && !photo.loading && !photo.generating && !photo.error && photo.videoUrl && !photo.isOriginal
+          ).length;
+        })()}
+        isGenerating={isGeneratingInfiniteLoop}
+        generationProgress={infiniteLoopProgress}
+        hasCachedVideo={!!cachedInfiniteLoopBlob}
+      />
+
+      {/* Infinite Loop Video Preview - Fullscreen playback after generation */}
+      {showInfiniteLoopPreview && cachedInfiniteLoopBlob && createPortal(
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.95)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10000001,
+            padding: '20px'
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowInfiniteLoopPreview(false);
+            }
+          }}
+        >
+          {/* Header */}
+          <div style={{
+            position: 'absolute',
+            top: '20px',
+            left: '20px',
+            right: '20px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            zIndex: 2
+          }}>
+            <h2 style={{
+              margin: 0,
+              color: '#fff',
+              fontSize: '24px',
+              fontWeight: '700',
+              fontFamily: '"Permanent Marker", cursive',
+              textShadow: '0 2px 8px rgba(0, 0, 0, 0.5)'
+            }}>
+              ♾️ Your Infinite Loop
+            </h2>
+            <button
+              onClick={() => setShowInfiniteLoopPreview(false)}
+              style={{
+                background: 'rgba(255, 255, 255, 0.2)',
+                border: 'none',
+                borderRadius: '50%',
+                width: '40px',
+                height: '40px',
+                cursor: 'pointer',
+                color: '#fff',
+                fontSize: '24px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                backdropFilter: 'blur(10px)'
+              }}
+            >
+              ×
+            </button>
+          </div>
+
+          {/* Video Player */}
+          <div style={{
+            maxWidth: '90vw',
+            maxHeight: '70vh',
+            borderRadius: '16px',
+            overflow: 'hidden',
+            boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)'
+          }}>
+            <video
+              ref={infiniteLoopVideoRef}
+              src={URL.createObjectURL(cachedInfiniteLoopBlob)}
+              autoPlay
+              loop
+              playsInline
+              controls
+              style={{
+                maxWidth: '90vw',
+                maxHeight: '70vh',
+                display: 'block'
+              }}
+            />
+          </div>
+
+          {/* Action Buttons */}
+          <div style={{
+            marginTop: '24px',
+            display: 'flex',
+            gap: '16px',
+            flexWrap: 'wrap',
+            justifyContent: 'center'
+          }}>
+            {/* Download Button */}
+            <button
+              onClick={() => {
+                const timestamp = new Date().toISOString().split('T')[0];
+                const filename = `sogni-infinite-loop-${timestamp}.mp4`;
+                const blobUrl = URL.createObjectURL(cachedInfiniteLoopBlob);
+                const link = document.createElement('a');
+                link.href = blobUrl;
+                link.download = filename;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+
+                showToast({
+                  title: '⬇️ Downloaded!',
+                  message: 'Your infinite loop video has been saved.',
+                  type: 'success'
+                });
+              }}
+              style={{
+                padding: '14px 28px',
+                background: 'linear-gradient(135deg, #4CAF50, #45a049)',
+                border: 'none',
+                borderRadius: '12px',
+                color: '#fff',
+                cursor: 'pointer',
+                fontSize: '16px',
+                fontWeight: '600',
+                fontFamily: '"Permanent Marker", cursive',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                boxShadow: '0 4px 12px rgba(76, 175, 80, 0.4)'
+              }}
+            >
+              ⬇️ Download
+            </button>
+
+            {/* Share Button (if supported) */}
+            {navigator.share && (
+              <button
+                onClick={async () => {
+                  try {
+                    const timestamp = new Date().toISOString().split('T')[0];
+                    const filename = `sogni-infinite-loop-${timestamp}.mp4`;
+                    const file = new File([cachedInfiniteLoopBlob], filename, { type: 'video/mp4' });
+                    await navigator.share({
+                      files: [file],
+                      title: 'Sogni Infinite Loop',
+                      text: 'Check out this seamless video loop!'
+                    });
+                  } catch (err) {
+                    console.log('Share cancelled or failed:', err);
+                  }
+                }}
+                style={{
+                  padding: '14px 28px',
+                  background: 'linear-gradient(135deg, #2196F3, #1976D2)',
+                  border: 'none',
+                  borderRadius: '12px',
+                  color: '#fff',
+                  cursor: 'pointer',
+                  fontSize: '16px',
+                  fontWeight: '600',
+                  fontFamily: '"Permanent Marker", cursive',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  boxShadow: '0 4px 12px rgba(33, 150, 243, 0.4)'
+                }}
+              >
+                📤 Share
+              </button>
+            )}
+
+            {/* Create New Button */}
+            <button
+              onClick={() => {
+                setCachedInfiniteLoopBlob(null);
+                setCachedInfiniteLoopHash(null);
+                setShowInfiniteLoopPreview(false);
+                setShowStitchOptionsPopup(true);
+              }}
+              style={{
+                padding: '14px 28px',
+                background: 'rgba(255, 255, 255, 0.15)',
+                border: '2px solid rgba(255, 255, 255, 0.3)',
+                borderRadius: '12px',
+                color: '#fff',
+                cursor: 'pointer',
+                fontSize: '16px',
+                fontWeight: '600',
+                fontFamily: '"Permanent Marker", cursive',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                backdropFilter: 'blur(10px)'
+              }}
+            >
+              🔄 Create New
+            </button>
+          </div>
+
+          {/* Tip */}
+          <p style={{
+            marginTop: '20px',
+            color: 'rgba(255, 255, 255, 0.6)',
+            fontSize: '13px',
+            textAlign: 'center'
+          }}>
+            Tip: Click outside the video to close this preview
+          </p>
+        </div>,
+        document.body
+      )}
 
       {/* Transition Video Popup - Shows before generating transition videos */}
       {showTransitionVideoPopup && createPortal(
