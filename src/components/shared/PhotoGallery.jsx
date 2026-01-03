@@ -4441,6 +4441,7 @@ const PhotoGallery = ({
       // Phase 2: Generate ALL transition videos in parallel
       const transitionStatus = [...initialTransitionStatus];
       const generatedTransitionUrls = new Array(transitionCount);
+      const transitionETAs = new Array(transitionCount).fill(null); // Track ETA for each transition
       let completedTransitions = 0;
       let failedTransition = null;
 
@@ -4449,7 +4450,9 @@ const PhotoGallery = ({
         current: 0,
         total: transitionCount,
         message: `Generating ${transitionCount} transitions in parallel...`,
-        transitionStatus: transitionStatus.map(() => 'generating')
+        transitionStatus: transitionStatus.map(() => 'generating'),
+        transitionETAs: [...transitionETAs],
+        maxETA: null
       });
 
       // Pre-load all destination images
@@ -4471,15 +4474,45 @@ const PhotoGallery = ({
 
         return new Promise((resolve, reject) => {
           const tempPhotoId = `infinite-loop-transition-${i}-${Date.now()}`;
+          
+          // Create a temporary photo object to track this transition's ETA
+          const tempPhoto = { 
+            id: tempPhotoId, 
+            images: [], 
+            generatingVideo: false,
+            videoETA: null,
+            videoElapsed: null
+          };
+
+          // Custom setPhotos function that captures ETA updates for this specific transition
+          const captureETAUpdates = (updateFn) => {
+            const updated = updateFn([tempPhoto]);
+            if (updated[0]) {
+              const { videoETA, videoElapsed } = updated[0];
+              
+              // Update this transition's ETA
+              transitionETAs[i] = videoETA;
+              
+              // Calculate the maximum ETA across all active transitions
+              const maxETA = Math.max(...transitionETAs.filter(eta => eta !== null && eta > 0));
+              
+              // Update progress with ETA info
+              setInfiniteLoopProgress(prev => ({
+                ...prev,
+                transitionETAs: [...transitionETAs],
+                maxETA: maxETA > 0 ? maxETA : null
+              }));
+            }
+          };
 
           generateVideo({
-            photo: { id: tempPhotoId, images: [], generatingVideo: false },
+            photo: tempPhoto,
             photoIndex: 0,
             subIndex: 0,
             imageWidth: startFrame.width,
             imageHeight: startFrame.height,
             sogniClient,
-            setPhotos: () => {},
+            setPhotos: captureETAUpdates,
             resolution: settings.videoResolution || '480p',
             quality: settings.videoQuality || 'fast',
             fps: settings.videoFramerate || 16,
@@ -4493,8 +4526,12 @@ const PhotoGallery = ({
               console.log(`[Infinite Loop] Transition ${i + 1} complete: ${videoUrl}`);
               generatedTransitionUrls[i] = videoUrl;
               transitionStatus[i] = 'complete';
+              transitionETAs[i] = 0; // Clear ETA when complete
               completedTransitions++;
               playSonicLogo(settings.soundEnabled);
+
+              // Calculate remaining max ETA
+              const maxETA = Math.max(...transitionETAs.filter(eta => eta !== null && eta > 0));
 
               // Update progress immediately
               setInfiniteLoopProgress({
@@ -4502,7 +4539,9 @@ const PhotoGallery = ({
                 current: completedTransitions,
                 total: transitionCount,
                 message: `${completedTransitions}/${transitionCount} transitions complete`,
-                transitionStatus: [...transitionStatus]
+                transitionStatus: [...transitionStatus],
+                transitionETAs: [...transitionETAs],
+                maxETA: maxETA > 0 ? maxETA : null
               });
 
               resolve({ index: i, url: videoUrl });
@@ -4510,12 +4549,14 @@ const PhotoGallery = ({
             onError: (error) => {
               console.error(`[Infinite Loop] Transition ${i + 1} failed:`, error);
               transitionStatus[i] = 'failed';
+              transitionETAs[i] = 0; // Clear ETA on failure
               failedTransition = i;
 
               // Update progress to show failure
               setInfiniteLoopProgress(prev => ({
                 ...prev,
-                transitionStatus: [...transitionStatus]
+                transitionStatus: [...transitionStatus],
+                transitionETAs: [...transitionETAs]
               }));
 
               reject({ index: i, error });

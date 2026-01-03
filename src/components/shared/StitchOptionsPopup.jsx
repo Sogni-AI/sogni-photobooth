@@ -165,6 +165,20 @@ const StitchOptionsPopup = ({
                 {generationProgress.message}
               </div>
 
+              {/* Countdown Timer - show max ETA from all active transitions */}
+              {generationProgress.phase === 'generating' && generationProgress.maxETA > 0 && (
+                <div style={{
+                  fontSize: '28px',
+                  fontWeight: '700',
+                  color: '#ffeb3b',
+                  marginBottom: '12px',
+                  fontFamily: '"Permanent Marker", cursive',
+                  textShadow: '0 2px 8px rgba(255, 235, 59, 0.4)'
+                }}>
+                  ⏱️ {Math.ceil(generationProgress.maxETA)}s
+                </div>
+              )}
+
               {/* Individual transition status indicators */}
               {generationProgress.phase === 'generating' && generationProgress.transitionStatus && (
                 <div style={{
@@ -501,7 +515,9 @@ StitchOptionsPopup.propTypes = {
     current: PropTypes.number,
     total: PropTypes.number,
     message: PropTypes.string,
-    transitionStatus: PropTypes.arrayOf(PropTypes.string)
+    transitionStatus: PropTypes.arrayOf(PropTypes.string),
+    transitionETAs: PropTypes.arrayOf(PropTypes.number),
+    maxETA: PropTypes.number
   }),
   hasCachedVideo: PropTypes.bool
 };
