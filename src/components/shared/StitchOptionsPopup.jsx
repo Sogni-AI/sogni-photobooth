@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import PropTypes from 'prop-types';
 
@@ -17,14 +17,6 @@ const StitchOptionsPopup = ({
   generationProgress = null, // { phase, current, total, message, transitionStatus }
   hasCachedVideo = false
 }) => {
-  const [selectedDuration, setSelectedDuration] = useState(3);
-
-  // Reset duration when popup opens
-  useEffect(() => {
-    if (visible) {
-      setSelectedDuration(3);
-    }
-  }, [visible]);
 
   const handleBackdropClick = (e) => {
     if (e.target === e.currentTarget && !isGenerating) {
@@ -44,11 +36,6 @@ const StitchOptionsPopup = ({
     return minutes;
   }, [videoCount]);
 
-  const durationOptions = [
-    { value: 3, label: '3 seconds', description: 'Quick transitions' },
-    { value: 5, label: '5 seconds', description: 'Balanced' },
-    { value: 7, label: '7 seconds', description: 'Smooth & cinematic' }
-  ];
 
   if (!visible) return null;
 
@@ -415,63 +402,25 @@ const StitchOptionsPopup = ({
                         fontSize: '13px',
                         color: 'rgba(0, 0, 0, 0.6)'
                       }}>
-                        Generate AI transitions between videos for seamless looping.
+                        Generate AI transitions between videos for seamless looping. Duration matches your original videos.
                       </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Duration Selector */}
+                {/* Info and Generate Button */}
                 <div style={{
                   padding: '12px 16px',
                   backgroundColor: 'rgba(147, 51, 234, 0.05)'
                 }}>
-                  <label style={{
-                    display: 'block',
-                    fontSize: '11px',
-                    fontWeight: '600',
-                    color: 'rgba(0, 0, 0, 0.7)',
-                    marginBottom: '8px',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.5px'
-                  }}>
-                    ⏱️ Transition Duration
-                  </label>
-                  <select
-                    value={selectedDuration}
-                    onChange={(e) => setSelectedDuration(parseInt(e.target.value))}
-                    style={{
-                      width: '100%',
-                      padding: '10px 12px',
-                      backgroundColor: '#fff',
-                      border: '1px solid rgba(0, 0, 0, 0.15)',
-                      borderRadius: '8px',
-                      color: '#000',
-                      fontSize: '14px',
-                      fontWeight: '500',
-                      cursor: 'pointer',
-                      appearance: 'none',
-                      backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23000' d='M6 8L1 3h10z'/%3E%3C/svg%3E")`,
-                      backgroundRepeat: 'no-repeat',
-                      backgroundPosition: 'right 12px center',
-                      paddingRight: '36px'
-                    }}
-                  >
-                    {durationOptions.map(opt => (
-                      <option key={opt.value} value={opt.value}>
-                        {opt.label} — {opt.description}
-                      </option>
-                    ))}
-                  </select>
-
                   {/* Estimated time info */}
                   <div style={{
-                    marginTop: '10px',
                     padding: '8px 10px',
                     backgroundColor: 'rgba(0, 0, 0, 0.05)',
                     borderRadius: '6px',
                     fontSize: '11px',
-                    color: 'rgba(0, 0, 0, 0.65)'
+                    color: 'rgba(0, 0, 0, 0.65)',
+                    marginBottom: '12px'
                   }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <span>📊 {videoCount} transition{videoCount !== 1 ? 's' : ''} to generate</span>
@@ -483,10 +432,9 @@ const StitchOptionsPopup = ({
 
                   {/* Generate Button */}
                   <button
-                    onClick={() => onInfiniteLoop(selectedDuration)}
+                    onClick={() => onInfiniteLoop()}
                     style={{
                       width: '100%',
-                      marginTop: '12px',
                       padding: '14px 20px',
                       background: 'linear-gradient(135deg, #9333ea 0%, #7c3aed 100%)',
                       border: 'none',

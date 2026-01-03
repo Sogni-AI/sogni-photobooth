@@ -4232,7 +4232,7 @@ const PhotoGallery = ({
   }, [photos, filteredPhotos, isPromptSelectorMode, isBulkDownloading, cachedStitchedVideoBlob, cachedStitchedVideoPhotosHash, showToast, setIsBulkDownloading, setBulkDownloadProgress]);
 
   // Handle Infinite Loop Stitch - generates AI transitions between videos for seamless looping
-  const handleInfiniteLoopStitch = useCallback(async (transitionDuration = 3) => {
+  const handleInfiniteLoopStitch = useCallback(async () => {
     if (isBulkDownloading || isGeneratingInfiniteLoop) {
       console.log('[Infinite Loop] Already in progress');
       return;
@@ -4255,6 +4255,30 @@ const PhotoGallery = ({
         });
         setShowStitchOptionsPopup(false);
         return;
+      }
+
+      // Detect video duration from the first video
+      const getVideoDuration = (videoUrl) => {
+        return new Promise((resolve, reject) => {
+          const video = document.createElement('video');
+          video.preload = 'metadata';
+          video.onloadedmetadata = () => {
+            resolve(video.duration);
+            video.src = '';
+          };
+          video.onerror = () => reject(new Error('Failed to load video metadata'));
+          video.src = videoUrl;
+        });
+      };
+
+      let transitionDuration;
+      try {
+        const videoDuration = await getVideoDuration(photosWithVideos[0].videoUrl);
+        transitionDuration = Math.round(videoDuration); // Round to nearest second
+        console.log(`[Infinite Loop] Detected video duration: ${videoDuration}s, using ${transitionDuration}s for transitions`);
+      } catch (error) {
+        console.warn('[Infinite Loop] Could not detect video duration, using default 5s');
+        transitionDuration = 5;
       }
 
       // Generate hash to check for cached version
@@ -4398,7 +4422,7 @@ const PhotoGallery = ({
         })
       );
 
-      // Create all transition generation promises
+      // Create all transition generation promises and update status individually
       const transitionPromises = lastFrames.map((startFrame, i) => {
         const nextIndex = (i + 1) % photosWithVideos.length;
         const endImage = endImages[i];
@@ -4427,40 +4451,41 @@ const PhotoGallery = ({
             referenceImageEnd: endImage.buffer,
             onComplete: (videoUrl) => {
               console.log(`[Infinite Loop] Transition ${i + 1} complete: ${videoUrl}`);
+              generatedTransitionUrls[i] = videoUrl;
+              transitionStatus[i] = 'complete';
+              completedTransitions++;
+              playSonicLogo(settings.soundEnabled);
+
+              // Update progress immediately
+              setInfiniteLoopProgress({
+                phase: 'generating',
+                current: completedTransitions,
+                total: transitionCount,
+                message: `${completedTransitions}/${transitionCount} transitions complete`,
+                transitionStatus: [...transitionStatus]
+              });
+
               resolve({ index: i, url: videoUrl });
             },
             onError: (error) => {
               console.error(`[Infinite Loop] Transition ${i + 1} failed:`, error);
+              transitionStatus[i] = 'failed';
+              failedTransition = i;
+
+              // Update progress to show failure
+              setInfiniteLoopProgress(prev => ({
+                ...prev,
+                transitionStatus: [...transitionStatus]
+              }));
+
               reject({ index: i, error });
             }
           });
         });
       });
 
-      // Handle completions as they come in
+      // Wait for all transitions to complete
       const results = await Promise.allSettled(transitionPromises);
-
-      for (const result of results) {
-        if (result.status === 'fulfilled') {
-          const { index, url } = result.value;
-          generatedTransitionUrls[index] = url;
-          transitionStatus[index] = 'complete';
-          completedTransitions++;
-          playSonicLogo(settings.soundEnabled);
-        } else {
-          const { index } = result.reason;
-          transitionStatus[index] = 'failed';
-          failedTransition = index;
-        }
-
-        setInfiniteLoopProgress({
-          phase: 'generating',
-          current: completedTransitions,
-          total: transitionCount,
-          message: `${completedTransitions}/${transitionCount} transitions complete`,
-          transitionStatus: [...transitionStatus]
-        });
-      }
 
       // Check for failures
       if (failedTransition !== null) {
@@ -12245,8 +12270,8 @@ const PhotoGallery = ({
           setShowStitchOptionsPopup(false);
           handleStitchAllVideos();
         }}
-        onInfiniteLoop={(duration) => {
-          handleInfiniteLoopStitch(duration);
+        onInfiniteLoop={() => {
+          handleInfiniteLoopStitch();
         }}
         onDownloadCached={() => {
           setShowStitchOptionsPopup(false);
