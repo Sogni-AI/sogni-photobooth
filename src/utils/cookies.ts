@@ -337,25 +337,6 @@ export function markBatchVideoTipShown(): void {
   }
 }
 
-// Infinite loop stitch tip tracking utilities
-export function hasSeenInfiniteLoopTip(): boolean {
-  try {
-    return localStorage.getItem('sogni_infinite_loop_tip_shown') === 'true';
-  } catch (e) {
-    console.warn('Error checking infinite loop tip status:', e);
-    return false;
-  }
-}
-
-export function markInfiniteLoopTipShown(): void {
-  try {
-    localStorage.setItem('sogni_infinite_loop_tip_shown', 'true');
-    console.log('✅ Marked infinite loop tip as shown');
-  } catch (e) {
-    console.warn('Error marking infinite loop tip as shown:', e);
-  }
-}
-
 // Utility function to clean up corrupted localStorage values
 export function cleanupCorruptedSettings(): void {
   try {

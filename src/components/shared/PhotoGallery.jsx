@@ -11,7 +11,7 @@ import { downloadImageMobile, enableMobileImageDownload } from '../../utils/mobi
 import { isMobile, styleIdToDisplay } from '../../utils/index';
 import promptsDataRaw from '../../prompts.json';
 import { THEME_GROUPS, getDefaultThemeGroupState, getEnabledPrompts } from '../../constants/themeGroups';
-import { getThemeGroupPreferences, saveThemeGroupPreferences, getFavoriteImages, toggleFavoriteImage, saveFavoriteImages, getBlockedPrompts, blockPrompt, hasSeenBatchVideoTip, markBatchVideoTipShown, hasSeenInfiniteLoopTip, markInfiniteLoopTipShown } from '../../utils/cookies';
+import { getThemeGroupPreferences, saveThemeGroupPreferences, getFavoriteImages, toggleFavoriteImage, saveFavoriteImages, getBlockedPrompts, blockPrompt, hasSeenBatchVideoTip, markBatchVideoTipShown } from '../../utils/cookies';
 import { getAttributionText } from '../../config/ugcAttributions';
 import { isFluxKontextModel, SAMPLE_GALLERY_CONFIG, getQRWatermarkConfig, DEFAULT_SETTINGS } from '../../constants/settings';
 import { TRANSITION_MUSIC_PRESETS } from '../../constants/transitionMusicPresets';
@@ -1113,6 +1113,7 @@ const PhotoGallery = ({
   const [stitchedVideoUrl, setStitchedVideoUrl] = useState(null);
   const [isGeneratingStitchedVideo, setIsGeneratingStitchedVideo] = useState(false);
   const [showDownloadTip, setShowDownloadTip] = useState(false);
+  const [hasShownInfiniteLoopTipThisBatch, setHasShownInfiniteLoopTipThisBatch] = useState(false);
 
   // State for caching stitched video blob (works with any workflow, not just transition mode)
   const [cachedStitchedVideoBlob, setCachedStitchedVideoBlob] = useState(null);
@@ -1568,6 +1569,9 @@ const PhotoGallery = ({
     // Clear stitched video cache for new batch
     setCachedStitchedVideoBlob(null);
     setCachedStitchedVideoPhotosHash(null);
+    
+    // Reset infinite loop tip flag for new batch
+    setHasShownInfiniteLoopTipThisBatch(false);
 
     // Stop any playing audio
     if (inlineAudioRef.current) {
@@ -3857,8 +3861,8 @@ const PhotoGallery = ({
   // Show infinite loop stitch tip when batch videos complete (non-transition mode)
   // Note: Must be defined after filteredPhotos to avoid temporal dead zone
   useEffect(() => {
-    // Only show if user hasn't seen it before
-    if (hasSeenInfiniteLoopTip()) {
+    // Only show once per batch (not per user lifetime)
+    if (hasShownInfiniteLoopTipThisBatch) {
       return;
     }
 
@@ -3881,8 +3885,8 @@ const PhotoGallery = ({
       // Delay showing the tip by 1.5 seconds after completion
       const showTimer = setTimeout(() => {
         setShowDownloadTip(true);
-        // Mark as shown immediately when displayed
-        markInfiniteLoopTipShown();
+        // Mark as shown for this batch session
+        setHasShownInfiniteLoopTipThisBatch(true);
         // Auto-hide after 10 seconds
         setTimeout(() => {
           setShowDownloadTip(false);
@@ -3891,7 +3895,7 @@ const PhotoGallery = ({
 
       return () => clearTimeout(showTimer);
     }
-  }, [photos, filteredPhotos, isPromptSelectorMode, isTransitionMode, transitionVideoQueue, showDownloadTip, showInfiniteLoopPreview]);
+  }, [photos, filteredPhotos, isPromptSelectorMode, isTransitionMode, transitionVideoQueue, showDownloadTip, showInfiniteLoopPreview, hasShownInfiniteLoopTipThisBatch]);
 
   // Get readable style display text for photo labels (no hashtags)
   const getStyleDisplayText = useCallback((photo) => {
