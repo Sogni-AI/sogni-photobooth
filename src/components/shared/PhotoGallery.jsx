@@ -4619,13 +4619,13 @@ const PhotoGallery = ({
       }
 
       // Phase 3: Stitch all videos together
-      setInfiniteLoopProgress({
+      setInfiniteLoopProgress(prev => ({
+        ...prev,
         phase: 'stitching',
         current: 0,
         total: photosWithVideos.length + transitionCount,
-        message: 'Stitching all videos together...',
-        transitionStatus
-      });
+        message: 'Stitching all videos together...'
+      }));
 
       // Build the final video sequence: video1, trans1, video2, trans2, ..., videoN, transN
       const allVideosToStitch = [];
@@ -4666,13 +4666,13 @@ const PhotoGallery = ({
       setCachedInfiniteLoopUrl(URL.createObjectURL(concatenatedBlob));
 
       // Phase 4: Show preview
-      setInfiniteLoopProgress({
+      setInfiniteLoopProgress(prev => ({
+        ...prev,
         phase: 'complete',
         current: 1,
         total: 1,
-        message: 'Infinite loop ready!',
-        transitionStatus
-      });
+        message: 'Infinite loop ready!'
+      }));
 
       showToast({
         title: '♾️ Infinite Loop Complete!',
