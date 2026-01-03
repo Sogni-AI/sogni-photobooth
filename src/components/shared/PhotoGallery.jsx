@@ -4344,6 +4344,9 @@ const PhotoGallery = ({
       // Initialize transition status for parallel tracking
       const initialTransitionStatus = Array(transitionCount).fill('pending');
 
+      // Reset per-transition throttle timestamps
+      lastETAUpdateTimesRef.current = {};
+
       setIsGeneratingInfiniteLoop(true);
       setInfiniteLoopProgress({
         phase: 'extracting',
