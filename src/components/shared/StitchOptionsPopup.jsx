@@ -207,7 +207,7 @@ const StitchOptionsPopup = ({
                           <span style={{ 
                             fontSize: '16px', 
                             fontWeight: '700',
-                            fontFamily: '"Permanent Marker", cursive'
+                            fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", sans-serif'
                           }}>
                             {Math.ceil(displayETA)}s
                           </span>
