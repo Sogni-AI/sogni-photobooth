@@ -894,6 +894,7 @@ const PhotoGallery = ({
   const [infiniteLoopProgress, setInfiniteLoopProgress] = useState(null); // { phase, current, total, message, transitionStatus }
   const [cachedInfiniteLoopBlob, setCachedInfiniteLoopBlob] = useState(null);
   const [cachedInfiniteLoopHash, setCachedInfiniteLoopHash] = useState(null);
+  const [cachedInfiniteLoopUrl, setCachedInfiniteLoopUrl] = useState(null); // Stable URL to prevent re-renders from restarting video
   const [showInfiniteLoopPreview, setShowInfiniteLoopPreview] = useState(false);
   const infiniteLoopVideoRef = useRef(null);
 
@@ -4538,9 +4539,14 @@ const PhotoGallery = ({
         null
       );
 
-      // Cache the result
+      // Cache the result and create stable URL
       setCachedInfiniteLoopBlob(concatenatedBlob);
       setCachedInfiniteLoopHash(photosHash);
+      // Revoke old URL if exists, then create new stable URL
+      if (cachedInfiniteLoopUrl) {
+        URL.revokeObjectURL(cachedInfiniteLoopUrl);
+      }
+      setCachedInfiniteLoopUrl(URL.createObjectURL(concatenatedBlob));
 
       // Phase 4: Show preview
       setInfiniteLoopProgress({
@@ -12289,7 +12295,7 @@ const PhotoGallery = ({
       />
 
       {/* Infinite Loop Video Preview - Fullscreen playback after generation */}
-      {showInfiniteLoopPreview && cachedInfiniteLoopBlob && createPortal(
+      {showInfiniteLoopPreview && cachedInfiniteLoopBlob && cachedInfiniteLoopUrl && createPortal(
         <div
           style={{
             position: 'fixed',
@@ -12356,7 +12362,7 @@ const PhotoGallery = ({
           }}>
             <video
               ref={infiniteLoopVideoRef}
-              src={URL.createObjectURL(cachedInfiniteLoopBlob)}
+              src={cachedInfiniteLoopUrl}
               autoPlay
               loop
               playsInline
@@ -12478,8 +12484,13 @@ const PhotoGallery = ({
               <button
                 onClick={(e) => {
                   e.stopPropagation();
+                  // Revoke the old URL to prevent memory leak
+                  if (cachedInfiniteLoopUrl) {
+                    URL.revokeObjectURL(cachedInfiniteLoopUrl);
+                  }
                   setCachedInfiniteLoopBlob(null);
                   setCachedInfiniteLoopHash(null);
+                  setCachedInfiniteLoopUrl(null);
                   setShowInfiniteLoopPreview(false);
                   setShowStitchOptionsPopup(true);
                 }}
