@@ -6826,6 +6826,32 @@ const PhotoGallery = ({
     }
   }, [selectedPhotoIndex, previousSelectedIndex, photos, filteredPhotos, isPromptSelectorMode, selectedSubIndex, tezdevTheme, outputFormat, aspectRatio, framedImageUrls, isThemeSupported]);
 
+  // Clear previousFramedImage after the selected photo's frame is ready
+  // This runs AFTER render (via useEffect) to avoid React #310 infinite loop error
+  useEffect(() => {
+    if (previousFramedImage && selectedPhotoIndex !== null) {
+      const photosArray = isPromptSelectorMode ? filteredPhotos : photos;
+      const selectedPhoto = photosArray[selectedPhotoIndex];
+      
+      if (selectedPhoto) {
+        const currentSubIndex = selectedPhoto.enhanced && selectedPhoto.enhancedImageUrl
+          ? -1
+          : (selectedSubIndex || 0);
+        const photoTaipeiFrameNumber = selectedPhoto.taipeiFrameNumber || 1;
+        const frameKey = generateFrameKey(selectedPhotoIndex, currentSubIndex, photoTaipeiFrameNumber);
+        
+        // If the frame for the selected photo is ready, clear the previous frame
+        if (framedImageUrls[frameKey]) {
+          // Use a small delay to allow any visual transition to complete
+          const timeoutId = setTimeout(() => {
+            setPreviousFramedImage(null);
+          }, 100);
+          return () => clearTimeout(timeoutId);
+        }
+      }
+    }
+  }, [previousFramedImage, selectedPhotoIndex, photos, filteredPhotos, isPromptSelectorMode, selectedSubIndex, framedImageUrls, generateFrameKey]);
+
   // Skip rendering if there are no photos or the grid is hidden
   // Exception: In prompt selector mode, we need to render even with empty photos while they're loading
   // This MUST come after all hooks to maintain hook order
@@ -10265,8 +10291,8 @@ const PhotoGallery = ({
                 }}>
                   <PlaceholderImage placeholderUrl={placeholderUrl} />
 
-                  {/* Hide button, refresh button, and favorite button for loading/error state - only show during loading, not when loaded */}
-                  {!isSelected && !isLoaded && !photo.isOriginal && !photo.isGalleryImage && (
+                  {/* Hide button, refresh button, and favorite button for loading/error state */}
+                  {!isSelected && !photo.isOriginal && !photo.isGalleryImage && (
                     <>
                       {/* Block prompt button - show for batch-generated images on desktop */}
                       {!isMobile() && !photo.generating && !photo.loading && photo.promptKey && (photo.stylePrompt || photo.positivePrompt) && (
@@ -10788,10 +10814,8 @@ const PhotoGallery = ({
                       const isGeneratingFrame = generatingFrames.has(frameKey);
                       
                       if (framedImageUrl) {
-                        // Clear previous framed image since we have the new one
-                        if (previousFramedImage) {
-                          setPreviousFramedImage(null);
-                        }
+                        // Note: Don't clear previousFramedImage during render (causes React #310)
+                        // It gets cleared via useEffect when photo selection changes
                         return framedImageUrl;
                       }
                       
