@@ -250,7 +250,7 @@ const createDefaultSettings = (): Settings => {
     videoDuration: 5, // Default to 5 seconds
     videoPositivePrompt: '{@a small playful gesture: a tiny wave or a brief peace sign, then returns to the original pose|fast 360 camera pan as the subject dances|the subject looks around and then winks|the subject steps out of the frame nonchalantly and then returns}', // Optional motion guidance (e.g., "smooth camera pan")
     videoNegativePrompt: 'slow motion, talking, blurry, low quality, static, deformed overexposed, blurred details, worst quality, low quality, JPEG compression, ugly, still picture, walking backwards', // Default negative prompt for video motion
-    videoTransitionPrompt: 'Cinematic transition shot that connects the starting frame reference image to the ending frame reference image with a creative artistic transition. Preserve the same subject identity and facial structure. Allow existing elements and environment to morph smoothly into the new scene with a subtle camera motion; keep the final reveal sharp, stable, and cinematic with creative character, subtle anamorphic flare, fine film grain', // Prompt for transition videos
+    videoTransitionPrompt: 'Cinematic transition between the elements in the starting frame image to the ending frame image with a creative artistic transition. Preserve the same subject identity and facial structure. Transition using only existing elements and environment to morph smoothly into the new scene with cinematic flare', // Prompt for transition videos
   };
 };
 
