@@ -165,32 +165,7 @@ const StitchOptionsPopup = ({
                 {generationProgress.message}
               </div>
 
-              {/* Countdown Timer - always show during generating phase to prevent layout shift */}
-              {generationProgress.phase === 'generating' && (
-                <div style={{
-                  fontSize: '28px',
-                  fontWeight: '700',
-                  color: '#ffeb3b',
-                  marginBottom: '12px',
-                  fontFamily: '"Permanent Marker", cursive',
-                  textShadow: '0 2px 8px rgba(255, 235, 59, 0.4)',
-                  minHeight: '36px',
-                  minWidth: '120px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden'
-                }}>
-                  {generationProgress.maxETA > 0 ? (
-                    <span>⏱️ {Math.ceil(generationProgress.maxETA)}s</span>
-                  ) : (
-                    <span style={{ fontSize: '20px', opacity: 0.6 }}>⏱️ ...</span>
-                  )}
-                </div>
-              )}
-
-              {/* Individual transition status indicators */}
+              {/* Individual transition status indicators with countdown timers */}
               {generationProgress.phase === 'generating' && generationProgress.transitionStatus && (
                 <div style={{
                   display: 'flex',
@@ -199,48 +174,69 @@ const StitchOptionsPopup = ({
                   marginBottom: '16px',
                   flexWrap: 'wrap'
                 }}>
-                  {generationProgress.transitionStatus.map((status, i) => (
-                    <div
-                      key={i}
-                      style={{
-                        width: '36px',
-                        height: '36px',
-                        borderRadius: '8px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '14px',
-                        fontWeight: '600',
-                        background: status === 'complete'
-                          ? 'linear-gradient(135deg, #4CAF50, #45a049)'
-                          : status === 'generating'
-                          ? 'linear-gradient(135deg, #9333ea, #7c3aed)'
-                          : status === 'failed'
-                          ? 'linear-gradient(135deg, #f44336, #d32f2f)'
-                          : 'rgba(255, 255, 255, 0.15)',
-                        color: '#fff',
-                        transition: 'all 0.3s ease',
-                        boxShadow: status === 'generating'
-                          ? '0 0 12px rgba(147, 51, 234, 0.6)'
-                          : 'none'
-                      }}
-                      title={`Transition ${i + 1}: ${status}`}
-                    >
-                      {status === 'complete' && '✓'}
-                      {status === 'generating' && (
-                        <div style={{
-                          width: '16px',
-                          height: '16px',
-                          border: '2px solid rgba(255, 255, 255, 0.3)',
-                          borderTopColor: '#fff',
-                          borderRadius: '50%',
-                          animation: 'spin 0.8s linear infinite'
-                        }} />
-                      )}
-                      {status === 'failed' && '✕'}
-                      {status === 'pending' && (i + 1)}
-                    </div>
-                  ))}
+                  {generationProgress.transitionStatus.map((status, i) => {
+                    const eta = generationProgress.transitionETAs?.[i];
+                    const hasETA = eta > 0;
+                    
+                    return (
+                      <div
+                        key={i}
+                        style={{
+                          minWidth: '48px',
+                          height: '48px',
+                          borderRadius: '8px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '12px',
+                          fontWeight: '600',
+                          background: status === 'complete'
+                            ? 'linear-gradient(135deg, #4CAF50, #45a049)'
+                            : status === 'generating'
+                            ? 'linear-gradient(135deg, #9333ea, #7c3aed)'
+                            : status === 'failed'
+                            ? 'linear-gradient(135deg, #f44336, #d32f2f)'
+                            : 'rgba(255, 255, 255, 0.15)',
+                          color: '#fff',
+                          transition: 'all 0.3s ease',
+                          boxShadow: status === 'generating'
+                            ? '0 0 12px rgba(147, 51, 234, 0.6)'
+                            : 'none',
+                          padding: '4px'
+                        }}
+                        title={`Transition ${i + 1}: ${status}${hasETA ? ` (${Math.ceil(eta)}s remaining)` : ''}`}
+                      >
+                        {status === 'complete' && <span style={{ fontSize: '18px' }}>✓</span>}
+                        {status === 'generating' && (
+                          <>
+                            {hasETA ? (
+                              <span style={{ 
+                                fontSize: '16px', 
+                                fontWeight: '700',
+                                fontFamily: '"Permanent Marker", cursive'
+                              }}>
+                                {Math.ceil(eta)}s
+                              </span>
+                            ) : (
+                              <div style={{
+                                width: '16px',
+                                height: '16px',
+                                border: '2px solid rgba(255, 255, 255, 0.3)',
+                                borderTopColor: '#fff',
+                                borderRadius: '50%',
+                                animation: 'spin 0.8s linear infinite'
+                              }} />
+                            )}
+                          </>
+                        )}
+                        {status === 'failed' && <span style={{ fontSize: '18px' }}>✕</span>}
+                        {status === 'pending' && (
+                          <span style={{ fontSize: '14px', opacity: 0.7 }}>{i + 1}</span>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
 
