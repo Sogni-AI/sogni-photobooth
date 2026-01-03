@@ -8036,7 +8036,7 @@ const PhotoGallery = ({
             <button
               className="more-photos-btn"
               onClick={handleMoreButtonClick}
-              disabled={!isGenerating && (!isSogniReady || !lastPhotoData.blob)}
+              disabled={!isGenerating && (!isSogniReady || (!lastPhotoData.blob && photos.filter(p => !p.hidden && !p.error && p.images && p.images.length > 0).length === 0))}
               style={{
                 background: 'linear-gradient(135deg, #ff5252, #e53935)',
                 color: 'white',
@@ -8045,7 +8045,7 @@ const PhotoGallery = ({
                 paddingBottom: '8px',
                 borderRadius: '8px',
                 boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-                cursor: (!isGenerating && (!isSogniReady || !lastPhotoData.blob)) ? 'not-allowed' : 'pointer',
+                cursor: (!isGenerating && (!isSogniReady || (!lastPhotoData.blob && photos.filter(p => !p.hidden && !p.error && p.images && p.images.length > 0).length === 0))) ? 'not-allowed' : 'pointer',
                 minHeight: '40px',
                 display: 'flex',
                 alignItems: 'center',
@@ -8055,7 +8055,7 @@ const PhotoGallery = ({
                 whiteSpace: 'nowrap',
                 fontSize: '15px',
                 fontFamily: '"Permanent Marker", cursive',
-                opacity: (!isGenerating && (!isSogniReady || !lastPhotoData.blob)) ? 0.6 : 1,
+                opacity: (!isGenerating && (!isSogniReady || (!lastPhotoData.blob && photos.filter(p => !p.hidden && !p.error && p.images && p.images.length > 0).length === 0))) ? 0.6 : 1,
               }}
               title={isGenerating ? 'Cancel current generation and start new batch' : 'Adjust and generate next batch'}
             >
@@ -10374,7 +10374,15 @@ const PhotoGallery = ({
                           }}
                           title={isPhotoFavorited(photo) ? 'Remove from favorites' : 'Add to favorites'}
                         >
-                          {isPhotoFavorited(photo) ? '❤️' : '🤍'}
+                          {isPhotoFavorited(photo) ? (
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg">
+                              <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                            </svg>
+                          ) : (
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" xmlns="http://www.w3.org/2000/svg">
+                              <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                            </svg>
+                          )}
                         </button>
                       )}
                       {/* Refresh button - show for failed images or when not generating/loading */}
@@ -10417,7 +10425,9 @@ const PhotoGallery = ({
                           }}
                           title="Refresh this image"
                         >
-                          🔄
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
+                          </svg>
                         </button>
                       )}
                       <button
@@ -11652,7 +11662,15 @@ const PhotoGallery = ({
                         }}
                         title={isPhotoFavorited(photo) ? "Remove from favorites" : "Add to favorites"}
                       >
-                        {isPhotoFavorited(photo) ? '❤️' : '🤍'}
+                        {isPhotoFavorited(photo) ? (
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                          </svg>
+                        ) : (
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                          </svg>
+                        )}
                       </button>
                     )}
                     {/* Motion video button - show for batch-generated images */}
@@ -11752,7 +11770,9 @@ const PhotoGallery = ({
                         }}
                         title="Refresh this image"
                       >
-                        🔄
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
+                        </svg>
                       </button>
                     )}
                     <button

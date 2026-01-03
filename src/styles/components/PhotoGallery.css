@@ -901,7 +901,24 @@ html body .photo-action-buttons .action-button,
     opacity: 1 !important;
     transform: scale(1) !important;
   }
-  
+
+  /* Keep block button hidden on mobile - desktop only feature */
+  .photo-block-btn-batch {
+    opacity: 0 !important;
+    display: none !important;
+  }
+}
+
+/* Fallback for mobile browsers that may not support hover media query */
+@media screen and (max-width: 768px) {
+  .photo-hide-btn,
+  .photo-refresh-btn,
+  .photo-motion-btn-batch,
+  .photo-favorite-btn-batch {
+    opacity: 1 !important;
+    transform: scale(1) !important;
+  }
+
   /* Keep block button hidden on mobile - desktop only feature */
   .photo-block-btn-batch {
     opacity: 0 !important;
