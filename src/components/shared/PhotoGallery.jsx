@@ -10298,8 +10298,8 @@ const PhotoGallery = ({
                           </svg>
                         </button>
                       )}
-                      {/* Favorite heart button - show for batch-generated images on desktop */}
-                      {!isMobile() && !photo.generating && !photo.loading && photo.promptKey && (photo.stylePrompt || photo.positivePrompt) && (
+                      {/* Favorite heart button - show for batch-generated images */}
+                      {!photo.generating && !photo.loading && photo.promptKey && (photo.stylePrompt || photo.positivePrompt) && (
                         <button
                           className="photo-favorite-btn-batch"
                         onMouseDown={(e) => {
@@ -11619,8 +11619,8 @@ const PhotoGallery = ({
                         {isPhotoFavorited(photo) ? '❤️' : '🤍'}
                       </button>
                     )}
-                    {/* Motion video button - show for batch-generated images on desktop */}
-                    {!isMobile() && photo.promptKey && (photo.stylePrompt || photo.positivePrompt) && (
+                    {/* Motion video button - show for batch-generated images */}
+                    {photo.promptKey && (photo.stylePrompt || photo.positivePrompt) && (
                       <button
                         className="photo-motion-btn-batch"
                         onClick={(e) => {

@@ -859,7 +859,7 @@ html body .photo-action-buttons .action-button,
   }
 }
 
-/* Hide button styles - visible on hover for desktop, hidden on touch devices for normal gallery */
+/* Hide button styles - visible on hover for desktop, always visible on touch devices */
 .photo-hide-btn {
   opacity: 0 !important;
   transform: scale(0.8) !important;
@@ -890,6 +890,23 @@ html body .photo-action-buttons .action-button,
   transition: all 0.2s ease !important;
   pointer-events: auto !important;
   cursor: pointer !important;
+}
+
+/* On touch devices, always show batch gallery buttons */
+@media (hover: none) and (pointer: coarse) {
+  .photo-hide-btn,
+  .photo-refresh-btn,
+  .photo-motion-btn-batch,
+  .photo-favorite-btn-batch {
+    opacity: 1 !important;
+    transform: scale(1) !important;
+  }
+  
+  /* Keep block button hidden on mobile - desktop only feature */
+  .photo-block-btn-batch {
+    opacity: 0 !important;
+    display: none !important;
+  }
 }
 
 /* Show hide button, refresh button, block button, and favorite button on photo hover - only for grid photos (not selected) and only on non-touch devices */
