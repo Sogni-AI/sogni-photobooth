@@ -892,7 +892,7 @@ html body .photo-action-buttons .action-button,
   cursor: pointer !important;
 }
 
-/* On touch devices, always show batch gallery buttons */
+/* On touch devices, always show batch gallery buttons (no hover needed) */
 @media (hover: none) and (pointer: coarse) {
   .photo-hide-btn,
   .photo-refresh-btn,
@@ -900,23 +900,6 @@ html body .photo-action-buttons .action-button,
   .photo-favorite-btn-batch {
     opacity: 1 !important;
     transform: scale(1) !important;
-  }
-  
-  /* Adjust positioning for mobile - more spacing between icons */
-  .photo-motion-btn-batch {
-    right: 100px !important;
-  }
-  
-  .photo-favorite-btn-batch {
-    right: 68px !important;
-  }
-  
-  .photo-refresh-btn {
-    right: 36px !important;
-  }
-  
-  .photo-hide-btn {
-    right: 4px !important;
   }
   
   /* Keep block button hidden on mobile - desktop only feature */

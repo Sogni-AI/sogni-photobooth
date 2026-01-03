@@ -175,12 +175,15 @@ const StitchOptionsPopup = ({
                   fontFamily: '"Permanent Marker", cursive',
                   textShadow: '0 2px 8px rgba(255, 235, 59, 0.4)',
                   minHeight: '36px',
+                  minWidth: '120px',
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center'
+                  justifyContent: 'center',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden'
                 }}>
                   {generationProgress.maxETA > 0 ? (
-                    <>⏱️ {Math.ceil(generationProgress.maxETA)}s</>
+                    <span>⏱️ {Math.ceil(generationProgress.maxETA)}s</span>
                   ) : (
                     <span style={{ fontSize: '20px', opacity: 0.6 }}>⏱️ ...</span>
                   )}

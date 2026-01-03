@@ -897,6 +897,7 @@ const PhotoGallery = ({
   const [cachedInfiniteLoopUrl, setCachedInfiniteLoopUrl] = useState(null); // Stable URL to prevent re-renders from restarting video
   const [showInfiniteLoopPreview, setShowInfiniteLoopPreview] = useState(false);
   const infiniteLoopVideoRef = useRef(null);
+  const lastETAUpdateTimeRef = useRef(0); // Throttle ETA updates to prevent flickering
 
   // Video cost estimation - include selectedPhotoIndex to bust cache when switching photos
   const { loading: videoLoading, cost: videoCostRaw, costInUSD: videoUSD, refetch: refetchVideoCost } = useVideoCostEstimation({
@@ -4496,6 +4497,13 @@ const PhotoGallery = ({
               
               // Update this transition's ETA
               transitionETAs[i] = videoETA;
+              
+              // Throttle updates to once per second to prevent flickering
+              const now = Date.now();
+              if (now - lastETAUpdateTimeRef.current < 1000) {
+                return; // Skip this update
+              }
+              lastETAUpdateTimeRef.current = now;
               
               // Calculate the maximum ETA across all active transitions
               const maxETA = Math.max(...transitionETAs.filter(eta => eta !== null && eta > 0));
@@ -10257,8 +10265,8 @@ const PhotoGallery = ({
                 }}>
                   <PlaceholderImage placeholderUrl={placeholderUrl} />
 
-                  {/* Hide button, refresh button, and favorite button for loading/error state - only show on hover for grid photos */}
-                  {!isSelected && !photo.isOriginal && !photo.isGalleryImage && (
+                  {/* Hide button, refresh button, and favorite button for loading/error state - only show during loading, not when loaded */}
+                  {!isSelected && !isLoaded && !photo.isOriginal && !photo.isGalleryImage && (
                     <>
                       {/* Block prompt button - show for batch-generated images on desktop */}
                       {!isMobile() && !photo.generating && !photo.loading && photo.promptKey && (photo.stylePrompt || photo.positivePrompt) && (
@@ -11582,8 +11590,8 @@ const PhotoGallery = ({
                         </svg>
                       </button>
                     )}
-                    {/* Favorite heart button - show for batch-generated images on desktop */}
-                    {!isMobile() && photo.promptKey && (photo.stylePrompt || photo.positivePrompt) && (
+                    {/* Favorite heart button - show for batch-generated images */}
+                    {photo.promptKey && (photo.stylePrompt || photo.positivePrompt) && (
                       <button
                         className="photo-favorite-btn-batch"
                         onMouseDown={(e) => {

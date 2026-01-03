@@ -1112,16 +1112,26 @@ html body.has-selected-photo .film-strip-container.visible .film-frame.selected[
 .film-frame.loading::before {
   content: "";
   position: absolute;
-  top: 12px; /* Match padding */
-  left: 12px; /* Match padding */
-  right: 12px; /* Match padding */
-  bottom: 40px; /* Leave space for label */
+  top: 16px; /* Match padding */
+  left: 16px; /* Match padding */
+  right: 16px; /* Match padding */
+  bottom: 56px; /* Leave space for label */
   z-index: 5;
   pointer-events: none;
   /* Warm wash that fades away as the image develops */
   background: radial-gradient(120% 120% at 50% 30%, rgba(255, 248, 230, 0.55) 0%, rgba(255, 246, 220, 0.4) 28%, rgba(255, 246, 220, 0.25) 52%, rgba(255, 246, 220, 0.1) 72%, rgba(255, 246, 220, 0) 100%);
   opacity: 1;
   animation: film-wash 14s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* Adjust loading overlay for mobile portrait */
+@media (max-width: 768px) and (orientation: portrait), (orientation: portrait) and (max-device-width: 768px) {
+  .film-frame:not(.selected).loading::before {
+    top: 8px !important; /* Match reduced mobile padding */
+    left: 8px !important; /* Match reduced mobile padding */
+    right: 8px !important; /* Match reduced mobile padding */
+    bottom: 28px !important; /* Match reduced mobile bottom padding */
+  }
 }
 
 @keyframes film-wash {
