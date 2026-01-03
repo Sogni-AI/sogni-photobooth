@@ -12311,52 +12311,45 @@ const PhotoGallery = ({
             }
           }}
         >
-          {/* Header */}
-          <div style={{
-            position: 'absolute',
-            top: '20px',
-            left: '20px',
-            right: '20px',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            zIndex: 2
-          }}>
-            <h2 style={{
-              margin: 0,
+          {/* Close Button */}
+          <button
+            onClick={() => setShowInfiniteLoopPreview(false)}
+            style={{
+              position: 'absolute',
+              top: '20px',
+              right: '20px',
+              background: 'rgba(0, 0, 0, 0.6)',
+              border: 'none',
+              borderRadius: '50%',
+              width: '40px',
+              height: '40px',
+              cursor: 'pointer',
               color: '#fff',
               fontSize: '24px',
-              fontWeight: '700',
-              fontFamily: '"Permanent Marker", cursive',
-              textShadow: '0 2px 8px rgba(0, 0, 0, 0.5)'
-            }}>
-              ♾️ Your Infinite Loop
-            </h2>
-            <button
-              onClick={() => setShowInfiniteLoopPreview(false)}
-              style={{
-                background: 'rgba(255, 255, 255, 0.2)',
-                border: 'none',
-                borderRadius: '50%',
-                width: '40px',
-                height: '40px',
-                cursor: 'pointer',
-                color: '#fff',
-                fontSize: '24px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                backdropFilter: 'blur(10px)'
-              }}
-            >
-              ×
-            </button>
-          </div>
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 99999,
+              boxShadow: '0 2px 10px rgba(0,0,0,0.3)',
+              transition: 'all 0.2s ease'
+            }}
+            onMouseOver={e => {
+              e.currentTarget.style.background = 'rgba(255, 83, 83, 0.8)';
+              e.currentTarget.style.transform = 'scale(1.05)';
+            }}
+            onMouseOut={e => {
+              e.currentTarget.style.background = 'rgba(0, 0, 0, 0.6)';
+              e.currentTarget.style.transform = 'scale(1)';
+            }}
+          >
+            ×
+          </button>
 
           {/* Video Player */}
           <div style={{
+            position: 'relative',
             maxWidth: '90vw',
-            maxHeight: '70vh',
+            maxHeight: '80vh',
             borderRadius: '16px',
             overflow: 'hidden',
             boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)'
@@ -12370,133 +12363,156 @@ const PhotoGallery = ({
               controls
               style={{
                 maxWidth: '90vw',
-                maxHeight: '70vh',
+                maxHeight: '80vh',
                 display: 'block'
               }}
             />
-          </div>
 
-          {/* Action Buttons */}
-          <div style={{
-            marginTop: '24px',
-            display: 'flex',
-            gap: '16px',
-            flexWrap: 'wrap',
-            justifyContent: 'center'
-          }}>
-            {/* Download Button */}
-            <button
-              onClick={() => {
-                const timestamp = new Date().toISOString().split('T')[0];
-                const filename = `sogni-infinite-loop-${timestamp}.mp4`;
-                const blobUrl = URL.createObjectURL(cachedInfiniteLoopBlob);
-                const link = document.createElement('a');
-                link.href = blobUrl;
-                link.download = filename;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
-
-                showToast({
-                  title: '⬇️ Downloaded!',
-                  message: 'Your infinite loop video has been saved.',
-                  type: 'success'
-                });
-              }}
-              style={{
-                padding: '14px 28px',
-                background: 'linear-gradient(135deg, #4CAF50, #45a049)',
-                border: 'none',
-                borderRadius: '12px',
-                color: '#fff',
-                cursor: 'pointer',
-                fontSize: '16px',
-                fontWeight: '600',
-                fontFamily: '"Permanent Marker", cursive',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                boxShadow: '0 4px 12px rgba(76, 175, 80, 0.4)'
-              }}
-            >
-              ⬇️ Download
-            </button>
-
-            {/* Share Button (if supported) */}
-            {navigator.share && (
+            {/* Action Icons - Bottom right overlay */}
+            <div style={{
+              position: 'absolute',
+              bottom: '60px',
+              right: '12px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '8px',
+              zIndex: 10
+            }}>
+              {/* Download Button */}
               <button
-                onClick={async () => {
-                  try {
-                    const timestamp = new Date().toISOString().split('T')[0];
-                    const filename = `sogni-infinite-loop-${timestamp}.mp4`;
-                    const file = new File([cachedInfiniteLoopBlob], filename, { type: 'video/mp4' });
-                    await navigator.share({
-                      files: [file],
-                      title: 'Sogni Infinite Loop',
-                      text: 'Check out this seamless video loop!'
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const timestamp = new Date().toISOString().split('T')[0];
+                  const filename = `sogni-infinite-loop-${timestamp}.mp4`;
+                  const blobUrl = URL.createObjectURL(cachedInfiniteLoopBlob);
+                  downloadVideo(blobUrl, filename).catch(() => {
+                    showToast({
+                      title: 'Download Failed',
+                      message: 'Failed to download video. Please try again.',
+                      type: 'error'
                     });
-                  } catch (err) {
-                    console.log('Share cancelled or failed:', err);
-                  }
+                  });
                 }}
+                title="Download"
                 style={{
-                  padding: '14px 28px',
-                  background: 'linear-gradient(135deg, #2196F3, #1976D2)',
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '50%',
+                  background: 'rgba(0, 0, 0, 0.6)',
                   border: 'none',
-                  borderRadius: '12px',
                   color: '#fff',
                   cursor: 'pointer',
-                  fontSize: '16px',
-                  fontWeight: '600',
-                  fontFamily: '"Permanent Marker", cursive',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '8px',
-                  boxShadow: '0 4px 12px rgba(33, 150, 243, 0.4)'
+                  justifyContent: 'center',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseOver={e => {
+                  e.currentTarget.style.background = 'rgba(76, 175, 80, 0.9)';
+                  e.currentTarget.style.transform = 'scale(1.1)';
+                }}
+                onMouseOut={e => {
+                  e.currentTarget.style.background = 'rgba(0, 0, 0, 0.6)';
+                  e.currentTarget.style.transform = 'scale(1)';
                 }}
               >
-                📤 Share
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+                </svg>
               </button>
-            )}
 
-            {/* Create New Button */}
-            <button
-              onClick={() => {
-                setCachedInfiniteLoopBlob(null);
-                setCachedInfiniteLoopHash(null);
-                setShowInfiniteLoopPreview(false);
-                setShowStitchOptionsPopup(true);
-              }}
-              style={{
-                padding: '14px 28px',
-                background: 'rgba(255, 255, 255, 0.15)',
-                border: '2px solid rgba(255, 255, 255, 0.3)',
-                borderRadius: '12px',
-                color: '#fff',
-                cursor: 'pointer',
-                fontSize: '16px',
-                fontWeight: '600',
-                fontFamily: '"Permanent Marker", cursive',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                backdropFilter: 'blur(10px)'
-              }}
-            >
-              🔄 Create New
-            </button>
+              {/* Share Button (if supported) */}
+              {navigator.share && navigator.canShare && (
+                <button
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    try {
+                      const timestamp = new Date().toISOString().split('T')[0];
+                      const filename = `sogni-infinite-loop-${timestamp}.mp4`;
+                      const file = new File([cachedInfiniteLoopBlob], filename, { type: 'video/mp4' });
+                      if (navigator.canShare({ files: [file] })) {
+                        await navigator.share({
+                          files: [file],
+                          title: 'Sogni Infinite Loop',
+                          text: 'Check out this seamless video loop!'
+                        });
+                      }
+                    } catch (err) {
+                      if (err.name !== 'AbortError') {
+                        console.log('Share failed:', err);
+                      }
+                    }
+                  }}
+                  title="Share"
+                  style={{
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '50%',
+                    background: 'rgba(0, 0, 0, 0.6)',
+                    border: 'none',
+                    color: '#fff',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                    transition: 'all 0.2s ease'
+                  }}
+                  onMouseOver={e => {
+                    e.currentTarget.style.background = 'rgba(33, 150, 243, 0.9)';
+                    e.currentTarget.style.transform = 'scale(1.1)';
+                  }}
+                  onMouseOut={e => {
+                    e.currentTarget.style.background = 'rgba(0, 0, 0, 0.6)';
+                    e.currentTarget.style.transform = 'scale(1)';
+                  }}
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"/>
+                  </svg>
+                </button>
+              )}
+
+              {/* Create New Button */}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setCachedInfiniteLoopBlob(null);
+                  setCachedInfiniteLoopHash(null);
+                  setShowInfiniteLoopPreview(false);
+                  setShowStitchOptionsPopup(true);
+                }}
+                title="Create New"
+                style={{
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '50%',
+                  background: 'rgba(0, 0, 0, 0.6)',
+                  border: 'none',
+                  color: '#fff',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseOver={e => {
+                  e.currentTarget.style.background = 'rgba(147, 51, 234, 0.9)';
+                  e.currentTarget.style.transform = 'scale(1.1)';
+                }}
+                onMouseOut={e => {
+                  e.currentTarget.style.background = 'rgba(0, 0, 0, 0.6)';
+                  e.currentTarget.style.transform = 'scale(1)';
+                }}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 6v3l4-4-4-4v3c-4.42 0-8 3.58-8 8 0 1.57.46 3.03 1.24 4.26L6.7 14.8c-.45-.83-.7-1.79-.7-2.8 0-3.31 2.69-6 6-6zm6.76 1.74L17.3 9.2c.44.84.7 1.79.7 2.8 0 3.31-2.69 6-6 6v-3l-4 4 4 4v-3c4.42 0 8-3.58 8-8 0-1.57-.46-3.03-1.24-4.26z"/>
+                </svg>
+              </button>
+            </div>
           </div>
-
-          {/* Tip */}
-          <p style={{
-            marginTop: '20px',
-            color: 'rgba(255, 255, 255, 0.6)',
-            fontSize: '13px',
-            textAlign: 'center'
-          }}>
-            Tip: Click outside the video to close this preview
-          </p>
         </div>,
         document.body
       )}
