@@ -4465,7 +4465,7 @@ const PhotoGallery = ({
         id: 'stitched-video',
         videoUrl: videoDataUrl, // Use data URL instead of blob URL
         images: photosWithVideos[0]?.images || [], // Use first photo's image as fallback
-        statusText: 'Just created this video with @sogni_protocol AI photobooth. Pretty sweet.'
+        statusText: 'Just created this video with @sogni_protocol AI photobooth. Pretty sweet. https://photobooth.sogni.ai'
         // Note: Omitting promptKey so it doesn't generate a hashtag in the share message
       };
 

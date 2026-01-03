@@ -101,11 +101,16 @@ const TwitterShareModal = ({
       const baseUrl = 'https://photobooth.sogni.ai';
       const messageWithoutUrl = baseMessage.replace(baseUrl, '').trim();
       
+      // If the message already contains the URL, don't add it again
+      if (baseMessage.includes(baseUrl)) {
+        return baseMessage;
+      }
+      
       if (styleDisplayText) {
         const styleTag = styleDisplayText.toLowerCase().replace(/\s+/g, '');
         return `${messageWithoutUrl} #${styleTag} ${baseUrl}`;
       }
-      return baseMessage;
+      return `${baseMessage} ${baseUrl}`;
     }
   }, [tezdevTheme, styleDisplayText, defaultMessage, photoData, isVideoShare]);
 

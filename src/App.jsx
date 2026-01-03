@@ -9597,6 +9597,7 @@ const App = () => {
         imageUrl={twitterPhotoData?.images?.[0] || (twitterPhotoIndex !== null && photos[twitterPhotoIndex]?.images?.[0]) || null}
         videoUrl={twitterPhotoData?.videoUrl || (twitterPhotoIndex !== null && photos[twitterPhotoIndex]?.videoUrl) || null}
         photoData={twitterPhotoData || (twitterPhotoIndex !== null ? photos[twitterPhotoIndex] : null)}
+        defaultMessage={twitterPhotoData?.statusText || (twitterPhotoIndex !== null && photos[twitterPhotoIndex]?.statusText) || undefined}
         stylePrompts={stylePrompts}
         tezdevTheme={tezdevTheme}
         aspectRatio={aspectRatio}
