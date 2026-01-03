@@ -1054,33 +1054,13 @@ html body .photo-action-buttons .action-button,
   cursor: pointer !important;
   transition: none !important;
   transform: none !important;
+  right: 52px !important; /* Always keep it in its proper position */
 }
 
 /* Video play button - always clickable */
 .photo-video-btn {
   pointer-events: auto !important;
   cursor: pointer !important;
-}
-
-/* When not hovering, move favorite button to top-right corner (where X button is) */
-.film-frame:not(:hover) .photo-favorite-btn-batch {
-  right: 4px !important;
-  transition: none !important;
-  transform: none !important;
-}
-
-/* When hovering, position third from right with proper spacing */
-.film-frame:hover .photo-favorite-btn-batch {
-  right: 52px !important;
-  transition: none !important; /* no tween between positions */
-  transform: none !important;
-}
-
-/* Keep heart stationary under cursor: prevent right shift while hovered */
-.photo-favorite-btn-batch:hover {
-  right: 52px !important;
-  transition: none !important;
-  transform: none !important;
 }
 
 /* Download All button styling */
