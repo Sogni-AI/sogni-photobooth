@@ -859,7 +859,7 @@ html body .photo-action-buttons .action-button,
   }
 }
 
-/* Hide button styles - only visible on hover */
+/* Hide button styles - visible on hover for desktop, always visible on touch devices */
 .photo-hide-btn {
   opacity: 0 !important;
   transform: scale(0.8) !important;
@@ -890,6 +890,18 @@ html body .photo-action-buttons .action-button,
   transition: all 0.2s ease !important;
   pointer-events: auto !important;
   cursor: pointer !important;
+}
+
+/* On touch devices, always show buttons */
+@media (hover: none) and (pointer: coarse) {
+  .photo-hide-btn,
+  .photo-refresh-btn,
+  .photo-block-btn-batch,
+  .photo-motion-btn-batch,
+  .photo-favorite-btn-batch {
+    opacity: 1 !important;
+    transform: scale(1) !important;
+  }
 }
 
 /* Show hide button, refresh button, block button, and favorite button on photo hover - only for grid photos (not selected) and only on non-touch devices */
@@ -982,6 +994,14 @@ html body .photo-action-buttons .action-button,
   .film-frame:not(.selected):hover .photo-favorite-btn-batch {
     opacity: 1 !important;
     transform: scale(1) !important;
+    pointer-events: auto !important;
+  }
+}
+
+/* On touch devices, always show vibe icons container */
+@media (hover: none) and (pointer: coarse) {
+  .vibe-icons-container {
+    opacity: 1 !important;
     pointer-events: auto !important;
   }
 }

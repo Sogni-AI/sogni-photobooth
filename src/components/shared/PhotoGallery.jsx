@@ -11,7 +11,7 @@ import { downloadImageMobile, enableMobileImageDownload } from '../../utils/mobi
 import { isMobile, styleIdToDisplay } from '../../utils/index';
 import promptsDataRaw from '../../prompts.json';
 import { THEME_GROUPS, getDefaultThemeGroupState, getEnabledPrompts } from '../../constants/themeGroups';
-import { getThemeGroupPreferences, saveThemeGroupPreferences, getFavoriteImages, toggleFavoriteImage, saveFavoriteImages, getBlockedPrompts, blockPrompt, hasSeenBatchVideoTip, markBatchVideoTipShown } from '../../utils/cookies';
+import { getThemeGroupPreferences, saveThemeGroupPreferences, getFavoriteImages, toggleFavoriteImage, saveFavoriteImages, getBlockedPrompts, blockPrompt, hasSeenBatchVideoTip, markBatchVideoTipShown, hasSeenInfiniteLoopTip, markInfiniteLoopTipShown } from '../../utils/cookies';
 import { getAttributionText } from '../../config/ugcAttributions';
 import { isFluxKontextModel, SAMPLE_GALLERY_CONFIG, getQRWatermarkConfig, DEFAULT_SETTINGS } from '../../constants/settings';
 import { TRANSITION_MUSIC_PRESETS } from '../../constants/transitionMusicPresets';
@@ -1480,37 +1480,6 @@ const PhotoGallery = ({
       return () => clearTimeout(dismissTimer);
     }
   }, [showBatchVideoTip]);
-
-  // Show infinite loop stitch tip when batch videos complete (non-transition mode)
-  useEffect(() => {
-    // Only show in non-transition mode
-    if (isTransitionMode || transitionVideoQueue.length > 0) {
-      return;
-    }
-
-    // Check if we have at least 2 completed videos (ready to stitch)
-    const currentPhotosArray = isPromptSelectorMode ? filteredPhotos : photos;
-    const completedVideos = currentPhotosArray.filter(
-      photo => !photo.hidden && !photo.loading && !photo.generating && !photo.error && photo.videoUrl && !photo.isOriginal
-    );
-
-    // Check if any videos are currently generating
-    const hasGeneratingVideo = currentPhotosArray.some(photo => photo.generatingVideo);
-
-    // Show tip if we have 2+ completed videos and nothing is generating
-    if (completedVideos.length >= 2 && !hasGeneratingVideo && !showDownloadTip && !showInfiniteLoopPreview) {
-      // Delay showing the tip by 1.5 seconds after completion
-      const showTimer = setTimeout(() => {
-        setShowDownloadTip(true);
-        // Auto-hide after 10 seconds
-        setTimeout(() => {
-          setShowDownloadTip(false);
-        }, 10000);
-      }, 1500);
-
-      return () => clearTimeout(showTimer);
-    }
-  }, [photos, filteredPhotos, isPromptSelectorMode, isTransitionMode, transitionVideoQueue, showDownloadTip, showInfiniteLoopPreview]);
 
   // Clear framed image cache when aspect ratio changes
   useEffect(() => {
@@ -3884,6 +3853,45 @@ const PhotoGallery = ({
       }
     }
   }, [wantsFullscreen, selectedPhotoIndex, isPromptSelectorMode, filteredPhotos, photos]);
+
+  // Show infinite loop stitch tip when batch videos complete (non-transition mode)
+  // Note: Must be defined after filteredPhotos to avoid temporal dead zone
+  useEffect(() => {
+    // Only show if user hasn't seen it before
+    if (hasSeenInfiniteLoopTip()) {
+      return;
+    }
+
+    // Only show in non-transition mode
+    if (isTransitionMode || transitionVideoQueue.length > 0) {
+      return;
+    }
+
+    // Check if we have at least 2 completed videos (ready to stitch)
+    const currentPhotosArray = isPromptSelectorMode ? filteredPhotos : photos;
+    const completedVideos = currentPhotosArray.filter(
+      photo => !photo.hidden && !photo.loading && !photo.generating && !photo.error && photo.videoUrl && !photo.isOriginal
+    );
+
+    // Check if any videos are currently generating
+    const hasGeneratingVideo = currentPhotosArray.some(photo => photo.generatingVideo);
+
+    // Show tip if we have 2+ completed videos and nothing is generating
+    if (completedVideos.length >= 2 && !hasGeneratingVideo && !showDownloadTip && !showInfiniteLoopPreview) {
+      // Delay showing the tip by 1.5 seconds after completion
+      const showTimer = setTimeout(() => {
+        setShowDownloadTip(true);
+        // Mark as shown immediately when displayed
+        markInfiniteLoopTipShown();
+        // Auto-hide after 10 seconds
+        setTimeout(() => {
+          setShowDownloadTip(false);
+        }, 10000);
+      }, 1500);
+
+      return () => clearTimeout(showTimer);
+    }
+  }, [photos, filteredPhotos, isPromptSelectorMode, isTransitionMode, transitionVideoQueue, showDownloadTip, showInfiniteLoopPreview]);
 
   // Get readable style display text for photo labels (no hashtags)
   const getStyleDisplayText = useCallback((photo) => {
@@ -11745,7 +11753,8 @@ const PhotoGallery = ({
                     gap: '4px',
                     alignItems: 'center',
                     zIndex: 99999,
-                    opacity: ((activeVideoPhotoId === (photo.id || photo.promptKey)) || (isPhotoFavorited(photo) && !isMobile()) || (('ontouchstart' in window || navigator.maxTouchPoints > 0) && isTouchHovered)) ? '1' : '0',
+                    // On touch devices, always show icons; on desktop, show on hover or when video playing or favorited
+                    opacity: (('ontouchstart' in window || navigator.maxTouchPoints > 0) || (activeVideoPhotoId === (photo.id || photo.promptKey)) || (isPhotoFavorited(photo) && !isMobile()) || isTouchHovered) ? '1' : '0',
                     transition: 'opacity 0.2s ease',
                     pointerEvents: 'all'
                   }}
@@ -11755,7 +11764,8 @@ const PhotoGallery = ({
                   onMouseLeave={(e) => {
                     const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
                     const isPlaying = activeVideoPhotoId === (photo.id || photo.promptKey);
-                    e.currentTarget.style.opacity = (isPlaying || (isPhotoFavorited(photo) && !isMobile()) || (isTouchDevice && isTouchHovered)) ? '1' : '0';
+                    // On touch devices, keep icons visible; on desktop, hide unless video playing or favorited
+                    e.currentTarget.style.opacity = (isTouchDevice || isPlaying || (isPhotoFavorited(photo) && !isMobile()) || isTouchHovered) ? '1' : '0';
                   }}
                 >
                   {/* Favorite heart - rightmost */}
