@@ -4447,7 +4447,7 @@ const PhotoGallery = ({
       const negativePrompt = settings.videoNegativePrompt || '';
 
       // Phase 2: Generate ALL transition videos in parallel
-      const transitionStatus = [...initialTransitionStatus];
+      const transitionStatus = Array(transitionCount).fill('generating'); // Start all as 'generating'
       const generatedTransitionUrls = new Array(transitionCount);
       const transitionETAs = new Array(transitionCount).fill(null); // Track ETA for each transition
       let completedTransitions = 0;
@@ -4458,7 +4458,7 @@ const PhotoGallery = ({
         current: 0,
         total: transitionCount,
         message: `Generating ${transitionCount} transitions in parallel...`,
-        transitionStatus: transitionStatus.map(() => 'generating'),
+        transitionStatus: [...transitionStatus],
         transitionETAs: [...transitionETAs],
         maxETA: null
       });
