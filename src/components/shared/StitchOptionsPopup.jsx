@@ -19,6 +19,11 @@ const StitchOptionsPopup = ({
 }) => {
   // Keep track of last known ETAs to avoid flickering back to spinner
   const lastKnownETAsRef = useRef({});
+  
+  // Reset cached ETAs when starting a new generation
+  if (!isGenerating && Object.keys(lastKnownETAsRef.current).length > 0) {
+    lastKnownETAsRef.current = {};
+  }
 
   const handleBackdropClick = (e) => {
     if (e.target === e.currentTarget && !isGenerating) {
@@ -180,11 +185,49 @@ const StitchOptionsPopup = ({
                     const eta = generationProgress.transitionETAs?.[i];
                     const hasETA = eta > 0;
                     
-                    // Keep track of last known ETA to avoid flickering
-                    if (hasETA) {
+                    // Keep track of last known ETA to avoid flickering (only while generating)
+                    if (status === 'generating' && hasETA) {
                       lastKnownETAsRef.current[i] = eta;
                     }
-                    const displayETA = hasETA ? eta : lastKnownETAsRef.current[i];
+                    // Clear cached ETA when complete
+                    if (status === 'complete') {
+                      delete lastKnownETAsRef.current[i];
+                    }
+                    const displayETA = (status === 'generating') ? (hasETA ? eta : lastKnownETAsRef.current[i]) : null;
+                    
+                    // Determine what to show inside the box
+                    let content;
+                    if (status === 'complete') {
+                      content = <span style={{ fontSize: '18px' }}>✓</span>;
+                    } else if (status === 'failed') {
+                      content = <span style={{ fontSize: '18px' }}>✕</span>;
+                    } else if (status === 'generating') {
+                      if (displayETA) {
+                        content = (
+                          <span style={{ 
+                            fontSize: '16px', 
+                            fontWeight: '700',
+                            fontFamily: '"Permanent Marker", cursive'
+                          }}>
+                            {Math.ceil(displayETA)}s
+                          </span>
+                        );
+                      } else {
+                        content = (
+                          <div style={{
+                            width: '16px',
+                            height: '16px',
+                            border: '2px solid rgba(255, 255, 255, 0.3)',
+                            borderTopColor: '#fff',
+                            borderRadius: '50%',
+                            animation: 'spin 0.8s linear infinite'
+                          }} />
+                        );
+                      }
+                    } else {
+                      // pending
+                      content = <span style={{ fontSize: '14px', opacity: 0.7 }}>{i + 1}</span>;
+                    }
                     
                     return (
                       <div
@@ -215,33 +258,7 @@ const StitchOptionsPopup = ({
                         }}
                         title={`Transition ${i + 1}: ${status}${displayETA ? ` (${Math.ceil(displayETA)}s remaining)` : ''}`}
                       >
-                        {status === 'complete' && <span style={{ fontSize: '18px' }}>✓</span>}
-                        {status === 'generating' && (
-                          <>
-                            {displayETA ? (
-                              <span style={{ 
-                                fontSize: '16px', 
-                                fontWeight: '700',
-                                fontFamily: '"Permanent Marker", cursive'
-                              }}>
-                                {Math.ceil(displayETA)}s
-                              </span>
-                            ) : (
-                              <div style={{
-                                width: '16px',
-                                height: '16px',
-                                border: '2px solid rgba(255, 255, 255, 0.3)',
-                                borderTopColor: '#fff',
-                                borderRadius: '50%',
-                                animation: 'spin 0.8s linear infinite'
-                              }} />
-                            )}
-                          </>
-                        )}
-                        {status === 'failed' && <span style={{ fontSize: '18px' }}>✕</span>}
-                        {status === 'pending' && (
-                          <span style={{ fontSize: '14px', opacity: 0.7 }}>{i + 1}</span>
-                        )}
+                        {content}
                       </div>
                     );
                   })}

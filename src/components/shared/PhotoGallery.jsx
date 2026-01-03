@@ -4447,10 +4447,7 @@ const PhotoGallery = ({
       const negativePrompt = settings.videoNegativePrompt || '';
 
       // Phase 2: Generate ALL transition videos in parallel
-      const transitionStatus = Array(transitionCount).fill('generating'); // Start all as 'generating'
       const generatedTransitionUrls = new Array(transitionCount);
-      const transitionETAs = new Array(transitionCount).fill(null); // Track ETA for each transition
-      let completedTransitions = 0;
       let failedTransition = null;
 
       setInfiniteLoopProgress({
@@ -4458,8 +4455,8 @@ const PhotoGallery = ({
         current: 0,
         total: transitionCount,
         message: `Generating ${transitionCount} transitions in parallel...`,
-        transitionStatus: [...transitionStatus],
-        transitionETAs: [...transitionETAs],
+        transitionStatus: Array(transitionCount).fill('generating'),
+        transitionETAs: Array(transitionCount).fill(null),
         maxETA: null
       });
 
@@ -4498,9 +4495,6 @@ const PhotoGallery = ({
             if (updated[0]) {
               const { videoETA } = updated[0];
               
-              // Update this transition's ETA
-              transitionETAs[i] = videoETA;
-              
               // Throttle updates per-transition to once per second
               const now = Date.now();
               const lastUpdate = lastETAUpdateTimesRef.current[i] || 0;
@@ -4509,15 +4503,22 @@ const PhotoGallery = ({
               }
               lastETAUpdateTimesRef.current[i] = now;
               
-              // Calculate the maximum ETA across all active transitions
-              const maxETA = Math.max(...transitionETAs.filter(eta => eta !== null && eta > 0));
-              
-              // Update progress with ETA info
-              setInfiniteLoopProgress(prev => ({
-                ...prev,
-                transitionETAs: [...transitionETAs],
-                maxETA: maxETA > 0 ? maxETA : null
-              }));
+              // Use functional update to get latest state
+              setInfiniteLoopProgress(prev => {
+                if (!prev || prev.transitionStatus?.[i] === 'complete') return prev;
+                
+                const newETAs = [...(prev.transitionETAs || [])];
+                newETAs[i] = videoETA;
+                
+                // Calculate the maximum ETA across all active transitions
+                const maxETA = Math.max(...newETAs.filter(eta => eta !== null && eta > 0), 0);
+                
+                return {
+                  ...prev,
+                  transitionETAs: newETAs,
+                  maxETA: maxETA > 0 ? maxETA : null
+                };
+              });
             }
           };
 
@@ -4541,39 +4542,59 @@ const PhotoGallery = ({
             onComplete: (videoUrl) => {
               console.log(`[Infinite Loop] Transition ${i + 1} complete: ${videoUrl}`);
               generatedTransitionUrls[i] = videoUrl;
-              transitionStatus[i] = 'complete';
-              transitionETAs[i] = 0; // Clear ETA when complete
-              completedTransitions++;
               playSonicLogo(settings.soundEnabled);
 
-              // Calculate remaining max ETA
-              const maxETA = Math.max(...transitionETAs.filter(eta => eta !== null && eta > 0));
-
-              // Update progress immediately
-              setInfiniteLoopProgress({
-                phase: 'generating',
-                current: completedTransitions,
-                total: transitionCount,
-                message: `${completedTransitions}/${transitionCount} transitions complete`,
-                transitionStatus: [...transitionStatus],
-                transitionETAs: [...transitionETAs],
-                maxETA: maxETA > 0 ? maxETA : null
+              // Use functional update to ensure we get the latest state
+              setInfiniteLoopProgress(prev => {
+                if (!prev) return prev;
+                
+                // Create new status array with this transition marked complete
+                const newStatus = [...prev.transitionStatus];
+                newStatus[i] = 'complete';
+                
+                // Create new ETAs array with this transition cleared
+                const newETAs = [...(prev.transitionETAs || [])];
+                newETAs[i] = 0;
+                
+                // Count completed
+                const completedCount = newStatus.filter(s => s === 'complete').length;
+                
+                // Calculate remaining max ETA
+                const maxETA = Math.max(...newETAs.filter(eta => eta !== null && eta > 0), 0);
+                
+                return {
+                  ...prev,
+                  phase: 'generating',
+                  current: completedCount,
+                  message: `${completedCount}/${prev.total} transitions complete`,
+                  transitionStatus: newStatus,
+                  transitionETAs: newETAs,
+                  maxETA: maxETA > 0 ? maxETA : null
+                };
               });
 
               resolve({ index: i, url: videoUrl });
             },
             onError: (error) => {
               console.error(`[Infinite Loop] Transition ${i + 1} failed:`, error);
-              transitionStatus[i] = 'failed';
-              transitionETAs[i] = 0; // Clear ETA on failure
               failedTransition = i;
 
-              // Update progress to show failure
-              setInfiniteLoopProgress(prev => ({
-                ...prev,
-                transitionStatus: [...transitionStatus],
-                transitionETAs: [...transitionETAs]
-              }));
+              // Use functional update for error state too
+              setInfiniteLoopProgress(prev => {
+                if (!prev) return prev;
+                
+                const newStatus = [...prev.transitionStatus];
+                newStatus[i] = 'failed';
+                
+                const newETAs = [...(prev.transitionETAs || [])];
+                newETAs[i] = 0;
+                
+                return {
+                  ...prev,
+                  transitionStatus: newStatus,
+                  transitionETAs: newETAs
+                };
+              });
 
               reject({ index: i, error });
             }
