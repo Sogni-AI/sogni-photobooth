@@ -897,7 +897,6 @@ const PhotoGallery = ({
   const [cachedInfiniteLoopUrl, setCachedInfiniteLoopUrl] = useState(null); // Stable URL to prevent re-renders from restarting video
   const [showInfiniteLoopPreview, setShowInfiniteLoopPreview] = useState(false);
   const infiniteLoopVideoRef = useRef(null);
-  const lastETAUpdateTimesRef = useRef({}); // Throttle ETA updates per-transition to prevent flickering
 
   // Video cost estimation - include selectedPhotoIndex to bust cache when switching photos
   const { loading: videoLoading, cost: videoCostRaw, costInUSD: videoUSD, refetch: refetchVideoCost } = useVideoCostEstimation({
@@ -4344,9 +4343,6 @@ const PhotoGallery = ({
       // Initialize transition status for parallel tracking
       const initialTransitionStatus = Array(transitionCount).fill('pending');
 
-      // Reset per-transition throttle timestamps
-      lastETAUpdateTimesRef.current = {};
-
       setIsGeneratingInfiniteLoop(true);
       setInfiniteLoopProgress({
         phase: 'extracting',
@@ -4495,15 +4491,7 @@ const PhotoGallery = ({
             if (updated[0]) {
               const { videoETA } = updated[0];
               
-              // Throttle updates per-transition to once per second
-              const now = Date.now();
-              const lastUpdate = lastETAUpdateTimesRef.current[i] || 0;
-              if (now - lastUpdate < 1000) {
-                return; // Skip this update for this transition
-              }
-              lastETAUpdateTimesRef.current[i] = now;
-              
-              // Use functional update to get latest state
+              // Update immediately - no throttling needed since each transition has its own display
               setInfiniteLoopProgress(prev => {
                 if (!prev || prev.transitionStatus?.[i] === 'complete') return prev;
                 
