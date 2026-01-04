@@ -4328,13 +4328,8 @@ const PhotoGallery = ({
       // Generate hash to check for cached version
       const photosHash = photosWithVideos.map(p => p.id + '-' + p.videoUrl).join('|') + `-dur${transitionDuration}`;
 
-      // Check if we have a cached version
-      if (cachedInfiniteLoopBlob && cachedInfiniteLoopHash === photosHash) {
-        console.log('[Infinite Loop] Using cached version');
-        setShowStitchOptionsPopup(false);
-        setShowInfiniteLoopPreview(true);
-        return;
-      }
+      // Note: We don't check for cached version here anymore - always regenerate when user clicks
+      // The "Download Cached" button in StitchOptionsPopup provides access to the previous version
 
       console.log(`[Infinite Loop] Starting with ${photosWithVideos.length} videos, ${transitionDuration}s transitions`);
 
