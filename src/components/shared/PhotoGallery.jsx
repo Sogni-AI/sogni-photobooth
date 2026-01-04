@@ -4338,6 +4338,14 @@ const PhotoGallery = ({
       // The "Download Cached" button in StitchOptionsPopup provides access to the previous version
 
       console.log(`[Infinite Loop] Starting with ${photosWithVideos.length} videos, ${transitionDuration}s transitions`);
+      
+      // Log all video URLs to debug potential corruption
+      console.group('[Infinite Loop] Video URLs');
+      photosWithVideos.forEach((photo, i) => {
+        console.log(`  ${i + 1}. ${photo.id} - ${photo.videoUrl?.substring(0, 100)}...`);
+        console.log(`     Resolution: ${photo.videoResolution}, FPS: ${photo.videoFramerate}, Duration: ${photo.videoDuration}`);
+      });
+      console.groupEnd();
 
       const transitionCount = photosWithVideos.length;
 
@@ -4630,6 +4638,13 @@ const PhotoGallery = ({
       }
 
       console.log(`[Infinite Loop] Stitching ${allVideosToStitch.length} videos`);
+      
+      // Validate all videos before stitching
+      console.group('[Infinite Loop] Pre-stitch validation');
+      for (let i = 0; i < allVideosToStitch.length; i++) {
+        console.log(`  ${i + 1}. ${allVideosToStitch[i].filename} - ${allVideosToStitch[i].url?.substring(0, 80)}...`);
+      }
+      console.groupEnd();
 
       const concatenatedBlob = await concatenateVideos(
         allVideosToStitch,
