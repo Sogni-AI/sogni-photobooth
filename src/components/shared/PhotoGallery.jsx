@@ -4315,18 +4315,24 @@ const PhotoGallery = ({
         });
       };
 
+      // Get video parameters from the first video to ensure consistency
+      // This is critical for MP4Box concatenation - all videos must have matching parameters
+      const firstPhoto = photosWithVideos[0];
+      const transitionResolution = firstPhoto.videoResolution || settings.videoResolution || '480p';
+      const transitionFramerate = firstPhoto.videoFramerate || settings.videoFramerate || 16;
+      
       let transitionDuration;
       try {
-        const videoDuration = await getVideoDuration(photosWithVideos[0].videoUrl);
+        const videoDuration = await getVideoDuration(firstPhoto.videoUrl);
         transitionDuration = Math.round(videoDuration); // Round to nearest second
-        console.log(`[Infinite Loop] Detected video duration: ${videoDuration}s, using ${transitionDuration}s for transitions`);
+        console.log(`[Infinite Loop] Detected video params - duration: ${videoDuration}s → ${transitionDuration}s, resolution: ${transitionResolution}, fps: ${transitionFramerate}`);
       } catch (error) {
         console.warn('[Infinite Loop] Could not detect video duration, using default 5s');
-        transitionDuration = 5;
+        transitionDuration = firstPhoto.videoDuration || 5;
       }
 
-      // Generate hash to check for cached version
-      const photosHash = photosWithVideos.map(p => p.id + '-' + p.videoUrl).join('|') + `-dur${transitionDuration}`;
+      // Generate hash to check for cached version (includes all video parameters for proper cache invalidation)
+      const photosHash = photosWithVideos.map(p => p.id + '-' + p.videoUrl).join('|') + `-dur${transitionDuration}-res${transitionResolution}-fps${transitionFramerate}`;
 
       // Note: We don't check for cached version here anymore - always regenerate when user clicks
       // The "Download Cached" button in StitchOptionsPopup provides access to the previous version
@@ -4513,9 +4519,9 @@ const PhotoGallery = ({
             imageHeight: startFrame.height,
             sogniClient,
             setPhotos: captureETAUpdates,
-            resolution: settings.videoResolution || '480p',
+            resolution: transitionResolution,
             quality: settings.videoQuality || 'fast',
-            fps: settings.videoFramerate || 16,
+            fps: transitionFramerate,
             duration: transitionDuration,
             positivePrompt: motionPrompt,
             negativePrompt: negativePrompt,
