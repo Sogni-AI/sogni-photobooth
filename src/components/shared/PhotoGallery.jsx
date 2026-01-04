@@ -4724,21 +4724,20 @@ const PhotoGallery = ({
         return;
       }
 
-      // Generate hash of photo IDs to check cache validity
-      const photosHash = photosWithVideos.map(p => p.id).sort().join('-');
-
       let videoBlob;
 
-      // Check for cached stitched video - first check general cache, then transition video cache
-      if (cachedStitchedVideoBlob && cachedStitchedVideoPhotosHash === photosHash) {
-        console.log('[Share Stitched] Using cached stitched video');
-        videoBlob = cachedStitchedVideoBlob;
-      } else if (readyTransitionVideo?.blob && isTransitionMode && transitionVideoQueue.length >= 2) {
-        // In transition mode, use the ready transition video if available
+      // Priority 1: Check for cached infinite loop video (most advanced - includes AI transitions)
+      if (cachedInfiniteLoopBlob) {
+        console.log('[Share Stitched] Using cached infinite loop video');
+        videoBlob = cachedInfiniteLoopBlob;
+      }
+      // Priority 2: Check for cached transition video
+      else if (readyTransitionVideo?.blob && isTransitionMode && transitionVideoQueue.length >= 2) {
         console.log('[Share Stitched] Using cached transition video');
         videoBlob = readyTransitionVideo.blob;
-      } else if (stitchedVideoUrl && isTransitionMode) {
-        // If we have a stitched video URL from the overlay, fetch the blob
+      }
+      // Priority 3: Check if we have a stitched video URL from the overlay, fetch the blob
+      else if (stitchedVideoUrl && isTransitionMode) {
         console.log('[Share Stitched] Fetching blob from stitched video URL');
         try {
           const response = await fetch(stitchedVideoUrl);
@@ -4746,6 +4745,15 @@ const PhotoGallery = ({
         } catch (fetchError) {
           console.log('[Share Stitched] Could not fetch from stitchedVideoUrl, will stitch fresh');
           videoBlob = null;
+        }
+      }
+      // Priority 4: Check for cached regular stitched video
+      else {
+        const photosHash = photosWithVideos.map(p => p.id).sort().join('-');
+        
+        if (cachedStitchedVideoBlob && cachedStitchedVideoPhotosHash === photosHash) {
+          console.log('[Share Stitched] Using cached stitched video');
+          videoBlob = cachedStitchedVideoBlob;
         }
       }
 
@@ -4758,7 +4766,6 @@ const PhotoGallery = ({
 
         const startTime = performance.now();
 
-        // Prepare videos array in order
         const videosToStitch = photosWithVideos.map((photo, index) => ({
           url: photo.videoUrl,
           filename: `video-${index + 1}.mp4`
@@ -4777,6 +4784,7 @@ const PhotoGallery = ({
         console.log(`[Share Stitched] ✅ Stitching complete in ${(elapsedMs / 1000).toFixed(2)}s`);
 
         // Cache the stitched video
+        const photosHash = photosWithVideos.map(p => p.id).sort().join('-');
         setCachedStitchedVideoBlob(concatenatedBlob);
         setCachedStitchedVideoPhotosHash(photosHash);
 
@@ -4850,7 +4858,7 @@ const PhotoGallery = ({
         type: 'error'
       });
     }
-  }, [photos, filteredPhotos, isPromptSelectorMode, isBulkDownloading, cachedStitchedVideoBlob, cachedStitchedVideoPhotosHash, readyTransitionVideo, isTransitionMode, transitionVideoQueue, stitchedVideoUrl, showToast, setIsBulkDownloading, setBulkDownloadProgress]);
+  }, [photos, filteredPhotos, isPromptSelectorMode, isBulkDownloading, cachedInfiniteLoopBlob, cachedStitchedVideoBlob, cachedStitchedVideoPhotosHash, readyTransitionVideo, isTransitionMode, transitionVideoQueue, stitchedVideoUrl, showToast, setIsBulkDownloading, setBulkDownloadProgress]);
 
   // Handle sharing stitched video to Twitter - stitch if needed, then open Twitter share modal
   const handleShareStitchedVideoToTwitter = useCallback(async () => {
@@ -4870,19 +4878,29 @@ const PhotoGallery = ({
         return;
       }
 
-      // Generate hash of photo IDs to check cache validity
-      const photosHash = photosWithVideos.map(p => p.id).sort().join('-');
-
       let videoBlob = null;
 
-      // Check for cached stitched video
-      if (cachedStitchedVideoBlob && cachedStitchedVideoPhotosHash === photosHash) {
-        console.log('[Twitter Share Stitched] Using cached stitched video');
-        videoBlob = cachedStitchedVideoBlob;
-      } else if (readyTransitionVideo?.blob && isTransitionMode && transitionVideoQueue.length >= 2) {
+      // Priority 1: Check for cached infinite loop video (most advanced - includes AI transitions)
+      if (cachedInfiniteLoopBlob) {
+        console.log('[Twitter Share Stitched] Using cached infinite loop video');
+        videoBlob = cachedInfiniteLoopBlob;
+      }
+      // Priority 2: Check for cached transition video
+      else if (readyTransitionVideo?.blob && isTransitionMode && transitionVideoQueue.length >= 2) {
         console.log('[Twitter Share Stitched] Using cached transition video');
         videoBlob = readyTransitionVideo.blob;
-      } else {
+      }
+      // Priority 3: Check for cached regular stitched video
+      else {
+        const photosHash = photosWithVideos.map(p => p.id).sort().join('-');
+        
+        if (cachedStitchedVideoBlob && cachedStitchedVideoPhotosHash === photosHash) {
+          console.log('[Twitter Share Stitched] Using cached stitched video');
+          videoBlob = cachedStitchedVideoBlob;
+        }
+      }
+      
+      if (!videoBlob) {
         // Need to stitch first
         console.log('[Twitter Share Stitched] Stitching videos before sharing to Twitter...');
         setIsBulkDownloading(true);
@@ -4903,6 +4921,7 @@ const PhotoGallery = ({
         );
 
         // Cache the stitched video
+        const photosHash = photosWithVideos.map(p => p.id).sort().join('-');
         setCachedStitchedVideoBlob(videoBlob);
         setCachedStitchedVideoPhotosHash(photosHash);
 
@@ -4953,7 +4972,7 @@ const PhotoGallery = ({
         type: 'error'
       });
     }
-  }, [photos, filteredPhotos, isPromptSelectorMode, cachedStitchedVideoBlob, cachedStitchedVideoPhotosHash, readyTransitionVideo, isTransitionMode, transitionVideoQueue, handleShareToX, showToast, setIsBulkDownloading, setBulkDownloadProgress]);
+  }, [photos, filteredPhotos, isPromptSelectorMode, cachedInfiniteLoopBlob, cachedStitchedVideoBlob, cachedStitchedVideoPhotosHash, readyTransitionVideo, isTransitionMode, transitionVideoQueue, handleShareToX, showToast, setIsBulkDownloading, setBulkDownloadProgress]);
 
   // Handle sharing stitched video via Web Share API
   const handleShareStitchedVideoViaWebShare = useCallback(async () => {
@@ -4987,19 +5006,29 @@ const PhotoGallery = ({
       return;
     }
 
-    // Generate hash of photo IDs to check cache validity
-    const photosHash = photosWithVideos.map(p => p.id).sort().join('-');
-
     let videoBlob = null;
 
-    // Check for cached stitched video
-    if (cachedStitchedVideoBlob && cachedStitchedVideoPhotosHash === photosHash) {
-      console.log('[QR Share Stitched] Using cached stitched video');
-      videoBlob = cachedStitchedVideoBlob;
-    } else if (readyTransitionVideo?.blob && isTransitionMode && transitionVideoQueue.length >= 2) {
+    // Priority 1: Check for cached infinite loop video (most advanced - includes AI transitions)
+    if (cachedInfiniteLoopBlob) {
+      console.log('[QR Share Stitched] Using cached infinite loop video');
+      videoBlob = cachedInfiniteLoopBlob;
+    }
+    // Priority 2: Check for cached transition video
+    else if (readyTransitionVideo?.blob && isTransitionMode && transitionVideoQueue.length >= 2) {
       console.log('[QR Share Stitched] Using cached transition video');
       videoBlob = readyTransitionVideo.blob;
-    } else {
+    }
+    // Priority 3: Check for cached regular stitched video
+    else {
+      const photosHash = photosWithVideos.map(p => p.id).sort().join('-');
+      
+      if (cachedStitchedVideoBlob && cachedStitchedVideoPhotosHash === photosHash) {
+        console.log('[QR Share Stitched] Using cached stitched video');
+        videoBlob = cachedStitchedVideoBlob;
+      }
+    }
+    
+    if (!videoBlob) {
       // Need to stitch the videos first
       console.log('[QR Share Stitched] Stitching videos for QR share...');
       showToast({
@@ -5021,6 +5050,7 @@ const PhotoGallery = ({
         );
 
         // Cache the stitched video
+        const photosHash = photosWithVideos.map(p => p.id).sort().join('-');
         setCachedStitchedVideoBlob(videoBlob);
         setCachedStitchedVideoPhotosHash(photosHash);
       } catch (error) {
@@ -5039,7 +5069,7 @@ const PhotoGallery = ({
 
     // Call the App.jsx handler to create QR code
     await handleStitchedVideoQRShare(videoBlob, thumbnailUrl);
-  }, [handleStitchedVideoQRShare, isPromptSelectorMode, filteredPhotos, photos, cachedStitchedVideoBlob, cachedStitchedVideoPhotosHash, readyTransitionVideo, isTransitionMode, transitionVideoQueue, showToast]);
+  }, [handleStitchedVideoQRShare, isPromptSelectorMode, filteredPhotos, photos, cachedInfiniteLoopBlob, cachedStitchedVideoBlob, cachedStitchedVideoPhotosHash, readyTransitionVideo, isTransitionMode, transitionVideoQueue, showToast]);
 
   // State for stitched video gallery submission
   const [showStitchedGalleryConfirm, setShowStitchedGalleryConfirm] = useState(false);
