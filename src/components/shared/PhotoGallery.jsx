@@ -11792,8 +11792,9 @@ const PhotoGallery = ({
                     {!photo.generatingVideo && (photo.positivePrompt || photo.stylePrompt) && (
                       <button
                         className="photo-motion-btn-batch"
-                        onClick={(e) => {
+                        onMouseDown={(e) => {
                           e.stopPropagation();
+                          e.preventDefault();
                           // Show the video options list for this photo (without selecting it)
                           setVideoTargetPhotoIndex(index);
                           setShowVideoOptionsList(true);
