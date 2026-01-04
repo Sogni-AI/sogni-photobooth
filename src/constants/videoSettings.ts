@@ -83,12 +83,14 @@ export const VIDEO_CONFIG = {
   // Frames per second options
   fpsOptions: [16, 32] as const,
   defaultFps: 16,
-  // Duration options in seconds
-  durationOptions: [3, 5, 7] as const,
+  // Duration range in seconds (1-8 in 0.5 increments)
+  minDuration: 1,
+  maxDuration: 8,
+  durationStep: 0.5,
   defaultDuration: 5,
-  // Frame range limits
+  // Frame range limits (1s = 17 frames, 8s = 129 frames at BASE_FPS 16)
   minFrames: 17,
-  maxFrames: 161,
+  maxFrames: 129,
   // Dimension must be divisible by this value
   dimensionDivisor: 16
 };

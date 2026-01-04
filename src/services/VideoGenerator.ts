@@ -51,7 +51,7 @@ interface GenerateVideoOptions {
   resolution?: VideoResolution;
   quality?: VideoQualityPreset;
   fps?: 16 | 32;
-  duration?: 3 | 5 | 7;
+  duration?: number; // Duration in seconds (1-8 in 0.5 increments)
   positivePrompt?: string;
   negativePrompt?: string;
   motionEmoji?: string;

@@ -5063,50 +5063,59 @@ const PhotoGallery = ({
       return;
     }
 
-    // Generate hash of photo IDs to check cache validity
-    const photosHash = photosWithVideos.map(p => p.id).sort().join('-');
-
     let videoBlob = null;
 
-    // Check for cached stitched video to show in preview
-    if (cachedStitchedVideoBlob && cachedStitchedVideoPhotosHash === photosHash) {
-      console.log('[Gallery Submit] Using cached stitched video for preview');
-      videoBlob = cachedStitchedVideoBlob;
-    } else if (readyTransitionVideo?.blob && isTransitionMode && transitionVideoQueue.length >= 2) {
+    // Priority 1: Check for cached infinite loop video (most advanced)
+    if (cachedInfiniteLoopBlob) {
+      console.log('[Gallery Submit] Using cached infinite loop video for preview');
+      videoBlob = cachedInfiniteLoopBlob;
+    }
+    // Priority 2: Check for cached transition video
+    else if (readyTransitionVideo?.blob && isTransitionMode && transitionVideoQueue.length >= 2) {
       console.log('[Gallery Submit] Using cached transition video for preview');
       videoBlob = readyTransitionVideo.blob;
-    } else {
-      // Need to stitch the videos first for preview
-      console.log('[Gallery Submit] Stitching videos for preview...');
-      showToast({
-        title: 'Preparing Preview',
-        message: 'Stitching videos...',
-        type: 'info'
-      });
-
-      try {
-        const videosToStitch = photosWithVideos.map((photo, index) => ({
-          url: photo.videoUrl,
-          filename: `video-${index + 1}.mp4`
-        }));
-
-        videoBlob = await concatenateVideos(
-          videosToStitch,
-          null,
-          null
-        );
-
-        // Cache the stitched video for later use
-        setCachedStitchedVideoBlob(videoBlob);
-        setCachedStitchedVideoPhotosHash(photosHash);
-      } catch (error) {
-        console.error('[Gallery Submit] Failed to stitch videos for preview:', error);
+    }
+    // Priority 3: Check for cached regular stitched video
+    else {
+      // Generate hash of photo IDs to check cache validity for regular stitch
+      const photosHash = photosWithVideos.map(p => p.id).sort().join('-');
+      
+      if (cachedStitchedVideoBlob && cachedStitchedVideoPhotosHash === photosHash) {
+        console.log('[Gallery Submit] Using cached stitched video for preview');
+        videoBlob = cachedStitchedVideoBlob;
+      } else {
+        // Need to stitch the videos first for preview
+        console.log('[Gallery Submit] Stitching videos for preview...');
         showToast({
-          title: 'Error',
-          message: 'Failed to prepare video preview.',
-          type: 'error'
+          title: 'Preparing Preview',
+          message: 'Stitching videos...',
+          type: 'info'
         });
-        return;
+
+        try {
+          const videosToStitch = photosWithVideos.map((photo, index) => ({
+            url: photo.videoUrl,
+            filename: `video-${index + 1}.mp4`
+          }));
+
+          videoBlob = await concatenateVideos(
+            videosToStitch,
+            null,
+            null
+          );
+
+          // Cache the stitched video for later use
+          setCachedStitchedVideoBlob(videoBlob);
+          setCachedStitchedVideoPhotosHash(photosHash);
+        } catch (error) {
+          console.error('[Gallery Submit] Failed to stitch videos for preview:', error);
+          showToast({
+            title: 'Error',
+            message: 'Failed to prepare video preview.',
+            type: 'error'
+          });
+          return;
+        }
       }
     }
 
@@ -5118,7 +5127,7 @@ const PhotoGallery = ({
 
     // Show confirmation popup
     setShowStitchedGalleryConfirm(true);
-  }, [isPromptSelectorMode, filteredPhotos, photos, showToast, cachedStitchedVideoBlob, cachedStitchedVideoPhotosHash, readyTransitionVideo, isTransitionMode, transitionVideoQueue]);
+  }, [isPromptSelectorMode, filteredPhotos, photos, showToast, cachedInfiniteLoopBlob, cachedStitchedVideoBlob, cachedStitchedVideoPhotosHash, readyTransitionVideo, isTransitionMode, transitionVideoQueue]);
 
   // Handle stitched video gallery submission confirm
   const handleStitchedGallerySubmitConfirm = useCallback(async () => {
@@ -5138,41 +5147,50 @@ const PhotoGallery = ({
         throw new Error('Not enough videos');
       }
 
-      // Generate hash of photo IDs to check cache validity
-      const photosHash = photosWithVideos.map(p => p.id).sort().join('-');
-
       let videoBlob = null;
 
-      // Check for cached stitched video
-      if (cachedStitchedVideoBlob && cachedStitchedVideoPhotosHash === photosHash) {
-        console.log('[Gallery Submit Stitched] Using cached stitched video');
-        videoBlob = cachedStitchedVideoBlob;
-      } else if (readyTransitionVideo?.blob && isTransitionMode && transitionVideoQueue.length >= 2) {
+      // Priority 1: Check for cached infinite loop video (most advanced - includes AI transitions)
+      if (cachedInfiniteLoopBlob) {
+        console.log('[Gallery Submit Stitched] Using cached infinite loop video');
+        videoBlob = cachedInfiniteLoopBlob;
+      }
+      // Priority 2: Check for cached transition video
+      else if (readyTransitionVideo?.blob && isTransitionMode && transitionVideoQueue.length >= 2) {
         console.log('[Gallery Submit Stitched] Using cached transition video');
         videoBlob = readyTransitionVideo.blob;
-      } else {
-        // Need to stitch the videos first
-        console.log('[Gallery Submit Stitched] Stitching videos before submission...');
-        showToast({
-          title: 'Preparing Video',
-          message: 'Stitching videos for submission...',
-          type: 'info'
-        });
+      }
+      // Priority 3: Check for cached regular stitched video
+      else {
+        // Generate hash of photo IDs to check cache validity for regular stitch
+        const photosHash = photosWithVideos.map(p => p.id).sort().join('-');
+        
+        if (cachedStitchedVideoBlob && cachedStitchedVideoPhotosHash === photosHash) {
+          console.log('[Gallery Submit Stitched] Using cached stitched video');
+          videoBlob = cachedStitchedVideoBlob;
+        } else {
+          // Need to stitch the videos first
+          console.log('[Gallery Submit Stitched] Stitching videos before submission...');
+          showToast({
+            title: 'Preparing Video',
+            message: 'Stitching videos for submission...',
+            type: 'info'
+          });
 
-        const videosToStitch = photosWithVideos.map((photo, index) => ({
-          url: photo.videoUrl,
-          filename: `video-${index + 1}.mp4`
-        }));
+          const videosToStitch = photosWithVideos.map((photo, index) => ({
+            url: photo.videoUrl,
+            filename: `video-${index + 1}.mp4`
+          }));
 
-        videoBlob = await concatenateVideos(
-          videosToStitch,
-          null,
-          null
-        );
+          videoBlob = await concatenateVideos(
+            videosToStitch,
+            null,
+            null
+          );
 
-        // Cache the stitched video
-        setCachedStitchedVideoBlob(videoBlob);
-        setCachedStitchedVideoPhotosHash(photosHash);
+          // Cache the stitched video
+          setCachedStitchedVideoBlob(videoBlob);
+          setCachedStitchedVideoPhotosHash(photosHash);
+        }
       }
 
       // Get thumbnail from first photo

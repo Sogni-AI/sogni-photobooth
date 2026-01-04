@@ -45,7 +45,7 @@ export interface Photo {
   // Video generation settings metadata
   videoResolution?: '480p' | '580p' | '720p';
   videoFramerate?: 16 | 32;
-  videoDuration?: 3 | 5 | 7;
+  videoDuration?: number; // Duration in seconds (1-8 in 0.5 increments)
   videoMotionPrompt?: string; // The motion prompt used for video generation
   videoMotionEmoji?: string; // The emoji used for video generation (e.g., '🔥', '😂')
 }
@@ -131,7 +131,7 @@ export interface Settings {
   videoResolution?: '480p' | '720p';
   videoQuality?: 'fast' | 'balanced' | 'quality' | 'pro';
   videoFramerate?: 16 | 32;
-  videoDuration?: 3 | 5 | 7;
+  videoDuration?: number; // Duration in seconds (1-8 in 0.5 increments)
   videoPositivePrompt?: string;
   videoNegativePrompt?: string;
   videoTransitionPrompt?: string;

@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useApp } from '../../context/AppContext';
 import { AspectRatioOption, TezDevTheme, OutputFormat, Settings } from '../../types/index';
 import { isFluxKontextModel, getModelRanges, getModelDefaults, DEFAULT_SETTINGS } from '../../constants/settings';
-import { VideoQualityPreset, VideoResolution } from '../../constants/videoSettings';
+import { VideoQualityPreset, VideoResolution, VIDEO_CONFIG } from '../../constants/videoSettings';
 import { themeConfigService } from '../../services/themeConfig';
 import { sanitizeUrl, getUrlValidationError } from '../../utils/urlValidation';
 import { useSogniAuth } from '../../services/sogniAuth';
@@ -1329,47 +1329,21 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
                   32 fps is smoother but costs more
                 </div>
 
-                {/* Video Duration selector */}
+                {/* Video Duration slider */}
                 <div className="control-option">
-                  <label className="control-label">Duration:</label>
-                  <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', color: 'white' }}>
-                      <input
-                        type="radio"
-                        name="videoDuration"
-                        value="3"
-                        checked={(settings.videoDuration || 5) === 3}
-                        onChange={() => updateSetting('videoDuration', 3)}
-                        style={{ cursor: 'pointer' }}
-                      />
-                      3s
-                    </label>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', color: 'white' }}>
-                      <input
-                        type="radio"
-                        name="videoDuration"
-                        value="5"
-                        checked={(settings.videoDuration || 5) === 5}
-                        onChange={() => updateSetting('videoDuration', 5)}
-                        style={{ cursor: 'pointer' }}
-                      />
-                      5s
-                    </label>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', color: 'white' }}>
-                      <input
-                        type="radio"
-                        name="videoDuration"
-                        value="7"
-                        checked={(settings.videoDuration || 5) === 7}
-                        onChange={() => updateSetting('videoDuration', 7)}
-                        style={{ cursor: 'pointer' }}
-                      />
-                      7s
-                    </label>
-                  </div>
+                  <label className="control-label">Duration: {settings.videoDuration || VIDEO_CONFIG.defaultDuration}s</label>
+                  <input
+                    type="range"
+                    min={VIDEO_CONFIG.minDuration}
+                    max={VIDEO_CONFIG.maxDuration}
+                    step={VIDEO_CONFIG.durationStep}
+                    value={settings.videoDuration || VIDEO_CONFIG.defaultDuration}
+                    onChange={(e) => updateSetting('videoDuration', parseFloat(e.target.value))}
+                    className="slider-input"
+                  />
                 </div>
                 <div className="control-description" style={{ marginTop: '-8px', marginBottom: '12px', marginLeft: '8px' }}>
-                  Longer videos take more time and cost more
+                  Longer videos take more time and cost more (1-8 seconds)
                 </div>
 
                 {/* Video Positive Motion Prompt */}
