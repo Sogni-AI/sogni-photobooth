@@ -4453,7 +4453,6 @@ const PhotoGallery = ({
 
       // Phase 2: Generate ALL transition videos in parallel
       const generatedTransitionUrls = new Array(transitionCount);
-      let failedTransition = null;
 
       setInfiniteLoopProgress({
         phase: 'generating',
@@ -4475,13 +4474,10 @@ const PhotoGallery = ({
         })
       );
 
-      // Create all transition generation promises and update status individually
-      const transitionPromises = lastFrames.map((startFrame, i) => {
+      // Helper function to generate a single transition with retry support
+      const generateSingleTransition = (i, startFrame, endImage, isRetry = false) => {
         const nextIndex = (i + 1) % photosWithVideos.length;
-        const endImage = endImages[i];
-
-        console.log(`[Infinite Loop] Starting transition ${i + 1}: video ${i + 1} → photo ${nextIndex + 1}`);
-
+        
         return new Promise((resolve, reject) => {
           const tempPhotoId = `infinite-loop-transition-${i}-${Date.now()}`;
           
@@ -4518,6 +4514,8 @@ const PhotoGallery = ({
               });
             }
           };
+
+          console.log(`[Infinite Loop] ${isRetry ? 'RETRY: ' : ''}Starting transition ${i + 1}: video ${i + 1} → photo ${nextIndex + 1}`);
 
           generateVideo({
             photo: tempPhoto,
@@ -4573,10 +4571,9 @@ const PhotoGallery = ({
               resolve({ index: i, url: videoUrl });
             },
             onError: (error) => {
-              console.error(`[Infinite Loop] Transition ${i + 1} failed:`, error);
-              failedTransition = i;
+              console.error(`[Infinite Loop] Transition ${i + 1} failed${isRetry ? ' (retry)' : ''}:`, error);
 
-              // Use functional update for error state too
+              // Use functional update for error state
               setInfiniteLoopProgress(prev => {
                 if (!prev) return prev;
                 
@@ -4593,26 +4590,69 @@ const PhotoGallery = ({
                 };
               });
 
-              reject({ index: i, error });
+              reject({ index: i, error, isRetry });
             }
           });
         });
+      };
+
+      // Create all transition generation promises
+      const transitionPromises = lastFrames.map((startFrame, i) => {
+        const endImage = endImages[i];
+        return generateSingleTransition(i, startFrame, endImage, false);
       });
 
-      // Wait for all transitions to complete
+      // Wait for all transitions to complete (first attempt)
       const results = await Promise.allSettled(transitionPromises);
 
-      // Check for failures
-      if (failedTransition !== null) {
-        showToast({
-          title: 'Some Transitions Failed',
-          message: `Transition ${failedTransition + 1} failed. Please try again.`,
-          type: 'error'
+      // Check for failures and retry once
+      const failedResults = results
+        .map((result, i) => ({ result, index: i }))
+        .filter(({ result }) => result.status === 'rejected');
+
+      if (failedResults.length > 0) {
+        console.log(`[Infinite Loop] ${failedResults.length} transition(s) failed, retrying...`);
+        
+        // Update status to show retrying
+        setInfiniteLoopProgress(prev => {
+          if (!prev) return prev;
+          const newStatus = [...prev.transitionStatus];
+          failedResults.forEach(({ index }) => {
+            newStatus[index] = 'generating'; // Reset to generating for retry
+          });
+          return {
+            ...prev,
+            transitionStatus: newStatus,
+            message: `Retrying ${failedResults.length} failed transition(s)...`
+          };
         });
-        setIsGeneratingInfiniteLoop(false);
-        setInfiniteLoopProgress(null);
-        setShowStitchOptionsPopup(false);
-        return;
+
+        // Retry failed transitions
+        const retryPromises = failedResults.map(({ index }) => {
+          const startFrame = lastFrames[index];
+          const endImage = endImages[index];
+          return generateSingleTransition(index, startFrame, endImage, true);
+        });
+
+        const retryResults = await Promise.allSettled(retryPromises);
+        
+        // Check if retries succeeded
+        const stillFailed = retryResults.filter(r => r.status === 'rejected');
+        
+        if (stillFailed.length > 0) {
+          const failedIndices = stillFailed.map(r => r.reason?.index + 1).join(', ');
+          showToast({
+            title: 'Transitions Failed',
+            message: `Transition(s) ${failedIndices} failed after retry. Please try again.`,
+            type: 'error'
+          });
+          setIsGeneratingInfiniteLoop(false);
+          setInfiniteLoopProgress(null);
+          setShowStitchOptionsPopup(false);
+          return;
+        }
+        
+        console.log(`[Infinite Loop] All retries succeeded!`);
       }
 
       // Phase 3: Stitch all videos together
