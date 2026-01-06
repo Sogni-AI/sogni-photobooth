@@ -24,6 +24,8 @@ const BaldForBaseConfirmationPopup = ({
   const videoRef = useRef(null);
   const [videoError, setVideoError] = useState(null);
   const [isWideScreen, setIsWideScreen] = useState(false);
+  const [isTablet, setIsTablet] = useState(false);
+  const [isVerySmallScreen, setIsVerySmallScreen] = useState(false);
 
   // Video URLs for the teaser videos
   const videoUrls = [
@@ -36,7 +38,11 @@ const BaldForBaseConfirmationPopup = ({
   // Check screen width for responsive layout
   useEffect(() => {
     const checkScreenWidth = () => {
-      setIsWideScreen(window.innerWidth >= 900);
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      setIsWideScreen(width >= 900);
+      setIsTablet(width >= 700 && width < 900);
+      setIsVerySmallScreen(width <= 375 || height <= 667);
     };
     checkScreenWidth();
     window.addEventListener('resize', checkScreenWidth);
@@ -274,14 +280,14 @@ const BaldForBaseConfirmationPopup = ({
         <div style={{
           display: 'flex',
           flexDirection: isWideScreen ? 'row' : 'column',
-          gap: isWideScreen ? '32px' : '16px',
+          gap: isWideScreen ? '32px' : (isTablet ? '20px' : (isVerySmallScreen ? '8px' : '16px')),
           flex: 1,
           minHeight: 0,
           overflow: isWideScreen ? 'visible' : 'hidden',
           alignItems: isWideScreen ? 'center' : 'stretch',
           justifyContent: isWideScreen ? 'flex-start' : 'flex-start',
-          padding: isWideScreen ? '0' : '0 45px',
-          paddingTop: isWideScreen ? '0' : '32px',
+          padding: isWideScreen ? '0' : (isTablet ? '0 60px' : (isVerySmallScreen ? '0 24px' : '0 45px')),
+          paddingTop: isWideScreen ? '0' : (isTablet ? '40px' : (isVerySmallScreen ? '16px' : '32px')),
           paddingBottom: isWideScreen ? '0' : (formatCost(costRaw, costUSD) && !loading ? '80px' : '100px'),
           position: 'relative',
           zIndex: 2
@@ -289,19 +295,20 @@ const BaldForBaseConfirmationPopup = ({
           {/* Popup Title - Mobile only */}
           {!isWideScreen && (
             <div style={{
-              fontSize: '36px',
+              fontSize: isTablet ? '48px' : (isVerySmallScreen ? '26px' : '36px'),
               fontWeight: '800',
               color: 'white',
-              marginBottom: '8px',
+              marginBottom: isTablet ? '12px' : (isVerySmallScreen ? '4px' : '8px'),
               marginTop: '0',
-              lineHeight: '1.2',
+              lineHeight: '1',
               letterSpacing: '-0.02em',
               textAlign: 'center',
               textShadow: '0 2px 12px rgba(0, 0, 0, 0.5), 0 1px 4px rgba(0, 0, 0, 0.4)',
               flexShrink: 0,
-              width: '100%'
+              width: '100%',
+              whiteSpace: 'nowrap'
             }}>
-              SOGNI + BASE App
+              SOGNI + Base App
             </div>
           )}
 
@@ -311,21 +318,22 @@ const BaldForBaseConfirmationPopup = ({
               width: '100%',
               margin: '0',
               position: 'relative',
-              borderRadius: '16px',
+              borderRadius: isTablet ? '20px' : (isVerySmallScreen ? '12px' : '16px'),
               overflow: 'hidden',
               boxShadow: '0 8px 24px rgba(0, 0, 0, 0.3)',
               background: 'rgba(0, 0, 0, 0.2)',
-              flexShrink: 0
+              flexShrink: 0,
+              maxHeight: isVerySmallScreen ? '140px' : (isTablet ? '280px' : 'none')
             }}>
               <img
                 src="/base-hero-wallet-metadata.png"
                 alt="Base App Preview"
                 style={{
                   width: '100%',
-                  height: 'auto',
+                  height: isVerySmallScreen ? '140px' : (isTablet ? '280px' : 'auto'),
                   display: 'block',
-                  objectFit: 'contain',
-                  borderRadius: '16px'
+                  objectFit: isVerySmallScreen || isTablet ? 'cover' : 'contain',
+                  borderRadius: isTablet ? '20px' : (isVerySmallScreen ? '12px' : '16px')
                 }}
               />
               <a
@@ -484,7 +492,7 @@ const BaldForBaseConfirmationPopup = ({
             <p style={{
               margin: 0,
               color: 'rgba(255, 255, 255, 0.98)',
-              fontSize: '13px',
+              fontSize: isTablet ? '16px' : (isVerySmallScreen ? '12px' : '13px'),
               lineHeight: '1.4',
               textAlign: 'left',
               fontWeight: '400',
@@ -499,10 +507,10 @@ const BaldForBaseConfirmationPopup = ({
           {/* Video Teaser - Mobile: Centered, smaller */}
           {!isWideScreen && (
             <div style={{
-              width: '160px',
+              width: isTablet ? '280px' : (isVerySmallScreen ? '140px' : '160px'),
               margin: '0 auto',
               aspectRatio: '2 / 3',
-              borderRadius: '16px',
+              borderRadius: isTablet ? '20px' : (isVerySmallScreen ? '12px' : '16px'),
               overflow: 'hidden',
               background: 'rgba(0, 0, 0, 0.4)',
               boxShadow: '0 8px 8px rgba(0, 0, 0, 0.4)',
@@ -559,15 +567,15 @@ const BaldForBaseConfirmationPopup = ({
                 bottom: 0,
                 left: 0,
                 right: 0,
-                padding: isWideScreen ? '12px 14px' : '10px 12px',
+                padding: isWideScreen ? '12px 14px' : (isTablet ? '12px 14px' : '10px 12px'),
                 background: 'linear-gradient(to top, rgba(0, 0, 0, 0.85) 0%, rgba(0, 0, 0, 0.7) 70%, transparent 100%)',
                 color: 'white',
-                fontSize: isWideScreen ? '12px' : '11px',
+                fontSize: isWideScreen ? '12px' : (isTablet ? '12px' : '11px'),
                 textAlign: 'center',
                 zIndex: 5,
                 pointerEvents: 'none'
               }}>
-                <div style={{ fontSize: isWideScreen ? '11px' : '10px', opacity: 0.9 }}>Contest Starts Jan 2025</div>
+                <div style={{ fontSize: isWideScreen ? '11px' : (isTablet ? '11px' : '10px'), opacity: 0.9 }}>Contest Starts Jan 2025</div>
               </div>
             </div>
           )}
@@ -657,12 +665,12 @@ const BaldForBaseConfirmationPopup = ({
               disabled={loading}
               style={{
                 width: '100%',
-                padding: '14px 20px',
+                padding: isTablet ? '18px 28px' : (isVerySmallScreen ? '12px 16px' : '14px 20px'),
                 borderRadius: '14px',
                 border: 'none',
                 background: loading ? 'rgba(0, 82, 255, 0.5)' : '#0052FF',
                 color: 'white',
-                fontSize: '14px',
+                fontSize: isTablet ? '18px' : (isVerySmallScreen ? '13px' : '14px'),
                 fontWeight: '700',
                 cursor: loading ? 'not-allowed' : 'pointer',
                 transition: 'all 0.25s ease',
@@ -690,8 +698,8 @@ const BaldForBaseConfirmationPopup = ({
                 }
               }}
             >
-              {loading 
-                ? '⏳ Calculating...' 
+              {loading
+                ? '⏳ Calculating...'
                 : isBatch && itemCount > 1
                   ? `Generate ${itemCount} Videos ⚡️`
                   : 'Generate Video ⚡️'
