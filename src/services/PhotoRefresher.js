@@ -2,7 +2,7 @@
  * Handles photo refresh using Sogni API - regenerates a single photo with its original prompt
  */
 
-import { styleIdToDisplay } from '../utils';
+import { styleIdToDisplay, normalizeSampler, normalizeScheduler } from '../utils';
 import { EDIT_MODEL_NEGATIVE_PROMPT_PREFIX } from '../constants/editPrompts';
 
 /**
@@ -238,8 +238,8 @@ export const refreshPhoto = async (options) => {
       steps: inferenceSteps,
       guidance: usesContextImages ? guidance : promptGuidance,
       numberOfMedia: 1, // Single image refresh
-      sampler,
-      scheduler,
+      sampler: normalizeSampler(sampler), // Normalize sampler to backend format
+      scheduler: normalizeScheduler(scheduler), // Normalize scheduler to backend format
       outputFormat: outputFormat || 'png',
       sensitiveContentFilter, // Adapters will convert to disableNSFWFilter for SDK
       sourceType: 'refresh', // Track refresh operations

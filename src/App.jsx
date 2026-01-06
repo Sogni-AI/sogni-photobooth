@@ -4,7 +4,7 @@ import { getModelOptions, defaultStylePrompts as initialStylePrompts, TIMEOUT_CO
 import { COPY_IMAGE_STYLE_PROMPT, EDIT_MODEL_TRANSFORMATION_PREFIX, EDIT_MODEL_NEGATIVE_PROMPT_PREFIX, stripTransformationPrefix } from './constants/editPrompts';
 import { photoThoughts, randomThoughts } from './constants/thoughts';
 import { saveSettingsToCookies, shouldShowPromoPopup, markPromoPopupShown, hasDoneDemoRender, markDemoRenderDone, clearSessionSettings } from './utils/cookies';
-import { styleIdToDisplay } from './utils';
+import { styleIdToDisplay, normalizeSampler, normalizeScheduler } from './utils';
 import { getCustomDimensions } from './utils/imageProcessing';
 import { generateGalleryFilename, getPortraitFolderWithFallback } from './utils/galleryLoader';
 import { goToPreviousPhoto, goToNextPhoto } from './utils/photoNavigation';
@@ -5237,7 +5237,7 @@ const App = () => {
       // Create project using context state for settings
       const usesContextImages = isContextImageModel(selectedModel);
       
-      const projectConfig = { 
+      const projectConfig = {
         type: 'image', // Required in SDK v4.x.x
         testnet: false,
         tokenType: walletTokenType, // Use selected payment method from wallet
@@ -5254,7 +5254,10 @@ const App = () => {
         numberOfMedia: numImages, // Use context state
         numberOfPreviews: authState.authMode === 'frontend' && usesContextImages ? 5 : 10, // Frontend context image models get 5 previews, backend gets 10
         // Only skip sampler and scheduler for Qwen Image Edit Lightning (server provides defaults)
-        ...(isQwenImageEditLightningModel(selectedModel) ? {} : { sampler, scheduler }),
+        ...(isQwenImageEditLightningModel(selectedModel) ? {} : {
+          sampler: normalizeSampler(sampler),
+          scheduler: normalizeScheduler(scheduler)
+        }),
         outputFormat: outputFormat, // Add output format setting
         sensitiveContentFilter: sensitiveContentFilter, // Adapters will convert to disableNSFWFilter for SDK
         sourceType: sourceType, // Add sourceType for analytics tracking

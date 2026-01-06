@@ -261,7 +261,7 @@ export function styleIdToDisplay(styleId: string): string {
     .replace(/([a-z])([A-Z])/g, '$1 $2')
     // Add space between letters and numbers
     .replace(/([a-zA-Z])(\d)/g, '$1 $2')
-    .replace(/(\d+)([a-zA-Z])/g, (match, numbers, letters) => {
+    .replace(/(\d+)([a-zA-Z])/g, (match: string, numbers: string, letters: string) => {
       // Don't separate common patterns like F1, 1990s, 90s, 70s, 3D, etc.
       const commonPatterns = /^(f1|1990s|90s|80s|70s|60s|50s|3d|2d|8k|4k|24x24|128x112)$/i;
       if (commonPatterns.test(numbers + letters)) {
@@ -309,4 +309,100 @@ export function getRandomMixPrompts(availableStyles: string[], prompts: Record<s
   }
 
   return `{${selectedPrompts.join('|')}}`;
+}
+
+// Valid backend sampler values (for validation)
+const VALID_BACKEND_SAMPLERS = [
+  'euler', 'euler_ancestral', 'heun', 'dpmpp_2m', 'dpmpp_2m_sde', 'dpmpp_sde',
+  'dpmpp_3m_sde', 'uni_pc', 'lcm', 'lms', 'dpm_2', 'dpm_2_ancestral', 'dpm_fast',
+  'dpm_adaptive', 'dpmpp_2s_ancestral', 'ddpm', 'ddim', 'uni_pc_bh2',
+  'res_multistep', 'res_multistep_cfg_pp'
+];
+
+// Valid backend scheduler values (for validation)
+const VALID_BACKEND_SCHEDULERS = [
+  'simple', 'normal', 'karras', 'exponential', 'sgm_uniform', 'ddim_uniform',
+  'beta', 'linear_quadratic', 'kl_optimal', 'ddim', 'leading', 'linear'
+];
+
+/**
+ * Normalize sampler name from UI format to backend format
+ * UI format: "DPM++ SDE" -> Backend format: "dpmpp_sde"
+ */
+export function normalizeSampler(sampler: string | undefined): string | undefined {
+  if (!sampler) return undefined;
+
+  const samplerMap: Record<string, string> = {
+    'Euler': 'euler',
+    'Euler a': 'euler_ancestral',
+    'Heun': 'heun',
+    'DPM++ 2M': 'dpmpp_2m',
+    'DPM++ 2M SDE': 'dpmpp_2m_sde',
+    'DPM++ SDE': 'dpmpp_sde',
+    'DPM++ 3M SDE': 'dpmpp_3m_sde',
+    'UniPC': 'uni_pc',
+    'LCM': 'lcm',
+    'LMS': 'lms',
+    'DPM 2': 'dpm_2',
+    'DPM 2 Ancestral': 'dpm_2_ancestral',
+    'DPM Fast': 'dpm_fast',
+    'DPM Adaptive': 'dpm_adaptive',
+    'DPM++ 2S Ancestral': 'dpmpp_2s_ancestral',
+    'DDPM': 'ddpm',
+    'DDIM': 'ddim',
+    'UniPC BH2': 'uni_pc_bh2',
+    'Res Multistep': 'res_multistep',
+    'Res Multistep CFG++': 'res_multistep_cfg_pp',
+  };
+
+  // Try exact match first
+  if (samplerMap[sampler]) {
+    return samplerMap[sampler];
+  }
+
+  // If already in valid backend format, return as-is
+  if (VALID_BACKEND_SAMPLERS.includes(sampler)) {
+    return sampler;
+  }
+
+  // Fallback: warn and return safe default
+  console.warn(`[NORMALIZE] Unknown sampler format: "${sampler}", falling back to 'dpmpp_sde'`);
+  return 'dpmpp_sde';
+}
+
+/**
+ * Normalize scheduler name from UI format to backend format
+ * UI format: "SGM Uniform" -> Backend format: "sgm_uniform"
+ */
+export function normalizeScheduler(scheduler: string | undefined): string | undefined {
+  if (!scheduler) return undefined;
+
+  const schedulerMap: Record<string, string> = {
+    'Karras': 'karras',
+    'Simple': 'simple',
+    'Normal': 'normal',
+    'SGM Uniform': 'sgm_uniform',
+    'Beta': 'beta',
+    'Linear': 'linear',
+    'Exponential': 'exponential',
+    'Linear Quadratic': 'linear_quadratic',
+    'Leading': 'leading',
+    'DDIM': 'ddim',
+    'DDIM Uniform': 'ddim_uniform',
+    'KL Optimal': 'kl_optimal',
+  };
+
+  // Try exact match first
+  if (schedulerMap[scheduler]) {
+    return schedulerMap[scheduler];
+  }
+
+  // If already in valid backend format, return as-is
+  if (VALID_BACKEND_SCHEDULERS.includes(scheduler)) {
+    return scheduler;
+  }
+
+  // Fallback: warn and return safe default
+  console.warn(`[NORMALIZE] Unknown scheduler format: "${scheduler}", falling back to 'karras'`);
+  return 'karras';
 } 
