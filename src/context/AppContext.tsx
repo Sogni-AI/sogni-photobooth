@@ -186,8 +186,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       controlNetStrength: getSettingFromCookie('controlNetStrength', DEFAULT_SETTINGS.controlNetStrength),
       controlNetGuidanceEnd: getSettingFromCookie('controlNetGuidanceEnd', DEFAULT_SETTINGS.controlNetGuidanceEnd),
       inferenceSteps: modelSettings.inferenceSteps || DEFAULT_SETTINGS.inferenceSteps,
+      sampler: modelSettings.sampler || DEFAULT_SETTINGS.sampler,
       scheduler: modelSettings.scheduler || DEFAULT_SETTINGS.scheduler,
-      timeStepSpacing: modelSettings.timeStepSpacing || DEFAULT_SETTINGS.timeStepSpacing,
       guidance: modelSettings.guidance || DEFAULT_SETTINGS.guidance,
       flashEnabled: getSettingFromCookie('flashEnabled', DEFAULT_SETTINGS.flashEnabled),
       keepOriginalPhoto: getSettingFromCookie('keepOriginalPhoto', DEFAULT_SETTINGS.keepOriginalPhoto),
@@ -275,7 +275,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const newSettings = { ...prev, [key]: value };
       
       // Save model-specific settings separately
-      const modelSpecificSettings = ['inferenceSteps', 'scheduler', 'timeStepSpacing', 'promptGuidance', 'guidance', 'numImages'];
+      const modelSpecificSettings = ['inferenceSteps', 'sampler', 'scheduler', 'promptGuidance', 'guidance', 'numImages'];
       if (modelSpecificSettings.includes(key)) {
         console.log(`📦 Saving model-specific setting ${String(key)}`);
         saveModelSpecificSettings(newSettings.selectedModel, { [key]: value });
@@ -355,8 +355,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ...pendingSettings, // Apply any pending updates from the current batch
       selectedModel: modelId,
       inferenceSteps: modelSettings.inferenceSteps ?? DEFAULT_SETTINGS.inferenceSteps,
+      sampler: modelSettings.sampler ?? DEFAULT_SETTINGS.sampler,
       scheduler: modelSettings.scheduler ?? DEFAULT_SETTINGS.scheduler,
-      timeStepSpacing: modelSettings.timeStepSpacing ?? DEFAULT_SETTINGS.timeStepSpacing,
       promptGuidance: modelSettings.promptGuidance ?? DEFAULT_SETTINGS.promptGuidance,
       guidance: modelSettings.guidance ?? DEFAULT_SETTINGS.guidance,
       numImages: modelSettings.numImages ?? DEFAULT_SETTINGS.numImages,
@@ -370,8 +370,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     
     console.log(`Final settings being applied:`, {
       inferenceSteps: newSettings.inferenceSteps,
+      sampler: newSettings.sampler,
       scheduler: newSettings.scheduler,
-      timeStepSpacing: newSettings.timeStepSpacing,
       promptGuidance: newSettings.promptGuidance,
       guidance: newSettings.guidance,
       numImages: newSettings.numImages,
@@ -391,8 +391,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (switchingModelTypes) {
       saveModelSpecificSettings(modelId, {
         inferenceSteps: modelSettings.inferenceSteps,
+        sampler: modelSettings.sampler,
         scheduler: modelSettings.scheduler,
-        timeStepSpacing: modelSettings.timeStepSpacing,
         promptGuidance: modelSettings.promptGuidance,
         guidance: modelSettings.guidance,
         numImages: modelSettings.numImages,
@@ -417,8 +417,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ...DEFAULT_SETTINGS,
       selectedModel: currentModel, // Keep the current model
       inferenceSteps: modelDefaults.inferenceSteps,
+      sampler: modelDefaults.sampler ?? DEFAULT_SETTINGS.sampler,
       scheduler: modelDefaults.scheduler ?? DEFAULT_SETTINGS.scheduler,
-      timeStepSpacing: modelDefaults.timeStepSpacing ?? DEFAULT_SETTINGS.timeStepSpacing,
       promptGuidance: modelDefaults.promptGuidance || DEFAULT_SETTINGS.promptGuidance,
       guidance: modelDefaults.guidance,
       numImages: modelDefaults.numImages,
@@ -429,8 +429,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // Save model-specific settings to their separate storage
     saveModelSpecificSettings(currentModel, {
       inferenceSteps: resetToDefaults.inferenceSteps,
+      sampler: resetToDefaults.sampler,
       scheduler: resetToDefaults.scheduler,
-      timeStepSpacing: resetToDefaults.timeStepSpacing,
       promptGuidance: resetToDefaults.promptGuidance,
       guidance: resetToDefaults.guidance,
       numImages: resetToDefaults.numImages,

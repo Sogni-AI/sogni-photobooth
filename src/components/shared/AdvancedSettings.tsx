@@ -69,14 +69,14 @@ interface AdvancedSettingsProps {
   inferenceSteps?: number;
   /** Handler for inference steps change */
   onInferenceStepsChange?: (value: number) => void;
-  /** Scheduler value */
+  /** Sampler value (sampling algorithm: euler, dpmpp_sde, etc.) */
+  sampler?: string;
+  /** Handler for sampler change */
+  onSamplerChange?: (value: string) => void;
+  /** Scheduler value (noise schedule: karras, simple, etc.) */
   scheduler?: string;
   /** Handler for scheduler change */
   onSchedulerChange?: (value: string) => void;
-  /** Time step spacing value */
-  timeStepSpacing?: string;
-  /** Handler for time step spacing change */
-  onTimeStepSpacingChange?: (value: string) => void;
   /** Flash enabled state */
   flashEnabled?: boolean;
   /** Handler for flash enabled change */
@@ -289,10 +289,10 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
     onControlNetGuidanceEndChange,
     inferenceSteps,
     onInferenceStepsChange,
+    sampler,
+    onSamplerChange,
     scheduler,
     onSchedulerChange,
-    timeStepSpacing,
-    onTimeStepSpacingChange,
     flashEnabled = true,
     onFlashEnabledChange,
     keepOriginalPhoto = false,
@@ -349,8 +349,8 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
   const finalControlNetStrength = controlNetStrength ?? modelDefaults.controlNetStrength ?? 0.7;
   const finalControlNetGuidanceEnd = controlNetGuidanceEnd ?? modelDefaults.controlNetGuidanceEnd ?? 0.6;
   const finalInferenceSteps = inferenceSteps ?? modelDefaults.inferenceSteps ?? 7;
-  const finalScheduler = scheduler ?? modelDefaults.scheduler ?? 'DPM++ SDE';
-  const finalTimeStepSpacing = timeStepSpacing ?? modelDefaults.timeStepSpacing ?? 'Karras';
+  const finalSampler = sampler ?? modelDefaults.sampler ?? 'DPM++ SDE';
+  const finalScheduler = scheduler ?? modelDefaults.scheduler ?? 'Karras';
 
   // Check if current model uses context images (Qwen, Flux) vs ControlNet (SDXL)
   const usesContextImages = isContextImageModel(currentModel);
@@ -829,6 +829,24 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
                   </div>
                 </div>
 
+                {/* Sampler selector - hidden for Qwen Image Edit 2511 Lightning (server provides defaults) */}
+                {!isQwenLightning && (
+                  <div className="advanced-control">
+                    <label className="advanced-label">Sampler:</label>
+                    <select
+                      className="advanced-select"
+                      onChange={(e) => onSamplerChange?.(e.target.value)}
+                      value={finalSampler}
+                    >
+                      {(modelRanges.samplerOptions || []).map((option) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
                 {/* Scheduler selector - hidden for Qwen Image Edit 2511 Lightning (server provides defaults) */}
                 {!isQwenLightning && (
                   <div className="advanced-control">
@@ -839,24 +857,6 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
                       value={finalScheduler}
                     >
                       {(modelRanges.schedulerOptions || []).map((option) => (
-                        <option key={option} value={option}>
-                          {option}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-
-                {/* Time Step Spacing selector - hidden for Qwen Image Edit 2511 Lightning (server provides defaults) */}
-                {!isQwenLightning && (
-                  <div className="advanced-control">
-                    <label className="advanced-label">Time Step Spacing:</label>
-                    <select
-                      className="advanced-select"
-                      onChange={(e) => onTimeStepSpacingChange?.(e.target.value)}
-                      value={finalTimeStepSpacing}
-                    >
-                      {(modelRanges.timeStepSpacingOptions || []).map((option) => (
                         <option key={option} value={option}>
                           {option}
                         </option>

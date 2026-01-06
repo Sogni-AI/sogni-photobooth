@@ -89,8 +89,8 @@ export interface Settings {
   controlNetStrength: number;
   controlNetGuidanceEnd: number;
   inferenceSteps: number;
+  sampler: string;
   scheduler: string;
-  timeStepSpacing: string;
   // Qwen Image Edit specific settings
   guidance: number;
   flashEnabled: boolean;

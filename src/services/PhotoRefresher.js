@@ -181,8 +181,8 @@ export const refreshPhoto = async (options) => {
       controlNetStrength, 
       controlNetGuidanceEnd,
       inferenceSteps, 
-      scheduler, 
-      timeStepSpacing,
+      sampler, 
+      scheduler,
       guidance,
       promptGuidance,
       stylePrompt,
@@ -238,8 +238,8 @@ export const refreshPhoto = async (options) => {
       steps: inferenceSteps,
       guidance: usesContextImages ? guidance : promptGuidance,
       numberOfMedia: 1, // Single image refresh
+      sampler,
       scheduler,
-      timeStepSpacing,
       outputFormat: outputFormat || 'png',
       sensitiveContentFilter, // Adapters will convert to disableNSFWFilter for SDK
       sourceType: 'refresh', // Track refresh operations

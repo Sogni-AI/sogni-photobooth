@@ -431,8 +431,8 @@ export async function generateImage(client, params, progressCallback, localProje
       guidance: params.promptGuidance || (isEnhancement ? 1 : 2),
       numberOfMedia: params.numberImages || 1,
       numberOfPreviews: isKreaUpscaling ? 0 : 10, // Disable previews for Krea upscaling
-      scheduler: params.scheduler || 'DPM++ SDE',
-      timeStepSpacing: params.timeStepSpacing || 'Karras',
+      sampler: params.sampler || 'DPM++ SDE',
+      scheduler: params.scheduler || 'Karras',
       // FORCE disable NSFW filter for Krea/Qwen Image Edit (not NSFW-aware), otherwise use user setting
       disableNSFWFilter: isNsfwUnawareModel ? true : (params.sensitiveContentFilter ? false : true),
       outputFormat: params.outputFormat || 'jpg',

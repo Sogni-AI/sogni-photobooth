@@ -177,10 +177,10 @@ export const getModelRanges = (modelValue: string, isLoggedInWithFrontendAuth: b
       // Steps min 4, max 8, default 5 (increased from 4 for better quality)
       inferenceSteps: { min: 4, max: 8, step: 1, default: 5 },
       numImages: { min: 1, max: maxImages, step: 1, default: defaultNumImages },
-      // Scheduler options based on sogni-socket comfySampler
-      schedulerOptions: ['Euler', 'Euler a', 'DPM++ 2M', 'DPM++ 2M SDE', 'DDIM', 'UniPC'],
-      // TimeStepSpacing options based on sogni-socket comfyScheduler
-      timeStepSpacingOptions: ['Simple', 'Normal', 'SGM Uniform', 'Beta'],
+      // Sampler options based on sogni-socket comfySampler
+      samplerOptions: ['Euler', 'Euler a', 'DPM++ 2M', 'DPM++ 2M SDE', 'DDIM', 'UniPC'],
+      // Scheduler options based on sogni-socket comfyScheduler
+      schedulerOptions: ['Simple', 'Normal', 'SGM Uniform', 'Beta'],
     };
   }
 
@@ -197,10 +197,10 @@ export const getModelRanges = (modelValue: string, isLoggedInWithFrontendAuth: b
       // Steps min 4, max 50, default 25 (increased from 20 for better quality)
       inferenceSteps: { min: 4, max: 50, step: 1, default: 25 },
       numImages: { min: 1, max: maxImages, step: 1, default: defaultNumImages },
-      // Scheduler options based on sogni-socket comfySampler
-      schedulerOptions: ['Euler', 'Euler a', 'DPM++ 2M', 'DPM++ 2M SDE', 'DDIM', 'UniPC'],
-      // TimeStepSpacing options based on sogni-socket comfyScheduler
-      timeStepSpacingOptions: ['Simple', 'Normal', 'SGM Uniform', 'Beta'],
+      // Sampler options based on sogni-socket comfySampler
+      samplerOptions: ['Euler', 'Euler a', 'DPM++ 2M', 'DPM++ 2M SDE', 'DDIM', 'UniPC'],
+      // Scheduler options based on sogni-socket comfyScheduler
+      schedulerOptions: ['Simple', 'Normal', 'SGM Uniform', 'Beta'],
     };
   }
 
@@ -217,10 +217,10 @@ export const getModelRanges = (modelValue: string, isLoggedInWithFrontendAuth: b
       // Based on sogni-socket modelTiers: steps min 20, max 35, default 25
       inferenceSteps: { min: 20, max: 35, step: 1, default: 25 },
       numImages: { min: 1, max: maxImages, step: 1, default: defaultNumImages },
-      // Scheduler options based on sogni-socket
-      schedulerOptions: ['Euler', 'Euler a', 'DPM++ 2M', 'DPM++ 2M SDE', 'DPM++ SDE'],
-      // TimeStepSpacing options based on sogni-socket
-      timeStepSpacingOptions: ['Simple', 'Karras', 'Linear', 'SGM Uniform', 'Beta', 'Normal', 'DDIM', 'KL Optimal'],
+      // Sampler options based on sogni-socket comfySampler
+      samplerOptions: ['Euler', 'Euler a', 'DPM++ 2M', 'DPM++ 2M SDE', 'DPM++ SDE'],
+      // Scheduler options based on sogni-socket comfyScheduler
+      schedulerOptions: ['Simple', 'Karras', 'Linear', 'SGM Uniform', 'Beta', 'Normal', 'DDIM', 'KL Optimal'],
     };
   }
 
@@ -237,10 +237,10 @@ export const getModelRanges = (modelValue: string, isLoggedInWithFrontendAuth: b
       // Steps min 20, max 50, default 25 (increased from 20 for better quality)
       inferenceSteps: { min: 20, max: 50, step: 1, default: 25 },
       numImages: { min: 1, max: maxImages, step: 1, default: defaultNumImages },
-      // Scheduler options based on sogni-socket comfySampler
-      schedulerOptions: ['Euler', 'Euler a', 'DPM++ 2M', 'DPM++ 2M SDE', 'DPM++ SDE', 'DDIM', 'UniPC', 'LCM'],
-      // TimeStepSpacing options - use similar to Flux.1 Kontext
-      timeStepSpacingOptions: ['Simple', 'Karras', 'Linear', 'SGM Uniform', 'Beta', 'Normal', 'DDIM'],
+      // Sampler options based on sogni-socket comfySampler
+      samplerOptions: ['Euler', 'Euler a', 'DPM++ 2M', 'DPM++ 2M SDE', 'DPM++ SDE', 'DDIM', 'UniPC', 'LCM'],
+      // Scheduler options based on sogni-socket comfyScheduler
+      schedulerOptions: ['Simple', 'Karras', 'Linear', 'SGM Uniform', 'Beta', 'Normal', 'DDIM'],
     };
   }
 
@@ -261,8 +261,8 @@ export const getModelRanges = (modelValue: string, isLoggedInWithFrontendAuth: b
     controlNetGuidanceEnd: { min: 0.2, max: 0.8, step: 0.1, default: 0.6 },
     inferenceSteps: { min: 4, max: 10, step: 1, default: 7 },
     numImages: { min: 1, max: maxImages, step: 1, default: defaultNumImages },
-    schedulerOptions: ['DPM++ SDE', 'DPM++ 2M SDE'],
-    timeStepSpacingOptions: ['Karras', 'SGM Uniform'],
+    samplerOptions: ['DPM++ SDE', 'DPM++ 2M SDE'],
+    schedulerOptions: ['Karras', 'SGM Uniform'],
   };
 };
 
@@ -270,48 +270,48 @@ export const getModelRanges = (modelValue: string, isLoggedInWithFrontendAuth: b
 export const getModelDefaults = (modelValue: string, isLoggedInWithFrontendAuth: boolean = false) => {
   const ranges = getModelRanges(modelValue, isLoggedInWithFrontendAuth);
 
-  // Qwen Image Edit Lightning - use server defaults for scheduler/timeStepSpacing
+  // Qwen Image Edit Lightning - use server defaults for sampler/scheduler
   if (isQwenImageEditLightningModel(modelValue)) {
     return {
       guidance: ranges.guidance.default,
       inferenceSteps: ranges.inferenceSteps.default,
-      // Note: scheduler and timeStepSpacing omitted for Lightning - server provides defaults
+      // Note: sampler and scheduler omitted for Lightning - server provides defaults
       numImages: ranges.numImages.default,
     };
   }
 
-  // Qwen Image Edit 2511 (standard) - include scheduler/timeStepSpacing defaults
+  // Qwen Image Edit 2511 (standard) - include sampler/scheduler defaults
   if (isQwenImageEditModel(modelValue)) {
     return {
       guidance: ranges.guidance.default,
       inferenceSteps: ranges.inferenceSteps.default,
       // Based on sogni-socket defaults: euler sampler, simple scheduler
-      scheduler: 'Euler',
-      timeStepSpacing: 'Simple',
+      sampler: 'Euler',
+      scheduler: 'Simple',
       numImages: ranges.numImages.default,
     };
   }
 
-  // Flux.1 Kontext - include scheduler/timeStepSpacing defaults
+  // Flux.1 Kontext - include sampler/scheduler defaults
   if (isFluxKontextModel(modelValue)) {
     return {
       guidance: ranges.guidance.default,
       inferenceSteps: ranges.inferenceSteps.default,
-      // Based on sogni-socket defaults: euler scheduler, simple timeStepSpacing
-      scheduler: 'Euler',
-      timeStepSpacing: 'Simple',
+      // Based on sogni-socket defaults: euler sampler, simple scheduler
+      sampler: 'Euler',
+      scheduler: 'Simple',
       numImages: ranges.numImages.default,
     };
   }
 
-  // Flux.2 [dev] - include scheduler/timeStepSpacing defaults
+  // Flux.2 [dev] - include sampler/scheduler defaults
   if (isFlux2DevModel(modelValue)) {
     return {
       guidance: ranges.guidance.default,
       inferenceSteps: ranges.inferenceSteps.default,
-      // Based on sogni-socket defaults: euler scheduler
-      scheduler: 'Euler',
-      timeStepSpacing: 'Simple',
+      // Based on sogni-socket defaults: euler sampler, simple scheduler
+      sampler: 'Euler',
+      scheduler: 'Simple',
       numImages: ranges.numImages.default,
     };
   }
@@ -323,8 +323,8 @@ export const getModelDefaults = (modelValue: string, isLoggedInWithFrontendAuth:
     controlNetStrength: ranges.controlNetStrength?.default || 0.7,
     controlNetGuidanceEnd: ranges.controlNetGuidanceEnd?.default || 0.6,
     inferenceSteps: ranges.inferenceSteps?.default || 7,
-    scheduler: 'DPM++ SDE',
-    timeStepSpacing: 'Karras',
+    sampler: 'DPM++ SDE',
+    scheduler: 'Karras',
     numImages: ranges.numImages?.default || 8,
   };
 };
@@ -357,8 +357,8 @@ const createDefaultSettings = (): Settings => {
     controlNetStrength: modelDefaults.controlNetStrength || 0.7,
     controlNetGuidanceEnd: modelDefaults.controlNetGuidanceEnd || 0.6,
     inferenceSteps: modelDefaults.inferenceSteps,
-    scheduler: modelDefaults.scheduler || 'DPM++ SDE',
-    timeStepSpacing: modelDefaults.timeStepSpacing || 'Karras',
+    sampler: modelDefaults.sampler || 'DPM++ SDE',
+    scheduler: modelDefaults.scheduler || 'Karras',
     // Qwen Image Edit specific settings
     guidance: modelDefaults.guidance || 3,
     flashEnabled: true,

@@ -199,7 +199,7 @@ export const enhancePhoto = async (options) => {
         sensitiveContentFilter: false, // HARDCODED: Context image edit models are not NSFW-aware, always disable filter
         contextImages: [new Uint8Array(arrayBuffer)], // Context image models use contextImages array
         sourceType: 'enhancement-context-image-edit', // Track context image enhancements separately
-        // Note: scheduler and timeStepSpacing omitted - server provides defaults for context image models
+        // Note: sampler and scheduler omitted - server provides defaults for context image models
       };
     } else {
       // Use Flux.1 Krea for standard enhancement

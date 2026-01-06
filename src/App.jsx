@@ -296,8 +296,8 @@ const App = () => {
     controlNetStrength, 
     controlNetGuidanceEnd, 
     inferenceSteps,
+    sampler,
     scheduler,
-    timeStepSpacing,
     guidance,
     flashEnabled, 
     keepOriginalPhoto,
@@ -5253,9 +5253,8 @@ const App = () => {
         guidance: usesContextImages ? guidance : promptGuidance, // Use guidance for context image models, promptGuidance for others
         numberOfMedia: numImages, // Use context state
         numberOfPreviews: authState.authMode === 'frontend' && usesContextImages ? 5 : 10, // Frontend context image models get 5 previews, backend gets 10
-        // Only skip scheduler and timeStepSpacing for Qwen Image Edit Lightning (server provides defaults)
-        // Other models use scheduler/timeStepSpacing normally
-        ...(isQwenImageEditLightningModel(selectedModel) ? {} : { scheduler: scheduler, timeStepSpacing: timeStepSpacing }),
+        // Only skip sampler and scheduler for Qwen Image Edit Lightning (server provides defaults)
+        ...(isQwenImageEditLightningModel(selectedModel) ? {} : { sampler, scheduler }),
         outputFormat: outputFormat, // Add output format setting
         sensitiveContentFilter: sensitiveContentFilter, // Adapters will convert to disableNSFWFilter for SDK
         sourceType: sourceType, // Add sourceType for analytics tracking
@@ -7633,13 +7632,13 @@ const App = () => {
             onInferenceStepsChange={(value) => {
               updateSetting('inferenceSteps', value);
             }}
+            sampler={sampler}
+            onSamplerChange={(value) => {
+              updateSetting('sampler', value);
+            }}
             scheduler={scheduler}
             onSchedulerChange={(value) => {
               updateSetting('scheduler', value);
-            }}
-            timeStepSpacing={timeStepSpacing}
-            onTimeStepSpacingChange={(value) => {
-              updateSetting('timeStepSpacing', value);
             }}
             flashEnabled={flashEnabled}
             onFlashEnabledChange={(value) => {
@@ -9713,8 +9712,8 @@ const App = () => {
           controlNetStrength={controlNetStrength}
           controlNetGuidanceEnd={controlNetGuidanceEnd}
           inferenceSteps={inferenceSteps}
+          sampler={sampler}
           scheduler={scheduler}
-          timeStepSpacing={timeStepSpacing}
           flashEnabled={flashEnabled}
           keepOriginalPhoto={keepOriginalPhoto}
           aspectRatio={aspectRatio}
@@ -9732,8 +9731,8 @@ const App = () => {
           // Remove incorrect setters, use updateSetting instead
           onControlNetGuidanceEndChange={(value) => updateSetting('controlNetGuidanceEnd', value)}
           onInferenceStepsChange={(value) => updateSetting('inferenceSteps', value)}
+          onSamplerChange={(value) => updateSetting('sampler', value)}
           onSchedulerChange={(value) => updateSetting('scheduler', value)}
-          onTimeStepSpacingChange={(value) => updateSetting('timeStepSpacing', value)}
           onFlashEnabledChange={(value) => updateSetting('flashEnabled', value)}
           onKeepOriginalPhotoChange={(value) => updateSetting('keepOriginalPhoto', value)}
           onAspectRatioChange={(value) => {

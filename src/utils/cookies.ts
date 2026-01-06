@@ -46,7 +46,7 @@ export function saveSettingsToCookies(settings: Partial<Settings>, isAuthenticat
 }
 
 // Model-specific settings management
-const MODEL_SPECIFIC_SETTINGS = ['inferenceSteps', 'scheduler', 'timeStepSpacing', 'promptGuidance', 'guidance', 'numImages'];
+const MODEL_SPECIFIC_SETTINGS = ['inferenceSteps', 'sampler', 'scheduler', 'promptGuidance', 'guidance', 'numImages'];
 
 export function getModelSpecificSetting<T>(modelId: string, settingName: string, defaultValue: T): T {
   try {
@@ -89,8 +89,8 @@ export function getSettingsForModel(modelId: string): Partial<Settings> {
   
   return {
     inferenceSteps: getModelSpecificSetting(modelId, 'inferenceSteps', modelDefaults.inferenceSteps),
+    sampler: getModelSpecificSetting(modelId, 'sampler', modelDefaults.sampler),
     scheduler: getModelSpecificSetting(modelId, 'scheduler', modelDefaults.scheduler),
-    timeStepSpacing: getModelSpecificSetting(modelId, 'timeStepSpacing', modelDefaults.timeStepSpacing),
     promptGuidance: usesContextImages 
       ? getSettingFromCookie('promptGuidance', 2) // Use global for SDXL setting
       : getModelSpecificSetting(modelId, 'promptGuidance', modelDefaults.promptGuidance || 2),

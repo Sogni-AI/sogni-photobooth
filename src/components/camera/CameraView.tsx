@@ -61,14 +61,14 @@ interface CameraViewProps {
   inferenceSteps?: number;
   /** Handler for inference steps change */
   onInferenceStepsChange?: (value: number) => void;
-  /** Scheduler value */
+  /** Sampler value (sampling algorithm: euler, dpmpp_sde, etc.) */
+  sampler?: string;
+  /** Handler for sampler change */
+  onSamplerChange?: (value: string) => void;
+  /** Scheduler value (noise schedule: karras, simple, etc.) */
   scheduler?: string;
   /** Handler for scheduler change */
   onSchedulerChange?: (value: string) => void;
-  /** Time step spacing value */
-  timeStepSpacing?: string;
-  /** Handler for time step spacing change */
-  onTimeStepSpacingChange?: (value: string) => void;
   /** Flash enabled state */
   flashEnabled?: boolean;
   /** Handler for flash enabled change */
@@ -137,10 +137,10 @@ export const CameraView: React.FC<CameraViewProps> = (props) => {
     onControlNetGuidanceEndChange,
     inferenceSteps = modelDefaults.inferenceSteps || 7,
     onInferenceStepsChange,
-    scheduler = modelDefaults.scheduler || 'DPM++ SDE',
+    sampler = modelDefaults.sampler || 'DPM++ SDE',
+    onSamplerChange,
+    scheduler = modelDefaults.scheduler || 'Karras',
     onSchedulerChange,
-    timeStepSpacing = modelDefaults.timeStepSpacing || 'Karras',
-    onTimeStepSpacingChange,
     flashEnabled = true,
     onFlashEnabledChange,
     keepOriginalPhoto = false,
@@ -661,10 +661,10 @@ export const CameraView: React.FC<CameraViewProps> = (props) => {
         onControlNetGuidanceEndChange={onControlNetGuidanceEndChange}
         inferenceSteps={inferenceSteps}
         onInferenceStepsChange={onInferenceStepsChange}
+        sampler={sampler}
+        onSamplerChange={onSamplerChange}
         scheduler={scheduler}
         onSchedulerChange={onSchedulerChange}
-        timeStepSpacing={timeStepSpacing}
-        onTimeStepSpacingChange={onTimeStepSpacingChange}
         flashEnabled={flashEnabled}
         onFlashEnabledChange={onFlashEnabledChange}
         keepOriginalPhoto={keepOriginalPhoto}

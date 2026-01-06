@@ -659,8 +659,8 @@ async function handleImageConversionWithStyle(imageUrl, imageSize, styleKey, sty
       height: 1024,
       // SDXL Turbo optimized settings
       promptGuidance: 2.0,
-      scheduler: 'DPM++ SDE',
-      timeStepSpacing: 'Karras',
+      sampler: 'DPM++ SDE',
+      scheduler: 'Karras',
       inferenceSteps: 7,
       controlNetStrength: 0.7,
       controlNetGuidanceEnd: 0.6
@@ -770,8 +770,8 @@ async function handleImageConversion(imageUrl, imageSize) {
       inferenceSteps: 7, // Backend expects inferenceSteps
       promptGuidance: 2, // Backend expects promptGuidance
       numberImages: 1, // Backend expects numberImages
-      scheduler: 'DPM++ SDE',
-      timeStepSpacing: 'Karras',
+      sampler: 'DPM++ SDE',
+      scheduler: 'Karras',
       outputFormat: 'jpg',
       sensitiveContentFilter: false,
       sourceType: 'upload', // Use upload instead of enhancement to avoid session conflicts
