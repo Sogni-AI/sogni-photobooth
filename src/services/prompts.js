@@ -1,12 +1,15 @@
 import promptsDataRaw from '../prompts.json';
+import { IMAGE_EDIT_PROMPTS_CATEGORY } from '../constants/editPrompts';
+import { isContextImageModel } from '../constants/settings';
 
 // Extract prompts from the new nested structure
 const promptsData = {};
 Object.values(promptsDataRaw).forEach(themeGroup => {
   Object.assign(promptsData, themeGroup.prompts);
 });
-import { FLUX_KONTEXT_PROMPTS } from '../constants/fluxPrompts';
-import { isFluxKontextModel } from '../constants/settings';
+
+// Get edit prompts from the image-edit-prompts category
+const editPromptsData = promptsDataRaw[IMAGE_EDIT_PROMPTS_CATEGORY]?.prompts || {};
 
 /**
  * Loads style prompts from various sources.
@@ -58,31 +61,23 @@ export const loadPrompts = () => {
 
 /**
  * Initializes and returns an object with all available style prompts.
- * @param {string} modelId - The current model ID to determine which prompts to use
+ * Now returns all prompts (including edit prompts) for all models.
+ * UI components handle filtering based on model type.
+ * @param {string} modelId - The current model ID (optional, kept for backwards compatibility)
  */
 export const initializeStylePrompts = async (modelId = null) => {
   try {
-    let prompts;
+    // Load all prompts (includes edit prompts now)
+    const prompts = await loadPrompts();
     
-    // Use Flux.1 Kontext specific prompts if the model is Flux.1 Kontext
-    if (modelId && isFluxKontextModel(modelId)) {
-      prompts = FLUX_KONTEXT_PROMPTS;
-      console.log('Using Flux.1 Kontext specific prompts');
-    } else {
-      // Use regular prompts for other models
-      prompts = await loadPrompts();
-      
-      if (Object.keys(prompts).length === 0) {
-        console.warn('No prompts loaded, using default empty prompt');
-        return { custom: '' };
-      }
+    if (Object.keys(prompts).length === 0) {
+      console.warn('No prompts loaded, using default empty prompt');
+      return { custom: '' };
     }
     
     // Create sorted object with custom first
-    // For Flux Kontext, custom and copyImageStyle are already in prompts
-    const hasCustom = 'custom' in prompts;
     const stylePrompts = {
-      ...(hasCustom ? {} : { custom: '' }), // Only add custom if not already in prompts
+      custom: '', // Always include custom option
       ...Object.fromEntries(
         Object.entries(prompts)
           .sort(([keyA], [keyB]) => keyA.localeCompare(keyB))
@@ -93,6 +88,9 @@ export const initializeStylePrompts = async (modelId = null) => {
     stylePrompts.random = 'RANDOM_SINGLE_STYLE';
     
     console.log('Prompts loaded successfully:', Object.keys(stylePrompts).length);
+    if (modelId && isContextImageModel(modelId)) {
+      console.log('Context image model detected - edit prompts available');
+    }
     
     // Expose to window for debugging
     if (typeof window !== 'undefined') {
@@ -177,4 +175,25 @@ export const getRandomMixPrompts = (count, stylePrompts) => {
   }
   
   return `{${selectedPrompts.join('|')}}`;
+};
+
+/**
+ * Get the list of edit prompt keys from the image-edit-prompts category
+ */
+export const getEditPromptKeys = () => {
+  return Object.keys(editPromptsData);
+};
+
+/**
+ * Check if a prompt key is an edit prompt
+ */
+export const isEditPrompt = (promptKey) => {
+  return promptKey in editPromptsData;
+};
+
+/**
+ * Get all edit prompts as an object
+ */
+export const getEditPrompts = () => {
+  return { ...editPromptsData };
 }; 

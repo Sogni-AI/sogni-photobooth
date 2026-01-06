@@ -1,9 +1,11 @@
 import React, { useRef, useEffect, useState } from 'react';
 import ReactDOM from 'react-dom';
 import { styleIdToDisplay } from '../../utils';
-import { THEME_GROUPS, getDefaultThemeGroupState, getEnabledPrompts } from '../../constants/themeGroups';
+import { THEME_GROUPS, getDefaultThemeGroupState, getEnabledPrompts, getOrderedThemeGroupIds, isImageEditPromptsCategory } from '../../constants/themeGroups';
 import { getThemeGroupPreferences, saveThemeGroupPreferences, getFavoriteImages } from '../../utils/cookies';
-import { isFluxKontextModel } from '../../constants/settings';
+import { isContextImageModel } from '../../constants/settings';
+import { IMAGE_EDIT_PROMPTS_CATEGORY } from '../../constants/editPrompts';
+import { isEditPrompt } from '../../services/prompts';
 import { generateGalleryFilename, getPortraitFolderWithFallback } from '../../utils/galleryLoader';
 import CustomPromptPopup, { CUSTOM_PROMPT_IMAGE_KEY } from './CustomPromptPopup';
 import urls from '../../config/urls';
@@ -13,12 +15,12 @@ import PropTypes from 'prop-types';
 import { getAttributionText } from '../../config/ugcAttributions';
 
 // StyleDropdown component that uses portals to render outside the DOM hierarchy
-const StyleDropdown = ({ 
-  isOpen, 
-  onClose, 
-  selectedStyle, 
-  updateStyle, 
-  defaultStylePrompts, 
+const StyleDropdown = ({
+  isOpen,
+  onClose,
+  selectedStyle,
+  updateStyle,
+  defaultStylePrompts,
   setShowControlOverlay: _setShowControlOverlay, // eslint-disable-line no-unused-vars
   dropdownPosition = 'top', // Default value
   triggerButtonClass = '.bottom-style-select', // Default class for the main toolbar
@@ -33,7 +35,9 @@ const StyleDropdown = ({
   styleReferenceImage = null, // Style reference image for Copy Image Style mode
   onEditStyleReference = null, // Callback to edit existing style reference
   onNavigateToVibeExplorer = null, // Callback to navigate to full Vibe Explorer
-  slideInPanel = false // Whether to render as a full-height slide-in panel
+  slideInPanel = false, // Whether to render as a full-height slide-in panel
+  onCopyImageStyle = null, // Callback for Copy Image Style action
+  showToast = null // Callback to show toast messages
 }) => {
   const [position, setPosition] = useState({ top: 0, left: 0, width: 0 });
   const [mounted, setMounted] = useState(false);
@@ -61,6 +65,16 @@ const StyleDropdown = ({
   const [showSearchInput, setShowSearchInput] = useState(false);
   const [customPromptImage, setCustomPromptImage] = useState(null);
   const [favoritesCount, setFavoritesCount] = useState(0);
+  
+  // Reload theme state when model changes (to reflect auto-toggle of Image Edit Styles)
+  useEffect(() => {
+    if (isOpen) {
+      const saved = getThemeGroupPreferences();
+      const defaultState = getDefaultThemeGroupState();
+      const newThemeState = { ...defaultState, ...saved };
+      setThemeGroupState(newThemeState);
+    }
+  }, [isOpen, selectedModel]);
   
   // Handle slide-in panel closing animation
   const handleClose = () => {
@@ -277,9 +291,16 @@ const StyleDropdown = ({
   };
 
   // Handle Select All themes
+  // Note: Does NOT select image-edit-prompts when non-edit model is selected
   const handleSelectAllThemes = () => {
     const allSelected = Object.fromEntries(
-      Object.keys(THEME_GROUPS).map(groupId => [groupId, true])
+      Object.keys(THEME_GROUPS).map(groupId => {
+        // Don't select image-edit-prompts if not using an edit model
+        if (isImageEditPromptsCategory(groupId) && !usesContextImages) {
+          return [groupId, false];
+        }
+        return [groupId, true];
+      })
     );
     setThemeGroupState(allSelected);
     saveThemeGroupPreferences(allSelected);
@@ -311,8 +332,8 @@ const StyleDropdown = ({
     }
   };
 
-  // Check if we're using Flux.1 Kontext
-  const isFluxKontext = selectedModel && isFluxKontextModel(selectedModel);
+  // Check if we're using a context image model (Qwen, Flux)
+  const usesContextImages = selectedModel && isContextImageModel(selectedModel);
 
   // Load custom prompt image and favorites count from localStorage
   useEffect(() => {
@@ -377,12 +398,12 @@ const StyleDropdown = ({
             }}
           >
       
-      {/* Browse Vibe Explorer - First item */}
-      {onNavigateToVibeExplorer && !isFluxKontext && (
+      {/* Browse Vibe Explorer - First item (shown for all models) */}
+      {onNavigateToVibeExplorer && (
         <div className="style-section featured">
-          <div 
+          <div
             className="style-option browse-vibe-explorer"
-            onClick={() => { 
+            onClick={() => {
               if (slideInPanel) {
                 // For slide-in panel: close with animation first, then navigate
                 handleClose();
@@ -406,8 +427,8 @@ const StyleDropdown = ({
       {/* Model Selector - Collapsible */}
       {onModelSelect && selectedModel && (
         <div className="style-section model-selector">
-            <div 
-              className="section-header collapsible" 
+            <div
+              className="section-header collapsible"
               style={{ color: '#333' }}
               onClick={() => setIsModelSectionOpen(!isModelSectionOpen)}
               onKeyDown={(e) => {
@@ -424,25 +445,57 @@ const StyleDropdown = ({
             </div>
             {isModelSectionOpen && (
               <div className="collapsible-content">
-                <div className="model-button-bar">
-                  <button
-                    className={`model-btn ${selectedModel === 'coreml-sogniXLturbo_alpha1_ad' ? 'active' : ''}`}
+                <div className="model-list-vertical">
+                  <div
+                    className={`model-option ${selectedModel === 'coreml-sogniXLturbo_alpha1_ad' ? 'selected' : ''}`}
                     onClick={() => {
                       console.log('StyleDropdown: Model changed to SOGNI.XLT');
                       onModelSelect('coreml-sogniXLturbo_alpha1_ad');
                     }}
                   >
-                    Default (Fast)
-                  </button>
-                  <button
-                    className={`model-btn ${selectedModel === 'flux1-dev-kontext_fp8_scaled' ? 'active' : ''}`}
+                    <span className="model-radio">{selectedModel === 'coreml-sogniXLturbo_alpha1_ad' ? '●' : '○'}</span>
+                    <span>Default (Fast)</span>
+                  </div>
+                  <div
+                    className={`model-option ${selectedModel === 'qwen_image_edit_2511_fp8_lightning' ? 'selected' : ''}`}
                     onClick={() => {
-                      console.log('StyleDropdown: Model changed to Flux Kontext');
+                      console.log('StyleDropdown: Model changed to Qwen Image Edit 2511 Lightning');
+                      onModelSelect('qwen_image_edit_2511_fp8_lightning');
+                    }}
+                  >
+                    <span className="model-radio">{selectedModel === 'qwen_image_edit_2511_fp8_lightning' ? '●' : '○'}</span>
+                    <span>✏️ Qwen Image Edit Lightning</span>
+                  </div>
+                  <div
+                    className={`model-option ${selectedModel === 'qwen_image_edit_2511_fp8' ? 'selected' : ''}`}
+                    onClick={() => {
+                      console.log('StyleDropdown: Model changed to Qwen Image Edit 2511');
+                      onModelSelect('qwen_image_edit_2511_fp8');
+                    }}
+                  >
+                    <span className="model-radio">{selectedModel === 'qwen_image_edit_2511_fp8' ? '●' : '○'}</span>
+                    <span>✏️ Qwen Image Edit 2511</span>
+                  </div>
+                  <div
+                    className={`model-option ${selectedModel === 'flux1-dev-kontext_fp8_scaled' ? 'selected' : ''}`}
+                    onClick={() => {
+                      console.log('StyleDropdown: Model changed to Flux.1 Kontext');
                       onModelSelect('flux1-dev-kontext_fp8_scaled');
                     }}
                   >
-                    Flux Kontext
-                  </button>
+                    <span className="model-radio">{selectedModel === 'flux1-dev-kontext_fp8_scaled' ? '●' : '○'}</span>
+                    <span>✏️ Flux.1 Kontext</span>
+                  </div>
+                  <div
+                    className={`model-option ${selectedModel === 'flux2_dev_fp8' ? 'selected' : ''}`}
+                    onClick={() => {
+                      console.log('StyleDropdown: Model changed to Flux.2 [dev]');
+                      onModelSelect('flux2_dev_fp8');
+                    }}
+                  >
+                    <span className="model-radio">{selectedModel === 'flux2_dev_fp8' ? '●' : '○'}</span>
+                    <span>✏️ Flux.2 [dev]</span>
+                  </div>
                 </div>
               </div>
             )}
@@ -450,7 +503,7 @@ const StyleDropdown = ({
       )}
       
       {/* Only show separator if Model Selector was shown OR Browse Vibe Explorer was shown */}
-      {((onModelSelect && selectedModel) || (onNavigateToVibeExplorer && !isFluxKontext)) && (
+      {((onModelSelect && selectedModel) || onNavigateToVibeExplorer) && (
         <div className="style-section-divider"></div>
       )}
       
@@ -523,13 +576,13 @@ const StyleDropdown = ({
       </div>
 
       {/* Browse Gallery and Copy Image Style */}
-      {((!isFluxKontext && onGallerySelect) || isFluxKontext) && (
+      {(onGallerySelect || onCopyImageStyle) && (
         <>
           <div className="style-section-divider"></div>
           <div className="style-section other-options">
-            {/* Browse Gallery option - only show for non-Flux models */}
-            {!isFluxKontext && onGallerySelect && (
-              <div 
+            {/* Browse Gallery option - only show for SDXL models (not context image models) */}
+            {!usesContextImages && onGallerySelect && (
+              <div
                 className={`style-option ${selectedStyle === 'browseGallery' ? 'selected' : ''}`}
                 onClick={() => handleStyleSelect('browseGallery', onGallerySelect)}
               >
@@ -537,98 +590,144 @@ const StyleDropdown = ({
                 <span>Browse Gallery</span>
               </div>
             )}
-            
-            {/* Copy Image Style option - only show when Flux Kontext is selected (disabled/coming soon) */}
-            {isFluxKontext && (
-              <div 
-                className="style-option disabled" 
-                title="Coming soon"
+
+            {/* Copy Image Style option - enabled for edit models, switches model for non-edit */}
+            {onCopyImageStyle && (
+              <div
+                className={`style-option ${selectedStyle === 'copyImageStyle' ? 'selected' : ''}`}
+                onClick={() => {
+                  if (usesContextImages) {
+                    // Edit model selected - proceed with Copy Image Style
+                    handleStyleSelect('copyImageStyle', onCopyImageStyle);
+                  } else {
+                    // Switch to edit model first, then proceed
+                    if (onModelSelect) {
+                      onModelSelect('qwen_image_edit_2511_fp8_lightning');
+                      if (showToast) {
+                        showToast({
+                          message: 'Switched to Qwen Image Edit Lightning for Copy Image Style',
+                          type: 'info'
+                        });
+                      }
+                    }
+                    handleStyleSelect('copyImageStyle', onCopyImageStyle);
+                  }
+                }}
               >
+                {/* Show circular preview thumbnail if style reference exists */}
+                {styleReferenceImage?.dataUrl && (
+                  <img
+                    src={styleReferenceImage.dataUrl}
+                    alt="Style reference"
+                    className="style-option-preview"
+                    style={{ borderRadius: '50%' }}
+                  />
+                )}
                 <span>🎨</span>
                 <span>Copy Image Style</span>
-                <span style={{ fontSize: '10px', opacity: 0.6, marginLeft: 'auto' }}>(Coming soon)</span>
+                {!usesContextImages && (
+                  <span style={{ fontSize: '10px', opacity: 0.7, marginLeft: 'auto' }}>
+                    (switches model)
+                  </span>
+                )}
               </div>
             )}
           </div>
         </>
       )}
       
-      {/* Themes Section - Collapsible, only show for non-Flux models */}
-      {!isFluxKontext && (
-        <>
-          <div className="style-section-divider"></div>
-          <div className="style-section themes">
-            <div 
-              className="section-header collapsible"
-              onClick={() => setIsThemesSectionOpen(!isThemesSectionOpen)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  setIsThemesSectionOpen(!isThemesSectionOpen);
-                }
-              }}
-              role="button"
-              tabIndex={0}
-            >
-              <span>🎨 Theme Packs</span>
-              <div className="section-header-controls">
-                {isThemesSectionOpen && (
-                  <>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleSelectAllThemes();
-                      }}
-                      className="header-control-btn"
-                      title="Select all themes"
-                    >
-                      ALL
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeselectAllThemes();
-                      }}
-                      className="header-control-btn"
-                      title="Deselect all themes"
-                    >
-                      NONE
-                    </button>
-                  </>
-                )}
-                <span className="collapse-arrow">{isThemesSectionOpen ? '▼' : '▶'}</span>
-              </div>
+      {/* Themes Section - Collapsible, shown for all models */}
+      <>
+        <div className="style-section-divider"></div>
+        <div className="style-section themes">
+          <div
+            className="section-header collapsible"
+            onClick={() => setIsThemesSectionOpen(!isThemesSectionOpen)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                setIsThemesSectionOpen(!isThemesSectionOpen);
+              }
+            }}
+            role="button"
+            tabIndex={0}
+          >
+            <span>🎨 Theme Packs</span>
+            <div className="section-header-controls">
+              {isThemesSectionOpen && (
+                <>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleSelectAllThemes();
+                    }}
+                    className="header-control-btn"
+                    title="Select all themes"
+                  >
+                    ALL
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeselectAllThemes();
+                    }}
+                    className="header-control-btn"
+                    title="Deselect all themes"
+                  >
+                    NONE
+                  </button>
+                </>
+              )}
+              <span className="collapse-arrow">{isThemesSectionOpen ? '▼' : '▶'}</span>
             </div>
-            
-            {isThemesSectionOpen && (
-              <div className="collapsible-content">
-                <div className="theme-groups">
-                  {Object.entries(THEME_GROUPS).map(([groupId, group]) => {
-                    // For favorites, use the dynamic count from localStorage
-                    const displayCount = groupId === 'favorites' ? favoritesCount : group.prompts.length;
-                    return (
-                      <div key={groupId} className="theme-group">
-                        <label className="theme-group-label">
-                          <input
-                            type="checkbox"
-                            checked={themeGroupState[groupId]}
-                            onChange={() => handleThemeGroupToggle(groupId)}
-                            className="theme-group-checkbox"
-                          />
-                          <span className="theme-group-name">{group.name}</span>
-                          <span className="theme-group-count">({displayCount})</span>
-                        </label>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
           </div>
 
-          <div className="style-section-divider"></div>
-        </>
-      )}
+          {isThemesSectionOpen && (
+            <div className="collapsible-content">
+              <div className="theme-groups">
+                {getOrderedThemeGroupIds().map((groupId) => {
+                  const group = THEME_GROUPS[groupId];
+                  // For favorites, use the dynamic count from localStorage
+                  const displayCount = groupId === 'favorites' ? favoritesCount : group.prompts.length;
+                  // Check if this is the image-edit-prompts category
+                  const isEditCategory = isImageEditPromptsCategory(groupId);
+                  // Disable image-edit-prompts if not using edit model
+                  const isDisabled = isEditCategory && !usesContextImages;
+
+                  return (
+                    <div
+                      key={groupId}
+                      className={`theme-group ${isDisabled ? 'disabled' : ''}`}
+                      title={isDisabled ? 'Switch to an Edit Model to use these prompts' : ''}
+                    >
+                      <label className={`theme-group-label ${isDisabled ? 'disabled' : ''}`}>
+                        <input
+                          type="checkbox"
+                          checked={themeGroupState[groupId]}
+                          onChange={() => {
+                            if (!isDisabled) {
+                              handleThemeGroupToggle(groupId);
+                            }
+                          }}
+                          disabled={isDisabled}
+                          className="theme-group-checkbox"
+                        />
+                        <span className="theme-group-name">
+                          {isEditCategory && <span style={{ marginRight: '4px' }}>✏️</span>}
+                          {group.name}
+                        </span>
+                        <span className="theme-group-count">({displayCount})</span>
+                      </label>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="style-section-divider"></div>
+      </>
 
       {/* Individual Styles Section - Collapsible */}
       <div className="style-section individual-styles">
@@ -703,14 +802,12 @@ const StyleDropdown = ({
               {Object.keys(defaultStylePrompts)
           .filter(key => key !== 'random' && key !== 'custom' && key !== 'randomMix' && key !== 'oneOfEach' && key !== 'copyImageStyle')
           .filter(key => {
-            // Apply theme pack filter (only for non-Flux models)
-            if (!isFluxKontext) {
-              const enabledPrompts = getEnabledPrompts(themeGroupState, defaultStylePrompts);
-              // If no themes are selected or all are deselected, show all styles
-              const hasAnyThemeEnabled = Object.values(themeGroupState).some(enabled => enabled);
-              if (hasAnyThemeEnabled && !enabledPrompts[key]) {
-                return false;
-              }
+            // Apply theme pack filter
+            const enabledPrompts = getEnabledPrompts(themeGroupState, defaultStylePrompts);
+            // If no themes are selected or all are deselected, show all styles
+            const hasAnyThemeEnabled = Object.values(themeGroupState).some(enabled => enabled);
+            if (hasAnyThemeEnabled && !enabledPrompts[key]) {
+              return false;
             }
             return true;
           })
@@ -721,24 +818,35 @@ const StyleDropdown = ({
             return displayName.includes(searchQuery.toLowerCase());
           })
           .sort((a, b) => {
+            // Sort edit prompts first when using edit model
+            const isEditA = isEditPrompt(a);
+            const isEditB = isEditPrompt(b);
+
+            // Edit prompts come first (only when edit model is selected)
+            if (usesContextImages) {
+              if (isEditA && !isEditB) return -1;
+              if (!isEditA && isEditB) return 1;
+            }
+
             const displayA = styleIdToDisplay(a);
             const displayB = styleIdToDisplay(b);
-            
+
             // Check if the first character of each display label is alphanumeric
             const isAlphanumericA = /^[a-zA-Z0-9]/.test(displayA);
             const isAlphanumericB = /^[a-zA-Z0-9]/.test(displayB);
-            
+
             // If one starts with non-alphanumeric and the other doesn't, prioritize the non-alphanumeric
             if (!isAlphanumericA && isAlphanumericB) return -1;
             if (isAlphanumericA && !isAlphanumericB) return 1;
-            
+
             // If both are the same type (both alphanumeric or both non-alphanumeric), sort alphabetically
             return displayA.localeCompare(displayB);
           })
           .map(styleKey => {
             // Generate preview image path for this style
             let previewImagePath = null;
-            
+            const isEditStyle = isEditPrompt(styleKey);
+
             // Special handling for Copy Image Style - use uploaded reference image
             if (styleKey === 'copyImageStyle' && styleReferenceImage?.dataUrl) {
               previewImagePath = styleReferenceImage.dataUrl;
@@ -752,11 +860,11 @@ const StyleDropdown = ({
                 previewImagePath = null;
               }
             }
-            
+
             return (
-              <div 
+              <div
                 key={styleKey}
-                className={`style-option ${selectedStyle === styleKey ? 'selected' : ''}`} 
+                className={`style-option ${selectedStyle === styleKey ? 'selected' : ''} ${isEditStyle ? 'edit-style' : ''}`}
                 onClick={() => {
                   // Special handling for copyImageStyle - allow clicking when selected to edit
                   if (styleKey === 'copyImageStyle' && selectedStyle === 'copyImageStyle' && onEditStyleReference) {
@@ -767,8 +875,8 @@ const StyleDropdown = ({
                 }}
               >
                 {previewImagePath && (
-                  <img 
-                    src={previewImagePath} 
+                  <img
+                    src={previewImagePath}
                     alt={styleIdToDisplay(styleKey)}
                     className="style-option-preview"
                     onError={(e) => {
@@ -778,7 +886,10 @@ const StyleDropdown = ({
                   />
                 )}
                 <span style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                  <span>{styleIdToDisplay(styleKey)}</span>
+                  <span>
+                    {isEditStyle && <span style={{ marginRight: '4px' }}>✏️</span>}
+                    {styleIdToDisplay(styleKey)}
+                  </span>
                   {/* UGC Attribution */}
                   {getAttributionText(styleKey) && (
                     <span style={{
@@ -847,7 +958,9 @@ StyleDropdown.propTypes = {
   styleReferenceImage: PropTypes.object,
   onEditStyleReference: PropTypes.func,
   onNavigateToVibeExplorer: PropTypes.func,
-  slideInPanel: PropTypes.bool
+  slideInPanel: PropTypes.bool,
+  onCopyImageStyle: PropTypes.func,
+  showToast: PropTypes.func
 };
 
 export default StyleDropdown; 

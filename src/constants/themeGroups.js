@@ -1,5 +1,6 @@
 // Theme groups for organizing style prompts - now sourced from consolidated prompts.json
 import promptsData from '../prompts.json';
+import { IMAGE_EDIT_PROMPTS_CATEGORY } from './editPrompts';
 
 // Convert the new structure to the old THEME_GROUPS format for compatibility
 export const THEME_GROUPS = {};
@@ -12,12 +13,27 @@ Object.entries(promptsData).forEach(([groupId, group]) => {
   };
 });
 
-// Default state - favorites and horror start unchecked, all other groups enabled
+// Helper to check if a theme group is the image edit prompts category
+export const isImageEditPromptsCategory = (groupId) => {
+  return groupId === IMAGE_EDIT_PROMPTS_CATEGORY;
+};
+
+// Get ordered theme group IDs with image-edit-prompts right after favorites
+export const getOrderedThemeGroupIds = () => {
+  const ids = Object.keys(THEME_GROUPS);
+  // Ensure favorites is first, then image-edit-prompts, then rest alphabetically
+  const favorites = ids.filter(id => id === 'favorites');
+  const imageEdit = ids.filter(id => id === IMAGE_EDIT_PROMPTS_CATEGORY);
+  const rest = ids.filter(id => id !== 'favorites' && id !== IMAGE_EDIT_PROMPTS_CATEGORY);
+  return [...favorites, ...imageEdit, ...rest];
+};
+
+// Default state - favorites, horror, and image-edit-prompts start unchecked, all other groups enabled
 export const getDefaultThemeGroupState = () => {
   const defaultState = {};
   Object.keys(THEME_GROUPS).forEach(groupId => {
-    // Favorites and horror start unchecked, all other groups start enabled
-    defaultState[groupId] = (groupId === 'favorites' || groupId === 'horror') ? false : true;
+    // Favorites, horror, and image-edit-prompts start unchecked, all other groups start enabled
+    defaultState[groupId] = (groupId === 'favorites' || groupId === 'horror' || groupId === IMAGE_EDIT_PROMPTS_CATEGORY) ? false : true;
   });
   return defaultState;
 };

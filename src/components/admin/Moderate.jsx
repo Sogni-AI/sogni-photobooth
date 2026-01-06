@@ -431,7 +431,7 @@ const Moderate = () => {
                     </div>
                     {entry.metadata?.model && (
                       <div className="entry-model">
-                        <strong>Model:</strong> {entry.metadata.model.replace('coreml-', '').replace('flux1-dev-kontext_fp8_scaled', 'Flux.1 Kontext')}
+                        <strong>Model:</strong> {entry.metadata.model.replace('coreml-', '').replace('qwen_image_edit_2511_fp8_lightning', 'Qwen Image Edit 2511 Lightning').replace('qwen_image_edit_2511_fp8', 'Qwen Image Edit 2511').replace('flux1-dev-kontext_fp8_scaled', 'Flux.1 Kontext').replace('flux2_dev_fp8', 'Flux.2 [dev]')}
                       </div>
                     )}
                     {entry.metadata?.inferenceSteps && (

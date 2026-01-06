@@ -31,7 +31,7 @@ export const enhancePhoto = async (options) => {
     clearFrameCache,
     clearQrCode, // New option to clear QR codes when enhancement starts
     // onSetActiveProject - not used for enhancement to avoid interfering with main generation
-    useKontext = false,
+    useEditModel = false,
     customPrompt = '',
     tokenType = 'spark', // Payment method - defaults to spark for backwards compatibility
     onOutOfCredits // Callback to show out of credits popup
@@ -181,24 +181,25 @@ export const enhancePhoto = async (options) => {
     // Configure project parameters based on model type
     let projectConfig;
     
-    if (useKontext) {
-      // Use Flux.1 Kontext for custom modifications
+    if (useEditModel) {
+      // Use context image edit model (Qwen, Flux, etc.) for custom modifications
       projectConfig = {
         type: 'image', // Required in SDK v4.x.x
         testnet: false,
         tokenType: tokenType,
-        modelId: "flux1-dev-kontext_fp8_scaled",
+        modelId: "qwen_image_edit_2511_fp8_lightning",
         positivePrompt: customPrompt || 'Enhance the image',
         sizePreset: 'custom',
         width,
         height,
-        steps: 24,
-        guidance: 5.5,
+        steps: 5,
+        guidance: 1, // Qwen Image Edit 2511 Lightning default guidance is 1 (max 2)
         numberOfMedia: 1,
         outputFormat: outputFormat || 'jpg',
-        sensitiveContentFilter: false, // HARDCODED: Kontext model is not NSFW-aware, always disable filter
-        contextImages: [new Uint8Array(arrayBuffer)], // Kontext uses contextImages array
-        sourceType: 'enhancement-kontext', // Track Kontext enhancements separately
+        sensitiveContentFilter: false, // HARDCODED: Context image edit models are not NSFW-aware, always disable filter
+        contextImages: [new Uint8Array(arrayBuffer)], // Context image models use contextImages array
+        sourceType: 'enhancement-context-image-edit', // Track context image enhancements separately
+        // Note: scheduler and timeStepSpacing omitted - server provides defaults for context image models
       };
     } else {
       // Use Flux.1 Krea for standard enhancement

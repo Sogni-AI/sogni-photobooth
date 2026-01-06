@@ -32,7 +32,7 @@
   "dependencies": {
     "@ffmpeg/ffmpeg": "^0.12.15",
     "@ffmpeg/util": "^0.12.2",
-    "@sogni-ai/sogni-client": "^4.0.0-alpha.35",
+    "@sogni-ai/sogni-client": "^4.0.0-alpha.41",
     "@types/qrcode": "^1.5.5",
     "@types/uuid": "^10.0.0",
     "canvas": "^2.11.2",

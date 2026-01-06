@@ -91,7 +91,7 @@ export interface Settings {
   inferenceSteps: number;
   scheduler: string;
   timeStepSpacing: string;
-  // Flux.1 Kontext specific settings
+  // Qwen Image Edit specific settings
   guidance: number;
   flashEnabled: boolean;
   keepOriginalPhoto: boolean;

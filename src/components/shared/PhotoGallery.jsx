@@ -11,9 +11,10 @@ import { downloadImageMobile, enableMobileImageDownload } from '../../utils/mobi
 import { isMobile, styleIdToDisplay } from '../../utils/index';
 import promptsDataRaw from '../../prompts.json';
 import { THEME_GROUPS, getDefaultThemeGroupState, getEnabledPrompts } from '../../constants/themeGroups';
+import { stripTransformationPrefix } from '../../constants/editPrompts';
 import { getThemeGroupPreferences, saveThemeGroupPreferences, getFavoriteImages, toggleFavoriteImage, saveFavoriteImages, getBlockedPrompts, blockPrompt, hasSeenBatchVideoTip, markBatchVideoTipShown } from '../../utils/cookies';
 import { getAttributionText } from '../../config/ugcAttributions';
-import { isFluxKontextModel, SAMPLE_GALLERY_CONFIG, getQRWatermarkConfig, DEFAULT_SETTINGS } from '../../constants/settings';
+import { isContextImageModel, SAMPLE_GALLERY_CONFIG, getQRWatermarkConfig, DEFAULT_SETTINGS } from '../../constants/settings';
 import { TRANSITION_MUSIC_PRESETS } from '../../constants/transitionMusicPresets';
 import { themeConfigService } from '../../services/themeConfig';
 import { useApp } from '../../context/AppContext';
@@ -786,13 +787,10 @@ const PhotoGallery = ({
   authState = null,
   handleRefreshPhoto = null,
   onOutOfCredits = null, // Callback to trigger out of credits popup
-  // New props for Copy image style feature (currently disabled - Coming soon)
-  // eslint-disable-next-line no-unused-vars
+  // Props for Copy image style feature
   onCopyImageStyleSelect = null,
   styleReferenceImage = null,
-  // eslint-disable-next-line no-unused-vars
   onRemoveStyleReference = null,
-  // eslint-disable-next-line no-unused-vars
   onEditStyleReference = null, // Callback to open existing style reference in adjuster
   // New props for vibe selector widget
   updateStyle = null, // Function to update selected style
@@ -836,23 +834,23 @@ const PhotoGallery = ({
     scheduler: 'DPM++ SDE',
     network: 'fast',
     previewCount: 0, // Krea typically has no previews
-    contextImages: 0, // Not using Flux Kontext
+    contextImages: 0, // Not using Qwen Image Edit
     cnEnabled: false, // Not using ControlNet
     guideImage: true, // Using guide/starting image for enhancement
     denoiseStrength: 0.75 // Starting image strength (1 - 0.75 = 0.25 denoise)
   });
 
-  // Cost estimation for Kontext enhancement (AI-guided enhancement)
-  // Kontext uses the image as a context/reference image
-  const { loading: kontextLoading, formattedCost: kontextCost, costInUSD: kontextUSD } = useCostEstimation({
-    model: 'flux1-dev-kontext_fp8_scaled',
+  // Cost estimation for context image edit enhancement (AI-guided enhancement)
+  // Context image models (Qwen, Flux) use the image as a context/reference image
+  const { loading: editModelLoading, formattedCost: editModelCost, costInUSD: editModelUSD } = useCostEstimation({
+    model: 'qwen_image_edit_2511_fp8_lightning',
     imageCount: 1,
-    stepCount: 24, // Kontext uses 24 steps (from PhotoEnhancer)
-    guidance: 5.5, // Kontext uses 5.5 guidance (from PhotoEnhancer)
+    stepCount: 5, // Qwen Image Edit Lightning uses 5 steps
+    guidance: 1, // Qwen Image Edit 2511 Lightning default guidance is 1 (max 2)
     scheduler: 'DPM++ SDE',
     network: 'fast',
     previewCount: 10,
-    contextImages: 1, // Using 1 Flux Kontext reference image
+    contextImages: 1, // Using 1 context image reference
     cnEnabled: false, // Not using ControlNet
     guideImage: false // Not using guide image (uses contextImages instead)
   });
@@ -1001,8 +999,8 @@ const PhotoGallery = ({
   // State to track touch hover in Vibe Explorer (separate from selectedPhotoIndex to avoid slideshow state)
   const [touchHoveredPhotoIndex, setTouchHoveredPhotoIndex] = useState(null);
 
-  // State to show "Coming soon" tooltip for Copy image style feature
-  const [showCopyStyleTooltip, setShowCopyStyleTooltip] = useState(false);
+  // eslint-disable-next-line no-unused-vars
+  const [showCopyStyleTooltip, setShowCopyStyleTooltip] = useState(false); // Legacy - can be removed
   
   // State to track composite framed images for right-click save compatibility
   const [framedImageUrls, setFramedImageUrls] = useState({});
@@ -1259,6 +1257,16 @@ const PhotoGallery = ({
       setThemeGroupState(initialThemeGroupState);
     }
   }, [isPromptSelectorMode, initialThemeGroupState]);
+
+  // Reload theme state when model changes (to reflect auto-toggle of Image Edit Styles)
+  useEffect(() => {
+    if (isPromptSelectorMode && selectedModel) {
+      const saved = getThemeGroupPreferences();
+      const defaultState = getDefaultThemeGroupState();
+      const newThemeState = { ...defaultState, ...saved };
+      setThemeGroupState(newThemeState);
+    }
+  }, [isPromptSelectorMode, selectedModel]);
 
   // Update search term when initialSearchTerm prop changes (only from URL/parent, not local changes)
   useEffect(() => {
@@ -1839,8 +1847,8 @@ const PhotoGallery = ({
     });
   }, [selectedPhotoIndex, selectedSubIndex, desiredWidth, desiredHeight, sogniClient, setPhotos, outputFormat, clearFrameCacheForPhoto, activeProjectReference, enhancePhoto, photos, onClearQrCode, onOutOfCredits, tokenType]);
 
-  // Handle enhancement with Kontext (with custom prompt)
-  const handleEnhanceWithKontext = useCallback(() => {
+  // Handle enhancement with context image edit model (with custom prompt)
+  const handleEnhanceWithEditModel = useCallback(() => {
     setShowEnhanceDropdown(false);
     setShowPromptModal(true);
     setCustomPrompt('');
@@ -1858,7 +1866,7 @@ const PhotoGallery = ({
     
     const photo = photos[selectedPhotoIndex];
     if (!photo || photo.enhancing) {
-      console.log('[ENHANCE] Already enhancing or no photo, ignoring Kontext enhance');
+      console.log('[ENHANCE] Already enhancing or no photo, ignoring edit model enhance');
       return;
     }
 
@@ -1877,8 +1885,8 @@ const PhotoGallery = ({
       onSetActiveProject: (projectId) => {
         activeProjectReference.current = projectId;
       },
-      // Kontext-specific parameters
-      useKontext: true,
+      // Context image edit model specific parameters
+      useEditModel: true,
       customPrompt: trimmed,
       tokenType: tokenType, // Use user's saved payment preference
       onOutOfCredits: onOutOfCredits // Pass out of credits callback
@@ -3748,7 +3756,7 @@ const PhotoGallery = ({
   const filteredPhotos = useMemo(() => {
     if (!isPromptSelectorMode || !photos) return photos;
 
-    const isFluxKontext = selectedModel && isFluxKontextModel(selectedModel);
+    const usesContextImages = selectedModel && isContextImageModel(selectedModel);
     let filtered = photos;
 
     // Build a list of all photos that should be shown based on enabled filters (OR logic)
@@ -3766,8 +3774,8 @@ const PhotoGallery = ({
         enabledFilters.push('favorites');
       }
       
-      // Check if any theme group filters are enabled (for non-Flux models)
-      if (!isFluxKontext) {
+      // Check if any theme group filters are enabled (for SDXL models only, not context image models)
+      if (!usesContextImages) {
         const enabledThemeGroups = Object.entries(themeGroupState)
           .filter(([groupId, enabled]) => enabled && groupId !== 'favorites')
           .map(([groupId]) => groupId);
@@ -3792,8 +3800,8 @@ const PhotoGallery = ({
         }
       }
       
-      // Check theme group filters
-      if (!isFluxKontext && !matchesAnyFilter) {
+      // Check theme group filters (only for SDXL models)
+      if (!usesContextImages && !matchesAnyFilter) {
         const enabledPrompts = getEnabledPrompts(themeGroupState, stylePrompts || {});
         if (photo.promptKey && Object.prototype.hasOwnProperty.call(enabledPrompts, photo.promptKey)) {
           matchesAnyFilter = true;
@@ -3914,23 +3922,25 @@ const PhotoGallery = ({
       return photo.customSceneName;
     }
     
-    // Try stylePrompt first
+    // Try stylePrompt first (strip transformation prefix for matching)
     if (photo.stylePrompt) {
+      const strippedStylePrompt = stripTransformationPrefix(photo.stylePrompt);
       const foundStyleKey = Object.entries(stylePrompts).find(
-        ([, value]) => value === photo.stylePrompt
+        ([, value]) => value === strippedStylePrompt
       )?.[0];
-      
+
       if (foundStyleKey && foundStyleKey !== 'custom' && foundStyleKey !== 'random' && foundStyleKey !== 'randomMix' && foundStyleKey !== 'browseGallery') {
         return styleIdToDisplay(foundStyleKey);
       }
     }
-    
-    // Try positivePrompt next
+
+    // Try positivePrompt next (strip transformation prefix for matching)
     if (photo.positivePrompt) {
+      const strippedPositivePrompt = stripTransformationPrefix(photo.positivePrompt);
       const foundStyleKey = Object.entries(stylePrompts).find(
-        ([, value]) => value === photo.positivePrompt
+        ([, value]) => value === strippedPositivePrompt
       )?.[0];
-      
+
       if (foundStyleKey && foundStyleKey !== 'custom' && foundStyleKey !== 'random' && foundStyleKey !== 'randomMix' && foundStyleKey !== 'browseGallery') {
         return styleIdToDisplay(foundStyleKey);
       }
@@ -8616,7 +8626,7 @@ const PhotoGallery = ({
                     e.stopPropagation();
                     
                     if (selectedPhoto.enhancing) return;
-                    // Show the enhance options dropdown (Krea/Kontext)
+                    // Show the enhance options dropdown (Krea/context image models)
                     setShowEnhanceDropdown(prev => !prev);
                   }}
                   disabled={selectedPhoto.loading || selectedPhoto.enhancing}
@@ -8807,7 +8817,7 @@ const PhotoGallery = ({
                   <button
                     className="dropdown-option rainbow-option"
                     ref={enhanceButton2Ref}
-                    onClick={(e) => { e.stopPropagation(); setShowEnhanceDropdown(false); handleEnhanceWithKontext(); }}
+                    onClick={(e) => { e.stopPropagation(); setShowEnhanceDropdown(false); handleEnhanceWithEditModel(); }}
                     style={{
                       width: 'calc(100% + 60px)',
                       padding: '16px 20px 16px 20px',
@@ -8852,9 +8862,9 @@ const PhotoGallery = ({
                     }}
                   >
                     🎨 Transform image with words
-                    {isAuthenticated && !kontextLoading && formatCost(kontextCost, kontextUSD) && (
+                    {isAuthenticated && !editModelLoading && formatCost(editModelCost, editModelUSD) && (
                       <div style={{ fontSize: '13px', opacity: 0.9, marginTop: '4px' }}>
-                        {formatCost(kontextCost, kontextUSD)}
+                        {formatCost(editModelCost, editModelUSD)}
                       </div>
                     )}
                   </button>
@@ -9487,7 +9497,7 @@ const PhotoGallery = ({
                 <span>Random: All</span>
               </button>
               
-              {!isFluxKontextModel(selectedModel) && (
+              {!isContextImageModel(selectedModel) && (
                 <button 
                   onClick={onRandomSingleSelect}
                   style={{
@@ -9613,28 +9623,54 @@ const PhotoGallery = ({
                 <span>Custom prompt</span>
               </button>
               
-              <button 
+              <button
                 onClick={() => {
-                  // Feature disabled - show "Coming soon" tooltip
-                  setShowCopyStyleTooltip(true);
-                  setTimeout(() => setShowCopyStyleTooltip(false), 2500);
+                  const isEditModel = selectedModel && isContextImageModel(selectedModel);
+                  if (isEditModel) {
+                    // Edit model selected - proceed with Copy Image Style
+                    if (onCopyImageStyleSelect) {
+                      onCopyImageStyleSelect();
+                    }
+                  } else {
+                    // Switch to edit model first
+                    if (switchToModel) {
+                      switchToModel('qwen_image_edit_2511_fp8_lightning');
+                      showToast({
+                        message: 'Switched to Qwen Image Edit Lightning for Copy Image Style',
+                        type: 'info'
+                      });
+                    }
+                    // Then trigger Copy Image Style
+                    if (onCopyImageStyleSelect) {
+                      setTimeout(() => onCopyImageStyleSelect(), 100);
+                    }
+                  }
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.transform = 'scale(1.02)';
+                  e.currentTarget.style.boxShadow = '0 5px 15px rgba(236, 72, 153, 0.4)';
+                  e.currentTarget.style.background = selectedStyle === 'copyImageStyle' ? 'linear-gradient(135deg, #ec4899 0%, #be185d 100%)' : 'linear-gradient(135deg, #f472b6 0%, #ec4899 100%)';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.transform = 'scale(1)';
+                  e.currentTarget.style.boxShadow = '0 3px 10px rgba(236, 72, 153, 0.3)';
+                  e.currentTarget.style.background = selectedStyle === 'copyImageStyle' ? 'linear-gradient(135deg, #ec4899 0%, #be185d 100%)' : 'linear-gradient(135deg, #f472b6 0%, #ec4899 100%)';
                 }}
                 style={{
-                  background: 'linear-gradient(135deg, #6b7280 0%, #4b5563 100%)',
-                  border: '3px solid transparent',
+                  background: selectedStyle === 'copyImageStyle' ? 'linear-gradient(135deg, #ec4899 0%, #be185d 100%)' : 'linear-gradient(135deg, #f472b6 0%, #ec4899 100%)',
+                  border: selectedStyle === 'copyImageStyle' ? '3px solid #fce7f3' : '3px solid transparent',
                   borderRadius: '20px',
                   padding: '10px 16px',
                   display: 'flex',
                   alignItems: 'center',
                   gap: '8px',
-                  cursor: 'not-allowed',
+                  cursor: 'pointer',
                   transition: 'all 0.2s ease',
-                  boxShadow: '0 3px 10px rgba(107, 114, 128, 0.3)',
+                  boxShadow: '0 3px 10px rgba(236, 72, 153, 0.3)',
                   color: 'white',
                   fontSize: '12px',
                   fontFamily: '"Permanent Marker", cursive',
                   fontWeight: '600',
-                  opacity: 0.6,
                   position: 'relative'
                 }}
               >
@@ -9651,8 +9687,8 @@ const PhotoGallery = ({
                     background: '#fff',
                     position: 'relative'
                   }}>
-                    <img 
-                      src={styleReferenceImage.dataUrl} 
+                    <img
+                      src={styleReferenceImage.dataUrl}
                       alt="Style reference"
                       style={{
                         width: '100%',
@@ -9661,78 +9697,57 @@ const PhotoGallery = ({
                         borderRadius: '50%'
                       }}
                     />
-                    {/* X button disabled - feature not active */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setShowCopyStyleTooltip(true);
-                        setTimeout(() => setShowCopyStyleTooltip(false), 2500);
-                      }}
-                      style={{
-                        position: 'absolute',
-                        top: '-6px',
-                        right: '-6px',
-                        width: '18px',
-                        height: '18px',
-                        borderRadius: '50%',
-                        background: '#9ca3af',
-                        border: '2px solid white',
-                        color: 'white',
-                        fontSize: '10px',
-                        fontWeight: 'bold',
-                        cursor: 'not-allowed',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        padding: 0,
-                        lineHeight: 1,
-                        boxShadow: '0 2px 4px rgba(0, 0, 0, 0.3)',
-                        transition: 'all 0.2s ease',
-                        zIndex: 1,
-                        opacity: 0.6
-                      }}
-                      title="Coming soon"
-                    >
-                      ×
-                    </button>
+                    {/* X button to remove style reference */}
+                    {onRemoveStyleReference && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onRemoveStyleReference();
+                        }}
+                        style={{
+                          position: 'absolute',
+                          top: '-6px',
+                          right: '-6px',
+                          width: '18px',
+                          height: '18px',
+                          borderRadius: '50%',
+                          background: '#ef4444',
+                          border: '2px solid white',
+                          color: 'white',
+                          fontSize: '10px',
+                          fontWeight: 'bold',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          padding: 0,
+                          lineHeight: 1,
+                          boxShadow: '0 2px 4px rgba(0, 0, 0, 0.3)',
+                          transition: 'all 0.2s ease',
+                          zIndex: 1
+                        }}
+                        onMouseOver={(e) => {
+                          e.stopPropagation();
+                          e.currentTarget.style.background = '#dc2626';
+                          e.currentTarget.style.transform = 'scale(1.1)';
+                        }}
+                        onMouseOut={(e) => {
+                          e.stopPropagation();
+                          e.currentTarget.style.background = '#ef4444';
+                          e.currentTarget.style.transform = 'scale(1)';
+                        }}
+                        title="Remove style reference"
+                      >
+                        ×
+                      </button>
+                    )}
                   </div>
                 ) : (
                   <span>🎨</span>
                 )}
                 <span>Copy image style</span>
-                
-                {/* "Coming soon" tooltip */}
-                {showCopyStyleTooltip && (
-                  <div style={{
-                    position: 'absolute',
-                    bottom: '-45px',
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    background: 'rgba(0, 0, 0, 0.9)',
-                    color: 'white',
-                    padding: '8px 14px',
-                    borderRadius: '8px',
-                    fontSize: '11px',
-                    fontFamily: '"Permanent Marker", cursive',
-                    whiteSpace: 'nowrap',
-                    zIndex: 1000,
-                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
-                    pointerEvents: 'none',
-                    animation: 'fadeIn 0.2s ease-in'
-                  }}>
-                    Coming soon
-                    <div style={{
-                      position: 'absolute',
-                      top: '-5px',
-                      left: '50%',
-                      transform: 'translateX(-50%)',
-                      width: 0,
-                      height: 0,
-                      borderLeft: '6px solid transparent',
-                      borderRight: '6px solid transparent',
-                      borderBottom: '6px solid rgba(0, 0, 0, 0.9)'
-                    }} />
-                  </div>
+                {!(selectedModel && isContextImageModel(selectedModel)) && (
+                  <span style={{ fontSize: '10px', opacity: 0.8 }}>(switches model)</span>
                 )}
               </button>
             </div>
@@ -12297,7 +12312,7 @@ const PhotoGallery = ({
         </div>
       )}
 
-      {/* Custom Prompt Modal for Kontext Enhancement */}
+      {/* Custom Prompt Modal for Context Image Edit Enhancement */}
       {showPromptModal && (
         <div 
           className="prompt-modal-overlay"

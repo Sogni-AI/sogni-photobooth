@@ -1,13 +1,14 @@
 import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 
-import { getModelOptions, defaultStylePrompts as initialStylePrompts, TIMEOUT_CONFIG, isFluxKontextModel, TWITTER_SHARE_CONFIG, getQRWatermarkConfig, DEFAULT_MODEL_ID, FLUX_KONTEXT_MODEL_ID } from './constants/settings';
+import { getModelOptions, defaultStylePrompts as initialStylePrompts, TIMEOUT_CONFIG, isQwenImageEditModel, isQwenImageEditLightningModel, isContextImageModel, isFluxModel, TWITTER_SHARE_CONFIG, getQRWatermarkConfig, DEFAULT_MODEL_ID, QWEN_IMAGE_EDIT_LIGHTNING_MODEL_ID } from './constants/settings';
+import { COPY_IMAGE_STYLE_PROMPT, EDIT_MODEL_TRANSFORMATION_PREFIX, stripTransformationPrefix } from './constants/editPrompts';
 import { photoThoughts, randomThoughts } from './constants/thoughts';
 import { saveSettingsToCookies, shouldShowPromoPopup, markPromoPopupShown, hasDoneDemoRender, markDemoRenderDone, clearSessionSettings } from './utils/cookies';
 import { styleIdToDisplay } from './utils';
 import { getCustomDimensions } from './utils/imageProcessing';
 import { generateGalleryFilename, getPortraitFolderWithFallback } from './utils/galleryLoader';
 import { goToPreviousPhoto, goToNextPhoto } from './utils/photoNavigation';
-import { initializeStylePrompts, getRandomStyle, getRandomMixPrompts } from './services/prompts';
+import { initializeStylePrompts, getRandomStyle, getRandomMixPrompts, isEditPrompt } from './services/prompts';
 import { getDefaultThemeGroupState, getEnabledPrompts, getOneOfEachPrompts } from './constants/themeGroups';
 import { getThemeGroupPreferences, saveThemeGroupPreferences } from './utils/cookies';
 import { initializeSogniClient } from './services/sogni';
@@ -2113,9 +2114,9 @@ const App = () => {
     console.log('📸 Has styleReferenceImage:', !!styleReferenceImage?.croppedBlob);
     console.log('📸 Current model:', selectedModel);
     
-    // FAILSAFE: If we have a style reference image and model is Flux Kontext, ensure copyImageStyle is set
-    if (styleReferenceImage?.croppedBlob && isFluxKontextModel(selectedModel) && selectedStyle !== 'copyImageStyle') {
-      console.warn('🚨 FAILSAFE: Style reference exists and model is Flux Kontext but style is not copyImageStyle!');
+    // FAILSAFE: If we have a style reference image and model is context image model (Qwen/Flux), ensure copyImageStyle is set
+    if (styleReferenceImage?.croppedBlob && isContextImageModel(selectedModel) && selectedStyle !== 'copyImageStyle') {
+      console.warn('🚨 FAILSAFE: Style reference exists and model is context image model but style is not copyImageStyle!');
       console.warn('🚨 Forcing selectedStyle to copyImageStyle');
       updateSetting('selectedStyle', 'copyImageStyle');
       saveSettingsToCookies({ selectedStyle: 'copyImageStyle' });
@@ -2933,28 +2934,30 @@ const App = () => {
           // Extract style hashtag using the same logic as PhotoGallery component
           let styleTag = 'vaporwave'; // Default fallback
           
-          // Try stylePrompt first
+          // Try stylePrompt first (strip transformation prefix for matching)
           if (photo.stylePrompt && stylePrompts) {
+            const strippedStylePrompt = stripTransformationPrefix(photo.stylePrompt);
             const foundStyleKey = Object.entries(stylePrompts).find(
-              ([, value]) => value === photo.stylePrompt
+              ([, value]) => value === strippedStylePrompt
             )?.[0];
-            
+
             if (foundStyleKey && foundStyleKey !== 'custom' && foundStyleKey !== 'random' && foundStyleKey !== 'randomMix') {
               styleTag = foundStyleKey;
             }
           }
-          
-          // Try positivePrompt next if stylePrompt didn't work
+
+          // Try positivePrompt next if stylePrompt didn't work (strip transformation prefix for matching)
           if (styleTag === 'vaporwave' && photo.positivePrompt && stylePrompts) {
+            const strippedPositivePrompt = stripTransformationPrefix(photo.positivePrompt);
             const foundStyleKey = Object.entries(stylePrompts).find(
-              ([, value]) => value === photo.positivePrompt
+              ([, value]) => value === strippedPositivePrompt
             )?.[0];
-            
+
             if (foundStyleKey && foundStyleKey !== 'custom' && foundStyleKey !== 'random' && foundStyleKey !== 'randomMix') {
               styleTag = foundStyleKey;
             }
           }
-          
+
           // Fall back to selectedStyle if available
           if (styleTag === 'vaporwave' && selectedStyle && selectedStyle !== 'custom' && selectedStyle !== 'random' && selectedStyle !== 'randomMix') {
             styleTag = selectedStyle;
@@ -3265,7 +3268,7 @@ const App = () => {
         model: selectedModel,
         inferenceSteps,
         seed: photoToShare?.seed || null,
-        guidance: isFluxKontextModel(selectedModel) ? guidance : promptGuidance,
+        guidance: isContextImageModel(selectedModel) ? guidance : promptGuidance,
         aspectRatio
       },
       onSuccess: async () => {
@@ -4964,9 +4967,9 @@ const App = () => {
       // Get theme-filtered prompts for random selection
       // Read latest theme state from localStorage to avoid stale closure values
       const getFilteredPromptsForRandom = () => {
-        // For Flux models, use all available prompts without theme filtering
-        const isFluxKontext = isFluxKontextModel(selectedModel);
-        if (isFluxKontext) {
+        // For context image models (Qwen, Flux), use all available prompts without theme filtering
+        const usesContextImages = isContextImageModel(selectedModel);
+        if (usesContextImages) {
           return stylePrompts;
         }
         // Read latest theme preferences from localStorage to ensure we use the most current settings
@@ -5000,7 +5003,7 @@ const App = () => {
         }
         
         // Special prompt for style reference mode
-        finalPositivePrompt = "identify the two images in the scene and transform the main person image into the style of the second image, the result must be the transformed person image only, generate a dramatically transformed image";
+        finalPositivePrompt = COPY_IMAGE_STYLE_PROMPT;
         console.log('🎨 Using Copy Image Style mode with special prompt');
       } else if (selectedStyle === 'custom') {
         finalPositivePrompt = finalPositivePrompt || '';
@@ -5085,6 +5088,29 @@ const App = () => {
         }
       } else {
         console.log('⚠️ Worker preferences SKIPPED in frontend - Premium Spark required');
+      }
+
+      // When using an edit model with a non-edit prompt, prepend transformation instruction
+      // This helps the edit model understand it should transform while preserving identity
+      const usesEditModel = isContextImageModel(selectedModel);
+      const isUsingEditPrompt = selectedStyle === 'copyImageStyle' || isEditPrompt(selectedStyle);
+      
+      if (usesEditModel && !isUsingEditPrompt && finalPositivePrompt && selectedStyle !== 'custom') {
+        console.log('✏️ Edit model with non-edit prompt detected - prepending transformation instruction');
+        
+        // Check if prompt uses pipe-separated syntax (randomMix, oneOfEach)
+        if (finalPositivePrompt.startsWith('{') && finalPositivePrompt.includes('|') && finalPositivePrompt.endsWith('}')) {
+          // For pipe-separated prompts, prepend to each individual prompt
+          const pipedPrompts = finalPositivePrompt.slice(1, -1); // Remove { and }
+          const promptArray = pipedPrompts.split('|');
+          const transformedPrompts = promptArray.map(p =>
+            `${EDIT_MODEL_TRANSFORMATION_PREFIX}${p.trim()}`
+          );
+          finalPositivePrompt = `{${transformedPrompts.join('|')}}`;
+        } else {
+          // For single prompts, prepend directly
+          finalPositivePrompt = `${EDIT_MODEL_TRANSFORMATION_PREFIX}${finalPositivePrompt}`;
+        }
       }
 
       // Style prompt logic: use context state
@@ -5201,7 +5227,7 @@ const App = () => {
       }
       
       // Create project using context state for settings
-      const isFluxKontext = isFluxKontextModel(selectedModel);
+      const usesContextImages = isContextImageModel(selectedModel);
       
       const projectConfig = { 
         type: 'image', // Required in SDK v4.x.x
@@ -5216,11 +5242,12 @@ const App = () => {
         width: getCustomDimensions(aspectRatio).width,  // Use aspectRatio here
         height: getCustomDimensions(aspectRatio).height, // Use aspectRatio here
         steps: inferenceSteps,
-        guidance: isFluxKontext ? guidance : promptGuidance, // Use guidance for Flux.1 Kontext, promptGuidance for others
+        guidance: usesContextImages ? guidance : promptGuidance, // Use guidance for context image models, promptGuidance for others
         numberOfMedia: numImages, // Use context state
-        numberOfPreviews: authState.authMode === 'frontend' && isFluxKontext ? 5 : 10, // Frontend Flux gets 5 previews, backend gets 10
-        scheduler: scheduler,
-        timeStepSpacing: timeStepSpacing,
+        numberOfPreviews: authState.authMode === 'frontend' && usesContextImages ? 5 : 10, // Frontend context image models get 5 previews, backend gets 10
+        // Only skip scheduler and timeStepSpacing for Qwen Image Edit Lightning (server provides defaults)
+        // Other models use scheduler/timeStepSpacing normally
+        ...(isQwenImageEditLightningModel(selectedModel) ? {} : { scheduler: scheduler, timeStepSpacing: timeStepSpacing }),
         outputFormat: outputFormat, // Add output format setting
         sensitiveContentFilter: sensitiveContentFilter, // Adapters will convert to disableNSFWFilter for SDK
         sourceType: sourceType, // Add sourceType for analytics tracking
@@ -5228,8 +5255,8 @@ const App = () => {
       };
       
       // Add image configuration based on model type
-      if (isFluxKontext) {
-        // For Flux.1 Kontext, use contextImages array (SDK expects array)
+      if (usesContextImages) {
+        // For context image models (Qwen, Flux), use contextImages array (SDK expects array)
         // Check if we're in Copy Image Style mode
         if (selectedStyle === 'copyImageStyle') {
           if (!styleReferenceImage?.croppedBlob) {
@@ -5243,14 +5270,14 @@ const App = () => {
             new Uint8Array(blobArrayBuffer),      // First image: user's photo (subject)
             new Uint8Array(styleRefArrayBuffer)   // Second image: style reference
           ];
-          console.log('🎨 Using both user photo and style reference for Flux Kontext');
+          console.log('🎨 Using both user photo and style reference for context image model');
           console.log(`📊 Context images: User photo (${blobArrayBuffer.byteLength} bytes) + Style ref (${styleRefArrayBuffer.byteLength} bytes)`);
         } else {
-          // Normal Flux Kontext mode - just use the user's photo
+          // Normal mode - just use the user's photo
           projectConfig.contextImages = [new Uint8Array(blobArrayBuffer)];
         }
       } else {
-        // For other models, use controlNet
+        // For SDXL models, use controlNet
         projectConfig.controlNet = {
           name: 'instantid',
           image: new Uint8Array(blobArrayBuffer),
@@ -5270,12 +5297,12 @@ const App = () => {
             model: selectedModel,
             imageCount: numImages,
             stepCount: inferenceSteps,
-            guidance: isFluxKontext ? guidance : promptGuidance,
+            guidance: usesContextImages ? guidance : promptGuidance,
             scheduler: scheduler,
             network: 'fast',
-            previewCount: authState.authMode === 'frontend' && isFluxKontext ? 5 : 10, // Frontend Flux gets 5 previews
-            contextImages: isFluxKontext ? (selectedStyle === 'copyImageStyle' && styleReferenceImage ? 2 : 1) : 0,
-            cnEnabled: !isFluxKontext,
+            previewCount: authState.authMode === 'frontend' && usesContextImages ? 5 : 10, // Frontend context image models get 5 previews
+            contextImages: usesContextImages ? (selectedStyle === 'copyImageStyle' && styleReferenceImage ? 2 : 1) : 0,
+            cnEnabled: !usesContextImages,
             tokenType: walletTokenType
           });
           if (estimatedCost !== null) {
@@ -5553,12 +5580,14 @@ const App = () => {
                 let hashtag = '';
                 const stylePromptValue = updated[photoIndex].stylePrompt;
                 if (stylePromptValue) {
-                  const foundKey = Object.entries(stylePrompts).find(([, value]) => value === stylePromptValue)?.[0];
+                  // Strip transformation prefix for matching
+                  const strippedStylePrompt = stripTransformationPrefix(stylePromptValue);
+                  const foundKey = Object.entries(stylePrompts).find(([, value]) => value === strippedStylePrompt)?.[0];
                   if (foundKey) {
                     hashtag = `#${foundKey}`;
                   }
                 }
-                
+
                 updated[photoIndex] = {
                   ...updated[photoIndex],
                   generating: true,
@@ -5576,12 +5605,14 @@ const App = () => {
                 let hashtag = '';
                 const stylePromptValue = updated[photoIndex].stylePrompt;
                 if (stylePromptValue) {
-                  const foundKey = Object.entries(stylePrompts).find(([, value]) => value === stylePromptValue)?.[0];
+                  // Strip transformation prefix for matching
+                  const strippedStylePrompt = stripTransformationPrefix(stylePromptValue);
+                  const foundKey = Object.entries(stylePrompts).find(([, value]) => value === strippedStylePrompt)?.[0];
                   if (foundKey) {
                     hashtag = `#${foundKey}`;
                   }
                 }
-                
+
                 updated[photoIndex] = {
                   ...updated[photoIndex],
                   generating: true,
@@ -6216,37 +6247,39 @@ const App = () => {
         // FINAL IMAGE - handle hashtags and completion
         // Handle hashtag generation for final jobs
         let hashtag = '';
-        
-        
-        // Strategy 1: Try to match positivePrompt from job
-        if (positivePrompt && !hashtag) {
+
+        // Strip transformation prefix for matching (edit models prepend this to non-edit prompts)
+        const strippedPositivePrompt = stripTransformationPrefix(positivePrompt);
+
+        // Strategy 1: Try to match positivePrompt from job (with prefix stripped)
+        if (strippedPositivePrompt && !hashtag) {
           // First check current stylePrompts (which includes Flux prompts when appropriate)
-          const foundKey = Object.entries(stylePrompts).find(([, value]) => value === positivePrompt)?.[0];
+          const foundKey = Object.entries(stylePrompts).find(([, value]) => value === strippedPositivePrompt)?.[0];
           if (foundKey && foundKey !== 'custom' && foundKey !== 'random' && foundKey !== 'randomMix') {
             hashtag = `#${foundKey}`;
-            console.log('📸 Found hashtag for completed job via positivePrompt:', { positivePrompt, hashtag, foundKey });
+            console.log('📸 Found hashtag for completed job via positivePrompt:', { positivePrompt: strippedPositivePrompt, hashtag, foundKey });
           }
-          
+
           // Fallback to promptsData for backward compatibility
           if (!hashtag) {
-            const fallbackKey = Object.entries(promptsData).find(([, value]) => value === positivePrompt)?.[0];
+            const fallbackKey = Object.entries(promptsData).find(([, value]) => value === strippedPositivePrompt)?.[0];
             if (fallbackKey && fallbackKey !== 'custom' && fallbackKey !== 'random' && fallbackKey !== 'randomMix') {
               hashtag = `#${fallbackKey}`;
-              console.log('📸 Found hashtag from promptsData fallback via positivePrompt:', { positivePrompt, hashtag, fallbackKey });
+              console.log('📸 Found hashtag from promptsData fallback via positivePrompt:', { positivePrompt: strippedPositivePrompt, hashtag, fallbackKey });
             }
           }
         }
-        
+
         // Strategy 2: If we have a valid stylePrompt, use that to help with hashtag lookup
         if (!hashtag && stylePrompt && stylePrompt.trim()) {
-          const trimmedStylePrompt = stylePrompt.trim();
+          const trimmedStylePrompt = stripTransformationPrefix(stylePrompt.trim());
           // First check current stylePrompts
           const styleKey = Object.entries(stylePrompts).find(([, value]) => value === trimmedStylePrompt)?.[0];
           if (styleKey && styleKey !== 'custom' && styleKey !== 'random' && styleKey !== 'randomMix') {
             console.log('📸 Found hashtag from stylePrompt:', styleKey);
             hashtag = `#${styleKey}`;
           }
-          
+
           // Fallback to promptsData
           if (!hashtag) {
             const fallbackStyleKey = Object.entries(promptsData).find(([, value]) => value === trimmedStylePrompt)?.[0];
@@ -6256,13 +6289,13 @@ const App = () => {
             }
           }
         }
-        
+
         // Strategy 3: Fall back to selectedStyle if it's a valid style
         if (!hashtag && selectedStyle && selectedStyle !== 'custom' && selectedStyle !== 'random' && selectedStyle !== 'randomMix' && selectedStyle !== 'oneOfEach') {
           console.log('📸 Using selectedStyle for hashtag:', selectedStyle);
           hashtag = `#${selectedStyle}`;
         }
-        
+
         // Strategy 3.5: For custom prompts, use custom scene name if available, otherwise #SogniPhotobooth
         if (!hashtag && selectedStyle === 'custom') {
           if (customSceneName && customSceneName.trim()) {
@@ -6273,20 +6306,20 @@ const App = () => {
             hashtag = '#SogniPhotobooth';
           }
         }
-        
+
         // Strategy 4: Final fallback - try to find ANY matching prompt in our style library
-        if (!hashtag && positivePrompt) {
+        if (!hashtag && strippedPositivePrompt) {
           // Check if the positive prompt contains any known style keywords
           const allStyleKeys = [...Object.keys(stylePrompts), ...Object.keys(promptsData)];
           const matchingKey = allStyleKeys.find(key => {
             const promptValue = stylePrompts[key] || promptsData[key];
             return promptValue && (
-              promptValue === positivePrompt ||
-              positivePrompt.includes(promptValue) ||
-              promptValue.includes(positivePrompt)
+              promptValue === strippedPositivePrompt ||
+              strippedPositivePrompt.includes(promptValue) ||
+              promptValue.includes(strippedPositivePrompt)
             );
           });
-          
+
           if (matchingKey && matchingKey !== 'custom' && matchingKey !== 'random' && matchingKey !== 'randomMix') {
             hashtag = `#${matchingKey}`;
             console.log('📸 Found hashtag via fuzzy matching:', { matchingKey, hashtag });
@@ -8199,8 +8232,8 @@ const App = () => {
     
     // IMPORTANT: Switch model FIRST, then set style
     // This prevents race conditions where switchToModel might use old settings
-    console.log('🔄 Switching to Flux Kontext for image style copy mode');
-    switchToModel(FLUX_KONTEXT_MODEL_ID);
+    console.log('🔄 Switching to Qwen Image Edit 2511 Lightning for image style copy mode');
+    switchToModel(QWEN_IMAGE_EDIT_LIGHTNING_MODEL_ID);
     
     // Then set the selected style to 'copyImageStyle' 
     // Use setTimeout to ensure model switch state update completes first
@@ -8217,7 +8250,7 @@ const App = () => {
       showToast({
         type: 'info',
         title: 'Model Switched',
-        message: 'Automatically switched to Flux Kontext for Copy Image Style. You can change the model in Photobooth Settings.',
+        message: 'Automatically switched to Qwen Image Edit 2511 Lightning for Copy Image Style. You can change the model in Photobooth Settings.',
         timeout: 5000
       });
     }, 0);
@@ -9999,7 +10032,7 @@ const App = () => {
                 <h2 className="marker-font">Photobooth Tips</h2>
                 <ul className="marker-font">
                   <li>Generated compositions reuses the same face size, position, and orientation as the camera snapshot so step back and get creative!</li>
-                  <li>Only one face at a time unless using Flux.1 Kontext! If multiple faces the biggest one in frame is used.</li>
+                  <li>Only one face at a time unless using context image models (Qwen, Flux)! If multiple faces the biggest one in frame is used.</li>
                   <li>The more light / dark depth on your face the better, flat even light results can be subpar.</li>
                   <li>Try using the Custom Prompt feature and providing your own prompt!</li>
                   <li>You can even drag a photo into the camera window to use as a reference!</li>

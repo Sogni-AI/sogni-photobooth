@@ -192,8 +192,8 @@ export const refreshPhoto = async (options) => {
       aspectRatio
     } = settings;
 
-    // Check if model is Flux Kontext
-    const isFluxKontext = selectedModel && selectedModel.includes('kontext');
+    // Check if model is a context image model (Qwen, Flux)
+    const usesContextImages = selectedModel && selectedModel.includes('qwen_image_edit') || selectedModel.includes('flux');
     
     // Parse seed if provided
     let seedParam = undefined;
@@ -228,7 +228,7 @@ export const refreshPhoto = async (options) => {
       width,
       height,
       steps: inferenceSteps,
-      guidance: isFluxKontext ? guidance : promptGuidance,
+      guidance: usesContextImages ? guidance : promptGuidance,
       numberOfMedia: 1, // Single image refresh
       scheduler,
       timeStepSpacing,
@@ -239,7 +239,7 @@ export const refreshPhoto = async (options) => {
     };
 
     // Add image configuration based on model type
-    if (isFluxKontext) {
+    if (usesContextImages) {
       projectConfig.contextImages = [new Uint8Array(arrayBuffer)];
     } else {
       projectConfig.controlNet = {

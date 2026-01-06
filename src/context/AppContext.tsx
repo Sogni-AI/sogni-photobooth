@@ -1,8 +1,10 @@
 import React, { createContext, useContext, useState, useRef, useMemo } from 'react';
 
 import { Photo, ProjectState, Settings } from '../types/index';
-import { DEFAULT_SETTINGS, getModelDefaults, isFluxKontextModel, DEFAULT_MODEL_ID } from '../constants/settings';
-import { getSettingFromCookie, saveSettingsToCookies, getSettingsForModel, saveModelSpecificSettings } from '../utils/cookies';
+import { DEFAULT_SETTINGS, getModelDefaults, isContextImageModel, DEFAULT_MODEL_ID } from '../constants/settings';
+import { getSettingFromCookie, saveSettingsToCookies, getSettingsForModel, saveModelSpecificSettings, getThemeGroupPreferences, saveThemeGroupPreferences } from '../utils/cookies';
+import { IMAGE_EDIT_PROMPTS_CATEGORY } from '../constants/editPrompts';
+import { getDefaultThemeGroupState } from '../constants/themeGroups';
 import promptsDataRaw from '../prompts.json';
 
 // Helper function to check if a style is from the Christmas/Winter category
@@ -12,6 +14,15 @@ const isWinterStyle = (styleKey: string): boolean => {
   }
   const winterPrompts = promptsDataRaw['christmas-winter']?.prompts || {};
   return styleKey in winterPrompts;
+};
+
+// Helper function to check if a style is from the image-edit-prompts category
+const isEditPromptStyle = (styleKey: string): boolean => {
+  if (!styleKey || styleKey === 'custom' || styleKey === 'random' || styleKey === 'randomMix' || styleKey === 'oneOfEach' || styleKey === 'browseGallery' || styleKey === 'copyImageStyle') {
+    return false;
+  }
+  const editPrompts = promptsDataRaw[IMAGE_EDIT_PROMPTS_CATEGORY]?.prompts || {};
+  return styleKey in editPrompts;
 };
 
 // Helper function to handle TezDev theme cookie migration
@@ -129,18 +140,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       saveModelSpecificSettings(DEFAULT_MODEL_ID, defaultModelSettings);
       console.log('🔄 [INIT] Saved default model settings:', defaultModelSettings);
       
-      // Clear any cached Flux Kontext model-specific settings to prevent conflicts
+      // Clear any cached context image model settings to prevent conflicts
       try {
+        localStorage.removeItem('sogni_model_qwen_image_edit_2511_fp8_lightning');
+        localStorage.removeItem('sogni_model_qwen_image_edit_2511_fp8');
         localStorage.removeItem('sogni_model_flux1-dev-kontext_fp8_scaled');
-        console.log('🔄 [INIT] Cleared Flux Kontext model cache');
+        localStorage.removeItem('sogni_model_flux2_dev_fp8');
+        console.log('🔄 [INIT] Cleared context image model caches');
       } catch (e) {
-        console.warn('Failed to clear Flux Kontext cache:', e);
+        console.warn('Failed to clear context image model caches:', e);
       }
       
-      // Also reset copyImageStyle to randomMix when resetting the model
-      // This ensures they're in sync
-      if (selectedStyle === 'copyImageStyle') {
-        console.log('🔄 [INIT] Also resetting style from Copy Image Style to Random: All (model was reset)');
+      // Reset copyImageStyle or edit prompt styles to randomMix when resetting the model
+      // This ensures they're in sync - edit prompts require edit models
+      if (selectedStyle === 'copyImageStyle' || isEditPromptStyle(selectedStyle)) {
+        console.log(`🔄 [INIT] Also resetting style from "${selectedStyle}" to Random: All (model was reset to non-edit model)`);
         selectedStyle = 'randomMix';
         saveSettingsToCookies({ selectedStyle });
       }
@@ -294,17 +308,41 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return;
     }
     
-    const isCurrentFlux = isFluxKontextModel(currentModel);
-    const isNewFlux = isFluxKontextModel(modelId);
+    const isCurrentContextImage = isContextImageModel(currentModel);
+    const isNewContextImage = isContextImageModel(modelId);
     
     // Check if we're switching between different model types
-    const switchingModelTypes = isCurrentFlux !== isNewFlux;
+    const switchingModelTypes = isCurrentContextImage !== isNewContextImage;
+    
+    // Auto-toggle Image Edit Styles category based on model type
+    try {
+      const currentThemePrefs = getThemeGroupPreferences();
+      const defaultThemeState = getDefaultThemeGroupState();
+      const themeState: Record<string, boolean> = { ...defaultThemeState, ...currentThemePrefs };
+      
+      const isEditCategoryEnabled = themeState[IMAGE_EDIT_PROMPTS_CATEGORY] ?? false;
+      
+      // If switching TO an edit model and Image Edit Styles is NOT enabled, enable it
+      if (isNewContextImage && !isEditCategoryEnabled) {
+        console.log('✏️ Auto-enabling Image Edit Styles category (switched to edit model)');
+        themeState[IMAGE_EDIT_PROMPTS_CATEGORY] = true;
+        saveThemeGroupPreferences(themeState);
+      }
+      // If switching FROM an edit model to non-edit and Image Edit Styles IS enabled, disable it
+      else if (!isNewContextImage && isCurrentContextImage && isEditCategoryEnabled) {
+        console.log('✏️ Auto-disabling Image Edit Styles category (switched from edit model)');
+        themeState[IMAGE_EDIT_PROMPTS_CATEGORY] = false;
+        saveThemeGroupPreferences(themeState);
+      }
+    } catch (e) {
+      console.warn('Failed to auto-toggle Image Edit Styles category:', e);
+    }
     
     let modelSettings;
     if (switchingModelTypes) {
       // When switching between model types, use defaults instead of saved settings
       modelSettings = getModelDefaults(modelId);
-      console.log(`Switching between model types (${isCurrentFlux ? 'Flux.1 Kontext' : 'Other'} -> ${isNewFlux ? 'Flux.1 Kontext' : 'Other'}), restoring defaults for ${modelId}:`, modelSettings);
+      console.log(`Switching between model types (${isCurrentContextImage ? 'Context Image' : 'SDXL'} -> ${isNewContextImage ? 'Context Image' : 'SDXL'}), restoring defaults for ${modelId}:`, modelSettings);
     } else {
       // When switching within the same model type, use saved settings
       modelSettings = getSettingsForModel(modelId);
@@ -323,6 +361,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       guidance: modelSettings.guidance ?? DEFAULT_SETTINGS.guidance,
       numImages: modelSettings.numImages ?? DEFAULT_SETTINGS.numImages,
     };
+    
+    // Cap numImages at 4 for context image models (Qwen, Flux) if current value is higher
+    if (isNewContextImage && newSettings.numImages > 4) {
+      console.log(`🔢 Capping numImages from ${newSettings.numImages} to 4 for context image model`);
+      newSettings.numImages = 4;
+    }
     
     console.log(`Final settings being applied:`, {
       inferenceSteps: newSettings.inferenceSteps,
@@ -373,8 +417,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ...DEFAULT_SETTINGS,
       selectedModel: currentModel, // Keep the current model
       inferenceSteps: modelDefaults.inferenceSteps,
-      scheduler: modelDefaults.scheduler,
-      timeStepSpacing: modelDefaults.timeStepSpacing,
+      scheduler: modelDefaults.scheduler ?? DEFAULT_SETTINGS.scheduler,
+      timeStepSpacing: modelDefaults.timeStepSpacing ?? DEFAULT_SETTINGS.timeStepSpacing,
       promptGuidance: modelDefaults.promptGuidance || DEFAULT_SETTINGS.promptGuidance,
       guidance: modelDefaults.guidance,
       numImages: modelDefaults.numImages,

@@ -3,7 +3,19 @@ import { isMobile } from '../utils/index';
 
 // Default model IDs
 export const DEFAULT_MODEL_ID = 'coreml-sogniXLturbo_alpha1_ad'; // Sogni Turbo
+
+// Qwen Image Edit model IDs
+export const QWEN_IMAGE_EDIT_LIGHTNING_MODEL_ID = 'qwen_image_edit_2511_fp8_lightning';
+export const QWEN_IMAGE_EDIT_MODEL_ID = 'qwen_image_edit_2511_fp8';
+export const QWEN_IMAGE_EDIT_MODEL_IDS = [QWEN_IMAGE_EDIT_LIGHTNING_MODEL_ID, QWEN_IMAGE_EDIT_MODEL_ID] as const;
+
+// Flux model IDs
 export const FLUX_KONTEXT_MODEL_ID = 'flux1-dev-kontext_fp8_scaled';
+export const FLUX2_DEV_MODEL_ID = 'flux2_dev_fp8';
+export const FLUX_MODEL_IDS = [FLUX_KONTEXT_MODEL_ID, FLUX2_DEV_MODEL_ID] as const;
+
+// All context image models (models that use contextImages instead of ControlNet)
+export const CONTEXT_IMAGE_MODEL_IDS = [...QWEN_IMAGE_EDIT_MODEL_IDS, ...FLUX_MODEL_IDS] as const;
 
 // Special style modes that are not individual library styles
 export const SPECIAL_STYLE_MODES = [
@@ -79,8 +91,20 @@ export const getModelOptions = () => {
       value: "coreml-epicrealismXL_VXIAbeast4SLightning",
     },
     {
+      label: "Qwen Image Edit 2511 Lightning",
+      value: "qwen_image_edit_2511_fp8_lightning",
+    },
+    {
+      label: "Qwen Image Edit 2511",
+      value: "qwen_image_edit_2511_fp8",
+    },
+    {
       label: "Flux.1 Kontext",
       value: "flux1-dev-kontext_fp8_scaled",
+    },
+    {
+      label: "Flux.2 [dev]",
+      value: "flux2_dev_fp8",
     },
   ];
 };
@@ -99,14 +123,39 @@ export const getValidModelValue = (selectedValue: string) => {
   return defaultValue;
 };
 
+// Helper function to check if the current model is any Qwen Image Edit model
+export const isQwenImageEditModel = (modelValue: string): boolean => {
+  return (QWEN_IMAGE_EDIT_MODEL_IDS as readonly string[]).includes(modelValue);
+};
+
+// Helper function to check if the current model is Qwen Image Edit Lightning (fast)
+export const isQwenImageEditLightningModel = (modelValue: string): boolean => {
+  return modelValue === QWEN_IMAGE_EDIT_LIGHTNING_MODEL_ID;
+};
+
+// Helper function to check if the current model is any Flux model
+export const isFluxModel = (modelValue: string): boolean => {
+  return (FLUX_MODEL_IDS as readonly string[]).includes(modelValue);
+};
+
 // Helper function to check if the current model is Flux.1 Kontext
 export const isFluxKontextModel = (modelValue: string): boolean => {
   return modelValue === FLUX_KONTEXT_MODEL_ID;
 };
 
+// Helper function to check if the current model is Flux.2 [dev]
+export const isFlux2DevModel = (modelValue: string): boolean => {
+  return modelValue === FLUX2_DEV_MODEL_ID;
+};
+
+// Helper function to check if the model uses context images (instead of ControlNet)
+export const isContextImageModel = (modelValue: string): boolean => {
+  return (CONTEXT_IMAGE_MODEL_IDS as readonly string[]).includes(modelValue);
+};
+
 // Helper function to identify Stable Diffusion models (SDXL-based models)
 export const isStableDiffusionModel = (modelValue: string): boolean => {
-  return !isFluxKontextModel(modelValue);
+  return !isContextImageModel(modelValue);
 };
 
 // Model parameter ranges and constraints
@@ -115,18 +164,83 @@ export const getModelRanges = (modelValue: string, isLoggedInWithFrontendAuth: b
   const MOBILE_MAX_IMAGES = 16;
   const deviceIsMobile = isMobile();
 
-  if (isFluxKontextModel(modelValue)) {
-    // For Flux Kontext: default 8 when not logged in, 4 when logged in (to save user credits)
+  // Qwen Image Edit 2511 Lightning (fast model)
+  if (isQwenImageEditLightningModel(modelValue)) {
+    // For Qwen Image Edit Lightning: default 8 when not logged in, 4 when logged in (to save user credits)
     const defaultNumImages = isLoggedInWithFrontendAuth ? 4 : 8;
     // Cap at 16 for mobile devices, otherwise use 8
     const maxImages = deviceIsMobile ? Math.min(8, MOBILE_MAX_IMAGES) : 8;
 
     return {
-      guidance: { min: 1, max: 5, step: 0.1, default: 2.8 },
-      inferenceSteps: { min: 18, max: 40, step: 1, default: 24 },
+      // Based on sogni-socket modelTiers: guidance min 1, max 2, default 1
+      guidance: { min: 1, max: 2, step: 0.1, default: 1 },
+      // Steps min 4, max 8, default 5 (increased from 4 for better quality)
+      inferenceSteps: { min: 4, max: 8, step: 1, default: 5 },
       numImages: { min: 1, max: maxImages, step: 1, default: defaultNumImages },
-      schedulerOptions: ['Euler', 'Euler a', 'DPM++ 2M'],
-      timeStepSpacingOptions: ['Simple', 'SGM Uniform', 'Beta', 'Normal', 'DDIM'],
+      // Scheduler options based on sogni-socket comfySampler
+      schedulerOptions: ['Euler', 'Euler a', 'DPM++ 2M', 'DPM++ 2M SDE', 'DDIM', 'UniPC'],
+      // TimeStepSpacing options based on sogni-socket comfyScheduler
+      timeStepSpacingOptions: ['Simple', 'Normal', 'SGM Uniform', 'Beta'],
+    };
+  }
+
+  // Qwen Image Edit 2511 (standard model)
+  if (isQwenImageEditModel(modelValue)) {
+    // For Qwen Image Edit: default 8 when not logged in, 4 when logged in (to save user credits)
+    const defaultNumImages = isLoggedInWithFrontendAuth ? 4 : 8;
+    // Cap at 16 for mobile devices, otherwise use 8
+    const maxImages = deviceIsMobile ? Math.min(8, MOBILE_MAX_IMAGES) : 8;
+
+    return {
+      // Based on sogni-socket modelTiers: guidance min 1, max 4, default 2.5
+      guidance: { min: 1, max: 4, step: 0.1, default: 2.5 },
+      // Steps min 4, max 50, default 25 (increased from 20 for better quality)
+      inferenceSteps: { min: 4, max: 50, step: 1, default: 25 },
+      numImages: { min: 1, max: maxImages, step: 1, default: defaultNumImages },
+      // Scheduler options based on sogni-socket comfySampler
+      schedulerOptions: ['Euler', 'Euler a', 'DPM++ 2M', 'DPM++ 2M SDE', 'DDIM', 'UniPC'],
+      // TimeStepSpacing options based on sogni-socket comfyScheduler
+      timeStepSpacingOptions: ['Simple', 'Normal', 'SGM Uniform', 'Beta'],
+    };
+  }
+
+  // Flux.1 Kontext model
+  if (isFluxKontextModel(modelValue)) {
+    // For Flux.1 Kontext: default 8 when not logged in, 4 when logged in (to save user credits)
+    const defaultNumImages = isLoggedInWithFrontendAuth ? 4 : 8;
+    // Cap at 16 for mobile devices, otherwise use 8
+    const maxImages = deviceIsMobile ? Math.min(8, MOBILE_MAX_IMAGES) : 8;
+
+    return {
+      // Based on sogni-socket modelTiers t71_flx_o_1024: guidance min 1, max 5, default 3
+      guidance: { min: 1, max: 5, step: 0.1, default: 3 },
+      // Based on sogni-socket modelTiers: steps min 20, max 35, default 25
+      inferenceSteps: { min: 20, max: 35, step: 1, default: 25 },
+      numImages: { min: 1, max: maxImages, step: 1, default: defaultNumImages },
+      // Scheduler options based on sogni-socket
+      schedulerOptions: ['Euler', 'Euler a', 'DPM++ 2M', 'DPM++ 2M SDE', 'DPM++ SDE'],
+      // TimeStepSpacing options based on sogni-socket
+      timeStepSpacingOptions: ['Simple', 'Karras', 'Linear', 'SGM Uniform', 'Beta', 'Normal', 'DDIM', 'KL Optimal'],
+    };
+  }
+
+  // Flux.2 [dev] model
+  if (isFlux2DevModel(modelValue)) {
+    // For Flux.2: default 8 when not logged in, 4 when logged in (to save user credits)
+    const defaultNumImages = isLoggedInWithFrontendAuth ? 4 : 8;
+    // Cap at 16 for mobile devices, otherwise use 8
+    const maxImages = deviceIsMobile ? Math.min(8, MOBILE_MAX_IMAGES) : 8;
+
+    return {
+      // Based on sogni-socket modelTiers flux2_dev_fp8: guidance min 3, max 6, default 4
+      guidance: { min: 3, max: 6, step: 0.1, default: 4 },
+      // Steps min 20, max 50, default 25 (increased from 20 for better quality)
+      inferenceSteps: { min: 20, max: 50, step: 1, default: 25 },
+      numImages: { min: 1, max: maxImages, step: 1, default: defaultNumImages },
+      // Scheduler options based on sogni-socket comfySampler
+      schedulerOptions: ['Euler', 'Euler a', 'DPM++ 2M', 'DPM++ 2M SDE', 'DPM++ SDE', 'DDIM', 'UniPC', 'LCM'],
+      // TimeStepSpacing options - use similar to Flux.1 Kontext
+      timeStepSpacingOptions: ['Simple', 'Karras', 'Linear', 'SGM Uniform', 'Beta', 'Normal', 'DDIM'],
     };
   }
 
@@ -156,17 +270,53 @@ export const getModelRanges = (modelValue: string, isLoggedInWithFrontendAuth: b
 export const getModelDefaults = (modelValue: string, isLoggedInWithFrontendAuth: boolean = false) => {
   const ranges = getModelRanges(modelValue, isLoggedInWithFrontendAuth);
 
-  if (isFluxKontextModel(modelValue)) {
+  // Qwen Image Edit Lightning - use server defaults for scheduler/timeStepSpacing
+  if (isQwenImageEditLightningModel(modelValue)) {
     return {
       guidance: ranges.guidance.default,
       inferenceSteps: ranges.inferenceSteps.default,
-      scheduler: 'DPM++ 2M', // Default scheduler
-      timeStepSpacing: 'Beta', // Default time step spacing
+      // Note: scheduler and timeStepSpacing omitted for Lightning - server provides defaults
       numImages: ranges.numImages.default,
     };
   }
 
-  // Default settings for other models
+  // Qwen Image Edit 2511 (standard) - include scheduler/timeStepSpacing defaults
+  if (isQwenImageEditModel(modelValue)) {
+    return {
+      guidance: ranges.guidance.default,
+      inferenceSteps: ranges.inferenceSteps.default,
+      // Based on sogni-socket defaults: euler sampler, simple scheduler
+      scheduler: 'Euler',
+      timeStepSpacing: 'Simple',
+      numImages: ranges.numImages.default,
+    };
+  }
+
+  // Flux.1 Kontext - include scheduler/timeStepSpacing defaults
+  if (isFluxKontextModel(modelValue)) {
+    return {
+      guidance: ranges.guidance.default,
+      inferenceSteps: ranges.inferenceSteps.default,
+      // Based on sogni-socket defaults: euler scheduler, simple timeStepSpacing
+      scheduler: 'Euler',
+      timeStepSpacing: 'Simple',
+      numImages: ranges.numImages.default,
+    };
+  }
+
+  // Flux.2 [dev] - include scheduler/timeStepSpacing defaults
+  if (isFlux2DevModel(modelValue)) {
+    return {
+      guidance: ranges.guidance.default,
+      inferenceSteps: ranges.inferenceSteps.default,
+      // Based on sogni-socket defaults: euler scheduler
+      scheduler: 'Euler',
+      timeStepSpacing: 'Simple',
+      numImages: ranges.numImages.default,
+    };
+  }
+
+  // Default settings for other models (SDXL)
   return {
     promptGuidance: ranges.promptGuidance?.default || 2,
     guidance: ranges.guidance?.default || 3,
@@ -207,9 +357,9 @@ const createDefaultSettings = (): Settings => {
     controlNetStrength: modelDefaults.controlNetStrength || 0.7,
     controlNetGuidanceEnd: modelDefaults.controlNetGuidanceEnd || 0.6,
     inferenceSteps: modelDefaults.inferenceSteps,
-    scheduler: modelDefaults.scheduler,
-    timeStepSpacing: modelDefaults.timeStepSpacing,
-    // Flux.1 Kontext specific settings
+    scheduler: modelDefaults.scheduler || 'DPM++ SDE',
+    timeStepSpacing: modelDefaults.timeStepSpacing || 'Karras',
+    // Qwen Image Edit specific settings
     guidance: modelDefaults.guidance || 3,
     flashEnabled: true,
     keepOriginalPhoto: false,

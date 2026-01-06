@@ -16,7 +16,7 @@ interface CostEstimationParams {
   previewCount?: number;
   scheduler?: string;
   guidance?: number;
-  contextImages?: number; // Number of Flux Kontext reference images (0 if not using)
+  contextImages?: number; // Number of context image references (0 if not using)
   cnEnabled?: boolean; // Whether ControlNet (InstantID) is enabled
   guideImage?: boolean; // Whether using a guide/starting image (for enhancement/upscaling)
   denoiseStrength?: number; // Denoise strength for guide image (0.0-1.0, typically 0.75 for Krea)

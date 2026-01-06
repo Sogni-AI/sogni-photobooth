@@ -45,9 +45,9 @@ interface CameraViewProps {
   promptGuidance?: number;
   /** Handler for prompt guidance change */
   onPromptGuidanceChange?: (value: number) => void;
-  /** Guidance value (Flux.1 Kontext specific) */
+  /** Guidance value (Qwen Image Edit specific) */
   guidance?: number;
-  /** Handler for guidance change (Flux.1 Kontext specific) */
+  /** Handler for guidance change (Qwen Image Edit specific) */
   onGuidanceChange?: (value: number) => void;
   /** ControlNet strength value */
   controlNetStrength?: number;

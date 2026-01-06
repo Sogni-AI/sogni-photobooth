@@ -1,5 +1,5 @@
 import { Settings } from '../types/index';
-import { getModelDefaults, isFluxKontextModel } from '../constants/settings';
+import { getModelDefaults, isContextImageModel } from '../constants/settings';
 
 export function getSettingFromCookie<T>(name: string, defaultValue: T, isAuthenticated: boolean = false): T {
   try {
@@ -85,18 +85,18 @@ export function saveModelSpecificSettings(modelId: string, settings: Partial<Set
 
 export function getSettingsForModel(modelId: string): Partial<Settings> {
   const modelDefaults = getModelDefaults(modelId);
-  const isFluxKontext = isFluxKontextModel(modelId);
+  const usesContextImages = isContextImageModel(modelId);
   
   return {
     inferenceSteps: getModelSpecificSetting(modelId, 'inferenceSteps', modelDefaults.inferenceSteps),
     scheduler: getModelSpecificSetting(modelId, 'scheduler', modelDefaults.scheduler),
     timeStepSpacing: getModelSpecificSetting(modelId, 'timeStepSpacing', modelDefaults.timeStepSpacing),
-    promptGuidance: isFluxKontext 
-      ? getSettingFromCookie('promptGuidance', 2) // Use global for non-Flux setting
+    promptGuidance: usesContextImages 
+      ? getSettingFromCookie('promptGuidance', 2) // Use global for SDXL setting
       : getModelSpecificSetting(modelId, 'promptGuidance', modelDefaults.promptGuidance || 2),
-    guidance: isFluxKontext 
+    guidance: usesContextImages 
       ? getModelSpecificSetting(modelId, 'guidance', modelDefaults.guidance)
-      : getSettingFromCookie('guidance', 3), // Use global for non-Flux setting
+      : getSettingFromCookie('guidance', 3), // Use global for SDXL setting
     numImages: getModelSpecificSetting(modelId, 'numImages', modelDefaults.numImages),
   };
 }

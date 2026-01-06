@@ -598,7 +598,7 @@ export class FrontendSogniClientAdapter {
         }
         
         // Debug log for enhancement jobs
-        if (params.sourceType === 'enhancement' || params.sourceType === 'enhancement-kontext') {
+        if (params.sourceType === 'enhancement' || params.sourceType === 'enhancement-qwen-image-edit') {
           console.log('[FrontendAdapter] Enhancement job params:', {
             modelId: params.modelId,
             sourceType: params.sourceType,

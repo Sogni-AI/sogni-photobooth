@@ -76,7 +76,7 @@ const ImageAdjuster = ({
   const [isBatchDropdownOpen, setIsBatchDropdownOpen] = useState(false);
 
   // Estimate cost for this generation
-  // ImageAdjuster uses InstantID ControlNet, not Flux Kontext
+  // ImageAdjuster uses InstantID ControlNet, not Qwen Image Edit
   const { loading: costLoading, cost, costInUSD } = useCostEstimation({
     model: selectedModel,
     imageCount: selectedBatchCount,
@@ -85,7 +85,7 @@ const ImageAdjuster = ({
     scheduler: scheduler,
     network: 'fast',
     previewCount: 10,
-    contextImages: 0, // Not using Flux Kontext reference images
+    contextImages: 0, // Not using context image models
     cnEnabled: true // Using InstantID ControlNet
   });
   

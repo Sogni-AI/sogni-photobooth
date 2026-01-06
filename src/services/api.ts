@@ -275,7 +275,7 @@ export async function createProject(params: Record<string, unknown>, progressCal
         throw new Error('Enhancement requires startingImage as Array or Uint8Array');
       }
     }
-    // Process contextImages for Flux.1 Kontext model
+    // Process contextImages for Qwen Image Edit model
     else if (params.contextImages && Array.isArray(params.contextImages)) {
       isContextImage = true;
       
@@ -359,7 +359,7 @@ export async function createProject(params: Record<string, unknown>, progressCal
         isPremiumSpark: params.isPremiumSpark // Pass premium status
       };
     } else if (isContextImage) {
-      // Generation parameters with contextImages (Flux.1 Kontext)
+      // Generation parameters with contextImages (Qwen Image Edit)
       projectParams = {
         selectedModel: params.modelId,
         positivePrompt: params.positivePrompt || '',

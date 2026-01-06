@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useApp } from '../../context/AppContext';
 import { AspectRatioOption, TezDevTheme, OutputFormat, Settings } from '../../types/index';
-import { isFluxKontextModel, getModelRanges, getModelDefaults, DEFAULT_SETTINGS } from '../../constants/settings';
+import { isQwenImageEditLightningModel, isContextImageModel, getModelRanges, getModelDefaults, DEFAULT_SETTINGS } from '../../constants/settings';
 import { VideoQualityPreset, VideoResolution, VIDEO_CONFIG } from '../../constants/videoSettings';
 import { themeConfigService } from '../../services/themeConfig';
 import { sanitizeUrl, getUrlValidationError } from '../../utils/urlValidation';
@@ -53,7 +53,7 @@ interface AdvancedSettingsProps {
   promptGuidance?: number;
   /** Handler for prompt guidance change */
   onPromptGuidanceChange?: (value: number) => void;
-  /** Guidance value (Flux.1 Kontext specific) */
+  /** Guidance value (Qwen Image Edit specific) */
   guidance?: number;
   /** Handler for guidance change */
   onGuidanceChange?: (value: number) => void;
@@ -352,8 +352,9 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
   const finalScheduler = scheduler ?? modelDefaults.scheduler ?? 'DPM++ SDE';
   const finalTimeStepSpacing = timeStepSpacing ?? modelDefaults.timeStepSpacing ?? 'Karras';
 
-  // Check if current model is Flux.1 Kontext
-  const isFluxKontext = isFluxKontextModel(currentModel);
+  // Check if current model uses context images (Qwen, Flux) vs ControlNet (SDXL)
+  const usesContextImages = isContextImageModel(currentModel);
+  const isQwenLightning = isQwenImageEditLightningModel(currentModel);
   
 
 
@@ -738,7 +739,7 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
             {showAdvancedModelSettings && (
               <div className="advanced-subsection">
                 {/* Prompt Guidance slider - different ranges for different models */}
-                {isFluxKontext ? (
+                {usesContextImages ? (
                   <div className="advanced-control">
                     <label className="advanced-label">Prompt Guidance:</label>
                     <div className="advanced-input-group">
@@ -772,8 +773,8 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
                   </div>
                 )}
 
-                {/* ControlNet settings - only show for non-Flux models */}
-                {!isFluxKontext && (
+                {/* ControlNet settings - only show for SDXL models (not context image models) */}
+                {!usesContextImages && (
                   <>
                     {/* ControlNet Strength slider */}
                     <div className="advanced-control">
@@ -817,8 +818,8 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
                   <div className="advanced-input-group">
                     <input
                       type="range"
-                      min={modelRanges.inferenceSteps?.min || (isFluxKontext ? 18 : 4)}
-                      max={modelRanges.inferenceSteps?.max || (isFluxKontext ? 40 : 10)}
+                      min={modelRanges.inferenceSteps?.min || 4}
+                      max={modelRanges.inferenceSteps?.max || (isQwenLightning ? 8 : (usesContextImages ? 50 : 10))}
                       step={modelRanges.inferenceSteps?.step || 1}
                       value={finalInferenceSteps}
                       onChange={(e) => onInferenceStepsChange?.(Number(e.target.value))}
@@ -828,37 +829,41 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
                   </div>
                 </div>
 
-                {/* Scheduler selector */}
-                <div className="advanced-control">
-                  <label className="advanced-label">Scheduler:</label>
-                  <select
-                    className="advanced-select"
-                    onChange={(e) => onSchedulerChange?.(e.target.value)}
-                    value={finalScheduler}
-                  >
-                    {(modelRanges.schedulerOptions || []).map((option) => (
-                      <option key={option} value={option}>
-                        {option}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                {/* Scheduler selector - hidden for Qwen Image Edit 2511 Lightning (server provides defaults) */}
+                {!isQwenLightning && (
+                  <div className="advanced-control">
+                    <label className="advanced-label">Scheduler:</label>
+                    <select
+                      className="advanced-select"
+                      onChange={(e) => onSchedulerChange?.(e.target.value)}
+                      value={finalScheduler}
+                    >
+                      {(modelRanges.schedulerOptions || []).map((option) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
-                {/* Time Step Spacing selector */}
-                <div className="advanced-control">
-                  <label className="advanced-label">Time Step Spacing:</label>
-                  <select
-                    className="advanced-select"
-                    onChange={(e) => onTimeStepSpacingChange?.(e.target.value)}
-                    value={finalTimeStepSpacing}
-                  >
-                    {(modelRanges.timeStepSpacingOptions || []).map((option) => (
-                      <option key={option} value={option}>
-                        {option}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                {/* Time Step Spacing selector - hidden for Qwen Image Edit 2511 Lightning (server provides defaults) */}
+                {!isQwenLightning && (
+                  <div className="advanced-control">
+                    <label className="advanced-label">Time Step Spacing:</label>
+                    <select
+                      className="advanced-select"
+                      onChange={(e) => onTimeStepSpacingChange?.(e.target.value)}
+                      value={finalTimeStepSpacing}
+                    >
+                      {(modelRanges.timeStepSpacingOptions || []).map((option) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -870,7 +875,7 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
           <input
             type="range"
             min={modelRanges.numImages?.min || 1}
-            max={modelRanges.numImages?.max || (isFluxKontext ? 8 : (isMobile() ? 16 : 32))}
+            max={modelRanges.numImages?.max || (usesContextImages ? 8 : (isMobile() ? 16 : 32))}
             step={modelRanges.numImages?.step || 1}
             value={finalNumImages}
             onChange={(e) => onNumImagesChange?.(Number(e.target.value))}

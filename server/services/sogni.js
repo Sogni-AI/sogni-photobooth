@@ -407,10 +407,16 @@ export async function generateImage(client, params, progressCallback, localProje
     // Prepare project options in the correct format for the Sogni SDK
     const isEnhancement = params.startingImage !== undefined;
     const isKreaUpscaling = isEnhancement && params.selectedModel === 'flux1-krea-dev_fp8_scaled';
-    const isKontextEnhancement = params.selectedModel === 'flux1-dev-kontext_fp8_scaled';
+    // Check for context image models (Qwen, Flux) that use contextImages instead of ControlNet
+    const isContextImageModel = [
+      'qwen_image_edit_2511_fp8_lightning',
+      'qwen_image_edit_2511_fp8',
+      'flux1-dev-kontext_fp8_scaled',
+      'flux2_dev_fp8'
+    ].includes(params.selectedModel);
     
-    // CRITICAL: Krea and Kontext models are not NSFW-aware, must always disable filter
-    const isNsfwUnawareModel = isKreaUpscaling || isKontextEnhancement;
+    // CRITICAL: Krea and context image models are not NSFW-aware, must always disable filter
+    const isNsfwUnawareModel = isKreaUpscaling || isContextImageModel;
     
     const projectOptions = {
       type: 'image', // Required in SDK v4.x.x
@@ -427,7 +433,7 @@ export async function generateImage(client, params, progressCallback, localProje
       numberOfPreviews: isKreaUpscaling ? 0 : 10, // Disable previews for Krea upscaling
       scheduler: params.scheduler || 'DPM++ SDE',
       timeStepSpacing: params.timeStepSpacing || 'Karras',
-      // FORCE disable NSFW filter for Krea/Kontext (not NSFW-aware), otherwise use user setting
+      // FORCE disable NSFW filter for Krea/Qwen Image Edit (not NSFW-aware), otherwise use user setting
       disableNSFWFilter: isNsfwUnawareModel ? true : (params.sensitiveContentFilter ? false : true),
       outputFormat: params.outputFormat || 'jpg',
       tokenType: params.tokenType || 'spark',
@@ -452,12 +458,12 @@ export async function generateImage(client, params, progressCallback, localProje
       
       console.log(`[IMAGE] Enhancement image: ${(imageData.length / 1024 / 1024).toFixed(2)}MB`);
     } else if (params.contextImages && Array.isArray(params.contextImages)) {
-      // Handle Flux.1 Kontext contextImages
+      // Handle Qwen Image Edit contextImages
       const contextImagesData = params.contextImages.map(img => {
         return img instanceof Uint8Array ? img : new Uint8Array(img);
       });
       
-      // For Flux.1 Kontext, use contextImages as the direct parameter (array)
+      // For Qwen Image Edit, use contextImages as the direct parameter (array)
       projectOptions.contextImages = contextImagesData;
       
     } else if (params.imageData) {
