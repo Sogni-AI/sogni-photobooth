@@ -5274,14 +5274,14 @@ const App = () => {
             throw new Error('Please select a style reference image first by clicking "Copy Image Style"');
           }
           
-          // In style reference mode, use both images: [userPhoto, styleReference]
+          // In style reference mode, use both images: [styleReference, userPhoto]
           const styleRefArrayBuffer = await styleReferenceImage.croppedBlob.arrayBuffer();
           projectConfig.contextImages = [
-            new Uint8Array(blobArrayBuffer),      // First image: user's photo (subject)
-            new Uint8Array(styleRefArrayBuffer)   // Second image: style reference
+            new Uint8Array(styleRefArrayBuffer),  // First image: style reference
+            new Uint8Array(blobArrayBuffer)       // Second image: user's photo (subject)
           ];
-          console.log('🎨 Using both user photo and style reference for context image model');
-          console.log(`📊 Context images: User photo (${blobArrayBuffer.byteLength} bytes) + Style ref (${styleRefArrayBuffer.byteLength} bytes)`);
+          console.log('🎨 Using both style reference and user photo for context image model');
+          console.log(`📊 Context images: Style ref (${styleRefArrayBuffer.byteLength} bytes) + User photo (${blobArrayBuffer.byteLength} bytes)`);
         } else {
           // Normal mode - just use the user's photo
           projectConfig.contextImages = [new Uint8Array(blobArrayBuffer)];
