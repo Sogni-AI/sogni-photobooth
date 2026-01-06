@@ -5094,8 +5094,9 @@ const App = () => {
       // This helps the edit model understand it should transform while preserving identity
       const usesEditModel = isContextImageModel(selectedModel);
       const isUsingEditPrompt = selectedStyle === 'copyImageStyle' || isEditPrompt(selectedStyle);
+      const isCopyImageStylePrompt = finalPositivePrompt === COPY_IMAGE_STYLE_PROMPT;
 
-      if (usesEditModel && !isUsingEditPrompt && finalPositivePrompt && selectedStyle !== 'custom') {
+      if (usesEditModel && !isUsingEditPrompt && !isCopyImageStylePrompt && finalPositivePrompt && selectedStyle !== 'custom') {
         console.log('✏️ Edit model with non-edit prompt detected - prepending transformation instruction');
 
         // Check if prompt uses pipe-separated syntax (randomMix, oneOfEach)
@@ -7497,6 +7498,8 @@ const App = () => {
             portraitType={portraitType}
             styleReferenceImage={styleReferenceImage}
             onEditStyleReference={handleEditStyleReference}
+            onCopyImageStyleSelect={handleStyleReferenceUpload}
+            showToast={showToast}
             // Photo tracking props
             originalPhotoUrl={
               // Show lastCameraPhoto for camera preview
@@ -8237,10 +8240,18 @@ const App = () => {
     // Hide the adjuster
     setShowStyleReferenceAdjuster(false);
     
-    // IMPORTANT: Switch model FIRST, then set style
+    // Check if we need to switch models
+    const isAlreadyEditModel = isContextImageModel(selectedModel);
+    const needsModelSwitch = !isAlreadyEditModel;
+    
+    // IMPORTANT: Switch model FIRST (if needed), then set style
     // This prevents race conditions where switchToModel might use old settings
-    console.log('🔄 Switching to Qwen Image Edit 2511 Lightning for image style copy mode');
-    switchToModel(QWEN_IMAGE_EDIT_LIGHTNING_MODEL_ID);
+    if (needsModelSwitch) {
+      console.log('🔄 Switching to Qwen Image Edit 2511 Lightning for image style copy mode');
+      switchToModel(QWEN_IMAGE_EDIT_LIGHTNING_MODEL_ID);
+    } else {
+      console.log('✅ Already using edit model, no switch needed');
+    }
     
     // Then set the selected style to 'copyImageStyle' 
     // Use setTimeout to ensure model switch state update completes first
@@ -8253,13 +8264,15 @@ const App = () => {
       updateUrlWithPrompt('copyImageStyle');
       console.log('🔗 Cleared URL prompt parameter');
       
-      // Inform user about the model switch
-      showToast({
-        type: 'info',
-        title: 'Model Switched',
-        message: 'Automatically switched to Qwen Image Edit 2511 Lightning for Copy Image Style. You can change the model in Photobooth Settings.',
-        timeout: 5000
-      });
+      // Only inform user about the model switch if we actually switched
+      if (needsModelSwitch) {
+        showToast({
+          type: 'info',
+          title: 'Model Switched',
+          message: 'Automatically switched to Qwen Image Edit 2511 Lightning for Copy Image Style. You can change the model in Photobooth Settings.',
+          timeout: 5000
+        });
+      }
     }, 0);
   };
 

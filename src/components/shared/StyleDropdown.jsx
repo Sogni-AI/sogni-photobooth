@@ -627,7 +627,6 @@ const StyleDropdown = ({
                 <span>Copy Image Style</span>
                 {!usesContextImages && (
                   <span style={{ fontSize: '10px', opacity: 0.7, marginLeft: 'auto' }}>
-                    (switches model)
                   </span>
                 )}
               </div>

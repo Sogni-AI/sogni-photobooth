@@ -7607,6 +7607,23 @@ const PhotoGallery = ({
             }
           }}
           portraitType={portraitType}
+          styleReferenceImage={styleReferenceImage}
+          onEditStyleReference={onEditStyleReference}
+          onCopyImageStyle={() => {
+            console.log('PhotoGallery: Copy Image Style triggered from StyleDropdown');
+            // Create a file input for the user to select an image
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/png, image/jpeg, image/jpg';
+            input.onchange = async (e) => {
+              const file = e.target.files?.[0];
+              if (file && onCopyImageStyleSelect) {
+                await onCopyImageStyleSelect(file);
+              }
+            };
+            input.click();
+          }}
+          showToast={showToast}
           onNavigateToVibeExplorer={onNavigateToVibeExplorer}
           slideInPanel={true}
         />
@@ -9624,11 +9641,25 @@ const PhotoGallery = ({
               <button
                 onClick={() => {
                   const isEditModel = selectedModel && isContextImageModel(selectedModel);
+                  
+                  // Helper to trigger file selection
+                  const triggerFileSelection = () => {
+                    console.log('PhotoGallery: Copy Image Style button clicked - opening file picker');
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.accept = 'image/png, image/jpeg, image/jpg';
+                    input.onchange = async (e) => {
+                      const file = e.target.files?.[0];
+                      if (file && onCopyImageStyleSelect) {
+                        await onCopyImageStyleSelect(file);
+                      }
+                    };
+                    input.click();
+                  };
+                  
                   if (isEditModel) {
                     // Edit model selected - proceed with Copy Image Style
-                    if (onCopyImageStyleSelect) {
-                      onCopyImageStyleSelect();
-                    }
+                    triggerFileSelection();
                   } else {
                     // Switch to edit model first
                     if (switchToModel) {
@@ -9638,10 +9669,8 @@ const PhotoGallery = ({
                         type: 'info'
                       });
                     }
-                    // Then trigger Copy Image Style
-                    if (onCopyImageStyleSelect) {
-                      setTimeout(() => onCopyImageStyleSelect(), 100);
-                    }
+                    // Then trigger Copy Image Style after a short delay for model switch
+                    setTimeout(() => triggerFileSelection(), 100);
                   }
                 }}
                 onMouseOver={(e) => {
@@ -9745,7 +9774,7 @@ const PhotoGallery = ({
                 )}
                 <span>Copy image style</span>
                 {!(selectedModel && isContextImageModel(selectedModel)) && (
-                  <span style={{ fontSize: '10px', opacity: 0.8 }}>(switches model)</span>
+                  <span style={{ fontSize: '10px', opacity: 0.8 }}></span>
                 )}
               </button>
             </div>

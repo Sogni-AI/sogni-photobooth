@@ -60,6 +60,8 @@ interface CameraStartMenuProps {
   portraitType?: 'headshot' | 'medium';
   styleReferenceImage?: { blob: File; dataUrl: string; croppedBlob: Blob | null } | null;
   onEditStyleReference?: () => void;
+  onCopyImageStyleSelect?: (file: File) => Promise<void>;
+  showToast?: (options: { message: string; type: string; title?: string }) => void;
   // Photo tracking props
   originalPhotoUrl?: string | null;
   photoSourceType?: 'camera' | 'upload' | null;
@@ -92,6 +94,8 @@ const CameraStartMenu: React.FC<CameraStartMenuProps> = ({
   portraitType = 'medium',
   styleReferenceImage = null,
   onEditStyleReference,
+  onCopyImageStyleSelect,
+  showToast,
   originalPhotoUrl = null,
   photoSourceType = null,
   reusablePhotoUrl = null,
@@ -666,6 +670,21 @@ const CameraStartMenu: React.FC<CameraStartMenuProps> = ({
           portraitType={portraitType}
           styleReferenceImage={styleReferenceImage as any}
           onEditStyleReference={onEditStyleReference as any}
+          onCopyImageStyle={(onCopyImageStyleSelect ? (() => {
+            console.log('CameraStartMenu: Copy Image Style triggered from StyleDropdown');
+            // Create a file input for the user to select an image
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/png, image/jpeg, image/jpg';
+            input.onchange = async (e) => {
+              const file = (e.target as HTMLInputElement).files?.[0];
+              if (file && onCopyImageStyleSelect) {
+                await onCopyImageStyleSelect(file);
+              }
+            };
+            input.click();
+          }) : undefined) as any}
+          showToast={showToast as any}
           onNavigateToVibeExplorer={onNavigateToGallery as any}
           slideInPanel={true}
         />
