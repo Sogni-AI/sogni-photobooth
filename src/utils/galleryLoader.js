@@ -91,7 +91,7 @@ const generateGalleryFilename = (promptKey) => {
 /**
  * Loads all gallery images and converts them to photo objects
  * @param {Object} stylePrompts - The available style prompts
- * @param {string} portraitType - The type of portrait: 'headshot', 'headshot2', 'medium', or 'fullbody'
+ * @param {string} portraitType - The type of portrait: 'headshot', 'headshot2', or 'medium'
  * @param {Object} promptsDataRaw - Optional raw prompts data for fallback logic
  * @returns {Promise<Array>} Array of photo objects for the gallery
  */
@@ -170,7 +170,7 @@ export const checkImageExists = (imagePath) => {
 
 /**
  * Gets the appropriate portrait folder with fallback logic
- * @param {string} portraitType - The requested portrait type ('headshot', 'headshot2', 'medium', or 'fullbody')
+ * @param {string} portraitType - The requested portrait type ('headshot', 'headshot2', or 'medium')
  * @param {string} promptKey - Optional prompt key to check if it's a winter style
  * @param {Object} promptsDataRaw - Optional raw prompts data to check winter category
  * @returns {string} The folder name to use (with fallback to 'headshot' if 'headshot2' and not a winter style)

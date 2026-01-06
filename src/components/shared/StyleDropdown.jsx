@@ -954,7 +954,7 @@ StyleDropdown.propTypes = {
   onCustomPromptChange: PropTypes.func,
   currentCustomPrompt: PropTypes.string,
   currentCustomSceneName: PropTypes.string,
-  portraitType: PropTypes.oneOf(['headshot', 'medium', 'fullbody']),
+  portraitType: PropTypes.oneOf(['headshot', 'medium']),
   styleReferenceImage: PropTypes.object,
   onEditStyleReference: PropTypes.func,
   onNavigateToVibeExplorer: PropTypes.func,

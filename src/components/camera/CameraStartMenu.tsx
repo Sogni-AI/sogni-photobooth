@@ -57,7 +57,7 @@ interface CameraStartMenuProps {
   onCustomPromptChange?: (prompt: string, sceneName: string) => void;
   currentCustomPrompt?: string;
   currentCustomSceneName?: string;
-  portraitType?: 'headshot' | 'medium' | 'fullbody';
+  portraitType?: 'headshot' | 'medium';
   styleReferenceImage?: { blob: File; dataUrl: string; croppedBlob: Blob | null } | null;
   onEditStyleReference?: () => void;
   // Photo tracking props

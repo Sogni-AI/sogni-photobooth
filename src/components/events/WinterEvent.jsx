@@ -19,7 +19,7 @@ const WinterEvent = () => {
   const [selectedStyleKey, setSelectedStyleKey] = useState(null); // Track selected style for mobile two-click
   const [snowflakeDismissed, setSnowflakeDismissed] = useState(false);
   const [showSnowflakeButton, setShowSnowflakeButton] = useState(false); // Delayed appearance
-  const [portraitType, setPortraitType] = useState('headshot2'); // 'headshot2', 'medium', or 'fullbody'
+  const [portraitType, setPortraitType] = useState('headshot2'); // 'headshot2' or 'medium'
   const [activeVideoStyleKeys, setActiveVideoStyleKeys] = useState([]); // Track which videos are playing (array for multiple)
   const [autoPlayEnabled, setAutoPlayEnabled] = useState(true); // Track if auto-play is active
   const [userInitiatedVideos, setUserInitiatedVideos] = useState(new Set()); // Track which videos were started by user
@@ -529,45 +529,6 @@ const WinterEvent = () => {
               </button>
               <span className="portrait-type-label winter-label">
                 MED
-              </span>
-            </div>
-            
-            <div 
-              style={{ position: 'relative' }} 
-              className="portrait-type-button-container"
-              onMouseEnter={(e) => {
-                if (portraitType !== 'fullbody') {
-                  const label = e.currentTarget.querySelector('.portrait-type-label');
-                  if (label) label.style.opacity = '1';
-                }
-              }}
-              onMouseLeave={(e) => {
-                const label = e.currentTarget.querySelector('.portrait-type-label');
-                if (label) label.style.opacity = '0';
-              }}
-            >
-              <button 
-                onClick={() => setPortraitType('fullbody')}
-                className="winter-portrait-btn"
-                style={{
-                  border: portraitType === 'fullbody' ? '3px solid #4a9eff' : '3px solid rgba(74, 158, 255, 0.3)',
-                  boxShadow: portraitType === 'fullbody' ? '0 0 12px rgba(74, 158, 255, 0.6)' : '0 2px 8px rgba(0,0,0,0.2)'
-                }}
-                title="Full Body"
-              >
-                <img 
-                  src="/gallery/sample-gallery-full-body-mark.jpg"
-                  alt="Full Body"
-                  style={{
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'cover',
-                    display: 'block'
-                  }}
-                />
-              </button>
-              <span className="portrait-type-label winter-label">
-                FAR
               </span>
             </div>
           </div>

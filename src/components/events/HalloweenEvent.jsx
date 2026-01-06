@@ -19,7 +19,7 @@ const HalloweenEvent = () => {
   const [selectedStyleKey, setSelectedStyleKey] = useState(null); // Track selected style for mobile two-click
   const [pumpkinDismissed, setPumpkinDismissed] = useState(false);
   const [showPumpkinButton, setShowPumpkinButton] = useState(false); // Delayed appearance
-  const [portraitType, setPortraitType] = useState('medium'); // 'headshot', 'medium', or 'fullbody'
+  const [portraitType, setPortraitType] = useState('medium'); // 'headshot' or 'medium'
   const { isEnabled, enable: enableMusic } = useMusicPlayer();
   const { updateSetting, stylePrompts } = useApp();
   const { navigateToCamera, navigateToContestVote } = useNavigation();
@@ -273,45 +273,6 @@ const HalloweenEvent = () => {
                 }}
               />
             </button>
-            
-            <div 
-              style={{ position: 'relative' }} 
-              className="portrait-type-button-container"
-              onMouseEnter={(e) => {
-                if (portraitType !== 'fullbody') {
-                  const label = e.currentTarget.querySelector('.portrait-type-label');
-                  if (label) label.style.opacity = '1';
-                }
-              }}
-              onMouseLeave={(e) => {
-                const label = e.currentTarget.querySelector('.portrait-type-label');
-                if (label) label.style.opacity = '0';
-              }}
-            >
-              <button 
-                onClick={() => setPortraitType('fullbody')}
-                className="halloween-portrait-btn"
-                style={{
-                  border: portraitType === 'fullbody' ? '3px solid #ff6b00' : '3px solid rgba(45, 24, 16, 0.3)',
-                  boxShadow: portraitType === 'fullbody' ? '0 0 12px rgba(255, 107, 0, 0.6)' : '0 2px 8px rgba(0,0,0,0.2)'
-                }}
-                title="Full Body"
-              >
-                <img 
-                  src="/gallery/sample-gallery-full-body-mark.jpg"
-                  alt="Full Body"
-                  style={{
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'cover',
-                    display: 'block'
-                  }}
-                />
-              </button>
-              <span className="portrait-type-label halloween-label">
-                FAR
-              </span>
-            </div>
           </div>
         </header>
 
