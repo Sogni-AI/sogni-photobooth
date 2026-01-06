@@ -2,7 +2,7 @@
 // Note: Regular edit prompts are now in prompts.json under "image-edit-prompts" category
 
 // Special prompt for Copy Image Style mode
-export const COPY_IMAGE_STYLE_PROMPT = "identify the two images in the scene and transform the main person image into the style of the second image, the result must be the transformed person image only, generate a dramatically transformed image";
+export const COPY_IMAGE_STYLE_PROMPT = "STYLE TRANSFER: Re-render subject in Image 1 with the exact same subject identity while matching Image 2’s visual style/medium; transfer Image 2’s palette, contrast/tonemap, lighting quality and direction, texture (grain/canvas/brushwork/ink), edge rendering/sharpness, and material response; keep content strictly from Image 1 and use Image 2 strictly as an appearance reference; exclude importing any specific background elements from Image 2.";
 
 // Category ID for image edit prompts in prompts.json
 export const IMAGE_EDIT_PROMPTS_CATEGORY = 'image-edit-prompts';

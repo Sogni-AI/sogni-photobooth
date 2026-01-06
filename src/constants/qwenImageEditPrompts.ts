@@ -1,7 +1,7 @@
 // Qwen Image Edit specific prompts
 export const QWEN_IMAGE_EDIT_PROMPTS = {
   custom: '', // Custom Prompt - user provides their own text
-  copyImageStyle: "identify the two images in the scene and transform the main person image into the style of the second image, the result must be the transformed person image only, generate a dramatically transformed image",
+  copyImageStyle: "STYLE TRANSFER: Re-render subject in Image 1 with the exact same subject identity while matching Image 2’s visual style/medium; transfer Image 2’s palette, contrast/tonemap, lighting quality and direction, texture (grain/canvas/brushwork/ink), edge rendering/sharpness, and material response; keep content strictly from Image 1 and use Image 2 strictly as an appearance reference; exclude importing any specific background elements from Image 2.",
   makeMeLegos: "Preserve the person's face and identify, make them into a lego character while keeping the person's identity and facial characteristics identical",
   astronaut: "Replace their clothes with a realistic NASA astronaut suit while keeping their face and identity the same",
   bodybuilder: "keep the person's face the same, keep hair the same, keep nose and mouth the same, same face shape, same expression, Make the person have huge muscles that blend naturally into their face realistically while keeping their existing identity and characteristics",
