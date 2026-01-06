@@ -3,6 +3,7 @@
  */
 
 import { styleIdToDisplay } from '../utils';
+import { EDIT_MODEL_NEGATIVE_PROMPT_PREFIX } from '../constants/editPrompts';
 
 /**
  * Refreshes a photo using Sogni API
@@ -214,6 +215,13 @@ export const refreshPhoto = async (options) => {
     
     console.log(`[REFRESH] Using dimensions from aspect ratio '${aspectRatio}': ${width}x${height} (original was ${imageDimensions.width}x${imageDimensions.height})`);
 
+    // Prepare negative prompt - prepend "black bars, " for edit models
+    let finalNegativePrompt = negativePrompt?.trim() || 'lowres, worst quality, low quality';
+    if (usesContextImages && finalNegativePrompt) {
+      console.log('[REFRESH] ✏️ Edit model detected - prepending "black bars, " to negative prompt');
+      finalNegativePrompt = `${EDIT_MODEL_NEGATIVE_PROMPT_PREFIX}${finalNegativePrompt}`;
+    }
+
     // Create project configuration for a single image refresh
     const projectConfig = {
       type: 'image', // Required in SDK v4.x.x
@@ -222,7 +230,7 @@ export const refreshPhoto = async (options) => {
       isPremiumSpark, // Pass premium status (for frontend auth)
       modelId: selectedModel,
       positivePrompt: promptToUse, // Use the photo's original prompt
-      negativePrompt: negativePrompt?.trim() || 'lowres, worst quality, low quality',
+      negativePrompt: finalNegativePrompt,
       stylePrompt: stylePrompt?.trim() || '',
       sizePreset: 'custom',
       width,

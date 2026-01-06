@@ -11,6 +11,10 @@ export const IMAGE_EDIT_PROMPTS_CATEGORY = 'image-edit-prompts';
 // This helps edit models understand to transform while preserving identity
 export const EDIT_MODEL_TRANSFORMATION_PREFIX = "Transform the person while keeping facial features and identity intact into this style: ";
 
+// Prefix prepended to negative prompts when using edit models
+// This helps prevent black bars/letterboxing artifacts common in edit model outputs
+export const EDIT_MODEL_NEGATIVE_PROMPT_PREFIX = "black bars, ";
+
 /**
  * Strips the transformation prefix from a prompt if present.
  * Used to match prompts back to their original style keys.

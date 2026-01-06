@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 
 import { getModelOptions, defaultStylePrompts as initialStylePrompts, TIMEOUT_CONFIG, isQwenImageEditModel, isQwenImageEditLightningModel, isContextImageModel, isFluxModel, TWITTER_SHARE_CONFIG, getQRWatermarkConfig, DEFAULT_MODEL_ID, QWEN_IMAGE_EDIT_LIGHTNING_MODEL_ID } from './constants/settings';
-import { COPY_IMAGE_STYLE_PROMPT, EDIT_MODEL_TRANSFORMATION_PREFIX, stripTransformationPrefix } from './constants/editPrompts';
+import { COPY_IMAGE_STYLE_PROMPT, EDIT_MODEL_TRANSFORMATION_PREFIX, EDIT_MODEL_NEGATIVE_PROMPT_PREFIX, stripTransformationPrefix } from './constants/editPrompts';
 import { photoThoughts, randomThoughts } from './constants/thoughts';
 import { saveSettingsToCookies, shouldShowPromoPopup, markPromoPopupShown, hasDoneDemoRender, markDemoRenderDone, clearSessionSettings } from './utils/cookies';
 import { styleIdToDisplay } from './utils';
@@ -5094,10 +5094,10 @@ const App = () => {
       // This helps the edit model understand it should transform while preserving identity
       const usesEditModel = isContextImageModel(selectedModel);
       const isUsingEditPrompt = selectedStyle === 'copyImageStyle' || isEditPrompt(selectedStyle);
-      
+
       if (usesEditModel && !isUsingEditPrompt && finalPositivePrompt && selectedStyle !== 'custom') {
         console.log('✏️ Edit model with non-edit prompt detected - prepending transformation instruction');
-        
+
         // Check if prompt uses pipe-separated syntax (randomMix, oneOfEach)
         if (finalPositivePrompt.startsWith('{') && finalPositivePrompt.includes('|') && finalPositivePrompt.endsWith('}')) {
           // For pipe-separated prompts, prepend to each individual prompt
@@ -5114,9 +5114,16 @@ const App = () => {
       }
 
       // Style prompt logic: use context state
-      let finalStylePrompt = stylePrompt.trim() || ''; 
+      let finalStylePrompt = stylePrompt.trim() || '';
       // Negative prompt logic: use context state
-      let finalNegativePrompt = negativePrompt.trim() || 'lowres, worst quality, low quality'; 
+      let finalNegativePrompt = negativePrompt.trim() || 'lowres, worst quality, low quality';
+
+      // When using an edit model, prepend "black bars, " to negative prompt
+      // This helps prevent black bars/letterboxing artifacts common in edit model outputs
+      if (usesEditModel && finalNegativePrompt) {
+        console.log('✏️ Edit model detected - prepending "black bars, " to negative prompt');
+        finalNegativePrompt = `${EDIT_MODEL_NEGATIVE_PROMPT_PREFIX}${finalNegativePrompt}`;
+      } 
       // Seed logic: use context state
       let seedValue = seed.trim();
       let seedParam = undefined;

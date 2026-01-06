@@ -3774,15 +3774,13 @@ const PhotoGallery = ({
         enabledFilters.push('favorites');
       }
       
-      // Check if any theme group filters are enabled (for SDXL models only, not context image models)
-      if (!usesContextImages) {
-        const enabledThemeGroups = Object.entries(themeGroupState)
-          .filter(([groupId, enabled]) => enabled && groupId !== 'favorites')
-          .map(([groupId]) => groupId);
-        
-        if (enabledThemeGroups.length > 0) {
-          enabledFilters.push('themes');
-        }
+      // Check if any theme group filters are enabled (for all models)
+      const enabledThemeGroups = Object.entries(themeGroupState)
+        .filter(([groupId, enabled]) => enabled && groupId !== 'favorites')
+        .map(([groupId]) => groupId);
+      
+      if (enabledThemeGroups.length > 0) {
+        enabledFilters.push('themes');
       }
       
       // If no filters are enabled, show all photos
@@ -3800,8 +3798,8 @@ const PhotoGallery = ({
         }
       }
       
-      // Check theme group filters (only for SDXL models)
-      if (!usesContextImages && !matchesAnyFilter) {
+      // Check theme group filters (for all models)
+      if (!matchesAnyFilter) {
         const enabledPrompts = getEnabledPrompts(themeGroupState, stylePrompts || {});
         if (photo.promptKey && Object.prototype.hasOwnProperty.call(enabledPrompts, photo.promptKey)) {
           matchesAnyFilter = true;
@@ -10291,7 +10289,7 @@ const PhotoGallery = ({
           width: '100%',
           maxWidth: 'none',
           margin: '0 auto',
-          padding: isPromptSelectorMode ? '4px 32px 32px' : '32px',
+          padding: isPromptSelectorMode ? '4px 32px 120px' : '32px 32px 120px',
           paddingTop: isPromptSelectorMode ? '4px' : undefined,
           // Force override the CSS !important rule
           ...(isPromptSelectorMode && {

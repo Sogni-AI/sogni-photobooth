@@ -206,25 +206,25 @@ body.extension-mode .action-button:not(.use-prompt-btn) {
     /* Reduce padding on mobile for better space utilization */
     padding: 10px 8px 20px 8px !important;
   }
-  
+
   .film-strip-content {
     /* Force exactly 2 equal-width columns using full width */
     grid-template-columns: repeat(2, 1fr) !important;
     gap: 12px !important; /* Slightly smaller gap for more space */
     /* Reduce padding to maximize photo space on mobile */
-    padding: 70px 8px 20px 8px !important;
+    padding: 70px 8px 120px 8px !important;
   }
-  
+
   /* Remove any conflicting margins */
   .film-frame:not(.selected) {
     margin: 0 !important;
   }
-  
+
   /* Multiple selectors to ensure it works */
   .film-strip-container .film-strip-content {
     grid-template-columns: repeat(2, 1fr) !important;
     gap: 12px !important;
-    padding: 70px 8px 20px 8px !important;
+    padding: 70px 8px 120px 8px !important;
   }
   
   [class*="film-strip-content"] {
@@ -238,15 +238,15 @@ body.extension-mode .action-button:not(.use-prompt-btn) {
 @media screen and (max-width: 600px) and (orientation: portrait) {
   .film-strip-content {
     /* Extra bottom padding to clear the Menu and New Batch buttons */
-    padding-bottom: 60px !important;
+    padding-bottom: 120px !important;
   }
-  
+
   .film-strip-container .film-strip-content {
-    padding-bottom: 60px !important;
+    padding-bottom: 120px !important;
   }
-  
+
   [class*="film-strip-content"] {
-    padding-bottom: 60px !important;
+    padding-bottom: 120px !important;
   }
 
   /* Prevent background scrolling when a photo is selected in fullscreen */
@@ -423,21 +423,21 @@ body.extension-mode .action-button:not(.use-prompt-btn) {
 @media (orientation: landscape) and (min-width: 2000px) {
   .film-strip-content {
     gap: 48px !important;
-    padding: 80px 40px 40px 40px !important;
+    padding: 80px 40px 120px 40px !important;
   }
 }
 
 @media (orientation: landscape) and (min-width: 2560px) {
   .film-strip-content {
     gap: 64px !important;
-    padding: 100px 60px 60px 60px !important;
+    padding: 100px 60px 140px 60px !important;
   }
 }
 
 @media (orientation: landscape) and (min-width: 3200px) {
   .film-strip-content {
     gap: 80px !important;
-    padding: 120px 80px 80px 80px !important;
+    padding: 120px 80px 160px 80px !important;
   }
 }
 
@@ -464,11 +464,11 @@ body.extension-mode .action-button:not(.use-prompt-btn) {
   .film-strip-container {
     padding: 10px 4px 20px 4px !important;
   }
-  
+
   .film-strip-content,
   .film-strip-container .film-strip-content,
   [class*="film-strip-content"] {
-    padding: 60px 4px 20px 4px !important;
+    padding: 60px 4px 120px 4px !important;
     gap: 8px !important;
   }
 }
