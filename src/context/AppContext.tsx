@@ -311,6 +311,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const isCurrentContextImage = isContextImageModel(currentModel);
     const isNewContextImage = isContextImageModel(modelId);
     
+    // If switching to a non-edit model while Copy Image Style or edit prompt style is selected, switch to Random All
+    const currentStyle = settings.selectedStyle;
+    if (!isNewContextImage && (currentStyle === 'copyImageStyle' || isEditPromptStyle(currentStyle))) {
+      console.log(`🔄 Switching from "${currentStyle}" to Random All because non-edit model selected`);
+      // Add to pending settings so it gets applied with the model switch
+      pendingSettings = {
+        ...pendingSettings,
+        selectedStyle: 'randomMix'
+      };
+    }
+    
     // Check if we're switching between different model types
     const switchingModelTypes = isCurrentContextImage !== isNewContextImage;
     
@@ -386,6 +397,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     
     // Save the model selection
     saveSettingsToCookies({ selectedModel: modelId });
+    
+    // Save any non-model-specific pending settings (like selectedStyle)
+    if (Object.keys(pendingSettings).length > 0) {
+      const modelSpecificKeys = ['inferenceSteps', 'sampler', 'scheduler', 'promptGuidance', 'guidance', 'numImages'];
+      const nonModelSpecificSettings: Partial<Settings> = {};
+      
+      (Object.keys(pendingSettings) as (keyof Settings)[]).forEach(key => {
+        if (!modelSpecificKeys.includes(key)) {
+          // TypeScript-safe assignment
+          (nonModelSpecificSettings as any)[key] = pendingSettings[key];
+        }
+      });
+      
+      if (Object.keys(nonModelSpecificSettings).length > 0) {
+        console.log('💾 Saving non-model-specific pending settings:', nonModelSpecificSettings);
+        saveSettingsToCookies(nonModelSpecificSettings);
+      }
+    }
     
     // If we switched model types and restored defaults, save them as the new settings for this model
     if (switchingModelTypes) {
