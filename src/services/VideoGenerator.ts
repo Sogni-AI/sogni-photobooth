@@ -274,29 +274,29 @@ export async function generateVideo(options: GenerateVideoOptions): Promise<void
       case 'animate-move':
         // Use modelVariant if provided, otherwise fall back to quality preset
         if (modelVariant) {
-          const baseConfig = modelVariant === 'speed'
-            ? ANIMATE_MOVE_QUALITY_PRESETS.fast
-            : ANIMATE_MOVE_QUALITY_PRESETS.quality;
+          const baseConfig = ANIMATE_MOVE_QUALITY_PRESETS.fast;
           qualityConfig = {
             ...baseConfig,
-            model: ANIMATE_MOVE_MODELS[modelVariant]
+            model: ANIMATE_MOVE_MODELS.speed // Only 'speed' model available
           };
         } else {
-          qualityConfig = ANIMATE_MOVE_QUALITY_PRESETS[quality];
+          // Map quality to available presets (only fast and balanced available)
+          const mappedQuality = quality === 'fast' ? 'fast' : 'balanced';
+          qualityConfig = ANIMATE_MOVE_QUALITY_PRESETS[mappedQuality];
         }
         break;
       case 'animate-replace':
         // Use modelVariant if provided, otherwise fall back to quality preset
         if (modelVariant) {
-          const baseConfig = modelVariant === 'speed'
-            ? ANIMATE_REPLACE_QUALITY_PRESETS.fast
-            : ANIMATE_REPLACE_QUALITY_PRESETS.quality;
+          const baseConfig = ANIMATE_REPLACE_QUALITY_PRESETS.fast;
           qualityConfig = {
             ...baseConfig,
-            model: ANIMATE_REPLACE_MODELS[modelVariant]
+            model: ANIMATE_REPLACE_MODELS.speed // Only 'speed' model available
           };
         } else {
-          qualityConfig = ANIMATE_REPLACE_QUALITY_PRESETS[quality];
+          // Map quality to available presets (only fast and balanced available)
+          const mappedQuality = quality === 'fast' ? 'fast' : 'balanced';
+          qualityConfig = ANIMATE_REPLACE_QUALITY_PRESETS[mappedQuality];
         }
         break;
       case 'i2v':
@@ -713,7 +713,7 @@ export async function generateVideo(options: GenerateVideoOptions): Promise<void
       pro: 15       // ~6-9 min at 480p, up to ~14 min at 720p + buffer
     };
     const baseTimeoutMs = timeoutMinutes[quality] * 60 * 1000;
-    const inactivityTimeoutMs = 120 * 1000; // 120 seconds of no activity
+    const inactivityTimeoutMs = 240 * 1000; // 240 seconds of no activity
 
     // Initialize last activity time
     activeProject.lastActivityTime = Date.now();

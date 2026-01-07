@@ -167,6 +167,7 @@ const SoundToVideoPopup = ({
   const [isDraggingWaveform, setIsDraggingWaveform] = useState(false);
   const [dragStartX, setDragStartX] = useState(0);
   const [dragStartOffset, setDragStartOffset] = useState(0);
+  const [hasMovedDuringDrag, setHasMovedDuringDrag] = useState(false);
 
   const audioInputRef = useRef(null);
   const audioPreviewRef = useRef(null);
@@ -353,11 +354,12 @@ const SoundToVideoPopup = ({
       setIsDraggingWaveform(true);
       setDragStartX(x);
       setDragStartOffset(audioStartOffset);
+      setHasMovedDuringDrag(false); // Track if user actually drags
     } else {
       const maxOffset = Math.max(0, audioDuration - videoDuration);
       const newOffset = Math.max(0, Math.min(clickTime, maxOffset));
       setAudioStartOffset(newOffset);
-      
+
       // If audio was playing, restart at new position
       if (isPlaying && audioPreviewRef.current) {
         audioPreviewRef.current.pause();
@@ -366,7 +368,7 @@ const SoundToVideoPopup = ({
           setIsPlaying(false);
           setError('Unable to play audio preview');
         });
-        
+
         // Restart playhead animation
         if (playbackAnimationRef.current) {
           cancelAnimationFrame(playbackAnimationRef.current);
@@ -398,6 +400,12 @@ const SoundToVideoPopup = ({
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const deltaX = x - dragStartX;
+
+    // Mark that user has moved during this drag
+    if (Math.abs(deltaX) > 3) { // Small threshold to distinguish click from drag
+      setHasMovedDuringDrag(true);
+    }
+
     const deltaTime = (deltaX / rect.width) * audioDuration;
 
     const maxOffset = Math.max(0, audioDuration - videoDuration);
@@ -406,18 +414,43 @@ const SoundToVideoPopup = ({
     setAudioStartOffset(newOffset);
   }, [isDraggingWaveform, dragStartX, dragStartOffset, audioDuration, videoDuration]);
 
-  const handleWaveformMouseUp = useCallback(() => {
-    setIsDraggingWaveform(false);
+  const handleWaveformMouseUp = useCallback((e) => {
+    if (!isDraggingWaveform) return;
+
+    const canvas = waveformCanvasRef.current;
+    const wasClick = !hasMovedDuringDrag; // True if user didn't drag, just clicked
     
-    // If audio was playing when user interacted, restart playback at new position
-    if (isPlaying && audioPreviewRef.current) {
+    setIsDraggingWaveform(false);
+    setHasMovedDuringDrag(false);
+
+    // If it was a simple click (not drag) within the selected area and audio is playing,
+    // move the playback position to where user clicked
+    if (wasClick && isPlaying && canvas && audioPreviewRef.current && audioDuration > 0) {
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const clickPosition = x / rect.width;
+      const clickTime = clickPosition * audioDuration;
+      
+      const selectionEnd = audioStartOffset + videoDuration;
+      const isInsideSelection = clickTime >= audioStartOffset && clickTime <= selectionEnd;
+      
+      if (isInsideSelection) {
+        // Move playback to clicked position
+        audioPreviewRef.current.currentTime = clickTime;
+        setPreviewPlayhead(clickTime);
+        return; // Don't restart from offset, just move playhead
+      }
+    }
+
+    // If audio was playing when user dragged, restart playback at new position
+    if (hasMovedDuringDrag && isPlaying && audioPreviewRef.current) {
       audioPreviewRef.current.pause();
       audioPreviewRef.current.currentTime = audioStartOffset;
       audioPreviewRef.current.play().catch(() => {
         setIsPlaying(false);
         setError('Unable to play audio preview');
       });
-      
+
       // Restart playhead animation
       if (playbackAnimationRef.current) {
         cancelAnimationFrame(playbackAnimationRef.current);
@@ -435,7 +468,7 @@ const SoundToVideoPopup = ({
       };
       playbackAnimationRef.current = requestAnimationFrame(updatePlayhead);
     }
-  }, [isPlaying, audioStartOffset, videoDuration]);
+  }, [isDraggingWaveform, hasMovedDuringDrag, isPlaying, audioStartOffset, videoDuration, audioDuration]);
 
   // Global mouse up listener for drag
   useEffect(() => {
@@ -596,12 +629,6 @@ const SoundToVideoPopup = ({
 
   if (!visible) return null;
 
-  const handleBackdropClick = (e) => {
-    if (e.target === e.currentTarget) {
-      handleClose();
-    }
-  };
-
   const hasValidSource = (sourceType === 'sample' && selectedSample) || (sourceType === 'upload' && uploadedAudio);
   const previewAudioUrl = sourceType === 'upload' ? uploadedAudioUrl : selectedSample?.url;
   // Round max duration down to nearest 0.25s to ensure frame count is divisible at 16fps
@@ -625,14 +652,13 @@ const SoundToVideoPopup = ({
         animation: 'fadeIn 0.2s ease',
         overflowY: 'auto'
       }}
-      onClick={handleBackdropClick}
     >
       <div
         style={{
           background: 'linear-gradient(135deg, #ec4899 0%, #db2777 100%)',
           borderRadius: isMobile ? '16px' : '20px',
           padding: isMobile ? '20px' : '30px',
-          maxWidth: '550px',
+          maxWidth: isMobile ? '550px' : '750px',
           width: '100%',
           maxHeight: isMobile ? '95vh' : '90vh',
           overflowY: 'auto',
@@ -640,6 +666,7 @@ const SoundToVideoPopup = ({
           animation: 'slideUp 0.3s ease',
           position: 'relative'
         }}
+        onClick={(e) => e.stopPropagation()}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Hidden audio element for preview */}

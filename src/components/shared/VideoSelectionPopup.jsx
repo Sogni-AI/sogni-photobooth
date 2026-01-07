@@ -14,12 +14,6 @@ const VideoSelectionPopup = ({
   isBatch = false,
   photoCount = 0
 }) => {
-  const handleBackdropClick = (e) => {
-    if (e.target === e.currentTarget) {
-      onClose();
-    }
-  };
-
   // Bald for Base video URLs (2:3 aspect ratio)
   const baldForBaseVideos = [
     `${urls.assetUrl}/bold-4-base/bold-4-base-1.mp4`,
@@ -282,9 +276,9 @@ const VideoSelectionPopup = ({
       disabled: !isBatch && photoCount < 2
     });
 
-    // Placeholder video URLs for new workflows (to be replaced with actual examples)
-    const animateMoveVideo = 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/videos/animate-move-placeholder.mp4';
-    const animateReplaceVideo = 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/videos/animate-replace-placeholder.mp4';
+    // Example video URLs for Video Move and Video Replace workflows
+    const animateMoveVideo = 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/gallery/videos/animate-move/animate-move-fast-techno-viking-mark-blade.mp4';
+    const animateReplaceVideo = 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/gallery/videos/animate-replace/einstein-yacty-walkout.mp4';
     const soundToVideoVideo = 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/videos/sogni-photobooth-video-demo_832x1216.mp4';
 
     // Add Video Move option
@@ -292,7 +286,7 @@ const VideoSelectionPopup = ({
       id: isBatch ? 'batch-animate-move' : 'animate-move',
       icon: '🎬',
       title: 'Video Move',
-      description: 'Apply camera movement from a source video to your image. Great for pans, zooms, and dynamic shots.',
+      description: 'Transfer character movement from a source video to your image.',
       gradient: 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)',
       exampleVideo: animateMoveVideo,
       isNew: true
@@ -303,7 +297,7 @@ const VideoSelectionPopup = ({
       id: isBatch ? 'batch-animate-replace' : 'animate-replace',
       icon: '🔄',
       title: 'Video Replace',
-      description: 'Replace the main subject in a video with your image while preserving the motion and background.',
+      description: 'Replace the main subject in a video with your character.',
       gradient: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
       exampleVideo: animateReplaceVideo,
       isNew: true
@@ -443,7 +437,6 @@ const VideoSelectionPopup = ({
         overflow: 'hidden',
         WebkitOverflowScrolling: 'touch'
       }}
-      onClick={handleBackdropClick}
     >
       <div
         style={{

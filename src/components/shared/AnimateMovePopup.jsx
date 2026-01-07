@@ -174,9 +174,22 @@ const AnimateMovePopup = ({
       setUploadedVideoUrl(null);
     }
     setError('');
-    setSourceVideoDuration(0);
-    // Reset to default duration for samples
-    setVideoDuration(5);
+    
+    // Load the sample video to get its duration
+    const tempVideo = document.createElement('video');
+    tempVideo.src = sample.url;
+    tempVideo.preload = 'metadata';
+    tempVideo.onloadedmetadata = () => {
+      const duration = tempVideo.duration;
+      setSourceVideoDuration(duration);
+      // Set default duration to source video duration or MAX_DURATION, whichever is smaller
+      // Round down to nearest 0.25s to ensure frame count is divisible at 16fps
+      const defaultDuration = Math.min(duration, MAX_DURATION);
+      const roundedDuration = Math.floor(defaultDuration * 4) / 4;
+      setVideoDuration(roundedDuration);
+      // Clean up
+      tempVideo.remove();
+    };
   };
 
   const formatCost = (tokenCost, usdCost) => {
@@ -239,12 +252,6 @@ const AnimateMovePopup = ({
 
   if (!visible) return null;
 
-  const handleBackdropClick = (e) => {
-    if (e.target === e.currentTarget) {
-      handleClose();
-    }
-  };
-
   const hasValidSource = (sourceType === 'sample' && selectedSample) || (sourceType === 'upload' && uploadedVideo);
   // Round max duration down to nearest 0.25s to ensure frame count is divisible at 16fps
   const maxDuration = sourceVideoDuration > 0 ? Math.floor(Math.min(sourceVideoDuration, MAX_DURATION) * 4) / 4 : MAX_DURATION;
@@ -267,14 +274,13 @@ const AnimateMovePopup = ({
         animation: 'fadeIn 0.2s ease',
         overflowY: 'auto'
       }}
-      onClick={handleBackdropClick}
     >
       <div
         style={{
           background: 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)',
           borderRadius: isMobile ? '16px' : '20px',
           padding: isMobile ? '20px' : '30px',
-          maxWidth: '550px',
+          maxWidth: isMobile ? '550px' : '750px',
           width: '100%',
           maxHeight: isMobile ? '95vh' : '90vh',
           overflowY: 'auto',
@@ -342,7 +348,7 @@ const AnimateMovePopup = ({
             color: 'rgba(255, 255, 255, 0.85)',
             fontSize: isMobile ? '12px' : '14px'
           }}>
-            Apply camera movement from a video to your image
+            Transfer character movement from a video to your image
           </p>
         </div>
 
@@ -368,7 +374,7 @@ const AnimateMovePopup = ({
           {/* Sample Videos Grid */}
           <div style={{
             display: 'grid',
-            gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)',
+            gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(5, 1fr)',
             gap: '10px',
             marginBottom: '12px'
           }}>
@@ -509,7 +515,7 @@ const AnimateMovePopup = ({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              maxHeight: isMobile ? '180px' : '220px'
+              maxHeight: isMobile ? '180px' : '160px'
             }}>
               <video
                 ref={videoPreviewRef}
@@ -521,7 +527,7 @@ const AnimateMovePopup = ({
                 onLoadedMetadata={handleVideoLoadedMetadata}
                 style={{
                   maxWidth: '100%',
-                  maxHeight: isMobile ? '180px' : '220px',
+                  maxHeight: isMobile ? '180px' : '160px',
                   width: 'auto',
                   height: 'auto',
                   objectFit: 'contain',
@@ -646,47 +652,6 @@ const AnimateMovePopup = ({
               boxSizing: 'border-box'
             }}
           />
-        </div>
-
-        {/* Model Variant Selector */}
-        <div style={{ marginBottom: '16px' }}>
-          <label style={{
-            display: 'block',
-            color: 'rgba(255, 255, 255, 0.9)',
-            fontSize: '13px',
-            fontWeight: '600',
-            marginBottom: '6px'
-          }}>
-            ⚙️ Model Version
-          </label>
-          <select
-            value={modelVariant}
-            onChange={(e) => setModelVariant(e.target.value)}
-            style={{
-              width: '100%',
-              padding: '10px 12px',
-              borderRadius: '8px',
-              border: '2px solid rgba(255, 255, 255, 0.2)',
-              background: 'rgba(255, 255, 255, 0.1)',
-              color: 'white',
-              fontSize: '13px',
-              fontWeight: '500',
-              cursor: 'pointer',
-              outline: 'none',
-              appearance: 'none',
-              backgroundImage: `url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`,
-              backgroundRepeat: 'no-repeat',
-              backgroundPosition: 'right 12px center',
-              paddingRight: '36px'
-            }}
-          >
-            <option value="speed" style={{ background: '#1a1a1a', color: 'white' }}>
-              ⚡ Fast (~3-5 min)
-            </option>
-            <option value="quality" style={{ background: '#1a1a1a', color: 'white' }}>
-              💎 Best Quality (~20-25 min)
-            </option>
-          </select>
         </div>
 
         {/* Error Message */}
