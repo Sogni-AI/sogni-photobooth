@@ -157,6 +157,7 @@ function RecentProjects({ sogniClient, onClose, onReuseProject }: RecentProjects
                       sogniClient={sogniClient}
                       onView={() => handleJobView(project, job.id)}
                       onHideJob={hideJob}
+                      modelName={project.model.name}
                     />
                   );
                 })}

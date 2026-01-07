@@ -8,9 +8,10 @@ interface SlideshowContentProps {
   job: ArchiveJob;
   sogniClient: SogniClient;
   active: boolean;
+  modelName: string;
 }
 
-function SlideshowContent({ job, sogniClient, active }: SlideshowContentProps) {
+function SlideshowContent({ job, sogniClient, active, modelName }: SlideshowContentProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
@@ -24,15 +25,28 @@ function SlideshowContent({ job, sogniClient, active }: SlideshowContentProps) {
     enabled: true
   });
 
-  // Detect if video has audio
+  // Detect if video should have audio based on model name or actual audio tracks
   useEffect(() => {
+    if (job.type !== 'video') return;
+
+    // Check model name for workflows that have audio
+    const modelLower = modelName?.toLowerCase() || '';
+    const shouldHaveAudio = modelLower.includes('s2v') ||
+      modelLower.includes('animate-move') ||
+      modelLower.includes('animate-replace');
+
+    if (shouldHaveAudio) {
+      setHasAudio(true);
+      return;
+    }
+
+    // Fallback: check video element for audio tracks (for other video types)
     const video = videoRef.current;
-    if (!video || job.type !== 'video') return;
+    if (!video || !url) return;
 
     const checkAudio = () => {
-      // Check if video has audio tracks
       const videoAny = video as any;
-      const hasAudioTrack = videoAny.mozHasAudio || 
+      const hasAudioTrack = videoAny.mozHasAudio ||
         Boolean(videoAny.webkitAudioDecodedByteCount) ||
         Boolean(videoAny.audioTracks && videoAny.audioTracks.length > 0);
       setHasAudio(hasAudioTrack);
@@ -46,7 +60,7 @@ function SlideshowContent({ job, sogniClient, active }: SlideshowContentProps) {
     return () => {
       video.removeEventListener('loadedmetadata', checkAudio);
     };
-  }, [url, job.type]);
+  }, [url, job.type, modelName]);
 
   // Autoplay video when active and URL is ready
   useEffect(() => {
@@ -331,6 +345,7 @@ function MediaSlideshow({ project, initialJobId, sogniClient, onClose }: MediaSl
             job={currentJob}
             sogniClient={sogniClient}
             active={true}
+            modelName={project.model.name}
           />
         </div>
 
