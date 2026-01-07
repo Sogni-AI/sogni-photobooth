@@ -1146,25 +1146,26 @@ export async function generateImage(client, params, progressCallback, localProje
       });
 
       // Enhanced timeout with better error reporting
+      // Increased to 30 minutes to handle long-running video jobs and queued jobs
       setTimeout(() => {
         if (!projectFinished) {
-          console.warn(`[IMAGE] Project ${project.id} timeout after 5 minutes`);
-          
+          console.warn(`[IMAGE] Project ${project.id} timeout after 30 minutes`);
+
           // Clear any remaining timeouts
           for (const timeoutId of projectCompletionTracker.jobCompletionTimeouts.values()) {
             clearTimeout(timeoutId);
           }
           projectCompletionTracker.jobCompletionTimeouts.clear();
-          
+
           // Clean up event handlers
           if (progressCallback) {
             cleanup();
           }
-          
+
           projectFinished = true;
-          reject(new Error('Project timeout after 5 minutes'));
+          reject(new Error('Project timeout after 30 minutes'));
         }
-      }, 5 * 60 * 1000); // 5 minute timeout
+      }, 30 * 60 * 1000); // 30 minute timeout (handles queued video jobs)
     });
   };
 

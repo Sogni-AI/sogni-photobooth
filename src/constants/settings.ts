@@ -415,19 +415,23 @@ export const SOGNI_URLS = {
 // Timeout configurations
 export const TIMEOUT_CONFIG = {
   // Per-job timeout - how long to wait for a single job to complete after it starts progressing
-  PER_JOB_TIMEOUT: 4 * 60 * 1000, // 4 minutes
-  
-  // Project watchdog timeout - how long to wait for progress on ANY job before considering project stuck  
-  PROJECT_WATCHDOG_TIMEOUT: 2 * 60 * 1000, // 2 minutes
-  
+  // Increased to handle long-running video jobs (especially queued ones)
+  PER_JOB_TIMEOUT: 20 * 60 * 1000, // 20 minutes
+
+  // Project watchdog timeout - how long to wait for progress on ANY job before considering project stuck
+  // Increased to handle queued video jobs that may take time before processing starts
+  PROJECT_WATCHDOG_TIMEOUT: 10 * 60 * 1000, // 10 minutes
+
   // Initial connection timeout - how long to wait for first event from backend
   INITIAL_CONNECTION_TIMEOUT: 30 * 1000, // 30 seconds
-  
-  // Overall project timeout - maximum time for entire batch (matches backend)
-  OVERALL_PROJECT_TIMEOUT: 5 * 60 * 1000, // 5 minutes
-  
+
+  // Overall project timeout - maximum time for entire batch
+  // Significantly increased to handle multiple queued video jobs
+  OVERALL_PROJECT_TIMEOUT: 30 * 60 * 1000, // 30 minutes
+
   // Progress stall timeout - how long without progress updates before considering a job stuck
-  PROGRESS_STALL_TIMEOUT: 90 * 1000, // 90 seconds
+  // Increased to handle queued jobs waiting for worker availability
+  PROGRESS_STALL_TIMEOUT: 5 * 60 * 1000, // 5 minutes
 } as const;
 
 export const defaultStylePrompts: { [key: string]: string } = {
