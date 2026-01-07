@@ -181,12 +181,6 @@ const BaldForBaseConfirmationPopup = ({
 
   if (!visible) return null;
 
-  const handleBackdropClick = (e) => {
-    if (e.target === e.currentTarget) {
-      onClose();
-    }
-  };
-
   return createPortal(
     <div
       style={{
@@ -204,7 +198,6 @@ const BaldForBaseConfirmationPopup = ({
         backdropFilter: 'blur(8px)',
         animation: 'fadeIn 0.2s ease'
       }}
-      onClick={handleBackdropClick}
     >
       <div
         style={{

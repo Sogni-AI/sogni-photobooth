@@ -66,13 +66,6 @@ export const VideoIntroPopup: React.FC<VideoIntroPopupProps> = ({
     onProceed();
   };
 
-  // Handle backdrop click
-  const handleBackdropClick = (e: React.MouseEvent) => {
-    if (e.target === e.currentTarget) {
-      handleDismiss();
-    }
-  };
-
   if (!visible) return null;
 
   const features = [
@@ -85,7 +78,6 @@ export const VideoIntroPopup: React.FC<VideoIntroPopupProps> = ({
   const content = (
     <div
       className="video-intro-popup-backdrop"
-      onClick={handleBackdropClick}
       style={{
         position: 'fixed',
         top: 0,

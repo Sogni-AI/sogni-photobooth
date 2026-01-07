@@ -33,12 +33,6 @@ const PromptVideoConfirmationPopup = ({
 
   if (!visible) return null;
 
-  const handleBackdropClick = (e) => {
-    if (e.target === e.currentTarget) {
-      onClose();
-    }
-  };
-
   const handleConfirm = () => {
     if (!positivePrompt.trim()) {
       setError('Please enter a prompt');
@@ -76,7 +70,6 @@ const PromptVideoConfirmationPopup = ({
         backdropFilter: 'blur(8px)',
         animation: 'fadeIn 0.2s ease'
       }}
-      onClick={handleBackdropClick}
     >
       <div
         style={{

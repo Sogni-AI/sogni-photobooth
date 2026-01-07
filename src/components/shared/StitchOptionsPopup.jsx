@@ -32,12 +32,6 @@ const StitchOptionsPopup = ({
     lastKnownETAsRef.current = {};
   }
 
-  const handleBackdropClick = (e) => {
-    if (e.target === e.currentTarget && !isGenerating) {
-      onClose();
-    }
-  };
-
   // Calculate estimated time for infinite loop
   const estimatedTime = useMemo(() => {
     if (videoCount < 2) return null;
@@ -69,7 +63,6 @@ const StitchOptionsPopup = ({
         padding: '20px',
         backdropFilter: 'blur(8px)'
       }}
-      onClick={handleBackdropClick}
     >
       <div
         style={{

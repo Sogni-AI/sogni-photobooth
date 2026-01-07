@@ -18,12 +18,6 @@ const CustomVideoPromptPopup = ({ visible, onGenerate, onClose }) => {
     }
   };
 
-  const handleBackdropClick = (e) => {
-    if (e.target === e.currentTarget) {
-      onClose();
-    }
-  };
-
   if (!visible) return null;
 
   const content = (
@@ -43,7 +37,6 @@ const CustomVideoPromptPopup = ({ visible, onGenerate, onClose }) => {
         backdropFilter: 'blur(8px)',
         animation: 'fadeIn 0.2s ease'
       }}
-      onClick={handleBackdropClick}
     >
       <div
         style={{

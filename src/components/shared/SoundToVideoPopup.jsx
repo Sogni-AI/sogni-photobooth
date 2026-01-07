@@ -667,7 +667,6 @@ const SoundToVideoPopup = ({
           position: 'relative'
         }}
         onClick={(e) => e.stopPropagation()}
-        onClick={(e) => e.stopPropagation()}
       >
         {/* Hidden audio element for preview */}
         {previewAudioUrl && (
