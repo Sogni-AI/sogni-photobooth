@@ -2340,13 +2340,25 @@ const App = () => {
   // Update handlePositivePromptChange to use updateSetting
   const handlePositivePromptChange = (value) => {
     updateSetting('positivePrompt', value);
-    if (selectedStyle !== 'custom') {
-      const currentPrompt = stylePrompts[selectedStyle] || '';
-      if (value !== currentPrompt) {
+    
+    // Auto-switch style based on positive prompt content
+    // If user types any text, switch to 'custom'
+    // If user deletes all text, switch to 'randomMix' (Random All)
+    if (value && value.trim().length > 0) {
+      // User has entered text - switch to custom if not already
+      if (selectedStyle !== 'custom') {
         updateSetting('selectedStyle', 'custom');
         // Clear the URL parameter when switching to custom
         updateUrlWithPrompt(null);
         setCurrentHashtag('SogniPhotobooth'); // Use #SogniPhotobooth for custom prompts
+      }
+    } else {
+      // User has cleared all text - switch to randomMix (Random All) if not already
+      if (selectedStyle !== 'randomMix') {
+        updateSetting('selectedStyle', 'randomMix');
+        // Clear the URL parameter when switching to randomMix
+        updateUrlWithPrompt(null);
+        setCurrentHashtag('SogniPhotobooth');
       }
     }
   };

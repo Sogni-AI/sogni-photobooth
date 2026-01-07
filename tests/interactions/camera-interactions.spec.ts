@@ -123,4 +123,38 @@ test.describe('Camera Interactions', () => {
     // Verify upload triggers photo generation
     await verifyVisible(page, '.film-strip-container');
   });
+
+  test('positive prompt auto-switches style picker', async ({ page }) => {
+    // Open settings
+    await openSettings(page);
+    await waitForStableState(page);
+
+    // Select a specific style (not custom or randomMix)
+    await selectStyle(page, 'Anime');
+    await waitForStableState(page);
+
+    // Find and type in the positive prompt field
+    const positivePromptField = page.locator('textarea.custom-style-input').first();
+    await positivePromptField.fill('');
+    await positivePromptField.fill('a beautiful sunset over mountains');
+    await waitForStableState(page);
+
+    // Verify that selectedStyle switched to 'custom'
+    const selectedStyle = await page.evaluate(() => {
+      const settings = localStorage.getItem('sogni_settings');
+      return settings ? JSON.parse(settings).selectedStyle : null;
+    });
+    expect(selectedStyle).toBe('custom');
+
+    // Now clear the positive prompt field completely
+    await positivePromptField.fill('');
+    await waitForStableState(page);
+
+    // Verify that selectedStyle switched to 'randomMix'
+    const selectedStyleAfterClear = await page.evaluate(() => {
+      const settings = localStorage.getItem('sogni_settings');
+      return settings ? JSON.parse(settings).selectedStyle : null;
+    });
+    expect(selectedStyleAfterClear).toBe('randomMix');
+  });
 }); 
