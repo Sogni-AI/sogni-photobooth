@@ -270,21 +270,19 @@ const SoundToVideoPopup = ({
 
     ctx.clearRect(0, 0, width, height);
 
-    // Draw selection range indicator
+    // Draw selection range border only (no fill overlay to keep white bars pure white)
     if (audioDuration > 0) {
       const startX = (audioStartOffset / audioDuration) * width;
       const endOffset = Math.min(audioStartOffset + videoDuration, audioDuration);
       const selectionWidth = ((endOffset - audioStartOffset) / audioDuration) * width;
 
-      ctx.fillStyle = 'rgba(236, 72, 153, 0.25)';
-      ctx.fillRect(startX, 0, selectionWidth, height);
-
-      ctx.strokeStyle = 'rgba(236, 72, 153, 0.9)';
+      // Only draw border, no fill to avoid making white bars look grayish
+      ctx.strokeStyle = 'rgba(236, 72, 153, 0.6)';
       ctx.lineWidth = 2;
       ctx.strokeRect(startX, 0, selectionWidth, height);
     }
 
-    // Draw waveform bars
+    // Draw waveform bars with complementary color pairing
     audioWaveform.forEach((value, i) => {
       const barHeight = value * (height - 4);
       const x = i * barWidth;
@@ -293,7 +291,8 @@ const SoundToVideoPopup = ({
       const barTime = (i / audioWaveform.length) * audioDuration;
       const isInSelection = barTime >= audioStartOffset && barTime < audioStartOffset + videoDuration;
 
-      ctx.fillStyle = isInSelection ? '#db2777' : 'rgba(255, 255, 255, 0.4)';
+      // White for selected, amber/gold for non-selected
+      ctx.fillStyle = isInSelection ? '#ffffff' : '#fbbf24';
       ctx.fillRect(x + 1, y, barWidth - 2, barHeight);
     });
 
@@ -1087,8 +1086,8 @@ const SoundToVideoPopup = ({
             <option value="speed" style={{ background: '#1a1a1a', color: 'white' }}>
               ⚡ Fast (~3-5 min)
             </option>
-            <option value="quality" style={{ background: '#1a1a1a', color: 'white' }}>
-              💎 Best Quality (~20-25 min)
+            <option value="quality" disabled style={{ background: '#1a1a1a', color: '#888' }}>
+              💎 Best Quality (Coming Soon)
             </option>
           </select>
         </div>
