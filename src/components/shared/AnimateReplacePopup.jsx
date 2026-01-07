@@ -7,26 +7,26 @@ import { getTokenLabel } from '../../services/walletService';
 const SAMPLE_REPLACEMENT_VIDEOS = [
   {
     id: 'lil-yacty',
-    title: '🚶 Walkout',
-    description: 'Dynamic walking motion',
+    title: '🚶 Yacty Walkout',
+    description: '',
     url: 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/video-samples/lil-yacty-walkout.mp4'
   },
   {
     id: 'm-to-the-beat',
-    title: '🎵 To the Beat',
-    description: 'Rhythmic movement',
+    title: '🎵 M to the Beat',
+    description: '',
     url: 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/video-samples/m-to-the-beat.mp4'
   },
   {
     id: 'ra-ra',
-    title: '💃 Ra Ra',
-    description: 'Energetic dance motion',
+    title: '💃 Ra Ra Dance',
+    description: '',
     url: 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/video-samples/ra-ra.mp4'
   },
   {
     id: 'techno-viking',
-    title: '⚔️ Viking March',
-    description: 'Powerful marching motion',
+    title: '⚔️ Techno Viking',
+    description: '',
     url: 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/video-samples/techno-viking.mp4'
   },
   {
