@@ -8415,30 +8415,24 @@ const App = () => {
     if (!sogniClient) return;
 
     try {
-      // Fetch the project details from job history
-      const walletAddress = sogniClient.account?.currentAccount?.walletAddress;
-      if (!walletAddress) {
+      // Fetch the project details directly using the projects endpoint
+      const response = await sogniClient.apiClient.rest.get(`/v1/projects/${projectId}`);
+
+      const project = response.data?.project;
+
+      if (!project) {
         showToast({
-          title: 'Error',
-          message: 'No wallet address found. Please sign in.',
+          title: 'Project Not Found',
+          message: 'Could not load project data.',
           type: 'error'
         });
         return;
       }
 
-      const response = await sogniClient.apiClient.rest.get('/v1/jobs/list', {
-        role: 'artist',
-        address: walletAddress,
-        limit: 100,
-        offset: 0
-      });
+      // Get all jobs from both workerJobs and completedWorkerJobs arrays
+      const allJobs = [...(project.workerJobs || []), ...(project.completedWorkerJobs || [])];
 
-      const { jobs } = response.data;
-
-      // Find all jobs for this project
-      const projectJobs = jobs.filter(job => job.parentRequest.id === projectId);
-
-      if (projectJobs.length === 0) {
+      if (allJobs.length === 0) {
         showToast({
           title: 'Project Not Found',
           message: 'Could not load project images.',
@@ -8448,7 +8442,7 @@ const App = () => {
       }
 
       // Filter to completed jobs (API returns 'jobCompleted' status)
-      const completedJobs = projectJobs.filter(job =>
+      const completedJobs = allJobs.filter(job =>
         job.status === 'jobCompleted' && !job.triggeredNSFWFilter
       );
 
