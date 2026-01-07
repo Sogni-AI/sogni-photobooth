@@ -291,8 +291,8 @@ const SoundToVideoPopup = ({
       const barTime = (i / audioWaveform.length) * audioDuration;
       const isInSelection = barTime >= audioStartOffset && barTime < audioStartOffset + videoDuration;
 
-      // White for selected, amber/gold for non-selected
-      ctx.fillStyle = isInSelection ? '#ffffff' : '#fbbf24';
+      // White for selected, muted purple-gray for non-selected (complements pink background)
+      ctx.fillStyle = isInSelection ? '#ffffff' : 'rgba(255, 255, 255, 0.35)';
       ctx.fillRect(x + 1, y, barWidth - 2, barHeight);
     });
 
@@ -1086,8 +1086,8 @@ const SoundToVideoPopup = ({
             <option value="speed" style={{ background: '#1a1a1a', color: 'white' }}>
               ⚡ Fast (~3-5 min)
             </option>
-            <option value="quality" disabled style={{ background: '#1a1a1a', color: '#888' }}>
-              💎 Best Quality (Coming Soon)
+            <option value="quality" style={{ background: '#1a1a1a', color: 'white' }}>
+              💎 Best Quality (~20-25 min)
             </option>
           </select>
         </div>
