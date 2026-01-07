@@ -124,6 +124,61 @@ const AnimateMovePopup = ({
     }
   }, [visible]);
 
+  // Preload all sample videos when popup opens (iOS fix - matches VideoSelectionPopup approach)
+  useEffect(() => {
+    if (!visible) return;
+
+    // Get all sample video URLs
+    const allVideoUrls = SAMPLE_MOTION_VIDEOS.map(sample => sample.url);
+
+    // Add link preload tags to head for faster loading
+    const preloadLinks = allVideoUrls.map(videoUrl => {
+      const link = document.createElement('link');
+      link.rel = 'preload';
+      link.as = 'video';
+      link.href = videoUrl;
+      link.crossOrigin = 'anonymous';
+      document.head.appendChild(link);
+      return link;
+    });
+
+    // Also preload all videos in hidden elements to cache them on iOS
+    const preloadVideoElements = allVideoUrls.map((videoUrl) => {
+      const preloadVideo = document.createElement('video');
+      preloadVideo.src = videoUrl;
+      preloadVideo.preload = 'auto';
+      preloadVideo.muted = true;
+      preloadVideo.playsInline = true;
+      preloadVideo.style.display = 'none';
+      document.body.appendChild(preloadVideo);
+      return preloadVideo;
+    });
+
+    // Remove preload videos after a delay to allow caching
+    const preloadTimeout = setTimeout(() => {
+      preloadVideoElements.forEach(video => {
+        if (document.body.contains(video)) {
+          document.body.removeChild(video);
+        }
+      });
+    }, 2000);
+
+    // Cleanup function
+    return () => {
+      clearTimeout(preloadTimeout);
+      preloadLinks.forEach(link => {
+        if (document.head.contains(link)) {
+          document.head.removeChild(link);
+        }
+      });
+      preloadVideoElements.forEach(video => {
+        if (document.body.contains(video)) {
+          document.body.removeChild(video);
+        }
+      });
+    };
+  }, [visible]);
+
   // Get video duration when loaded
   const handleVideoLoadedMetadata = useCallback(() => {
     if (videoPreviewRef.current) {
@@ -372,12 +427,14 @@ const AnimateMovePopup = ({
           </label>
 
           {/* Sample Videos Grid */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(5, 1fr)',
-            gap: '10px',
-            marginBottom: '12px'
-          }}>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(5, 1fr)',
+              gap: '10px',
+              marginBottom: '12px'
+            }}
+          >
             {SAMPLE_MOTION_VIDEOS.map((sample) => (
               <button
                 key={sample.id}
@@ -412,10 +469,11 @@ const AnimateMovePopup = ({
               >
                 <video
                   src={sample.url}
+                  autoPlay
                   muted
                   loop
                   playsInline
-                  preload="metadata"
+                  preload="auto"
                   style={{
                     width: '100%',
                     height: '100%',
