@@ -35,7 +35,20 @@ import { getTokenLabel } from '../../services/walletService';
 import { useToastContext } from '../../context/ToastContext';
 import { generateGalleryFilename, getPortraitFolderWithFallback } from '../../utils/galleryLoader';
 import { generateVideo, cancelVideoGeneration, downloadVideo } from '../../services/VideoGenerator.ts';
-import { hasSeenVideoIntro, hasGeneratedVideo, formatVideoDuration, hasSeenVideoTip, markVideoTipShown, BASE_HERO_PROMPT } from '../../constants/videoSettings.ts';
+import { 
+  hasSeenVideoIntro, 
+  hasGeneratedVideo, 
+  formatVideoDuration, 
+  hasSeenVideoTip, 
+  markVideoTipShown, 
+  BASE_HERO_PROMPT,
+  S2V_MODELS,
+  S2V_QUALITY_PRESETS,
+  ANIMATE_MOVE_MODELS,
+  ANIMATE_MOVE_QUALITY_PRESETS,
+  ANIMATE_REPLACE_MODELS,
+  ANIMATE_REPLACE_QUALITY_PRESETS
+} from '../../constants/videoSettings.ts';
 import VideoIntroPopup from './VideoIntroPopup.tsx';
 import { playSonicLogo, warmUpAudio } from '../../utils/sonicLogos';
 import CustomVideoPromptPopup from './CustomVideoPromptPopup';
@@ -43,6 +56,9 @@ import BaldForBaseConfirmationPopup from './BaldForBaseConfirmationPopup';
 import PromptVideoConfirmationPopup from './PromptVideoConfirmationPopup';
 import VideoSelectionPopup from './VideoSelectionPopup';
 import TransitionVideoCompleteNotification from './TransitionVideoCompleteNotification';
+import AnimateMovePopup from './AnimateMovePopup';
+import AnimateReplacePopup from './AnimateReplacePopup';
+import SoundToVideoPopup from './SoundToVideoPopup';
 import ConfettiCelebration from './ConfettiCelebration';
 import StitchOptionsPopup from './StitchOptionsPopup';
 import { extractLastFrame } from '../../utils/videoFrameExtraction';
@@ -882,6 +898,23 @@ const PhotoGallery = ({
   const [showBatchPromptVideoPopup, setShowBatchPromptVideoPopup] = useState(false); // Popup before Prompt Video generation (batch)
   const [showVideoSelectionPopup, setShowVideoSelectionPopup] = useState(false); // New video selection popup
   const [isVideoSelectionBatch, setIsVideoSelectionBatch] = useState(false); // Track if selection popup is from batch
+  // New video workflow popup states
+  const [showAnimateMovePopup, setShowAnimateMovePopup] = useState(false); // Single Animate Move popup
+  const [showBatchAnimateMovePopup, setShowBatchAnimateMovePopup] = useState(false); // Batch Animate Move popup
+  const [showAnimateReplacePopup, setShowAnimateReplacePopup] = useState(false); // Single Animate Replace popup
+  const [showBatchAnimateReplacePopup, setShowBatchAnimateReplacePopup] = useState(false); // Batch Animate Replace popup
+  const [showS2VPopup, setShowS2VPopup] = useState(false); // Single Sound to Video popup
+  const [showBatchS2VPopup, setShowBatchS2VPopup] = useState(false); // Batch Sound to Video popup
+  
+  // Model variant states for cost estimation in new workflow popups
+  const [animateMoveModelVariant, setAnimateMoveModelVariant] = useState('speed');
+  const [animateReplaceModelVariant, setAnimateReplaceModelVariant] = useState('speed');
+  const [s2vModelVariant, setS2vModelVariant] = useState('speed');
+  
+  // Duration states for cost estimation in new workflow popups
+  const [animateMoveDuration, setAnimateMoveDuration] = useState(5);
+  const [animateReplaceDuration, setAnimateReplaceDuration] = useState(5);
+  const [s2vDuration, setS2vDuration] = useState(5);
   const [autoTriggerBaldForBaseAfterGeneration, setAutoTriggerBaldForBaseAfterGeneration] = useState(false); // Auto-trigger Bald for Base after photo generation
   const [hasSeenGenerationStart, setHasSeenGenerationStart] = useState(false); // Track if we've seen generation start
   const previousPhotoCountRef = useRef(0); // Track previous photo count to detect when new photos are added
@@ -983,6 +1016,115 @@ const PhotoGallery = ({
     duration: settings.videoDuration || 5,
     enabled: isAuthenticated && loadedPhotosCount > 0 && showBatchPromptVideoPopup,
     jobCount: loadedPhotosCount
+  });
+
+  // Animate Move cost estimation (single) - enabled when popup is shown
+  const animateMoveConfig = animateMoveModelVariant === 'speed' 
+    ? ANIMATE_MOVE_QUALITY_PRESETS.fast 
+    : ANIMATE_MOVE_QUALITY_PRESETS.quality;
+  const { loading: animateMoveLoading, cost: animateMoveCostRaw, costInUSD: animateMoveUSD } = useVideoCostEstimation({
+    imageWidth: desiredWidth || 768,
+    imageHeight: desiredHeight || 1024,
+    resolution: settings.videoResolution || '480p',
+    quality: settings.videoQuality || 'fast',
+    fps: settings.videoFramerate || 16,
+    duration: animateMoveDuration, // Use popup duration state
+    enabled: isAuthenticated && selectedPhoto !== null && showAnimateMovePopup,
+    photoId: selectedPhotoIndex,
+    modelId: ANIMATE_MOVE_MODELS[animateMoveModelVariant],
+    steps: animateMoveConfig.steps
+  });
+
+  // Animate Move cost estimation (batch) - enabled when popup is shown
+  const { loading: batchAnimateMoveLoading, cost: batchAnimateMoveCostRaw, costInUSD: batchAnimateMoveUSD } = useVideoCostEstimation({
+    imageWidth: desiredWidth || 768,
+    imageHeight: desiredHeight || 1024,
+    resolution: settings.videoResolution || '480p',
+    quality: settings.videoQuality || 'fast',
+    fps: settings.videoFramerate || 16,
+    duration: animateMoveDuration, // Use popup duration state
+    enabled: isAuthenticated && loadedPhotosCount > 0 && showBatchAnimateMovePopup,
+    jobCount: loadedPhotosCount,
+    modelId: ANIMATE_MOVE_MODELS[animateMoveModelVariant],
+    steps: animateMoveConfig.steps
+  });
+
+  // Animate Replace cost estimation (single) - enabled when popup is shown
+  const animateReplaceConfig = animateReplaceModelVariant === 'speed'
+    ? ANIMATE_REPLACE_QUALITY_PRESETS.fast
+    : ANIMATE_REPLACE_QUALITY_PRESETS.quality;
+  const { loading: animateReplaceLoading, cost: animateReplaceCostRaw, costInUSD: animateReplaceUSD } = useVideoCostEstimation({
+    imageWidth: desiredWidth || 768,
+    imageHeight: desiredHeight || 1024,
+    resolution: settings.videoResolution || '480p',
+    quality: settings.videoQuality || 'fast',
+    fps: settings.videoFramerate || 16,
+    duration: animateReplaceDuration, // Use popup duration state
+    enabled: isAuthenticated && selectedPhoto !== null && showAnimateReplacePopup,
+    photoId: selectedPhotoIndex,
+    modelId: ANIMATE_REPLACE_MODELS[animateReplaceModelVariant],
+    steps: animateReplaceConfig.steps
+  });
+
+  // Animate Replace cost estimation (batch) - enabled when popup is shown
+  const { loading: batchAnimateReplaceLoading, cost: batchAnimateReplaceCostRaw, costInUSD: batchAnimateReplaceUSD } = useVideoCostEstimation({
+    imageWidth: desiredWidth || 768,
+    imageHeight: desiredHeight || 1024,
+    resolution: settings.videoResolution || '480p',
+    quality: settings.videoQuality || 'fast',
+    fps: settings.videoFramerate || 16,
+    duration: animateReplaceDuration, // Use popup duration state
+    enabled: isAuthenticated && loadedPhotosCount > 0 && showBatchAnimateReplacePopup,
+    jobCount: loadedPhotosCount,
+    modelId: ANIMATE_REPLACE_MODELS[animateReplaceModelVariant],
+    steps: animateReplaceConfig.steps
+  });
+
+  // Sound to Video cost estimation (single) - enabled when popup is shown
+  const s2vConfig = s2vModelVariant === 'speed'
+    ? S2V_QUALITY_PRESETS.fast
+    : S2V_QUALITY_PRESETS.quality;
+  const { loading: s2vLoading, cost: s2vCostRaw, costInUSD: s2vUSD } = useVideoCostEstimation({
+    imageWidth: desiredWidth || 768,
+    imageHeight: desiredHeight || 1024,
+    resolution: settings.videoResolution || '480p',
+    quality: settings.videoQuality || 'fast',
+    fps: settings.videoFramerate || 16,
+    duration: s2vDuration, // Use popup duration state
+    enabled: isAuthenticated && selectedPhoto !== null && showS2VPopup,
+    photoId: selectedPhotoIndex,
+    modelId: S2V_MODELS[s2vModelVariant],
+    steps: s2vConfig.steps
+  });
+
+  // Sound to Video cost estimation (batch) - enabled when popup is shown
+  const { loading: batchS2VLoading, cost: batchS2VCostRaw, costInUSD: batchS2VUSD } = useVideoCostEstimation({
+    imageWidth: desiredWidth || 768,
+    imageHeight: desiredHeight || 1024,
+    resolution: settings.videoResolution || '480p',
+    quality: settings.videoQuality || 'fast',
+    fps: settings.videoFramerate || 16,
+    duration: s2vDuration, // Use popup duration state
+    enabled: isAuthenticated && loadedPhotosCount > 0 && showBatchS2VPopup,
+    jobCount: loadedPhotosCount,
+    modelId: S2V_MODELS[s2vModelVariant],
+    steps: s2vConfig.steps
+  });
+
+  // Infinite Loop cost estimation - enabled when stitch popup is shown
+  // This estimates the cost of generating transition videos (one per segment)
+  const photosWithVideosCount = photos.filter(
+    photo => !photo.hidden && !photo.loading && !photo.generating && !photo.error && photo.videoUrl && !photo.isOriginal
+  ).length;
+  const { loading: infiniteLoopCostLoading, cost: infiniteLoopCostRaw, costInUSD: infiniteLoopUSD } = useVideoCostEstimation({
+    imageWidth: desiredWidth || 768,
+    imageHeight: desiredHeight || 1024,
+    resolution: settings.videoResolution || '480p',
+    quality: settings.videoQuality || 'fast',
+    fps: settings.videoFramerate || 16,
+    duration: settings.videoDuration || 5,
+    enabled: isAuthenticated && photosWithVideosCount >= 2 && showStitchOptionsPopup,
+    jobCount: photosWithVideosCount // One transition per segment
   });
   
   // State for custom prompt popup in Sample Gallery mode
@@ -1091,6 +1233,9 @@ const PhotoGallery = ({
   // State for AI-generated video playback (separate from easter egg videos)
   // Use a Set to allow multiple videos to play simultaneously (since videos are muted)
   const [playingGeneratedVideoIds, setPlayingGeneratedVideoIds] = useState(new Set());
+  
+  // Track S2V videos that need user interaction to play with audio
+  const [s2vVideosNeedingClick, setS2vVideosNeedingClick] = useState(new Set());
   
   // State for transition video mode - tracks if we're in transition batch mode and the photo order
   const [transitionVideoQueue, setTransitionVideoQueue] = useState([]);
@@ -2616,7 +2761,7 @@ const PhotoGallery = ({
   // Handle video type selection from VideoSelectionPopup
   const handleVideoTypeSelection = useCallback((videoType) => {
     setShowVideoSelectionPopup(false);
-    
+
     if (isVideoSelectionBatch) {
       // Batch mode
       switch (videoType) {
@@ -2632,6 +2777,15 @@ const PhotoGallery = ({
           break;
         case 'batch-transition':
           setShowTransitionVideoPopup(true);
+          break;
+        case 'batch-animate-move':
+          setShowBatchAnimateMovePopup(true);
+          break;
+        case 'batch-animate-replace':
+          setShowBatchAnimateReplacePopup(true);
+          break;
+        case 'batch-s2v':
+          setShowBatchS2VPopup(true);
           break;
         default:
           break;
@@ -2650,6 +2804,15 @@ const PhotoGallery = ({
           break;
         case 'transition':
           setShowTransitionVideoPopup(true);
+          break;
+        case 'animate-move':
+          setShowAnimateMovePopup(true);
+          break;
+        case 'animate-replace':
+          setShowAnimateReplacePopup(true);
+          break;
+        case 's2v':
+          setShowS2VPopup(true);
           break;
         default:
           break;
@@ -2922,6 +3085,466 @@ const PhotoGallery = ({
       img.src = imageUrl;
     }
   }, [photos, sogniClient, setPhotos, settings.videoResolution, settings.videoQuality, settings.videoFramerate, settings.videoDuration, settings.videoNegativePrompt, settings.soundEnabled, showToast, tokenType, onOutOfCredits, setPlayingGeneratedVideoIds, setCurrentVideoIndexByPhoto, setShowVideoNewBadge]);
+
+  // ==================== ANIMATE MOVE HANDLERS ====================
+
+  // Handle Animate Move video generation (single)
+  const handleAnimateMoveExecute = useCallback(async ({ positivePrompt, negativePrompt, videoData, videoUrl, videoDuration: customDuration, workflowType, modelVariant }) => {
+    setShowAnimateMovePopup(false);
+
+    // Pre-warm audio for iOS
+    warmUpAudio();
+
+    // Use videoTargetPhotoIndex if set (from gallery motion button), otherwise selectedPhotoIndex
+    const targetIndex = videoTargetPhotoIndex !== null ? videoTargetPhotoIndex : selectedPhotoIndex;
+    setVideoTargetPhotoIndex(null);
+
+    if (targetIndex === null) return;
+
+    const photo = photos[targetIndex];
+    if (!photo || photo.generatingVideo) return;
+
+    setShowVideoNewBadge(false);
+
+    const imageUrl = photo.enhancedImageUrl || photo.images?.[selectedSubIndex || 0] || photo.originalDataUrl;
+    if (!imageUrl) {
+      showToast({ title: 'Video Failed', message: 'No image available for video generation.', type: 'error' });
+      return;
+    }
+
+    // Use custom duration from popup or fall back to settings
+    const duration = customDuration || settings.videoDuration || 5;
+
+    // Fetch video data if URL provided
+    let videoBuffer = videoData;
+    if (!videoBuffer && videoUrl) {
+      try {
+        const response = await fetch(videoUrl);
+        const arrayBuffer = await response.arrayBuffer();
+        videoBuffer = new Uint8Array(arrayBuffer);
+      } catch (err) {
+        showToast({ title: 'Video Failed', message: 'Failed to load source video.', type: 'error' });
+        return;
+      }
+    }
+
+    const img = new Image();
+    img.onload = () => {
+      generateVideo({
+        photo,
+        photoIndex: targetIndex,
+        subIndex: selectedSubIndex || 0,
+        imageWidth: img.naturalWidth,
+        imageHeight: img.naturalHeight,
+        sogniClient,
+        setPhotos,
+        resolution: settings.videoResolution || '480p',
+        quality: settings.videoQuality || 'fast',
+        fps: settings.videoFramerate || 16,
+        duration: duration,
+        positivePrompt,
+        negativePrompt,
+        tokenType,
+        workflowType: 'animate-move',
+        referenceVideo: videoBuffer,
+        modelVariant, // Pass model variant from popup
+        onComplete: (resultVideoUrl) => {
+          playSonicLogo(settings.soundEnabled);
+          showToast({ title: '🎬 Animate Move Complete!', message: 'Your video is ready!', type: 'success' });
+          setPlayingGeneratedVideoIds(prev => new Set([...prev, photo.id]));
+        },
+        onError: (error) => {
+          showToast({ title: 'Video Failed', message: error.message || 'Video generation failed', type: 'error' });
+        },
+        onOutOfCredits: () => { if (onOutOfCredits) onOutOfCredits(); }
+      });
+    };
+    img.src = imageUrl;
+  }, [videoTargetPhotoIndex, selectedPhotoIndex, selectedSubIndex, photos, sogniClient, setPhotos, settings, tokenType, showToast, onOutOfCredits]);
+
+  // Handle Animate Move batch execution
+  const handleBatchAnimateMoveExecute = useCallback(async ({ positivePrompt, negativePrompt, videoData, videoUrl, videoDuration: customDuration, workflowType, modelVariant }) => {
+    setShowBatchAnimateMovePopup(false);
+    warmUpAudio();
+
+    const loadedPhotos = photos.filter(
+      photo => !photo.hidden && !photo.loading && !photo.generating && !photo.error && photo.images && photo.images.length > 0 && !photo.isOriginal
+    );
+
+    if (loadedPhotos.length === 0) {
+      showToast({ title: 'No Images', message: 'No images available for video generation.', type: 'error' });
+      return;
+    }
+
+    setShowVideoNewBadge(false);
+
+    // Fetch video data if URL provided
+    let videoBuffer = videoData;
+    if (!videoBuffer && videoUrl) {
+      try {
+        const response = await fetch(videoUrl);
+        const arrayBuffer = await response.arrayBuffer();
+        videoBuffer = new Uint8Array(arrayBuffer);
+      } catch (err) {
+        showToast({ title: 'Video Failed', message: 'Failed to load source video.', type: 'error' });
+        return;
+      }
+    }
+
+    // Use custom duration from popup or fall back to settings
+    const duration = customDuration || settings.videoDuration || 5;
+
+    showToast({
+      title: '🎬 Batch Animate Move',
+      message: `Starting video generation for ${loadedPhotos.length} image${loadedPhotos.length > 1 ? 's' : ''}...`,
+      type: 'info',
+      timeout: 3000
+    });
+
+    for (const photo of loadedPhotos) {
+      const photoIndex = photos.findIndex(p => p.id === photo.id);
+      if (photoIndex === -1 || photo.generatingVideo) continue;
+
+      const imageUrl = photo.enhancedImageUrl || photo.images?.[0] || photo.originalDataUrl;
+      if (!imageUrl) continue;
+
+      const img = new Image();
+      img.onload = () => {
+        generateVideo({
+          photo,
+          photoIndex,
+          subIndex: 0,
+          imageWidth: img.naturalWidth,
+          imageHeight: img.naturalHeight,
+          sogniClient,
+          setPhotos,
+          resolution: settings.videoResolution || '480p',
+          quality: settings.videoQuality || 'fast',
+          fps: settings.videoFramerate || 16,
+          duration: duration,
+          positivePrompt,
+          negativePrompt,
+          tokenType,
+          workflowType: 'animate-move',
+          referenceVideo: videoBuffer,
+          modelVariant, // Pass model variant from popup
+          onComplete: () => {
+            playSonicLogo(settings.soundEnabled);
+            setPlayingGeneratedVideoIds(prev => new Set([...prev, photo.id]));
+          },
+          onError: (error) => console.error('[BATCH ANIMATE MOVE] Error:', error),
+          onOutOfCredits: () => { if (onOutOfCredits) onOutOfCredits(); }
+        });
+      };
+      img.src = imageUrl;
+    }
+  }, [photos, sogniClient, setPhotos, settings, tokenType, showToast, onOutOfCredits]);
+
+  // ==================== ANIMATE REPLACE HANDLERS ====================
+
+  // Handle Animate Replace video generation (single)
+  const handleAnimateReplaceExecute = useCallback(async ({ positivePrompt, negativePrompt, videoData, videoUrl, sam2Coordinates, videoDuration: customDuration, workflowType, modelVariant }) => {
+    setShowAnimateReplacePopup(false);
+    warmUpAudio();
+
+    const targetIndex = videoTargetPhotoIndex !== null ? videoTargetPhotoIndex : selectedPhotoIndex;
+    setVideoTargetPhotoIndex(null);
+
+    if (targetIndex === null) return;
+
+    const photo = photos[targetIndex];
+    if (!photo || photo.generatingVideo) return;
+
+    setShowVideoNewBadge(false);
+
+    const imageUrl = photo.enhancedImageUrl || photo.images?.[selectedSubIndex || 0] || photo.originalDataUrl;
+    if (!imageUrl) {
+      showToast({ title: 'Video Failed', message: 'No image available for video generation.', type: 'error' });
+      return;
+    }
+
+    // Use custom duration from popup or fall back to settings
+    const duration = customDuration || settings.videoDuration || 5;
+
+    // Fetch video data if URL provided
+    let videoBuffer = videoData;
+    if (!videoBuffer && videoUrl) {
+      try {
+        const response = await fetch(videoUrl);
+        const arrayBuffer = await response.arrayBuffer();
+        videoBuffer = new Uint8Array(arrayBuffer);
+      } catch (err) {
+        showToast({ title: 'Video Failed', message: 'Failed to load source video.', type: 'error' });
+        return;
+      }
+    }
+
+    const img = new Image();
+    img.onload = () => {
+      generateVideo({
+        photo,
+        photoIndex: targetIndex,
+        subIndex: selectedSubIndex || 0,
+        imageWidth: img.naturalWidth,
+        imageHeight: img.naturalHeight,
+        sogniClient,
+        setPhotos,
+        resolution: settings.videoResolution || '480p',
+        quality: settings.videoQuality || 'fast',
+        fps: settings.videoFramerate || 16,
+        duration: duration,
+        positivePrompt,
+        negativePrompt,
+        tokenType,
+        workflowType: 'animate-replace',
+        referenceVideo: videoBuffer,
+        sam2Coordinates,
+        modelVariant, // Pass model variant from popup
+        onComplete: () => {
+          playSonicLogo(settings.soundEnabled);
+          showToast({ title: '🔄 Animate Replace Complete!', message: 'Your video is ready!', type: 'success' });
+          setPlayingGeneratedVideoIds(prev => new Set([...prev, photo.id]));
+        },
+        onError: (error) => {
+          showToast({ title: 'Video Failed', message: error.message || 'Video generation failed', type: 'error' });
+        },
+        onOutOfCredits: () => { if (onOutOfCredits) onOutOfCredits(); }
+      });
+    };
+    img.src = imageUrl;
+  }, [videoTargetPhotoIndex, selectedPhotoIndex, selectedSubIndex, photos, sogniClient, setPhotos, settings, tokenType, showToast, onOutOfCredits]);
+
+  // Handle Animate Replace batch execution
+  const handleBatchAnimateReplaceExecute = useCallback(async ({ positivePrompt, negativePrompt, videoData, videoUrl, sam2Coordinates, videoDuration: customDuration, workflowType, modelVariant }) => {
+    setShowBatchAnimateReplacePopup(false);
+    warmUpAudio();
+
+    const loadedPhotos = photos.filter(
+      photo => !photo.hidden && !photo.loading && !photo.generating && !photo.error && photo.images && photo.images.length > 0 && !photo.isOriginal
+    );
+
+    if (loadedPhotos.length === 0) {
+      showToast({ title: 'No Images', message: 'No images available for video generation.', type: 'error' });
+      return;
+    }
+
+    setShowVideoNewBadge(false);
+
+    let videoBuffer = videoData;
+    if (!videoBuffer && videoUrl) {
+      try {
+        const response = await fetch(videoUrl);
+        const arrayBuffer = await response.arrayBuffer();
+        videoBuffer = new Uint8Array(arrayBuffer);
+      } catch (err) {
+        showToast({ title: 'Video Failed', message: 'Failed to load source video.', type: 'error' });
+        return;
+      }
+    }
+
+    // Use custom duration from popup or fall back to settings
+    const duration = customDuration || settings.videoDuration || 5;
+
+    showToast({
+      title: '🔄 Batch Animate Replace',
+      message: `Starting video generation for ${loadedPhotos.length} image${loadedPhotos.length > 1 ? 's' : ''}...`,
+      type: 'info',
+      timeout: 3000
+    });
+
+    for (const photo of loadedPhotos) {
+      const photoIndex = photos.findIndex(p => p.id === photo.id);
+      if (photoIndex === -1 || photo.generatingVideo) continue;
+
+      const imageUrl = photo.enhancedImageUrl || photo.images?.[0] || photo.originalDataUrl;
+      if (!imageUrl) continue;
+
+      const img = new Image();
+      img.onload = () => {
+        generateVideo({
+          photo,
+          photoIndex,
+          subIndex: 0,
+          imageWidth: img.naturalWidth,
+          imageHeight: img.naturalHeight,
+          sogniClient,
+          setPhotos,
+          resolution: settings.videoResolution || '480p',
+          quality: settings.videoQuality || 'fast',
+          fps: settings.videoFramerate || 16,
+          duration: duration,
+          positivePrompt,
+          negativePrompt,
+          tokenType,
+          workflowType: 'animate-replace',
+          referenceVideo: videoBuffer,
+          sam2Coordinates,
+          modelVariant, // Pass model variant from popup
+          onComplete: () => {
+            playSonicLogo(settings.soundEnabled);
+            setPlayingGeneratedVideoIds(prev => new Set([...prev, photo.id]));
+          },
+          onError: (error) => console.error('[BATCH ANIMATE REPLACE] Error:', error),
+          onOutOfCredits: () => { if (onOutOfCredits) onOutOfCredits(); }
+        });
+      };
+      img.src = imageUrl;
+    }
+  }, [photos, sogniClient, setPhotos, settings, tokenType, showToast, onOutOfCredits]);
+
+  // ==================== SOUND TO VIDEO (S2V) HANDLERS ====================
+
+  // Handle Sound to Video generation (single)
+  const handleS2VExecute = useCallback(async ({ positivePrompt, negativePrompt, audioData, audioUrl, audioStartOffset, videoDuration: customDuration, workflowType, modelVariant }) => {
+    setShowS2VPopup(false);
+    warmUpAudio();
+
+    const targetIndex = videoTargetPhotoIndex !== null ? videoTargetPhotoIndex : selectedPhotoIndex;
+    setVideoTargetPhotoIndex(null);
+
+    if (targetIndex === null) return;
+
+    const photo = photos[targetIndex];
+    if (!photo || photo.generatingVideo) return;
+
+    setShowVideoNewBadge(false);
+
+    const imageUrl = photo.enhancedImageUrl || photo.images?.[selectedSubIndex || 0] || photo.originalDataUrl;
+    if (!imageUrl) {
+      showToast({ title: 'Video Failed', message: 'No image available for video generation.', type: 'error' });
+      return;
+    }
+
+    // Use custom duration from popup or fall back to settings
+    const duration = customDuration || settings.videoDuration || 5;
+
+    // Fetch audio data if URL provided
+    let audioBuffer = audioData;
+    if (!audioBuffer && audioUrl) {
+      try {
+        const response = await fetch(audioUrl);
+        const arrayBuffer = await response.arrayBuffer();
+        audioBuffer = new Uint8Array(arrayBuffer);
+      } catch (err) {
+        showToast({ title: 'Video Failed', message: 'Failed to load audio file.', type: 'error' });
+        return;
+      }
+    }
+
+    const img = new Image();
+    img.onload = () => {
+      generateVideo({
+        photo,
+        photoIndex: targetIndex,
+        subIndex: selectedSubIndex || 0,
+        imageWidth: img.naturalWidth,
+        imageHeight: img.naturalHeight,
+        sogniClient,
+        setPhotos,
+        resolution: settings.videoResolution || '480p',
+        quality: settings.videoQuality || 'fast',
+        fps: settings.videoFramerate || 16,
+        duration: duration,
+        positivePrompt,
+        negativePrompt,
+        tokenType,
+        workflowType: 's2v',
+        referenceAudio: audioBuffer,
+        audioStart: audioStartOffset || 0,
+        audioDuration: duration,
+        modelVariant, // Pass model variant from popup
+        onComplete: () => {
+          playSonicLogo(settings.soundEnabled);
+          showToast({ title: '🎤 Sound to Video Complete!', message: 'Your video is ready!', type: 'success' });
+          setPlayingGeneratedVideoIds(prev => new Set([...prev, photo.id]));
+        },
+        onError: (error) => {
+          showToast({ title: 'Video Failed', message: error.message || 'Video generation failed', type: 'error' });
+        },
+        onOutOfCredits: () => { if (onOutOfCredits) onOutOfCredits(); }
+      });
+    };
+    img.src = imageUrl;
+  }, [videoTargetPhotoIndex, selectedPhotoIndex, selectedSubIndex, photos, sogniClient, setPhotos, settings, tokenType, showToast, onOutOfCredits]);
+
+  // Handle Sound to Video batch execution
+  const handleBatchS2VExecute = useCallback(async ({ positivePrompt, negativePrompt, audioData, audioUrl, audioStartOffset, videoDuration: customDuration, workflowType, modelVariant }) => {
+    setShowBatchS2VPopup(false);
+    warmUpAudio();
+
+    const loadedPhotos = photos.filter(
+      photo => !photo.hidden && !photo.loading && !photo.generating && !photo.error && photo.images && photo.images.length > 0 && !photo.isOriginal
+    );
+
+    if (loadedPhotos.length === 0) {
+      showToast({ title: 'No Images', message: 'No images available for video generation.', type: 'error' });
+      return;
+    }
+
+    setShowVideoNewBadge(false);
+
+    let audioBuffer = audioData;
+    if (!audioBuffer && audioUrl) {
+      try {
+        const response = await fetch(audioUrl);
+        const arrayBuffer = await response.arrayBuffer();
+        audioBuffer = new Uint8Array(arrayBuffer);
+      } catch (err) {
+        showToast({ title: 'Video Failed', message: 'Failed to load audio file.', type: 'error' });
+        return;
+      }
+    }
+
+    // Use custom duration from popup or fall back to settings
+    const duration = customDuration || settings.videoDuration || 5;
+
+    showToast({
+      title: '🎤 Batch Sound to Video',
+      message: `Starting video generation for ${loadedPhotos.length} image${loadedPhotos.length > 1 ? 's' : ''}...`,
+      type: 'info',
+      timeout: 3000
+    });
+
+    for (const photo of loadedPhotos) {
+      const photoIndex = photos.findIndex(p => p.id === photo.id);
+      if (photoIndex === -1 || photo.generatingVideo) continue;
+
+      const imageUrl = photo.enhancedImageUrl || photo.images?.[0] || photo.originalDataUrl;
+      if (!imageUrl) continue;
+
+      const img = new Image();
+      img.onload = () => {
+        generateVideo({
+          photo,
+          photoIndex,
+          subIndex: 0,
+          imageWidth: img.naturalWidth,
+          imageHeight: img.naturalHeight,
+          sogniClient,
+          setPhotos,
+          resolution: settings.videoResolution || '480p',
+          quality: settings.videoQuality || 'fast',
+          fps: settings.videoFramerate || 16,
+          duration: duration,
+          positivePrompt,
+          negativePrompt,
+          tokenType,
+          workflowType: 's2v',
+          referenceAudio: audioBuffer,
+          audioStart: audioStartOffset || 0,
+          audioDuration: duration,
+          modelVariant, // Pass model variant from popup
+          onComplete: () => {
+            playSonicLogo(settings.soundEnabled);
+            setPlayingGeneratedVideoIds(prev => new Set([...prev, photo.id]));
+          },
+          onError: (error) => console.error('[BATCH S2V] Error:', error),
+          onOutOfCredits: () => { if (onOutOfCredits) onOutOfCredits(); }
+        });
+      };
+      img.src = imageUrl;
+    }
+  }, [photos, sogniClient, setPhotos, settings, tokenType, showToast, onOutOfCredits]);
 
   // Handle batch video generation for all images
   const handleBatchGenerateVideo = useCallback(async (customMotionPrompt = null, customNegativePrompt = null, motionEmoji = null) => {
@@ -4329,23 +4952,46 @@ const PhotoGallery = ({
       const transitionResolution = firstPhoto.videoResolution || settings.videoResolution || '480p';
       const transitionFramerate = firstPhoto.videoFramerate || settings.videoFramerate || 16;
       
+      // CRITICAL: Calculate exact frame count from video duration to ensure perfect matching
+      // Transitions MUST have the exact same frame count as segment videos for concatenation
+      let transitionFrames;
       let transitionDuration;
       try {
         const videoDuration = await getVideoDuration(firstPhoto.videoUrl);
-        transitionDuration = Math.round(videoDuration); // Round to nearest second
-        console.log(`[Infinite Loop] Detected video params - duration: ${videoDuration}s → ${transitionDuration}s, resolution: ${transitionResolution}, fps: ${transitionFramerate}`);
+        // Calculate exact frames: duration * fps + 1 (at base fps 16)
+        const calculatedFrames = Math.round(videoDuration * 16) + 1;
+        
+        // VALIDATION: Check if video exceeds i2v transition workflow limit (161 frames = 10s)
+        if (calculatedFrames > 161) {
+          const maxDuration = (161 - 1) / 16; // 10 seconds
+          showToast({
+            title: 'Videos Too Long',
+            message: `Infinite Loop requires videos to be ${maxDuration}s or shorter. Your videos are ${videoDuration.toFixed(1)}s. Please use shorter videos or regenerate with a shorter duration.`,
+            type: 'error'
+          });
+          setIsGeneratingInfiniteLoop(false);
+          setInfiniteLoopProgress(null);
+          setShowStitchOptionsPopup(false);
+          return;
+        }
+        
+        transitionFrames = calculatedFrames;
+        // Calculate duration from frames for display/logging
+        transitionDuration = (transitionFrames - 1) / 16;
+        console.log(`[Infinite Loop] Video params - detected duration: ${videoDuration}s, calculated frames: ${calculatedFrames}, transition frames: ${transitionFrames}, transition duration: ${transitionDuration}s, resolution: ${transitionResolution}, fps: ${transitionFramerate}`);
       } catch (error) {
-        console.warn('[Infinite Loop] Could not detect video duration, using default 5s');
-        transitionDuration = firstPhoto.videoDuration || 5;
+        console.warn('[Infinite Loop] Could not detect video duration, using default 5s = 81 frames');
+        transitionFrames = (firstPhoto.videoDuration || 5) * 16 + 1;
+        transitionDuration = (transitionFrames - 1) / 16;
       }
 
       // Generate hash to check for cached version (includes all video parameters for proper cache invalidation)
-      const photosHash = photosWithVideos.map(p => p.id + '-' + p.videoUrl).join('|') + `-dur${transitionDuration}-res${transitionResolution}-fps${transitionFramerate}`;
+      const photosHash = photosWithVideos.map(p => p.id + '-' + p.videoUrl).join('|') + `-frames${transitionFrames}-res${transitionResolution}-fps${transitionFramerate}`;
 
       // Note: We don't check for cached version here anymore - always regenerate when user clicks
       // The "Download Cached" button in StitchOptionsPopup provides access to the previous version
 
-      console.log(`[Infinite Loop] Starting with ${photosWithVideos.length} videos, ${transitionDuration}s transitions`);
+      console.log(`[Infinite Loop] Starting with ${photosWithVideos.length} videos, ${transitionFrames} frames (${transitionDuration}s) transitions`);
       
       // Log all video URLs to debug potential corruption
       console.group('[Infinite Loop] Video URLs');
@@ -4523,7 +5169,7 @@ const PhotoGallery = ({
             }
           };
 
-          console.log(`[Infinite Loop] ${isRetry ? 'RETRY: ' : ''}Starting transition ${i + 1}: video ${i + 1} → photo ${nextIndex + 1}`);
+          console.log(`[Infinite Loop] ${isRetry ? 'RETRY: ' : ''}Starting transition ${i + 1}: video ${i + 1} → photo ${nextIndex + 1}, ${transitionFrames} frames`);
 
           generateVideo({
             photo: tempPhoto,
@@ -4536,7 +5182,7 @@ const PhotoGallery = ({
             resolution: transitionResolution,
             quality: settings.videoQuality || 'fast',
             fps: transitionFramerate,
-            duration: transitionDuration,
+            frames: transitionFrames, // Use explicit frames for exact matching
             positivePrompt: motionPrompt,
             negativePrompt: negativePrompt,
             tokenType: tokenType,
@@ -11163,23 +11809,113 @@ const PhotoGallery = ({
                 {/* AI-Generated Video Overlay - Show when generated video is playing */}
                 {photo.videoUrl && !photo.generatingVideo && playingGeneratedVideoIds.has(photo.id) && (
                   // All photos play their own video in a simple loop
-                  <video
-                    src={photo.videoUrl}
-                    autoPlay
-                    loop={true}
-                    muted
-                    playsInline
-                    style={{
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      width: '100%',
-                      height: '100%',
-                      objectFit: 'cover',
-                      zIndex: 5,
-                      pointerEvents: 'none'
-                    }}
-                  />
+                  // S2V videos play with audio enabled
+                  <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 4 }}>
+                    <video
+                      key={`video-${photo.id}-${photo.videoWorkflowType}`}
+                      src={photo.videoUrl}
+                      autoPlay
+                      loop={true}
+                      muted={photo.videoWorkflowType !== 's2v'}
+                      playsInline
+                      onLoadedMetadata={(e) => {
+                        // For S2V videos, try to unmute and play with audio
+                        if (photo.videoWorkflowType === 's2v') {
+                          const videoEl = e.currentTarget;
+                          videoEl.muted = false;
+                          // Try to play with audio - if it fails, show click-to-play overlay
+                          const playPromise = videoEl.play();
+                          if (playPromise !== undefined) {
+                            playPromise.catch(() => {
+                              // Autoplay with audio blocked, show click-to-play overlay
+                              setS2vVideosNeedingClick(prev => new Set([...prev, photo.id]));
+                            });
+                          }
+                        }
+                      }}
+                      style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                        zIndex: 5,
+                        pointerEvents: photo.videoWorkflowType === 's2v' && s2vVideosNeedingClick.has(photo.id) ? 'auto' : 'none'
+                      }}
+                    />
+                    
+                    {/* Click-to-play overlay for S2V videos when audio autoplay is blocked */}
+                    {photo.videoWorkflowType === 's2v' && s2vVideosNeedingClick.has(photo.id) && (
+                      <div
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const videoEl = e.currentTarget.parentElement.querySelector('video');
+                          if (videoEl) {
+                            videoEl.muted = false;
+                            videoEl.play().then(() => {
+                              setS2vVideosNeedingClick(prev => {
+                                const newSet = new Set(prev);
+                                newSet.delete(photo.id);
+                                return newSet;
+                              });
+                            }).catch(() => {
+                              console.log('Failed to play S2V video with audio');
+                            });
+                          }
+                        }}
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          width: '100%',
+                          height: '100%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                          backdropFilter: 'blur(4px)',
+                          zIndex: 6,
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease'
+                        }}
+                        onMouseOver={(e) => {
+                          e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+                        }}
+                        onMouseOut={(e) => {
+                          e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.6)';
+                        }}
+                      >
+                        <div style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          gap: '12px',
+                          padding: '20px',
+                          borderRadius: '16px',
+                          background: 'rgba(236, 72, 153, 0.9)',
+                          boxShadow: '0 8px 32px rgba(236, 72, 153, 0.4)',
+                          animation: 'pulse 2s ease-in-out infinite'
+                        }}>
+                          <div style={{
+                            fontSize: '48px',
+                            lineHeight: 1
+                          }}>
+                            🔊
+                          </div>
+                          <div style={{
+                            color: 'white',
+                            fontSize: '16px',
+                            fontWeight: '700',
+                            textAlign: 'center',
+                            textShadow: '0 2px 4px rgba(0,0,0,0.3)'
+                          }}>
+                            Click to Play with Audio
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 )}
 
                 {/* Video generation progress overlay - displays worker, ETA and elapsed time */}
@@ -12520,6 +13256,12 @@ const PhotoGallery = ({
         isGenerating={isGeneratingInfiniteLoop}
         generationProgress={infiniteLoopProgress}
         hasCachedVideo={!!cachedInfiniteLoopBlob}
+        costLoading={infiniteLoopCostLoading}
+        costRaw={infiniteLoopCostRaw}
+        costUSD={infiniteLoopUSD}
+        videoResolution={settings.videoResolution || '480p'}
+        videoDuration={settings.videoDuration || 5}
+        tokenType={tokenType}
       />
 
       {/* Infinite Loop Video Preview - Fullscreen playback after generation */}
@@ -13550,6 +14292,113 @@ const PhotoGallery = ({
         itemCount={loadedPhotosCount}
       />
 
+      {/* Animate Move Popup (Single) */}
+      <AnimateMovePopup
+        visible={showAnimateMovePopup}
+        onConfirm={handleAnimateMoveExecute}
+        onClose={() => setShowAnimateMovePopup(false)}
+        loading={animateMoveLoading}
+        costRaw={animateMoveCostRaw}
+        costUSD={animateMoveUSD}
+        videoResolution={settings.videoResolution || '480p'}
+        tokenType={tokenType}
+        isBatch={false}
+        itemCount={1}
+        modelVariant={animateMoveModelVariant}
+        onModelVariantChange={setAnimateMoveModelVariant}
+        videoDuration={animateMoveDuration}
+        onDurationChange={setAnimateMoveDuration}
+      />
+
+      {/* Animate Move Popup (Batch) */}
+      <AnimateMovePopup
+        visible={showBatchAnimateMovePopup}
+        onConfirm={handleBatchAnimateMoveExecute}
+        onClose={() => setShowBatchAnimateMovePopup(false)}
+        loading={batchAnimateMoveLoading}
+        costRaw={batchAnimateMoveCostRaw}
+        costUSD={batchAnimateMoveUSD}
+        videoResolution={settings.videoResolution || '480p'}
+        tokenType={tokenType}
+        isBatch={true}
+        itemCount={loadedPhotosCount}
+        modelVariant={animateMoveModelVariant}
+        onModelVariantChange={setAnimateMoveModelVariant}
+        videoDuration={animateMoveDuration}
+        onDurationChange={setAnimateMoveDuration}
+      />
+
+      {/* Animate Replace Popup (Single) */}
+      <AnimateReplacePopup
+        visible={showAnimateReplacePopup}
+        onConfirm={handleAnimateReplaceExecute}
+        onClose={() => setShowAnimateReplacePopup(false)}
+        loading={animateReplaceLoading}
+        costRaw={animateReplaceCostRaw}
+        costUSD={animateReplaceUSD}
+        videoResolution={settings.videoResolution || '480p'}
+        tokenType={tokenType}
+        isBatch={false}
+        itemCount={1}
+        modelVariant={animateReplaceModelVariant}
+        onModelVariantChange={setAnimateReplaceModelVariant}
+        videoDuration={animateReplaceDuration}
+        onDurationChange={setAnimateReplaceDuration}
+      />
+
+      {/* Animate Replace Popup (Batch) */}
+      <AnimateReplacePopup
+        visible={showBatchAnimateReplacePopup}
+        onConfirm={handleBatchAnimateReplaceExecute}
+        onClose={() => setShowBatchAnimateReplacePopup(false)}
+        loading={batchAnimateReplaceLoading}
+        costRaw={batchAnimateReplaceCostRaw}
+        costUSD={batchAnimateReplaceUSD}
+        videoResolution={settings.videoResolution || '480p'}
+        tokenType={tokenType}
+        isBatch={true}
+        itemCount={loadedPhotosCount}
+        modelVariant={animateReplaceModelVariant}
+        onModelVariantChange={setAnimateReplaceModelVariant}
+        videoDuration={animateReplaceDuration}
+        onDurationChange={setAnimateReplaceDuration}
+      />
+
+      {/* Sound to Video Popup (Single) */}
+      <SoundToVideoPopup
+        visible={showS2VPopup}
+        onConfirm={handleS2VExecute}
+        onClose={() => setShowS2VPopup(false)}
+        loading={s2vLoading}
+        costRaw={s2vCostRaw}
+        costUSD={s2vUSD}
+        videoResolution={settings.videoResolution || '480p'}
+        tokenType={tokenType}
+        isBatch={false}
+        itemCount={1}
+        modelVariant={s2vModelVariant}
+        onModelVariantChange={setS2vModelVariant}
+        videoDuration={s2vDuration}
+        onDurationChange={setS2vDuration}
+      />
+
+      {/* Sound to Video Popup (Batch) */}
+      <SoundToVideoPopup
+        visible={showBatchS2VPopup}
+        onConfirm={handleBatchS2VExecute}
+        onClose={() => setShowBatchS2VPopup(false)}
+        loading={batchS2VLoading}
+        costRaw={batchS2VCostRaw}
+        costUSD={batchS2VUSD}
+        videoResolution={settings.videoResolution || '480p'}
+        tokenType={tokenType}
+        isBatch={true}
+        itemCount={loadedPhotosCount}
+        modelVariant={s2vModelVariant}
+        onModelVariantChange={setS2vModelVariant}
+        videoDuration={s2vDuration}
+        onDurationChange={setS2vDuration}
+      />
 
       {/* Custom Prompt Popup for Sample Gallery mode */}
       <CustomPromptPopup

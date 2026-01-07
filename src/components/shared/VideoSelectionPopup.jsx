@@ -44,11 +44,18 @@ const VideoSelectionPopup = ({
   const [promptVideoIndex, setPromptVideoIndex] = useState(0);
   const [emojiVideoIndex, setEmojiVideoIndex] = useState(0);
   const [baldForBaseVideoIndex, setBaldForBaseVideoIndex] = useState(0);
+  const [s2vMuted, setS2vMuted] = useState(true); // S2V video muted by default
   const [videoLoadedStates, setVideoLoadedStates] = useState({
     'prompt': false,
     'emoji': false,
     'bald-for-base': false,
-    'transition': false
+    'transition': false,
+    'animate-move': false,
+    'batch-animate-move': false,
+    'animate-replace': false,
+    'batch-animate-replace': false,
+    's2v': false,
+    'batch-s2v': false
   });
   const promptVideoRefs = React.useRef({});
   const emojiVideoRefs = React.useRef({});
@@ -135,12 +142,19 @@ const VideoSelectionPopup = ({
     setPromptVideoIndex(0);
     setEmojiVideoIndex(0);
     setBaldForBaseVideoIndex(0);
+    setS2vMuted(true); // Reset mute state when popup opens
     // Reset loading states when popup opens
     setVideoLoadedStates({
       'prompt': false,
       'emoji': false,
       'bald-for-base': false,
-      'transition': false
+      'transition': false,
+      'animate-move': false,
+      'batch-animate-move': false,
+      'animate-replace': false,
+      'batch-animate-replace': false,
+      's2v': false,
+      'batch-s2v': false
     });
     
     // Preload first videos using link preload for better performance
@@ -260,12 +274,50 @@ const VideoSelectionPopup = ({
       id: isBatch ? 'batch-transition' : 'transition',
       icon: '🔀',
       title: isBatch ? 'Batch Transition' : 'Transition Video',
-      description: isBatch 
+      description: isBatch
         ? 'Create looping videos that connect multiple images together with seamless transitions.'
         : 'Create looping videos that connect multiple images together with seamless transitions. Requires 2 or more images.',
       gradient: 'linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)',
       exampleVideo: transitionVideo,
       disabled: !isBatch && photoCount < 2
+    });
+
+    // Placeholder video URLs for new workflows (to be replaced with actual examples)
+    const animateMoveVideo = 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/videos/animate-move-placeholder.mp4';
+    const animateReplaceVideo = 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/videos/animate-replace-placeholder.mp4';
+    const soundToVideoVideo = 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/videos/sogni-photobooth-video-demo_832x1216.mp4';
+
+    // Add Video Move option
+    options.push({
+      id: isBatch ? 'batch-animate-move' : 'animate-move',
+      icon: '🎬',
+      title: 'Video Move',
+      description: 'Apply camera movement from a source video to your image. Great for pans, zooms, and dynamic shots.',
+      gradient: 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)',
+      exampleVideo: animateMoveVideo,
+      isNew: true
+    });
+
+    // Add Video Replace option
+    options.push({
+      id: isBatch ? 'batch-animate-replace' : 'animate-replace',
+      icon: '🔄',
+      title: 'Video Replace',
+      description: 'Replace the main subject in a video with your image while preserving the motion and background.',
+      gradient: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
+      exampleVideo: animateReplaceVideo,
+      isNew: true
+    });
+
+    // Add Sound to Video (S2V) option
+    options.push({
+      id: isBatch ? 'batch-s2v' : 's2v',
+      icon: '🎤',
+      title: 'Sound to Video',
+      description: 'Generate lip-synced video from audio. Perfect for making your image speak or sing.',
+      gradient: 'linear-gradient(135deg, #ec4899 0%, #db2777 100%)',
+      exampleVideo: soundToVideoVideo,
+      isNew: true
     });
 
     // Add Bald for Base option last
@@ -624,7 +676,7 @@ const VideoSelectionPopup = ({
                         }}
                         src={option.exampleVideo}
                         autoPlay
-                        muted
+                        muted={option.id === 's2v' || option.id === 'batch-s2v' ? s2vMuted : true}
                         playsInline
                         preload="auto"
                         loop={!option.exampleVideos}
@@ -657,6 +709,45 @@ const VideoSelectionPopup = ({
                           transition: 'opacity 0.3s ease'
                         }}
                       />
+                      {/* Mute/Unmute button for S2V videos */}
+                      {(option.id === 's2v' || option.id === 'batch-s2v') && videoLoadedStates[option.id] && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setS2vMuted(!s2vMuted);
+                          }}
+                          style={{
+                            position: 'absolute',
+                            bottom: '12px',
+                            right: '12px',
+                            width: '36px',
+                            height: '36px',
+                            borderRadius: '50%',
+                            border: 'none',
+                            background: 'rgba(0, 0, 0, 0.7)',
+                            color: 'white',
+                            fontSize: '18px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            transition: 'all 0.2s ease',
+                            zIndex: 10,
+                            backdropFilter: 'blur(10px)',
+                            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)'
+                          }}
+                          onMouseOver={(e) => {
+                            e.currentTarget.style.background = 'rgba(0, 0, 0, 0.85)';
+                            e.currentTarget.style.transform = 'scale(1.1)';
+                          }}
+                          onMouseOut={(e) => {
+                            e.currentTarget.style.background = 'rgba(0, 0, 0, 0.7)';
+                            e.currentTarget.style.transform = 'scale(1)';
+                          }}
+                        >
+                          {s2vMuted ? '🔇' : '🔊'}
+                        </button>
+                      )}
                     </>
                   ) : null}
                   
@@ -677,10 +768,10 @@ const VideoSelectionPopup = ({
 
                 {/* Content Section */}
                 <div style={{
-                  padding: isMobile ? '12px' : '16px',
+                  padding: isMobile ? '12px' : isTablet ? '14px' : '16px',
                   display: 'flex',
                   flexDirection: 'column',
-                  gap: isMobile ? '6px' : '8px',
+                  gap: isMobile ? '6px' : isTablet ? '6px' : '8px',
                   flex: '0 0 auto',
                   background: 'transparent',
                   minHeight: 0
@@ -692,8 +783,8 @@ const VideoSelectionPopup = ({
                     gap: isMobile ? '6px' : '10px',
                     marginBottom: '2px'
                   }}>
-                    <span style={{ 
-                      fontSize: isMobile ? '20px' : '28px',
+                    <span style={{
+                      fontSize: isMobile ? '20px' : isTablet ? '24px' : '28px',
                       filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1))',
                       flexShrink: 0
                     }}>
@@ -702,16 +793,37 @@ const VideoSelectionPopup = ({
                     <h3 style={{
                       margin: 0,
                       color: isDisabled ? '#9CA3AF' : '#1a1a1a',
-                      fontSize: isMobile ? '16px' : '22px',
+                      fontSize: isMobile ? '16px' : isTablet ? '18px' : '22px',
                       fontWeight: '700',
                       fontFamily: '"Permanent Marker", cursive',
                       letterSpacing: '-0.01em',
                       lineHeight: '1.2',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap'
+                      whiteSpace: isTablet ? 'normal' : 'nowrap',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      flexWrap: isTablet ? 'wrap' : 'nowrap'
                     }}>
                       {option.title}
+                      {option.isNew && (
+                        <span style={{
+                          fontSize: '9px',
+                          fontWeight: '700',
+                          fontFamily: 'system-ui, sans-serif',
+                          background: 'linear-gradient(135deg, #10b981, #059669)',
+                          color: 'white',
+                          padding: '2px 6px',
+                          borderRadius: '4px',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.5px',
+                          flexShrink: 0,
+                          animation: 'newBadgePulse 2s ease-in-out infinite'
+                        }}>
+                          NEW
+                        </span>
+                      )}
                     </h3>
                   </div>
 
@@ -719,7 +831,7 @@ const VideoSelectionPopup = ({
                   <p style={{
                     margin: 0,
                     color: isDisabled ? '#9CA3AF' : '#666',
-                    fontSize: isMobile ? '11px' : '14px',
+                    fontSize: isMobile ? '11px' : isTablet ? '12px' : '14px',
                     lineHeight: '1.4',
                     fontWeight: '400',
                     letterSpacing: '0.01em',
@@ -790,6 +902,16 @@ const VideoSelectionPopup = ({
           to {
             opacity: 1;
             transform: scale(1);
+          }
+        }
+        @keyframes newBadgePulse {
+          0%, 100% {
+            opacity: 1;
+            transform: scale(1);
+          }
+          50% {
+            opacity: 0.85;
+            transform: scale(1.05);
           }
         }
         /* Scrollbar styling - visible on iOS for better UX */

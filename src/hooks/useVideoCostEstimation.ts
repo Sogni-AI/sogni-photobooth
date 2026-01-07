@@ -37,6 +37,10 @@ interface VideoCostEstimationParams {
   photoId?: number | null;
   /** Number of jobs to request (default: 1) */
   jobCount?: number;
+  /** Optional: Direct model ID override (takes precedence over quality) */
+  modelId?: string;
+  /** Optional: Direct steps override (takes precedence over quality) */
+  steps?: number;
 }
 
 interface VideoCostEstimationResult {
@@ -105,7 +109,9 @@ export function useVideoCostEstimation(params: VideoCostEstimationParams): Video
     duration = VIDEO_CONFIG.defaultDuration,
     enabled = true,
     photoId,
-    jobCount = 1
+    jobCount = 1,
+    modelId: directModelId,
+    steps: directSteps
   } = params;
 
   // Calculate frames from duration and fps if not explicitly provided
@@ -123,12 +129,23 @@ export function useVideoCostEstimation(params: VideoCostEstimationParams): Video
       return;
     }
 
-    // Get quality preset config
-    const qualityConfig = VIDEO_QUALITY_PRESETS[quality];
-    if (!qualityConfig) {
-      setError(new Error(`Invalid quality preset: ${quality}`));
-      setLoading(false);
-      return;
+    // Use direct modelId/steps if provided, otherwise use quality preset
+    let modelId: string;
+    let steps: number;
+    
+    if (directModelId && directSteps !== undefined) {
+      modelId = directModelId;
+      steps = directSteps;
+    } else {
+      // Get quality preset config
+      const qualityConfig = VIDEO_QUALITY_PRESETS[quality];
+      if (!qualityConfig) {
+        setError(new Error(`Invalid quality preset: ${quality}`));
+        setLoading(false);
+        return;
+      }
+      modelId = qualityConfig.model;
+      steps = qualityConfig.steps;
     }
 
     // Calculate video dimensions
@@ -139,12 +156,12 @@ export function useVideoCostEstimation(params: VideoCostEstimationParams): Video
     // Include enabled to bust cache when dropdown opens/closes
     const paramsHash = JSON.stringify({
       tokenType,
-      modelId: qualityConfig.model,
+      modelId,
       width: dimensions.width,
       height: dimensions.height,
       frames,
       fps,
-      steps: qualityConfig.steps,
+      steps,
       photoId,
       jobCount,
       enabled
@@ -161,12 +178,12 @@ export function useVideoCostEstimation(params: VideoCostEstimationParams): Video
     try {
       const result = await fetchVideoCostEstimate(
         tokenType,
-        qualityConfig.model,
+        modelId,
         dimensions.width,
         dimensions.height,
         frames,
         fps,
-        qualityConfig.steps,
+        steps,
         jobCount
       );
 
@@ -212,7 +229,7 @@ export function useVideoCostEstimation(params: VideoCostEstimationParams): Video
       setCostInUSD(null);
       setLoading(false);
     }
-  }, [enabled, imageWidth, imageHeight, resolution, quality, frames, fps, tokenType, photoId, jobCount]);
+  }, [enabled, imageWidth, imageHeight, resolution, quality, frames, fps, tokenType, photoId, jobCount, directModelId, directSteps]);
 
   // Fetch on mount and when params change
   useEffect(() => {

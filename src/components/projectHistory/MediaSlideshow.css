@@ -149,6 +149,35 @@
   fill: currentColor;
 }
 
+/* Video Mute Button */
+.slideshow-mute-btn {
+  position: absolute;
+  bottom: 12px;
+  right: 56px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.5);
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: white;
+}
+
+.slideshow-mute-btn:hover {
+  background: rgba(0, 0, 0, 0.75);
+  transform: scale(1.1);
+}
+
+.slideshow-mute-btn svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+}
+
 /* Navigation Buttons - Always visible */
 .slideshow-nav-btn {
   position: absolute;
@@ -306,6 +335,18 @@
   }
 
   .slideshow-video-btn svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .slideshow-mute-btn {
+    width: 32px;
+    height: 32px;
+    bottom: 10px;
+    right: 50px;
+  }
+
+  .slideshow-mute-btn svg {
     width: 14px;
     height: 14px;
   }

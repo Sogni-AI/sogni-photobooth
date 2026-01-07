@@ -17,8 +17,17 @@ import {
   markVideoGenerated,
   calculateVideoFrames,
   VideoQualityPreset,
-  VideoResolution
+  VideoResolution,
+  S2V_QUALITY_PRESETS,
+  ANIMATE_MOVE_QUALITY_PRESETS,
+  ANIMATE_REPLACE_QUALITY_PRESETS,
+  S2V_MODELS,
+  ANIMATE_MOVE_MODELS,
+  ANIMATE_REPLACE_MODELS
 } from '../constants/videoSettings';
+
+// Workflow types for different video generation modes
+export type VideoWorkflowType = 'i2v' | 's2v' | 'animate-move' | 'animate-replace';
 import { Photo } from '../types/index';
 import { trackVideoGeneration } from './frontendAnalytics';
 import { fetchWithRetry } from '../utils/index';
@@ -52,12 +61,21 @@ interface GenerateVideoOptions {
   quality?: VideoQualityPreset;
   fps?: 16 | 32;
   duration?: number; // Duration in seconds (1-8 in 0.5 increments)
+  frames?: number; // Explicit frame count - takes precedence over duration
   positivePrompt?: string;
   negativePrompt?: string;
   motionEmoji?: string;
   tokenType?: 'spark' | 'sogni';
   referenceImage?: Uint8Array;
   referenceImageEnd?: Uint8Array;
+  // New workflow parameters
+  workflowType?: VideoWorkflowType;
+  referenceVideo?: Uint8Array; // For animate-move and animate-replace
+  referenceAudio?: Uint8Array; // For S2V
+  audioStart?: number; // For S2V - start offset in seconds
+  audioDuration?: number; // For S2V - duration to use from audio
+  sam2Coordinates?: string; // For animate-replace - JSON string of [{x, y}]
+  modelVariant?: 'speed' | 'quality'; // Model variant for new workflows (lightx2v vs full)
   onComplete?: (videoUrl: string) => void;
   onError?: (error: Error) => void;
   onCancel?: () => void;
@@ -134,12 +152,21 @@ export async function generateVideo(options: GenerateVideoOptions): Promise<void
     quality = 'fast',
     fps = 16,
     duration = 5,
+    frames: explicitFrames, // Explicit frame count (takes precedence over duration)
     positivePrompt = '',
     negativePrompt = '',
     motionEmoji,
     tokenType = 'spark',
     referenceImage: customReferenceImage,
     referenceImageEnd,
+    // New workflow parameters
+    workflowType = 'i2v',
+    referenceVideo,
+    referenceAudio,
+    audioStart,
+    audioDuration,
+    sam2Coordinates,
+    modelVariant, // Model variant for new workflows (speed/quality)
     onComplete,
     onError,
     onOutOfCredits
@@ -217,9 +244,69 @@ export async function generateVideo(options: GenerateVideoOptions): Promise<void
       imageBuffer = new Uint8Array(arrayBuffer);
     }
 
-    const qualityConfig = VIDEO_QUALITY_PRESETS[quality];
+    // Select quality config based on workflow type
+    let qualityConfig: {
+      model: string;
+      steps: number;
+      label: string;
+      description: string;
+      guidance?: number;
+      shift?: number;
+      sampler?: string;
+      scheduler?: string;
+    };
+
+    switch (workflowType) {
+      case 's2v':
+        // Use modelVariant if provided, otherwise fall back to quality preset
+        if (modelVariant) {
+          const baseConfig = modelVariant === 'speed' 
+            ? S2V_QUALITY_PRESETS.fast 
+            : S2V_QUALITY_PRESETS.quality;
+          qualityConfig = {
+            ...baseConfig,
+            model: S2V_MODELS[modelVariant]
+          };
+        } else {
+          qualityConfig = S2V_QUALITY_PRESETS[quality];
+        }
+        break;
+      case 'animate-move':
+        // Use modelVariant if provided, otherwise fall back to quality preset
+        if (modelVariant) {
+          const baseConfig = modelVariant === 'speed'
+            ? ANIMATE_MOVE_QUALITY_PRESETS.fast
+            : ANIMATE_MOVE_QUALITY_PRESETS.quality;
+          qualityConfig = {
+            ...baseConfig,
+            model: ANIMATE_MOVE_MODELS[modelVariant]
+          };
+        } else {
+          qualityConfig = ANIMATE_MOVE_QUALITY_PRESETS[quality];
+        }
+        break;
+      case 'animate-replace':
+        // Use modelVariant if provided, otherwise fall back to quality preset
+        if (modelVariant) {
+          const baseConfig = modelVariant === 'speed'
+            ? ANIMATE_REPLACE_QUALITY_PRESETS.fast
+            : ANIMATE_REPLACE_QUALITY_PRESETS.quality;
+          qualityConfig = {
+            ...baseConfig,
+            model: ANIMATE_REPLACE_MODELS[modelVariant]
+          };
+        } else {
+          qualityConfig = ANIMATE_REPLACE_QUALITY_PRESETS[quality];
+        }
+        break;
+      case 'i2v':
+      default:
+        qualityConfig = VIDEO_QUALITY_PRESETS[quality];
+        break;
+    }
+
     if (!qualityConfig) {
-      throw new Error(`Invalid quality preset: ${quality}`);
+      throw new Error(`Invalid quality preset: ${quality} for workflow: ${workflowType}`);
     }
 
     // Set initial state
@@ -243,17 +330,24 @@ export async function generateVideo(options: GenerateVideoOptions): Promise<void
     // Create project - pass SCALED dimensions with sizePreset: 'custom' like image generation
     const seed = Math.floor(Math.random() * 2147483647);
     
-    // Calculate frames based on duration (fps only affects playback, not frame count)
-    const frames = calculateVideoFrames(duration);
+    // Use explicit frames if provided, otherwise calculate from duration
+    // Explicit frames take precedence for workflows like Infinite Loop that need exact frame matching
+    const frames = explicitFrames !== undefined ? explicitFrames : calculateVideoFrames(duration);
     
     console.log('🎬 VIDEO SETTINGS RECEIVED:');
-    console.log(`   Duration setting: ${duration}s`);
+    if (explicitFrames !== undefined) {
+      console.log(`   Explicit frames: ${frames}`);
+      console.log(`   Calculated duration: ${((frames - 1) / 16).toFixed(2)}s (at BASE_FPS 16)`);
+    } else {
+      console.log(`   Duration setting: ${duration}s`);
+      console.log(`   Calculated frames: ${frames} (BASE_FPS 16 * ${duration}s + 1)`);
+    }
     console.log(`   FPS setting: ${fps}`);
-    console.log(`   Calculated frames: ${frames} (BASE_FPS 16 * ${duration}s + 1)`);
     console.log(`   Resolution: ${resolution}`);
     console.log(`   Quality: ${quality}`);
     
-    const createParams = {
+    // Build base createParams
+    const createParams: Record<string, unknown> = {
       type: 'video',
       modelId: qualityConfig.model,
       positivePrompt: positivePrompt || '',
@@ -266,12 +360,65 @@ export async function generateVideo(options: GenerateVideoOptions): Promise<void
       width: scaled.width,
       height: scaled.height,
       referenceImage: imageBuffer,
-      ...(referenceImageEnd && { referenceImageEnd }),
-      // Frame count calculated from duration and fps
       frames: frames,
       fps: fps,
       tokenType: tokenType
     };
+
+    // Add workflow-specific parameters
+    if (workflowType === 'i2v') {
+      // Standard I2V - add referenceImageEnd if provided (for transitions)
+      if (referenceImageEnd) {
+        createParams.referenceImageEnd = referenceImageEnd;
+      }
+    } else if (workflowType === 's2v') {
+      // Sound to Video - add audio reference and S2V-specific settings
+      if (referenceAudio) {
+        createParams.referenceAudio = referenceAudio;
+      }
+      // Add audio timing parameters
+      if (audioStart !== undefined) {
+        createParams.audioStart = audioStart;
+      }
+      if (audioDuration !== undefined) {
+        createParams.audioDuration = audioDuration;
+      }
+      // S2V uses specific sampler/scheduler
+      if (qualityConfig.sampler) {
+        createParams.sampler = qualityConfig.sampler;
+      }
+      if (qualityConfig.scheduler) {
+        createParams.scheduler = qualityConfig.scheduler;
+      }
+      if (qualityConfig.shift !== undefined) {
+        createParams.shift = qualityConfig.shift;
+      }
+      if (qualityConfig.guidance !== undefined) {
+        createParams.guidance = qualityConfig.guidance;
+      }
+    } else if (workflowType === 'animate-move' || workflowType === 'animate-replace') {
+      // Animate workflows - add video reference
+      if (referenceVideo) {
+        createParams.referenceVideo = referenceVideo;
+      }
+      // Add animate-specific settings
+      if (qualityConfig.sampler) {
+        createParams.sampler = qualityConfig.sampler;
+      }
+      if (qualityConfig.scheduler) {
+        createParams.scheduler = qualityConfig.scheduler;
+      }
+      if (qualityConfig.shift !== undefined) {
+        createParams.shift = qualityConfig.shift;
+      }
+      if (qualityConfig.guidance !== undefined) {
+        createParams.guidance = qualityConfig.guidance;
+      }
+      // Animate-Replace specific: SAM2 coordinates for subject selection
+      if (workflowType === 'animate-replace' && sam2Coordinates) {
+        createParams.sam2Coordinates = sam2Coordinates;
+      }
+    }
 
     // Log video job submission for debugging
     console.group('🎬 VIDEO JOB SUBMITTED');
@@ -280,6 +427,7 @@ export async function generateVideo(options: GenerateVideoOptions): Promise<void
     console.log(`   HEIGHT: ${scaled.height}px`);
     console.log('');
     console.log('📋 Job Settings:');
+    console.log(`   Workflow Type: ${workflowType}`);
     console.log(`   Resolution Setting: ${resolution} (${VIDEO_RESOLUTIONS[resolution].label})`);
     console.log(`   Quality: ${quality} (${qualityConfig.label})`);
     console.log(`   Model: ${qualityConfig.model}`);
@@ -297,6 +445,23 @@ export async function generateVideo(options: GenerateVideoOptions): Promise<void
       console.log('');
       console.log('🔀 Transition Mode:');
       console.log(`   Using referenceImageEnd (size: ${referenceImageEnd.length} bytes)`);
+    }
+    if (referenceVideo) {
+      console.log('');
+      console.log('🎬 Animate Mode:');
+      console.log(`   Using referenceVideo (size: ${referenceVideo.length} bytes)`);
+    }
+    if (referenceAudio) {
+      console.log('');
+      console.log('🎤 S2V Mode:');
+      console.log(`   Using referenceAudio (size: ${referenceAudio.length} bytes)`);
+      console.log(`   audioStart: ${audioStart}`);
+      console.log(`   audioDuration: ${audioDuration}`);
+    }
+    if (sam2Coordinates) {
+      console.log('');
+      console.log('🎯 SAM2 Coordinates:');
+      console.log(`   ${sam2Coordinates}`);
     }
     console.groupEnd();
     
@@ -539,7 +704,7 @@ export async function generateVideo(options: GenerateVideoOptions): Promise<void
 
     // Activity-aware timeout system:
     // - Use quality-based timeout as the initial baseline
-    // - If job is still sending jobETA updates, extend timeout
+    // - If job is still sending jobETA updates, extend timeout indefinitely
     // - Only timeout if 120 seconds pass without any jobETA update
     const timeoutMinutes: Record<VideoQualityPreset, number> = {
       fast: 3,      // ~12-20s generation + large buffer
@@ -553,13 +718,17 @@ export async function generateVideo(options: GenerateVideoOptions): Promise<void
     // Initialize last activity time
     activeProject.lastActivityTime = Date.now();
 
-    // Base timeout - triggers if job exceeds the quality-based timeout
+    // Base timeout - only used as fallback, activity checks take precedence
     activeProject.timeoutId = setTimeout(() => {
       if (activeProject.isCompleted) return;
       
       // Check if we've received recent activity
       const timeSinceLastActivity = Date.now() - (activeProject.lastActivityTime || 0);
-      if (timeSinceLastActivity < inactivityTimeoutMs) return;
+      // If we have recent activity, don't timeout even if base timeout is exceeded
+      if (timeSinceLastActivity < inactivityTimeoutMs) {
+        console.log(`[VIDEO] Base timeout reached but job is still active (last activity ${Math.floor(timeSinceLastActivity / 1000)}s ago). Continuing...`);
+        return;
+      }
       
       handleProjectError(new Error('Video generation timed out'), 'timeout');
     }, baseTimeoutMs);
@@ -570,8 +739,10 @@ export async function generateVideo(options: GenerateVideoOptions): Promise<void
       
       const timeSinceLastActivity = Date.now() - (activeProject.lastActivityTime || Date.now());
       
-      // If no activity for 120 seconds and we're past the base timeout, trigger timeout
-      if (timeSinceLastActivity > inactivityTimeoutMs && Date.now() - (activeProject.startTime || Date.now()) > baseTimeoutMs) {
+      // CRITICAL FIX: Only timeout based on inactivity, not base timeout
+      // If we're receiving jobETA events, keep the job alive regardless of how long it takes
+      if (timeSinceLastActivity > inactivityTimeoutMs) {
+        console.log(`[VIDEO] No activity for ${Math.floor(timeSinceLastActivity / 1000)}s. Timing out...`);
         handleProjectError(new Error('Video generation timed out - no activity'), 'inactivity timeout');
       }
     }, 30000); // Check every 30 seconds
@@ -786,7 +957,8 @@ export async function generateVideo(options: GenerateVideoOptions): Promise<void
           videoFramerate: fps,
           videoDuration: duration,
           videoMotionPrompt: positivePrompt || '', // Store the motion prompt used
-          videoMotionEmoji: motionEmoji || '' // Store the emoji used for video generation
+          videoMotionEmoji: motionEmoji || '', // Store the emoji used for video generation
+          videoWorkflowType: workflowType || 'default' // Store workflow type (s2v, animate-move, etc.)
         };
         return updated;
       });

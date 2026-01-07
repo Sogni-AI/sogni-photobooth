@@ -13,6 +13,24 @@ export const VIDEO_MODELS = {
   quality: 'wan_v2.2-14b-fp8_i2v'
 } as const;
 
+// Sound to Video (S2V) model variants
+export const S2V_MODELS = {
+  speed: 'wan_v2.2-14b-fp8_s2v_lightx2v',
+  quality: 'wan_v2.2-14b-fp8_s2v'
+} as const;
+
+// Animate Move model variants
+export const ANIMATE_MOVE_MODELS = {
+  speed: 'wan_v2.2-14b-fp8_animate-move_lightx2v',
+  quality: 'wan_v2.2-14b-fp8_animate-move'
+} as const;
+
+// Animate Replace model variants
+export const ANIMATE_REPLACE_MODELS = {
+  speed: 'wan_v2.2-14b-fp8_animate-replace_lightx2v',
+  quality: 'wan_v2.2-14b-fp8_animate-replace'
+} as const;
+
 export type VideoModelType = keyof typeof VIDEO_MODELS;
 
 // Quality presets mapping to model + steps configuration
@@ -44,6 +62,138 @@ export const VIDEO_QUALITY_PRESETS = {
 } as const;
 
 export type VideoQualityPreset = keyof typeof VIDEO_QUALITY_PRESETS;
+
+// S2V Quality presets
+export const S2V_QUALITY_PRESETS = {
+  fast: {
+    model: S2V_MODELS.speed,
+    steps: 4,
+    label: 'Fast',
+    description: 'Quick generation (~20-30s)',
+    guidance: 1.0,
+    shift: 8.0,
+    sampler: 'uni_pc',
+    scheduler: 'simple'
+  },
+  balanced: {
+    model: S2V_MODELS.speed,
+    steps: 8,
+    label: 'Balanced',
+    description: 'Good balance (~40-60s)',
+    guidance: 1.0,
+    shift: 8.0,
+    sampler: 'uni_pc',
+    scheduler: 'simple'
+  },
+  quality: {
+    model: S2V_MODELS.quality,
+    steps: 20,
+    label: 'High Quality',
+    description: 'Higher quality (~3-5 min)',
+    guidance: 6.0,
+    shift: 8.0,
+    sampler: 'uni_pc',
+    scheduler: 'simple'
+  },
+  pro: {
+    model: S2V_MODELS.quality,
+    steps: 30,
+    label: 'Pro',
+    description: 'Maximum quality (~6-10 min)',
+    guidance: 6.0,
+    shift: 8.0,
+    sampler: 'uni_pc',
+    scheduler: 'simple'
+  }
+} as const;
+
+// Animate Move Quality presets
+export const ANIMATE_MOVE_QUALITY_PRESETS = {
+  fast: {
+    model: ANIMATE_MOVE_MODELS.speed,
+    steps: 6,
+    label: 'Fast',
+    description: 'Quick generation (~20-30s)',
+    guidance: 1.0,
+    shift: 8.0,
+    sampler: 'euler',
+    scheduler: 'simple'
+  },
+  balanced: {
+    model: ANIMATE_MOVE_MODELS.speed,
+    steps: 8,
+    label: 'Balanced',
+    description: 'Good balance (~40-60s)',
+    guidance: 1.0,
+    shift: 8.0,
+    sampler: 'euler',
+    scheduler: 'simple'
+  },
+  quality: {
+    model: ANIMATE_MOVE_MODELS.quality,
+    steps: 20,
+    label: 'High Quality',
+    description: 'Higher quality (~3-5 min)',
+    guidance: 4.0,
+    shift: 8.0,
+    sampler: 'euler',
+    scheduler: 'simple'
+  },
+  pro: {
+    model: ANIMATE_MOVE_MODELS.quality,
+    steps: 30,
+    label: 'Pro',
+    description: 'Maximum quality (~6-10 min)',
+    guidance: 4.0,
+    shift: 8.0,
+    sampler: 'euler',
+    scheduler: 'simple'
+  }
+} as const;
+
+// Animate Replace Quality presets
+export const ANIMATE_REPLACE_QUALITY_PRESETS = {
+  fast: {
+    model: ANIMATE_REPLACE_MODELS.speed,
+    steps: 6,
+    label: 'Fast',
+    description: 'Quick generation (~20-30s)',
+    guidance: 1.0,
+    shift: 8.0,
+    sampler: 'euler',
+    scheduler: 'simple'
+  },
+  balanced: {
+    model: ANIMATE_REPLACE_MODELS.speed,
+    steps: 8,
+    label: 'Balanced',
+    description: 'Good balance (~40-60s)',
+    guidance: 1.0,
+    shift: 8.0,
+    sampler: 'euler',
+    scheduler: 'simple'
+  },
+  quality: {
+    model: ANIMATE_REPLACE_MODELS.quality,
+    steps: 20,
+    label: 'High Quality',
+    description: 'Higher quality (~3-5 min)',
+    guidance: 4.0,
+    shift: 8.0,
+    sampler: 'euler',
+    scheduler: 'simple'
+  },
+  pro: {
+    model: ANIMATE_REPLACE_MODELS.quality,
+    steps: 30,
+    label: 'Pro',
+    description: 'Maximum quality (~6-10 min)',
+    guidance: 4.0,
+    shift: 8.0,
+    sampler: 'euler',
+    scheduler: 'simple'
+  }
+} as const;
 
 // Resolution presets
 // Dimensions will be rounded to nearest 16 for video encoding compatibility

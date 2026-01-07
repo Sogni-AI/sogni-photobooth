@@ -575,62 +575,19 @@ const StyleDropdown = ({
         )}
       </div>
 
-      {/* Browse Gallery and Copy Image Style */}
-      {(onGallerySelect || onCopyImageStyle) && (
+      {/* Browse Gallery */}
+      {onGallerySelect && !usesContextImages && (
         <>
           <div className="style-section-divider"></div>
           <div className="style-section other-options">
             {/* Browse Gallery option - only show for SDXL models (not context image models) */}
-            {!usesContextImages && onGallerySelect && (
-              <div
-                className={`style-option ${selectedStyle === 'browseGallery' ? 'selected' : ''}`}
-                onClick={() => handleStyleSelect('browseGallery', onGallerySelect)}
-              >
-                <span>🖼️</span>
-                <span>Browse Gallery</span>
-              </div>
-            )}
-
-            {/* Copy Image Style option - enabled for edit models, switches model for non-edit */}
-            {onCopyImageStyle && (
-              <div
-                className={`style-option ${selectedStyle === 'copyImageStyle' ? 'selected' : ''}`}
-                onClick={() => {
-                  if (usesContextImages) {
-                    // Edit model selected - proceed with Copy Image Style
-                    handleStyleSelect('copyImageStyle', onCopyImageStyle);
-                  } else {
-                    // Switch to edit model first, then proceed
-                    if (onModelSelect) {
-                      onModelSelect('qwen_image_edit_2511_fp8_lightning');
-                      if (showToast) {
-                        showToast({
-                          message: 'Switched to Qwen Image Edit Lightning for Copy Image Style',
-                          type: 'info'
-                        });
-                      }
-                    }
-                    handleStyleSelect('copyImageStyle', onCopyImageStyle);
-                  }
-                }}
-              >
-                {/* Show circular preview thumbnail if style reference exists */}
-                {styleReferenceImage?.dataUrl && (
-                  <img
-                    src={styleReferenceImage.dataUrl}
-                    alt="Style reference"
-                    className="style-option-preview"
-                    style={{ borderRadius: '50%' }}
-                  />
-                )}
-                <span>🎨</span>
-                <span>Copy Image Style</span>
-                {!usesContextImages && (
-                  <span style={{ fontSize: '10px', opacity: 0.7, marginLeft: 'auto' }}>
-                  </span>
-                )}
-              </div>
-            )}
+            <div
+              className={`style-option ${selectedStyle === 'browseGallery' ? 'selected' : ''}`}
+              onClick={() => handleStyleSelect('browseGallery', onGallerySelect)}
+            >
+              <span>🖼️</span>
+              <span>Browse Gallery</span>
+            </div>
           </div>
         </>
       )}
@@ -798,6 +755,57 @@ const StyleDropdown = ({
             )}
 
             <div className="style-list">
+              {/* Add Copy Image Style as first item if onCopyImageStyle is provided */}
+              {onCopyImageStyle && (
+                <div
+                  key="copyImageStyle"
+                  className={`style-option ${selectedStyle === 'copyImageStyle' ? 'selected' : ''}`}
+                  onClick={() => {
+                    if (usesContextImages) {
+                      // Edit model selected - proceed with Copy Image Style
+                      handleStyleSelect('copyImageStyle', onCopyImageStyle);
+                    } else {
+                      // Switch to edit model first, then proceed
+                      if (onModelSelect) {
+                        onModelSelect('qwen_image_edit_2511_fp8_lightning');
+                        if (showToast) {
+                          showToast({
+                            message: 'Switched to Qwen Image Edit Lightning for Copy Image Style',
+                            type: 'info'
+                          });
+                        }
+                      }
+                      handleStyleSelect('copyImageStyle', onCopyImageStyle);
+                    }
+                  }}
+                >
+                  {/* Show rectangular preview thumbnail if style reference exists */}
+                  {styleReferenceImage?.dataUrl && (
+                    <img
+                      src={styleReferenceImage.dataUrl}
+                      alt="Style reference"
+                      className="style-option-preview"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                      }}
+                    />
+                  )}
+                  <span style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                    <span>
+                      🎨 Copy Image Style
+                    </span>
+                    {!usesContextImages && (
+                      <span style={{
+                        fontSize: '10px',
+                        lineHeight: '5px',
+                        opacity: 0.7,
+                      }}>
+                        Switches to Edit Model
+                      </span>
+                    )}
+                  </span>
+                </div>
+              )}
               {Object.keys(defaultStylePrompts)
           .filter(key => key !== 'random' && key !== 'custom' && key !== 'randomMix' && key !== 'oneOfEach' && key !== 'copyImageStyle')
           .filter(key => {

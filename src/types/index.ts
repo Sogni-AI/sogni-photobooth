@@ -48,6 +48,7 @@ export interface Photo {
   videoDuration?: number; // Duration in seconds (1-8 in 0.5 increments)
   videoMotionPrompt?: string; // The motion prompt used for video generation
   videoMotionEmoji?: string; // The emoji used for video generation (e.g., '🔥', '😂')
+  videoWorkflowType?: string; // The workflow type used (e.g., 's2v', 'animate-move', 'animate-replace', 'default')
 }
 
 export interface ProjectState {

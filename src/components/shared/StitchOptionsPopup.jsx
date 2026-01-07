@@ -1,6 +1,7 @@
 import React, { useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import PropTypes from 'prop-types';
+import { getTokenLabel } from '../../services/walletService';
 
 /**
  * StitchOptionsPopup
@@ -15,7 +16,13 @@ const StitchOptionsPopup = ({
   videoCount = 0,
   isGenerating = false,
   generationProgress = null, // { phase, current, total, message, transitionStatus }
-  hasCachedVideo = false
+  hasCachedVideo = false,
+  costLoading = false,
+  costRaw = null,
+  costUSD = null,
+  videoResolution = '480p',
+  videoDuration = 5,
+  tokenType = 'spark'
 }) => {
   // Keep track of last known ETAs to avoid flickering back to spinner
   const lastKnownETAsRef = useRef({});
@@ -512,6 +519,62 @@ const StitchOptionsPopup = ({
                     ♾️ Generate Infinite Loop
                   </button>
                 </div>
+
+                {/* Cost Footer for Infinite Loop */}
+                {!costLoading && costRaw && costUSD ? (
+                  <div style={{
+                    marginTop: '16px',
+                    padding: '12px 16px',
+                    borderRadius: '8px',
+                    background: 'rgba(0, 0, 0, 0.05)',
+                    border: '1px solid rgba(0, 0, 0, 0.1)'
+                  }}>
+                    <div style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      marginBottom: '4px'
+                    }}>
+                      <span style={{ fontSize: '11px', fontWeight: '600', color: 'rgba(0, 0, 0, 0.7)' }}>
+                        📹 {videoCount} transitions • 📐 {videoResolution} • ⏱️ {videoDuration}s
+                      </span>
+                      <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                        <span style={{ fontSize: '12px', fontWeight: '700', color: '#000' }}>
+                          {(() => {
+                            const costValue = typeof costRaw === 'number' ? costRaw : parseFloat(costRaw);
+                            if (isNaN(costValue)) return null;
+                            const tokenLabel = getTokenLabel(tokenType);
+                            return `${costValue.toFixed(2)} ${tokenLabel}`;
+                          })()}
+                        </span>
+                        <span style={{ fontSize: '11px', fontWeight: '400', color: 'rgba(0, 0, 0, 0.6)' }}>
+                          ≈ ${costUSD.toFixed(2)} USD
+                        </span>
+                      </div>
+                    </div>
+                    <div style={{
+                      fontSize: '10px',
+                      color: 'rgba(0, 0, 0, 0.6)',
+                      fontStyle: 'italic',
+                      marginTop: '4px'
+                    }}>
+                      Cost is for generating AI transitions between videos
+                    </div>
+                  </div>
+                ) : costLoading ? (
+                  <div style={{
+                    marginTop: '16px',
+                    padding: '12px 16px',
+                    fontSize: '12px',
+                    fontWeight: '600',
+                    textAlign: 'center',
+                    borderRadius: '8px',
+                    background: 'rgba(0, 0, 0, 0.05)',
+                    color: 'rgba(0, 0, 0, 0.7)'
+                  }}>
+                    Calculating cost...
+                  </div>
+                ) : null}
               </div>
             </>
           )}
@@ -558,7 +621,13 @@ StitchOptionsPopup.propTypes = {
     transitionETAs: PropTypes.arrayOf(PropTypes.number),
     maxETA: PropTypes.number
   }),
-  hasCachedVideo: PropTypes.bool
+  hasCachedVideo: PropTypes.bool,
+  costLoading: PropTypes.bool,
+  costRaw: PropTypes.number,
+  costUSD: PropTypes.number,
+  videoResolution: PropTypes.string,
+  videoDuration: PropTypes.number,
+  tokenType: PropTypes.oneOf(['spark', 'sogni'])
 };
 
 export default StitchOptionsPopup;
