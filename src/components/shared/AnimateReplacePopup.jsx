@@ -95,6 +95,7 @@ const AnimateReplacePopup = ({
   }, [externalVideoDuration]);
   
   const [sourceVideoDuration, setSourceVideoDuration] = useState(0);
+  const [videoAspectRatio, setVideoAspectRatio] = useState(9/16); // Default to portrait
 
   // Video timeline trimmer state
   const [videoStartOffset, setVideoStartOffset] = useState(0);
@@ -233,13 +234,21 @@ const AnimateReplacePopup = ({
         }
       });
 
+      // Calculate thumbnail dimensions based on video's actual aspect ratio
+      const videoWidth = video.videoWidth;
+      const videoHeight = video.videoHeight;
+      const aspectRatio = videoWidth / videoHeight;
+      setVideoAspectRatio(aspectRatio);
+
+      // Fixed height of 60px, width based on aspect ratio
+      const thumbHeight = 60;
+      const thumbWidth = Math.round(thumbHeight * aspectRatio);
+
       const numThumbnails = 20;
       const interval = duration / numThumbnails;
       const thumbnails = [];
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
-      const thumbWidth = 40;
-      const thumbHeight = 60;
       canvas.width = thumbWidth;
       canvas.height = thumbHeight;
 
@@ -663,7 +672,15 @@ const AnimateReplacePopup = ({
         cancelAnimationFrame(playbackAnimationRef.current);
       }
     } else {
-      video.currentTime = videoStartOffset;
+      // Only reset to start if playhead is outside the selection bounds
+      const currentPlayhead = previewPlayhead || video.currentTime;
+      const endTime = videoStartOffset + videoDuration;
+      const isOutsideSelection = currentPlayhead < videoStartOffset || currentPlayhead >= endTime;
+
+      if (isOutsideSelection) {
+        video.currentTime = videoStartOffset;
+      }
+
       video.play().catch(() => {
         setError('Unable to play video preview');
       });
@@ -672,21 +689,21 @@ const AnimateReplacePopup = ({
       const updatePlayhead = () => {
         if (videoPreviewRef.current && !videoPreviewRef.current.paused) {
           const currentTime = videoPreviewRef.current.currentTime;
-          const endTime = videoStartOffset + videoDuration;
-          
+          const loopEndTime = videoStartOffset + videoDuration;
+
           setPreviewPlayhead(currentTime);
-          
+
           // Loop back to start if we've reached or passed the end
-          if (currentTime >= endTime) {
+          if (currentTime >= loopEndTime) {
             videoPreviewRef.current.currentTime = videoStartOffset;
           }
-          
+
           playbackAnimationRef.current = requestAnimationFrame(updatePlayhead);
         }
       };
       playbackAnimationRef.current = requestAnimationFrame(updatePlayhead);
     }
-  }, [isPlaying, videoStartOffset, videoDuration]);
+  }, [isPlaying, videoStartOffset, videoDuration, previewPlayhead]);
 
   // Format time helper
   const formatTime = (seconds) => {
@@ -1442,15 +1459,23 @@ const AnimateReplacePopup = ({
             </>
           )}
 
-          {/* Sample Videos Grid - only shown when no video selected */}
+          {/* Sample Videos Carousel - only shown when no video selected */}
           {!hasValidSource && (
             <>
               <div
                 style={{
-                  display: 'grid',
-                  gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(5, 1fr)',
+                  display: 'flex',
                   gap: '10px',
-                  marginBottom: '12px'
+                  marginBottom: '12px',
+                  overflowX: 'auto',
+                  overflowY: 'hidden',
+                  scrollSnapType: 'x mandatory',
+                  WebkitOverflowScrolling: 'touch',
+                  paddingBottom: '8px',
+                  marginLeft: '-4px',
+                  marginRight: '-4px',
+                  paddingLeft: '4px',
+                  paddingRight: '4px'
                 }}
               >
                 {SAMPLE_REPLACEMENT_VIDEOS.map((sample) => (
@@ -1467,7 +1492,10 @@ const AnimateReplacePopup = ({
                       cursor: 'pointer',
                       transition: 'all 0.2s ease',
                       overflow: 'hidden',
-                      aspectRatio: '9/16',
+                      flexShrink: 0,
+                      width: isMobile ? '100px' : '90px',
+                      height: isMobile ? '178px' : '160px',
+                      scrollSnapAlign: 'start',
                       display: 'flex',
                       flexDirection: 'column'
                     }}
@@ -1493,14 +1521,11 @@ const AnimateReplacePopup = ({
                       left: 0,
                       right: 0,
                       background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 100%)',
-                      padding: '6px 8px',
+                      padding: '4px 6px',
                       textAlign: 'center'
                     }}>
-                      <div style={{ fontSize: '12px', fontWeight: '700', textShadow: '0 1px 3px rgba(0,0,0,0.5)' }}>
+                      <div style={{ fontSize: '10px', fontWeight: '700', textShadow: '0 1px 3px rgba(0,0,0,0.5)' }}>
                         {sample.title}
-                      </div>
-                      <div style={{ fontSize: '9px', opacity: 0.8, marginTop: '2px', textShadow: '0 1px 2px rgba(0,0,0,0.5)' }}>
-                        {sample.description}
                       </div>
                     </div>
                   </button>
