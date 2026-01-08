@@ -74,6 +74,7 @@ interface GenerateVideoOptions {
   referenceAudio?: Uint8Array; // For S2V
   audioStart?: number; // For S2V - start offset in seconds
   audioDuration?: number; // For S2V - duration to use from audio
+  videoStart?: number; // For animate-move and animate-replace - start offset in seconds
   sam2Coordinates?: string; // For animate-replace - JSON string of [{x, y}]
   modelVariant?: 'speed' | 'quality'; // Model variant for new workflows (lightx2v vs full)
   onComplete?: (videoUrl: string) => void;
@@ -165,6 +166,7 @@ export async function generateVideo(options: GenerateVideoOptions): Promise<void
     referenceAudio,
     audioStart,
     audioDuration,
+    videoStart,
     sam2Coordinates,
     modelVariant, // Model variant for new workflows (speed/quality)
     onComplete,
@@ -401,6 +403,10 @@ export async function generateVideo(options: GenerateVideoOptions): Promise<void
       if (referenceVideo) {
         createParams.referenceVideo = referenceVideo;
       }
+      // Add video start offset for trimming
+      if (videoStart !== undefined && videoStart > 0) {
+        createParams.videoStart = videoStart;
+      }
       // Add animate-specific settings
       if (qualityConfig.sampler) {
         createParams.sampler = qualityConfig.sampler;
@@ -450,6 +456,7 @@ export async function generateVideo(options: GenerateVideoOptions): Promise<void
       console.log('');
       console.log('🎬 Animate Mode:');
       console.log(`   Using referenceVideo (size: ${referenceVideo.length} bytes)`);
+      console.log(`   videoStart: ${videoStart !== undefined ? videoStart + 's' : 'not set'}`);
     }
     if (referenceAudio) {
       console.log('');

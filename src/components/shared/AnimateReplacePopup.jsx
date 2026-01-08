@@ -7,7 +7,7 @@ import { getTokenLabel } from '../../services/walletService';
 const SAMPLE_REPLACEMENT_VIDEOS = [
   {
     id: 'lil-yacty',
-    title: '🚶 Yacty Walkout',
+    title: '🚶 Yachty Walkout',
     description: '',
     url: 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/video-samples/lil-yacty-walkout.mp4'
   },
@@ -96,15 +96,53 @@ const AnimateReplacePopup = ({
   
   const [sourceVideoDuration, setSourceVideoDuration] = useState(0);
 
+  // Video timeline trimmer state
+  const [videoStartOffset, setVideoStartOffset] = useState(0);
+  const [videoThumbnails, setVideoThumbnails] = useState(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [previewPlayhead, setPreviewPlayhead] = useState(0);
+  const [isDraggingTimeline, setIsDraggingTimeline] = useState(false);
+  const [dragType, setDragType] = useState(null); // 'move', 'start', 'end'
+  const [dragStartX, setDragStartX] = useState(0);
+  const [dragStartOffset, setDragStartOffset] = useState(0);
+  const [dragStartDuration, setDragStartDuration] = useState(0);
+  const [hasMovedDuringDrag, setHasMovedDuringDrag] = useState(false);
+  const [pendingStartOffset, setPendingStartOffset] = useState(null);
+  const [pendingDuration, setPendingDuration] = useState(null);
+
   const videoInputRef = useRef(null);
   const videoPreviewRef = useRef(null);
+  const timelineCanvasRef = useRef(null);
+  const timelineContainerRef = useRef(null);
+  const simpleTimelineRef = useRef(null);
+  const playbackAnimationRef = useRef(null);
+  const sampleVideoRefs = useRef({}); // Track sample video elements to pause others
+  const thumbnailImagesRef = useRef([]); // Cache loaded thumbnail images to prevent flicker
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+  const [canvasWidth, setCanvasWidth] = useState(400); // Dynamic canvas width
 
   useEffect(() => {
     const handleResize = () => setWindowWidth(window.innerWidth);
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  // ResizeObserver to keep canvas width in sync with container
+  useEffect(() => {
+    if (!timelineContainerRef.current) return;
+
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const newWidth = Math.floor(entry.contentRect.width);
+        if (newWidth > 0 && newWidth !== canvasWidth) {
+          setCanvasWidth(newWidth);
+        }
+      }
+    });
+
+    resizeObserver.observe(timelineContainerRef.current);
+    return () => resizeObserver.disconnect();
+  }, [canvasWidth]);
 
   const isMobile = windowWidth < 768;
 
@@ -121,8 +159,541 @@ const AnimateReplacePopup = ({
   useEffect(() => {
     if (visible) {
       setError('');
+      setIsPlaying(false);
+    } else {
+      // Cleanup when popup closes
+      if (videoPreviewRef.current) {
+        videoPreviewRef.current.pause();
+        videoPreviewRef.current.currentTime = 0;
+      }
+      setIsPlaying(false);
+      if (playbackAnimationRef.current) {
+        cancelAnimationFrame(playbackAnimationRef.current);
+      }
     }
   }, [visible]);
+
+  // Cleanup animation frame on unmount
+  useEffect(() => {
+    return () => {
+      if (playbackAnimationRef.current) {
+        cancelAnimationFrame(playbackAnimationRef.current);
+      }
+    };
+  }, []);
+
+  // Generate thumbnails from video
+  const generateThumbnails = useCallback(async (videoUrl) => {
+    setVideoThumbnails(null); // Reset thumbnails
+    setPreviewPlayhead(0); // Reset playhead
+
+    // For remote URLs, fetch as blob to avoid CORS issues with canvas
+    let blobUrl = null;
+    const isBlobUrl = videoUrl.startsWith('blob:');
+
+    try {
+      if (!isBlobUrl) {
+        // Fetch the video as a blob to bypass CORS for canvas operations
+        const response = await fetch(videoUrl, { mode: 'cors' });
+        if (!response.ok) throw new Error('Failed to fetch video');
+        const blob = await response.blob();
+        blobUrl = URL.createObjectURL(blob);
+      }
+
+      const workingUrl = blobUrl || videoUrl;
+
+      // Create video element for thumbnail extraction
+      const video = document.createElement('video');
+      video.crossOrigin = 'anonymous';
+      video.src = workingUrl;
+      video.muted = true;
+      video.preload = 'auto';
+
+      await new Promise((resolve, reject) => {
+        video.onloadedmetadata = resolve;
+        video.onerror = reject;
+        setTimeout(() => reject(new Error('Video load timeout')), 15000);
+      });
+
+      const duration = video.duration;
+      setSourceVideoDuration(duration);
+
+      // Set default duration to source video duration or MAX_DURATION, whichever is smaller
+      const defaultDuration = Math.min(duration, MAX_DURATION);
+      const roundedDuration = Math.floor(defaultDuration * 4) / 4;
+      setVideoDuration(roundedDuration);
+      setVideoStartOffset(0);
+
+      // Wait for video to be ready for seeking
+      await new Promise((resolve) => {
+        if (video.readyState >= 2) {
+          resolve();
+        } else {
+          video.oncanplay = resolve;
+        }
+      });
+
+      const numThumbnails = 20;
+      const interval = duration / numThumbnails;
+      const thumbnails = [];
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const thumbWidth = 40;
+      const thumbHeight = 60;
+      canvas.width = thumbWidth;
+      canvas.height = thumbHeight;
+
+      for (let i = 0; i < numThumbnails; i++) {
+        video.currentTime = i * interval;
+        await new Promise((resolve) => {
+          video.onseeked = resolve;
+        });
+
+        try {
+          ctx.drawImage(video, 0, 0, thumbWidth, thumbHeight);
+          thumbnails.push(canvas.toDataURL('image/jpeg', 0.5));
+        } catch (canvasErr) {
+          // Canvas tainted - fall back to simple timeline
+          console.warn('Canvas tainted, falling back to simple timeline');
+          setVideoThumbnails(null);
+          video.remove();
+          if (blobUrl) URL.revokeObjectURL(blobUrl);
+          return;
+        }
+      }
+
+      setVideoThumbnails(thumbnails);
+      video.remove();
+      if (blobUrl) URL.revokeObjectURL(blobUrl);
+    } catch (err) {
+      console.error('Failed to generate thumbnails:', err);
+      setVideoThumbnails(null);
+      if (blobUrl) URL.revokeObjectURL(blobUrl);
+
+      // Still try to get duration from a simple video load
+      try {
+        const fallbackVideo = document.createElement('video');
+        fallbackVideo.src = videoUrl;
+        fallbackVideo.muted = true;
+        fallbackVideo.preload = 'metadata';
+
+        await new Promise((resolve, reject) => {
+          fallbackVideo.onloadedmetadata = resolve;
+          fallbackVideo.onerror = reject;
+          setTimeout(() => reject(new Error('Video load timeout')), 10000);
+        });
+
+        const duration = fallbackVideo.duration;
+        setSourceVideoDuration(duration);
+        const defaultDuration = Math.min(duration, MAX_DURATION);
+        const roundedDuration = Math.floor(defaultDuration * 4) / 4;
+        setVideoDuration(roundedDuration);
+        setVideoStartOffset(0);
+        fallbackVideo.remove();
+      } catch (fallbackErr) {
+        console.error('Failed to get video duration:', fallbackErr);
+      }
+    }
+  }, []);
+
+  // Track if thumbnails are loaded
+  const [thumbnailsLoaded, setThumbnailsLoaded] = useState(false);
+
+  // Pre-load thumbnail images when thumbnails change to prevent flicker
+  useEffect(() => {
+    if (videoThumbnails && videoThumbnails.length > 0) {
+      setThumbnailsLoaded(false);
+      let loadedCount = 0;
+      const images = videoThumbnails.map((thumb) => {
+        const img = new Image();
+        img.onload = () => {
+          loadedCount++;
+          // Mark as loaded when all images are done
+          if (loadedCount === videoThumbnails.length) {
+            setThumbnailsLoaded(true);
+          }
+        };
+        img.src = thumb;
+        return img;
+      });
+      thumbnailImagesRef.current = images;
+    } else {
+      thumbnailImagesRef.current = [];
+      setThumbnailsLoaded(false);
+    }
+  }, [videoThumbnails]);
+
+  // Draw timeline on canvas - uses visual values (pending during drag) for real-time updates
+  const drawTimeline = useCallback(() => {
+    const canvas = timelineCanvasRef.current;
+    if (!canvas || !videoThumbnails || sourceVideoDuration <= 0) return;
+
+    const ctx = canvas.getContext('2d');
+    const width = canvas.width;
+    const height = canvas.height;
+
+    // Use visual values for real-time dragging
+    const displayStartOffset = pendingStartOffset !== null ? pendingStartOffset : videoStartOffset;
+    const displayDuration = pendingDuration !== null ? pendingDuration : videoDuration;
+
+    ctx.clearRect(0, 0, width, height);
+
+    const thumbWidth = width / videoThumbnails.length;
+    const cachedImages = thumbnailImagesRef.current;
+
+    // Calculate selection bounds in pixels
+    const startX = (displayStartOffset / sourceVideoDuration) * width;
+    const endX = Math.min(((displayStartOffset + displayDuration) / sourceVideoDuration), 1) * width;
+
+    // Helper to draw all thumbnails (center-aligned to their capture times)
+    const drawAllThumbnails = () => {
+      videoThumbnails.forEach((thumb, i) => {
+        const img = cachedImages[i] || new Image();
+        if (!cachedImages[i]) img.src = thumb;
+        
+        // Calculate the time this thumbnail represents (center of its time range)
+        const thumbnailTime = (i + 0.5) * (sourceVideoDuration / videoThumbnails.length);
+        // Position the thumbnail so its CENTER is at this time's pixel position
+        const centerX = (thumbnailTime / sourceVideoDuration) * width;
+        const x = centerX - (thumbWidth / 2);
+        
+        if (img.complete && img.naturalWidth > 0) {
+          ctx.drawImage(img, x, 0, thumbWidth, height);
+        }
+      });
+    };
+
+    // STEP 1: Draw ALL thumbnails at reduced opacity (entire timeline dimmed)
+    ctx.globalAlpha = 0.35;
+    drawAllThumbnails();
+
+    // STEP 2: Clip to selection region and redraw at full opacity (overwrites dimmed area)
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(startX, 0, endX - startX, height);
+    ctx.clip();
+    ctx.globalAlpha = 1.0;
+    drawAllThumbnails();
+    ctx.restore();
+
+    // STEP 3: Reset alpha and draw selection border
+    ctx.globalAlpha = 1.0;
+    ctx.strokeStyle = 'rgba(249, 115, 22, 0.9)';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(startX + 1, 1, (endX - startX) - 2, height - 2);
+
+    // STEP 4: Draw playhead
+    const clampedPlayhead = Math.max(0, Math.min(previewPlayhead, sourceVideoDuration));
+    const playheadX = (clampedPlayhead / sourceVideoDuration) * width;
+    ctx.strokeStyle = isPlaying ? '#fff' : 'rgba(255, 255, 255, 0.7)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(playheadX, 0);
+    ctx.lineTo(playheadX, height);
+    ctx.stroke();
+
+    // Draw playhead top marker
+    ctx.fillStyle = isPlaying ? '#fff' : 'rgba(255, 255, 255, 0.7)';
+    ctx.beginPath();
+    ctx.arc(playheadX, 0, 4, 0, Math.PI);
+    ctx.fill();
+  }, [videoThumbnails, videoStartOffset, sourceVideoDuration, videoDuration, isPlaying, previewPlayhead, pendingStartOffset, pendingDuration, canvasWidth]);
+
+  // Redraw timeline when thumbnails finish loading
+  // Use requestAnimationFrame to ensure canvas is mounted after state updates
+  useEffect(() => {
+    if (thumbnailsLoaded && visible) {
+      // Wait for next frame to ensure canvas is mounted
+      const frame = requestAnimationFrame(() => {
+        // Double RAF to ensure layout is complete
+        requestAnimationFrame(() => {
+          drawTimeline();
+        });
+      });
+      return () => cancelAnimationFrame(frame);
+    }
+  }, [thumbnailsLoaded, drawTimeline, visible]);
+
+  // Update timeline when data changes - including during drag for real-time visual feedback
+  useEffect(() => {
+    if (visible && videoThumbnails) {
+      const frame = requestAnimationFrame(() => {
+        drawTimeline();
+      });
+      return () => cancelAnimationFrame(frame);
+    }
+  }, [drawTimeline, visible, videoThumbnails, videoStartOffset, isPlaying, previewPlayhead, videoDuration, pendingStartOffset, pendingDuration]);
+
+  // Get visual values (pending during drag, actual otherwise)
+  const visualStartOffset = pendingStartOffset !== null ? pendingStartOffset : videoStartOffset;
+  const visualDuration = pendingDuration !== null ? pendingDuration : videoDuration;
+
+  // Helper to get clientX from mouse or touch event
+  const getClientX = (e) => {
+    if (e.touches && e.touches.length > 0) {
+      return e.touches[0].clientX;
+    }
+    if (e.changedTouches && e.changedTouches.length > 0) {
+      return e.changedTouches[0].clientX;
+    }
+    return e.clientX;
+  };
+
+  // Handle timeline mouse/touch interaction - unified for both canvas and div
+  const handleTimelineMouseDown = useCallback((e, overrideDragType = null) => {
+    const timelineElement = timelineCanvasRef.current || simpleTimelineRef.current;
+    if (!timelineElement || sourceVideoDuration === 0) return;
+
+    const rect = timelineElement.getBoundingClientRect();
+    const x = getClientX(e) - rect.left;
+    const clickPosition = Math.max(0, Math.min(1, x / rect.width));
+    const clickTime = clickPosition * sourceVideoDuration;
+
+    // Calculate handle zones (10px on each side)
+    const handleZone = 10 / rect.width * sourceVideoDuration;
+    const selectionStart = videoStartOffset;
+    const selectionEnd = videoStartOffset + videoDuration;
+
+    let detectedDragType = overrideDragType;
+
+    if (!detectedDragType) {
+      // Check if clicking on start handle
+      if (Math.abs(clickTime - selectionStart) < handleZone) {
+        detectedDragType = 'start';
+      }
+      // Check if clicking on end handle
+      else if (Math.abs(clickTime - selectionEnd) < handleZone) {
+        detectedDragType = 'end';
+      }
+      // Check if clicking inside selection (move)
+      else if (clickTime >= selectionStart && clickTime <= selectionEnd) {
+        detectedDragType = 'move';
+      }
+      // Clicking outside - jump selection to center on that point
+      else {
+        const maxOffset = Math.max(0, sourceVideoDuration - videoDuration);
+        const newOffset = Math.max(0, Math.min(clickTime - videoDuration / 2, maxOffset));
+        setVideoStartOffset(newOffset);
+        setPreviewPlayhead(newOffset); // Update playhead visual immediately
+        setPendingStartOffset(null);
+        setPendingDuration(null);
+
+        // Seek video preview to new position
+        if (videoPreviewRef.current) {
+          videoPreviewRef.current.currentTime = newOffset;
+        }
+
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
+    }
+
+    setIsDraggingTimeline(true);
+    setDragType(detectedDragType);
+    setDragStartX(x);
+    setDragStartOffset(videoStartOffset);
+    setDragStartDuration(videoDuration);
+    setHasMovedDuringDrag(false);
+    setPendingStartOffset(videoStartOffset);
+    setPendingDuration(videoDuration);
+
+    e.preventDefault();
+    e.stopPropagation();
+  }, [sourceVideoDuration, videoStartOffset, videoDuration]);
+
+  // Alias for simple timeline
+  const handleSimpleTimelineMouseDown = handleTimelineMouseDown;
+
+  const handleTimelineMouseMove = useCallback((e) => {
+    if (!isDraggingTimeline || !dragType) return;
+
+    const timelineElement = timelineCanvasRef.current || simpleTimelineRef.current;
+    if (!timelineElement || sourceVideoDuration === 0) return;
+
+    // Prevent scrolling during drag on touch devices
+    if (e.cancelable) {
+      e.preventDefault();
+    }
+
+    const rect = timelineElement.getBoundingClientRect();
+    const x = getClientX(e) - rect.left;
+    const deltaX = x - dragStartX;
+
+    if (Math.abs(deltaX) > 3) {
+      setHasMovedDuringDrag(true);
+    }
+
+    const deltaTime = (deltaX / rect.width) * sourceVideoDuration;
+    const minDuration = 0.25; // Minimum 0.25s duration
+
+    if (dragType === 'move') {
+      // Move entire selection
+      const maxOffset = Math.max(0, sourceVideoDuration - dragStartDuration);
+      const newOffset = Math.max(0, Math.min(dragStartOffset + deltaTime, maxOffset));
+      setPendingStartOffset(newOffset);
+    } else if (dragType === 'start') {
+      // Adjust start (and inversely adjust duration)
+      const newStart = Math.max(0, Math.min(dragStartOffset + deltaTime, dragStartOffset + dragStartDuration - minDuration));
+      const newDuration = dragStartOffset + dragStartDuration - newStart;
+      // Round to 0.25s increments
+      const roundedDuration = Math.round(newDuration * 4) / 4;
+      const clampedDuration = Math.min(Math.max(roundedDuration, minDuration), MAX_DURATION);
+      const adjustedStart = dragStartOffset + dragStartDuration - clampedDuration;
+      setPendingStartOffset(Math.max(0, adjustedStart));
+      setPendingDuration(clampedDuration);
+    } else if (dragType === 'end') {
+      // Adjust end (duration)
+      const newDuration = Math.max(minDuration, Math.min(dragStartDuration + deltaTime, sourceVideoDuration - dragStartOffset, MAX_DURATION));
+      // Round to 0.25s increments
+      const roundedDuration = Math.round(newDuration * 4) / 4;
+      setPendingDuration(Math.max(minDuration, roundedDuration));
+    }
+
+    // Update video preview position during drag (visual feedback)
+    if (videoPreviewRef.current && hasMovedDuringDrag) {
+      const previewTime = pendingStartOffset !== null ? pendingStartOffset : videoStartOffset;
+      // Don't update video position during drag - wait for release
+    }
+  }, [isDraggingTimeline, dragType, dragStartX, dragStartOffset, dragStartDuration, sourceVideoDuration, hasMovedDuringDrag, pendingStartOffset, videoStartOffset]);
+
+  const handleTimelineMouseUp = useCallback((e) => {
+    if (!isDraggingTimeline) return;
+
+    const wasClick = !hasMovedDuringDrag;
+
+    // Get final values before clearing pending
+    const finalStart = pendingStartOffset !== null ? pendingStartOffset : videoStartOffset;
+    const finalDuration = pendingDuration !== null ? pendingDuration : videoDuration;
+
+    // Commit pending values to actual state
+    if (pendingStartOffset !== null) {
+      setVideoStartOffset(pendingStartOffset);
+    }
+    if (pendingDuration !== null) {
+      setVideoDuration(pendingDuration);
+    }
+
+    // Reset drag state
+    setIsDraggingTimeline(false);
+    setDragType(null);
+    setHasMovedDuringDrag(false);
+
+    // Handle click (no drag movement) - seek to clicked position
+    if (wasClick && sourceVideoDuration > 0) {
+      const timelineElement = timelineCanvasRef.current || simpleTimelineRef.current;
+      if (timelineElement) {
+        const rect = timelineElement.getBoundingClientRect();
+        const x = getClientX(e) - rect.left;
+        const clickPosition = Math.max(0, Math.min(1, x / rect.width));
+        const clickTime = clickPosition * sourceVideoDuration;
+
+        // Update playhead visual immediately
+        setPreviewPlayhead(clickTime);
+
+        // Seek video to clicked position
+        if (videoPreviewRef.current) {
+          videoPreviewRef.current.currentTime = clickTime;
+          // Also update the selected sample card's video
+          if (selectedSample && sampleVideoRefs.current[selectedSample.id]) {
+            sampleVideoRefs.current[selectedSample.id].currentTime = clickTime;
+          }
+        }
+      }
+    } else if (hasMovedDuringDrag) {
+      // After drag, seek video to new start position
+      setPreviewPlayhead(finalStart);
+
+      if (videoPreviewRef.current) {
+        videoPreviewRef.current.currentTime = finalStart;
+      }
+      // Also update the selected sample card's video
+      if (selectedSample && sampleVideoRefs.current[selectedSample.id]) {
+        sampleVideoRefs.current[selectedSample.id].currentTime = finalStart;
+      }
+
+      // If was playing, restart playback loop
+      if (isPlaying && videoPreviewRef.current) {
+        if (playbackAnimationRef.current) {
+          cancelAnimationFrame(playbackAnimationRef.current);
+        }
+        const updatePlayhead = () => {
+          if (videoPreviewRef.current && !videoPreviewRef.current.paused) {
+            setPreviewPlayhead(videoPreviewRef.current.currentTime);
+            if (videoPreviewRef.current.currentTime >= finalStart + finalDuration) {
+              videoPreviewRef.current.currentTime = finalStart;
+            }
+            playbackAnimationRef.current = requestAnimationFrame(updatePlayhead);
+          }
+        };
+        playbackAnimationRef.current = requestAnimationFrame(updatePlayhead);
+      }
+    }
+
+    // Clear pending values AFTER committing
+    setPendingStartOffset(null);
+    setPendingDuration(null);
+  }, [isDraggingTimeline, hasMovedDuringDrag, isPlaying, videoStartOffset, videoDuration, sourceVideoDuration, pendingStartOffset, pendingDuration, selectedSample]);
+
+  // Global mouse/touch up listener for drag
+  useEffect(() => {
+    if (isDraggingTimeline) {
+      window.addEventListener('mouseup', handleTimelineMouseUp);
+      window.addEventListener('mousemove', handleTimelineMouseMove);
+      window.addEventListener('touchend', handleTimelineMouseUp);
+      window.addEventListener('touchmove', handleTimelineMouseMove, { passive: false });
+      return () => {
+        window.removeEventListener('mouseup', handleTimelineMouseUp);
+        window.removeEventListener('mousemove', handleTimelineMouseMove);
+        window.removeEventListener('touchend', handleTimelineMouseUp);
+        window.removeEventListener('touchmove', handleTimelineMouseMove);
+      };
+    }
+  }, [isDraggingTimeline, handleTimelineMouseUp, handleTimelineMouseMove]);
+
+  // Toggle video preview playback
+  const toggleVideoPreview = useCallback(() => {
+    const video = videoPreviewRef.current;
+    if (!video) return;
+
+    if (isPlaying) {
+      video.pause();
+      setIsPlaying(false);
+      if (playbackAnimationRef.current) {
+        cancelAnimationFrame(playbackAnimationRef.current);
+      }
+    } else {
+      video.currentTime = videoStartOffset;
+      video.play().catch(() => {
+        setError('Unable to play video preview');
+      });
+      setIsPlaying(true);
+
+      const updatePlayhead = () => {
+        if (videoPreviewRef.current && !videoPreviewRef.current.paused) {
+          const currentTime = videoPreviewRef.current.currentTime;
+          const endTime = videoStartOffset + videoDuration;
+          
+          setPreviewPlayhead(currentTime);
+          
+          // Loop back to start if we've reached or passed the end
+          if (currentTime >= endTime) {
+            videoPreviewRef.current.currentTime = videoStartOffset;
+          }
+          
+          playbackAnimationRef.current = requestAnimationFrame(updatePlayhead);
+        }
+      };
+      playbackAnimationRef.current = requestAnimationFrame(updatePlayhead);
+    }
+  }, [isPlaying, videoStartOffset, videoDuration]);
+
+  // Format time helper
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
 
   // Preload all sample videos when popup opens (iOS fix - matches VideoSelectionPopup approach)
   useEffect(() => {
@@ -179,20 +750,18 @@ const AnimateReplacePopup = ({
     };
   }, [visible]);
 
-  // Get video duration when loaded
+  // Get video duration when loaded (fallback if thumbnails fail)
   const handleVideoLoadedMetadata = useCallback(() => {
-    if (videoPreviewRef.current) {
+    if (videoPreviewRef.current && sourceVideoDuration === 0) {
       const duration = videoPreviewRef.current.duration;
       setSourceVideoDuration(duration);
-      // Set default duration to source video duration or MAX_DURATION, whichever is smaller
-      // Round down to nearest 0.25s to ensure frame count is divisible at 16fps
       const defaultDuration = Math.min(duration, MAX_DURATION);
       const roundedDuration = Math.floor(defaultDuration * 4) / 4;
       setVideoDuration(roundedDuration);
     }
-  }, []);
+  }, [sourceVideoDuration]);
 
-  const handleVideoUpload = (e) => {
+  const handleVideoUpload = async (e) => {
     const file = e.target.files?.[0];
     if (file) {
       // Validate file type
@@ -211,16 +780,34 @@ const AnimateReplacePopup = ({
       setSelectedSample(null);
       setError('');
       setSourceVideoDuration(0);
+      setVideoThumbnails(null);
+      setVideoStartOffset(0);
+      setIsPlaying(false);
 
       // Create preview URL
       if (uploadedVideoUrl) {
         URL.revokeObjectURL(uploadedVideoUrl);
       }
-      setUploadedVideoUrl(URL.createObjectURL(file));
+      const newUrl = URL.createObjectURL(file);
+      setUploadedVideoUrl(newUrl);
+
+      // Generate thumbnails for timeline
+      await generateThumbnails(newUrl);
     }
   };
 
-  const handleSampleSelect = (sample) => {
+  const handleSampleSelect = async (sample) => {
+    // Pause all sample videos except the selected one
+    Object.entries(sampleVideoRefs.current).forEach(([id, videoEl]) => {
+      if (videoEl) {
+        if (id === sample.id) {
+          videoEl.play().catch(() => {});
+        } else {
+          videoEl.pause();
+        }
+      }
+    });
+
     setSelectedSample(sample);
     setSourceType('sample');
     setUploadedVideo(null);
@@ -229,22 +816,15 @@ const AnimateReplacePopup = ({
       setUploadedVideoUrl(null);
     }
     setError('');
-    
-    // Load the sample video to get its duration
-    const tempVideo = document.createElement('video');
-    tempVideo.src = sample.url;
-    tempVideo.preload = 'metadata';
-    tempVideo.onloadedmetadata = () => {
-      const duration = tempVideo.duration;
-      setSourceVideoDuration(duration);
-      // Set default duration to source video duration or MAX_DURATION, whichever is smaller
-      // Round down to nearest 0.25s to ensure frame count is divisible at 16fps
-      const defaultDuration = Math.min(duration, MAX_DURATION);
-      const roundedDuration = Math.floor(defaultDuration * 4) / 4;
-      setVideoDuration(roundedDuration);
-      // Clean up
-      tempVideo.remove();
-    };
+    setVideoThumbnails(null);
+    setVideoStartOffset(0);
+    setPreviewPlayhead(0);
+    setIsPlaying(false);
+    setPendingStartOffset(null);
+    setPendingDuration(null);
+
+    // Generate thumbnails for timeline
+    await generateThumbnails(sample.url);
   };
 
   const formatCost = (tokenCost, usdCost) => {
@@ -288,6 +868,7 @@ const AnimateReplacePopup = ({
       videoUrl,
       sam2Coordinates,
       videoDuration,
+      videoStartOffset,
       workflowType: 'animate-replace',
       modelVariant // Pass the selected model variant
     });
@@ -306,6 +887,12 @@ const AnimateReplacePopup = ({
     setError('');
     setVideoDuration(5);
     setSourceVideoDuration(0);
+    setVideoThumbnails(null);
+    setVideoStartOffset(0);
+    setIsPlaying(false);
+    if (playbackAnimationRef.current) {
+      cancelAnimationFrame(playbackAnimationRef.current);
+    }
     onClose();
   };
 
@@ -418,284 +1005,546 @@ const AnimateReplacePopup = ({
           padding: isMobile ? '14px' : '16px',
           marginBottom: '16px'
         }}>
-          <label style={{
-            display: 'block',
-            color: 'white',
-            fontSize: '13px',
-            fontWeight: '600',
-            marginBottom: '12px',
-            textTransform: 'uppercase',
-            letterSpacing: '0.5px'
-          }}>
-            📹 Source Video (Subject to Replace)
-          </label>
-
-          {/* Sample Videos Grid */}
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(5, 1fr)',
-              gap: '10px',
-              marginBottom: '12px'
-            }}
-          >
-            {SAMPLE_REPLACEMENT_VIDEOS.map((sample) => (
-              <button
-                key={sample.id}
-                onClick={() => handleSampleSelect(sample)}
-                style={{
-                  position: 'relative',
-                  padding: 0,
-                  borderRadius: '10px',
-                  border: selectedSample?.id === sample.id
-                    ? '3px solid white'
-                    : '3px solid rgba(255, 255, 255, 0.3)',
-                  background: 'rgba(0, 0, 0, 0.3)',
-                  color: 'white',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  overflow: 'hidden',
-                  aspectRatio: '9/16',
-                  display: 'flex',
-                  flexDirection: 'column'
-                }}
-                onMouseEnter={(e) => {
-                  const video = e.currentTarget.querySelector('video');
-                  if (video) video.play().catch(() => {});
-                }}
-                onMouseLeave={(e) => {
-                  const video = e.currentTarget.querySelector('video');
-                  if (video) {
-                    video.pause();
-                    video.currentTime = 0;
-                  }
-                }}
-              >
-                <video
-                  src={sample.url}
-                  autoPlay
-                  muted
-                  loop
-                  playsInline
-                  preload="auto"
-                  style={{
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'cover',
-                    pointerEvents: 'none'
-                  }}
-                />
-                <div style={{
-                  position: 'absolute',
-                  bottom: 0,
-                  left: 0,
-                  right: 0,
-                  background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 100%)',
-                  padding: '6px 8px',
-                  textAlign: 'center'
-                }}>
-                  <div style={{ fontSize: '12px', fontWeight: '700', textShadow: '0 1px 3px rgba(0,0,0,0.5)' }}>
-                    {sample.title}
-                  </div>
-                  <div style={{ fontSize: '9px', opacity: 0.8, marginTop: '2px', textShadow: '0 1px 2px rgba(0,0,0,0.5)' }}>
-                    {sample.description}
-                  </div>
-                </div>
-                {selectedSample?.id === sample.id && (
-                  <div style={{
-                    position: 'absolute',
-                    top: '8px',
-                    right: '8px',
-                    width: '24px',
-                    height: '24px',
-                    borderRadius: '50%',
-                    background: 'white',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '14px',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
-                  }}>
-                    ✓
-                  </div>
-                )}
-              </button>
-            ))}
-          </div>
-
-          {/* Or divider */}
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            margin: '12px 0',
-            color: 'rgba(255, 255, 255, 0.6)',
-            fontSize: '11px'
-          }}>
-            <div style={{ flex: 1, height: '1px', backgroundColor: 'rgba(255, 255, 255, 0.3)' }} />
-            <span>or upload your own</span>
-            <div style={{ flex: 1, height: '1px', backgroundColor: 'rgba(255, 255, 255, 0.3)' }} />
-          </div>
-
-          {/* Upload Button */}
-          <input
-            type="file"
-            ref={videoInputRef}
-            accept="video/*"
-            style={{ display: 'none' }}
-            onChange={handleVideoUpload}
-          />
-          <button
-            onClick={() => videoInputRef.current?.click()}
-            style={{
-              width: '100%',
-              padding: '12px',
-              borderRadius: '8px',
-              border: uploadedVideo
-                ? '2px solid rgba(76, 175, 80, 0.8)'
-                : '2px dashed rgba(255, 255, 255, 0.4)',
-              background: uploadedVideo
-                ? 'rgba(76, 175, 80, 0.3)'
-                : 'rgba(255, 255, 255, 0.1)',
-              color: 'white',
-              cursor: 'pointer',
-              fontSize: '13px',
-              fontWeight: '500',
-              transition: 'all 0.2s ease'
-            }}
-          >
-            {uploadedVideo ? `✅ ${uploadedVideo.name}` : '📁 Upload Video (MP4)'}
-          </button>
-
-          {/* Video Preview */}
-          {uploadedVideoUrl && (
-            <div style={{
-              marginTop: '12px',
-              borderRadius: '8px',
-              overflow: 'hidden',
-              background: 'rgba(0, 0, 0, 0.3)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              maxHeight: isMobile ? '180px' : '160px'
-            }}>
-              <video
-                ref={videoPreviewRef}
-                src={uploadedVideoUrl}
-                autoPlay
-                muted
-                loop
-                playsInline
-                onLoadedMetadata={handleVideoLoadedMetadata}
-                style={{
-                  maxWidth: '100%',
-                  maxHeight: isMobile ? '180px' : '160px',
-                  width: 'auto',
-                  height: 'auto',
-                  objectFit: 'contain',
-                  borderRadius: '8px'
-                }}
-              />
-            </div>
-          )}
-
-          {/* Video duration info */}
-          {sourceVideoDuration > 0 && (
-            <div style={{
-              marginTop: '8px',
-              fontSize: '11px',
-              color: 'rgba(255, 255, 255, 0.7)',
-              textAlign: 'center'
-            }}>
-              Source video: {Math.round(sourceVideoDuration)}s
-            </div>
-          )}
-
-          {/* SAM2 Info Note */}
-          <div style={{
-            marginTop: '12px',
-            padding: '10px 12px',
-            background: 'rgba(255, 255, 255, 0.15)',
-            borderRadius: '8px',
-            fontSize: '11px',
-            color: 'rgba(255, 255, 255, 0.9)',
-            lineHeight: '1.4'
-          }}>
-            💡 <strong>Tip:</strong> The main subject in the center of the video will be replaced with your image.
-          </div>
-        </div>
-
-        {/* Duration Slider */}
-        <div style={{
-          background: 'rgba(0, 0, 0, 0.2)',
-          borderRadius: '12px',
-          padding: isMobile ? '14px' : '16px',
-          marginBottom: '16px'
-        }}>
+          {/* Header with title and optional clear button */}
           <div style={{
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            marginBottom: '10px'
+            marginBottom: '12px'
           }}>
             <label style={{
+              display: 'block',
               color: 'white',
               fontSize: '13px',
-              fontWeight: '600'
+              fontWeight: '600',
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px'
             }}>
-              ⏱️ Output Duration
+              📹 Source Video (Subject to Replace)
             </label>
-            <span style={{
-              color: 'white',
-              fontSize: '16px',
-              fontWeight: '700',
-              background: 'rgba(255, 255, 255, 0.2)',
-              padding: '4px 12px',
-              borderRadius: '6px'
-            }}>
-              {sliderDuration}s
-            </span>
+            {hasValidSource && (
+              <button
+                onClick={() => {
+                  setSelectedSample(null);
+                  setUploadedVideo(null);
+                  if (uploadedVideoUrl) {
+                    URL.revokeObjectURL(uploadedVideoUrl);
+                    setUploadedVideoUrl(null);
+                  }
+                  setSourceVideoDuration(0);
+                  setVideoThumbnails(null);
+                  setVideoStartOffset(0);
+                  setPreviewPlayhead(0);
+                  setIsPlaying(false);
+                  // Resume all sample videos
+                  Object.values(sampleVideoRefs.current).forEach((videoEl) => {
+                    if (videoEl) videoEl.play().catch(() => {});
+                  });
+                }}
+                style={{
+                  padding: '4px 10px',
+                  backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                  border: '1px solid rgba(255, 255, 255, 0.3)',
+                  borderRadius: '6px',
+                  color: 'white',
+                  cursor: 'pointer',
+                  fontSize: '11px',
+                  fontWeight: '600',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.4)';
+                  e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.6)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
+                  e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.3)';
+                }}
+              >
+                ✕ Change
+              </button>
+            )}
           </div>
-          <input
-            type="range"
-            min="0.25"
-            max={maxDuration}
-            step="0.25"
-            value={sliderDuration}
-            onChange={(e) => {
-              const newDuration = parseFloat(e.target.value);
-              setSliderDuration(newDuration);
-              setInternalVideoDuration(newDuration);
-            }}
-            onMouseUp={(e) => {
-              const newDuration = parseFloat(e.target.value);
-              commitDuration(newDuration);
-            }}
-            onTouchEnd={(e) => {
-              const newDuration = parseFloat(e.target.value);
-              commitDuration(newDuration);
-            }}
-            style={{
-              width: '100%',
-              height: '8px',
-              borderRadius: '4px',
-              background: `linear-gradient(to right, white ${(sliderDuration / maxDuration) * 100}%, rgba(255,255,255,0.3) ${(sliderDuration / maxDuration) * 100}%)`,
-              outline: 'none',
-              cursor: 'pointer',
-              WebkitAppearance: 'none'
-            }}
-          />
-          <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            marginTop: '6px',
-            fontSize: '10px',
-            color: 'rgba(255, 255, 255, 0.7)'
-          }}>
-            <span>0.25s</span>
-            <span>{maxDuration}s max</span>
-          </div>
+
+          {/* Selected Video Preview and Timeline Editor - shown when a video is selected */}
+          {hasValidSource && sourceVideoDuration > 0 && (
+            <>
+              {/* Video Preview - show above timeline */}
+              <div style={{
+                marginBottom: '14px',
+                borderRadius: '10px',
+                overflow: 'hidden',
+                backgroundColor: 'rgba(0, 0, 0, 0.4)',
+                border: '2px solid rgba(249, 115, 22, 0.5)',
+                position: 'relative'
+              }}>
+                {/* Selected video title badge */}
+                <div style={{
+                  position: 'absolute',
+                  top: '8px',
+                  left: '8px',
+                  padding: '4px 10px',
+                  backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                  borderRadius: '6px',
+                  fontSize: '11px',
+                  fontWeight: '600',
+                  color: 'white',
+                  zIndex: 2
+                }}>
+                  {sourceType === 'sample' && selectedSample ? selectedSample.title : uploadedVideo?.name || 'Uploaded Video'}
+                </div>
+
+                {/* Video element */}
+                <video
+                  ref={videoPreviewRef}
+                  src={sourceType === 'sample' && selectedSample ? selectedSample.url : uploadedVideoUrl}
+                  muted
+                  playsInline
+                  onLoadedMetadata={handleVideoLoadedMetadata}
+                  style={{
+                    width: '100%',
+                    maxHeight: isMobile ? '180px' : '220px',
+                    objectFit: 'contain',
+                    display: 'block'
+                  }}
+                />
+              </div>
+
+              {/* Timeline Trimmer Controls */}
+              <div>
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginBottom: '8px'
+                }}>
+                  <label style={{
+                    color: 'rgba(255, 255, 255, 0.9)',
+                    fontSize: '12px',
+                    fontWeight: '600'
+                  }}>
+                    ✂️ Select Video Segment
+                  </label>
+                  <button
+                    onClick={toggleVideoPreview}
+                    style={{
+                      padding: '6px 14px',
+                      backgroundColor: isPlaying ? '#ef4444' : 'rgba(255, 255, 255, 0.9)',
+                      border: 'none',
+                      borderRadius: '6px',
+                      color: isPlaying ? 'white' : '#ea580c',
+                      cursor: 'pointer',
+                      fontSize: '12px',
+                      fontWeight: '600',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}
+                  >
+                    {isPlaying ? '⏸ Pause' : '▶ Preview'}
+                  </button>
+                </div>
+
+                {/* Timeline - either canvas with thumbnails or simple gradient bar */}
+                {videoThumbnails ? (
+                  <div
+                    ref={timelineContainerRef}
+                    style={{
+                      position: 'relative',
+                      backgroundColor: 'rgba(0, 0, 0, 0.4)',
+                      borderRadius: '8px',
+                      overflow: 'visible',
+                      cursor: isDraggingTimeline ? 'grabbing' : 'pointer',
+                      userSelect: 'none',
+                      border: '1px solid rgba(255, 255, 255, 0.2)'
+                    }}
+                    onMouseDown={handleTimelineMouseDown}
+                    onTouchStart={handleTimelineMouseDown}
+                  >
+                    <canvas
+                      ref={timelineCanvasRef}
+                      width={canvasWidth}
+                      height={60}
+                      style={{
+                        display: 'block',
+                        width: '100%',
+                        height: '60px',
+                        pointerEvents: 'none'
+                      }}
+                    />
+                    {/* Left resize handle overlay for canvas timeline */}
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: '0',
+                        bottom: '0',
+                        left: `calc(${(visualStartOffset / sourceVideoDuration) * 100}% - 6px)`,
+                        width: '12px',
+                        cursor: 'ew-resize',
+                        zIndex: 5,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                      onMouseDown={(e) => { e.stopPropagation(); handleTimelineMouseDown(e, 'start'); }}
+                      onTouchStart={(e) => { e.stopPropagation(); handleTimelineMouseDown(e, 'start'); }}
+                    >
+                      <div style={{
+                        width: '4px',
+                        height: '28px',
+                        backgroundColor: '#f97316',
+                        borderRadius: '2px',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.5)'
+                      }} />
+                    </div>
+                    {/* Right resize handle overlay for canvas timeline */}
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: '0',
+                        bottom: '0',
+                        left: `calc(${((visualStartOffset + visualDuration) / sourceVideoDuration) * 100}% - 6px)`,
+                        width: '12px',
+                        cursor: 'ew-resize',
+                        zIndex: 5,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                      onMouseDown={(e) => { e.stopPropagation(); handleTimelineMouseDown(e, 'end'); }}
+                      onTouchStart={(e) => { e.stopPropagation(); handleTimelineMouseDown(e, 'end'); }}
+                    >
+                      <div style={{
+                        width: '4px',
+                        height: '28px',
+                        backgroundColor: '#f97316',
+                        borderRadius: '2px',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.5)'
+                      }} />
+                    </div>
+                    {/* Duration label overlay for canvas timeline */}
+                    <div style={{
+                      position: 'absolute',
+                      top: '50%',
+                      left: `${((visualStartOffset + visualDuration / 2) / sourceVideoDuration) * 100}%`,
+                      transform: 'translate(-50%, -50%)',
+                      fontSize: '11px',
+                      fontWeight: '700',
+                      color: 'white',
+                      textShadow: '0 1px 3px rgba(0,0,0,0.8)',
+                    pointerEvents: 'none',
+                    zIndex: 3
+                  }}>
+                    {visualDuration.toFixed(2)}s
+                  </div>
+                </div>
+              ) : (
+                /* Simple gradient timeline for videos without thumbnails */
+                <div
+                  ref={simpleTimelineRef}
+                  style={{
+                    position: 'relative',
+                    height: '50px',
+                    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+                    borderRadius: '8px',
+                    overflow: 'visible',
+                    cursor: isDraggingTimeline && dragType === 'move' ? 'grabbing' : 'pointer',
+                    userSelect: 'none',
+                    border: '1px solid rgba(255, 255, 255, 0.2)'
+                  }}
+                  onMouseDown={handleSimpleTimelineMouseDown}
+                  onTouchStart={handleSimpleTimelineMouseDown}
+                >
+                  {/* Background gradient representing video */}
+                  <div style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    background: 'linear-gradient(90deg, rgba(249, 115, 22, 0.15) 0%, rgba(234, 88, 12, 0.1) 50%, rgba(249, 115, 22, 0.15) 100%)',
+                    borderRadius: '7px'
+                  }} />
+
+                  {/* Selection highlight */}
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: '2px',
+                      bottom: '2px',
+                      left: `${(visualStartOffset / sourceVideoDuration) * 100}%`,
+                      width: `${(Math.min(visualDuration, sourceVideoDuration - visualStartOffset) / sourceVideoDuration) * 100}%`,
+                      background: 'linear-gradient(180deg, rgba(249, 115, 22, 0.7) 0%, rgba(234, 88, 12, 0.5) 100%)',
+                      border: '2px solid #f97316',
+                      borderRadius: '4px',
+                      boxSizing: 'border-box',
+                      cursor: isDraggingTimeline && dragType === 'move' ? 'grabbing' : 'grab',
+                      minWidth: '20px'
+                    }}
+                  >
+                    {/* Duration label inside selection */}
+                    <div style={{
+                      position: 'absolute',
+                      top: '50%',
+                      left: '50%',
+                      transform: 'translate(-50%, -50%)',
+                      fontSize: '11px',
+                      fontWeight: '700',
+                      color: 'white',
+                      textShadow: '0 1px 2px rgba(0,0,0,0.5)',
+                      whiteSpace: 'nowrap',
+                      pointerEvents: 'none'
+                    }}>
+                      {visualDuration.toFixed(2)}s
+                    </div>
+                  </div>
+
+                  {/* Left resize handle */}
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: '0',
+                      bottom: '0',
+                      left: `calc(${(visualStartOffset / sourceVideoDuration) * 100}% - 6px)`,
+                      width: '12px',
+                      cursor: 'ew-resize',
+                      zIndex: 5,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                    onMouseDown={(e) => { e.stopPropagation(); handleTimelineMouseDown(e, 'start'); }}
+                    onTouchStart={(e) => { e.stopPropagation(); handleTimelineMouseDown(e, 'start'); }}
+                  >
+                    <div style={{
+                      width: '4px',
+                      height: '24px',
+                      backgroundColor: '#f97316',
+                      borderRadius: '2px',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.3)'
+                    }} />
+                  </div>
+
+                  {/* Right resize handle */}
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: '0',
+                      bottom: '0',
+                      left: `calc(${((visualStartOffset + visualDuration) / sourceVideoDuration) * 100}% - 6px)`,
+                      width: '12px',
+                      cursor: 'ew-resize',
+                      zIndex: 5,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                    onMouseDown={(e) => { e.stopPropagation(); handleTimelineMouseDown(e, 'end'); }}
+                    onTouchStart={(e) => { e.stopPropagation(); handleTimelineMouseDown(e, 'end'); }}
+                  >
+                    <div style={{
+                      width: '4px',
+                      height: '24px',
+                      backgroundColor: '#f97316',
+                      borderRadius: '2px',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.3)'
+                    }} />
+                  </div>
+
+                  {/* Playhead - always visible when video loaded */}
+                  <div style={{
+                    position: 'absolute',
+                    top: 0,
+                    bottom: 0,
+                    left: `${(previewPlayhead / sourceVideoDuration) * 100}%`,
+                    width: '2px',
+                    backgroundColor: isPlaying ? '#fff' : 'rgba(255, 255, 255, 0.7)',
+                    zIndex: 4,
+                    pointerEvents: 'none',
+                    boxShadow: isPlaying ? '0 0 6px rgba(255,255,255,0.8)' : '0 0 4px rgba(255,255,255,0.3)',
+                    transition: isPlaying ? 'none' : 'left 0.1s ease-out'
+                  }} />
+
+                  {/* Time markers */}
+                  <div style={{
+                    position: 'absolute',
+                    bottom: '-18px',
+                    left: '0',
+                    fontSize: '9px',
+                    color: 'rgba(255, 255, 255, 0.6)',
+                    fontWeight: '500'
+                  }}>
+                    0:00
+                  </div>
+                  <div style={{
+                    position: 'absolute',
+                    bottom: '-18px',
+                    right: '0',
+                    fontSize: '9px',
+                    color: 'rgba(255, 255, 255, 0.6)',
+                    fontWeight: '500'
+                  }}>
+                    {formatTime(sourceVideoDuration)}
+                  </div>
+                </div>
+              )}
+
+                {/* Time indicators */}
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  marginTop: '22px',
+                  fontSize: '10px',
+                  color: 'rgba(255, 255, 255, 0.8)',
+                  fontWeight: '500'
+                }}>
+                  <span style={{ color: '#fff' }}>
+                    Start: {formatTime(visualStartOffset)}
+                  </span>
+                  <span style={{ color: '#fff', fontWeight: '700' }}>
+                    Duration: {visualDuration.toFixed(2)}s
+                  </span>
+                  <span style={{ color: '#fff' }}>
+                    End: {formatTime(visualStartOffset + visualDuration)}
+                  </span>
+                </div>
+
+                <p style={{
+                  margin: '6px 0 0 0',
+                  color: 'rgba(255, 255, 255, 0.6)',
+                  fontSize: '10px',
+                  textAlign: 'center'
+                }}>
+                  Drag edges to resize • Drag middle to move • Click outside to jump
+                </p>
+              </div>
+
+              {/* SAM2 Info Note */}
+              <div style={{
+                marginTop: '12px',
+                padding: '10px 12px',
+                background: 'rgba(255, 255, 255, 0.15)',
+                borderRadius: '8px',
+                fontSize: '11px',
+                color: 'rgba(255, 255, 255, 0.9)',
+                lineHeight: '1.4'
+              }}>
+                💡 <strong>Tip:</strong> The main subject in the center of the video will be replaced with your image.
+              </div>
+            </>
+          )}
+
+          {/* Sample Videos Grid - only shown when no video selected */}
+          {!hasValidSource && (
+            <>
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(5, 1fr)',
+                  gap: '10px',
+                  marginBottom: '12px'
+                }}
+              >
+                {SAMPLE_REPLACEMENT_VIDEOS.map((sample) => (
+                  <button
+                    key={sample.id}
+                    onClick={() => handleSampleSelect(sample)}
+                    style={{
+                      position: 'relative',
+                      padding: 0,
+                      borderRadius: '10px',
+                      border: '3px solid rgba(255, 255, 255, 0.3)',
+                      background: 'rgba(0, 0, 0, 0.3)',
+                      color: 'white',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      overflow: 'hidden',
+                      aspectRatio: '9/16',
+                      display: 'flex',
+                      flexDirection: 'column'
+                    }}
+                  >
+                    <video
+                      ref={(el) => { sampleVideoRefs.current[sample.id] = el; }}
+                      src={sample.url}
+                      autoPlay
+                      muted
+                      loop
+                      playsInline
+                      preload="auto"
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                        pointerEvents: 'none'
+                      }}
+                    />
+                    <div style={{
+                      position: 'absolute',
+                      bottom: 0,
+                      left: 0,
+                      right: 0,
+                      background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 100%)',
+                      padding: '6px 8px',
+                      textAlign: 'center'
+                    }}>
+                      <div style={{ fontSize: '12px', fontWeight: '700', textShadow: '0 1px 3px rgba(0,0,0,0.5)' }}>
+                        {sample.title}
+                      </div>
+                      <div style={{ fontSize: '9px', opacity: 0.8, marginTop: '2px', textShadow: '0 1px 2px rgba(0,0,0,0.5)' }}>
+                        {sample.description}
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+
+              {/* Or divider */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                margin: '12px 0',
+                color: 'rgba(255, 255, 255, 0.6)',
+                fontSize: '11px'
+              }}>
+                <div style={{ flex: 1, height: '1px', backgroundColor: 'rgba(255, 255, 255, 0.3)' }} />
+                <span>or upload your own</span>
+                <div style={{ flex: 1, height: '1px', backgroundColor: 'rgba(255, 255, 255, 0.3)' }} />
+              </div>
+
+              {/* Upload Button */}
+              <input
+                type="file"
+                ref={videoInputRef}
+                accept="video/*"
+                style={{ display: 'none' }}
+                onChange={handleVideoUpload}
+              />
+              <button
+                onClick={() => videoInputRef.current?.click()}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  borderRadius: '8px',
+                  border: '2px dashed rgba(255, 255, 255, 0.4)',
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  color: 'white',
+                  cursor: 'pointer',
+                  fontSize: '13px',
+                  fontWeight: '500',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                📁 Upload Video (MP4)
+              </button>
+            </>
+          )}
         </div>
+
 
         {/* Prompt Section */}
         <div style={{ marginBottom: '16px' }}>
@@ -815,7 +1664,7 @@ const AnimateReplacePopup = ({
               alignItems: 'center'
             }}>
               <span style={{ fontSize: '10px', fontWeight: '500', opacity: 0.8 }}>
-                {`${isBatch ? `📹 ${itemCount} videos • ` : ''}📐 ${videoResolution || '480p'} • ⏱️ ${sliderDuration}s`}
+                {`${isBatch ? `📹 ${itemCount} videos • ` : ''}📐 ${videoResolution || '480p'} • ⏱️ ${videoDuration}s`}
               </span>
               <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
                 {costRaw && (

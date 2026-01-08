@@ -3089,7 +3089,7 @@ const PhotoGallery = ({
   // ==================== ANIMATE MOVE HANDLERS ====================
 
   // Handle Animate Move video generation (single)
-  const handleAnimateMoveExecute = useCallback(async ({ positivePrompt, negativePrompt, videoData, videoUrl, videoDuration: customDuration, workflowType, modelVariant }) => {
+  const handleAnimateMoveExecute = useCallback(async ({ positivePrompt, negativePrompt, videoData, videoUrl, videoDuration: customDuration, videoStartOffset, workflowType, modelVariant }) => {
     setShowAnimateMovePopup(false);
 
     // Pre-warm audio for iOS
@@ -3147,6 +3147,7 @@ const PhotoGallery = ({
         tokenType,
         workflowType: 'animate-move',
         referenceVideo: videoBuffer,
+        videoStart: videoStartOffset, // Pass video trim start offset
         modelVariant, // Pass model variant from popup
         onComplete: (resultVideoUrl) => {
           playSonicLogo(settings.soundEnabled);
@@ -3163,7 +3164,7 @@ const PhotoGallery = ({
   }, [videoTargetPhotoIndex, selectedPhotoIndex, selectedSubIndex, photos, sogniClient, setPhotos, settings, tokenType, showToast, onOutOfCredits]);
 
   // Handle Animate Move batch execution
-  const handleBatchAnimateMoveExecute = useCallback(async ({ positivePrompt, negativePrompt, videoData, videoUrl, videoDuration: customDuration, workflowType, modelVariant }) => {
+  const handleBatchAnimateMoveExecute = useCallback(async ({ positivePrompt, negativePrompt, videoData, videoUrl, videoDuration: customDuration, videoStartOffset, workflowType, modelVariant }) => {
     setShowBatchAnimateMovePopup(false);
     warmUpAudio();
 
@@ -3227,6 +3228,7 @@ const PhotoGallery = ({
           tokenType,
           workflowType: 'animate-move',
           referenceVideo: videoBuffer,
+          videoStart: videoStartOffset, // Pass video trim start offset
           modelVariant, // Pass model variant from popup
           onComplete: () => {
             playSonicLogo(settings.soundEnabled);
@@ -3243,7 +3245,7 @@ const PhotoGallery = ({
   // ==================== ANIMATE REPLACE HANDLERS ====================
 
   // Handle Animate Replace video generation (single)
-  const handleAnimateReplaceExecute = useCallback(async ({ positivePrompt, negativePrompt, videoData, videoUrl, sam2Coordinates, videoDuration: customDuration, workflowType, modelVariant }) => {
+  const handleAnimateReplaceExecute = useCallback(async ({ positivePrompt, negativePrompt, videoData, videoUrl, sam2Coordinates, videoDuration: customDuration, videoStartOffset, workflowType, modelVariant }) => {
     setShowAnimateReplacePopup(false);
     warmUpAudio();
 
@@ -3299,6 +3301,7 @@ const PhotoGallery = ({
         workflowType: 'animate-replace',
         referenceVideo: videoBuffer,
         sam2Coordinates,
+        videoStart: videoStartOffset, // Pass video trim start offset
         modelVariant, // Pass model variant from popup
         onComplete: () => {
           playSonicLogo(settings.soundEnabled);
@@ -3315,7 +3318,7 @@ const PhotoGallery = ({
   }, [videoTargetPhotoIndex, selectedPhotoIndex, selectedSubIndex, photos, sogniClient, setPhotos, settings, tokenType, showToast, onOutOfCredits]);
 
   // Handle Animate Replace batch execution
-  const handleBatchAnimateReplaceExecute = useCallback(async ({ positivePrompt, negativePrompt, videoData, videoUrl, sam2Coordinates, videoDuration: customDuration, workflowType, modelVariant }) => {
+  const handleBatchAnimateReplaceExecute = useCallback(async ({ positivePrompt, negativePrompt, videoData, videoUrl, sam2Coordinates, videoDuration: customDuration, videoStartOffset, workflowType, modelVariant }) => {
     setShowBatchAnimateReplacePopup(false);
     warmUpAudio();
 
@@ -3379,6 +3382,7 @@ const PhotoGallery = ({
           workflowType: 'animate-replace',
           referenceVideo: videoBuffer,
           sam2Coordinates,
+          videoStart: videoStartOffset, // Pass video trim start offset
           modelVariant, // Pass model variant from popup
           onComplete: () => {
             playSonicLogo(settings.soundEnabled);

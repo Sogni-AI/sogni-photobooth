@@ -165,9 +165,13 @@ const SoundToVideoPopup = ({
   const [audioWaveform, setAudioWaveform] = useState(null);
   const [previewPlayhead, setPreviewPlayhead] = useState(0);
   const [isDraggingWaveform, setIsDraggingWaveform] = useState(false);
+  const [dragType, setDragType] = useState(null); // 'start', 'end', 'move'
   const [dragStartX, setDragStartX] = useState(0);
   const [dragStartOffset, setDragStartOffset] = useState(0);
+  const [dragStartDuration, setDragStartDuration] = useState(0);
   const [hasMovedDuringDrag, setHasMovedDuringDrag] = useState(false);
+  const [pendingStartOffset, setPendingStartOffset] = useState(null);
+  const [pendingDuration, setPendingDuration] = useState(null);
 
   const audioInputRef = useRef(null);
   const audioPreviewRef = useRef(null);
@@ -268,33 +272,36 @@ const SoundToVideoPopup = ({
     const height = canvas.height;
     const barWidth = width / audioWaveform.length;
 
+    // Use visual values for real-time dragging
+    const displayStartOffset = pendingStartOffset !== null ? pendingStartOffset : audioStartOffset;
+    const displayDuration = pendingDuration !== null ? pendingDuration : videoDuration;
+
     ctx.clearRect(0, 0, width, height);
 
-    // Draw selection range border only (no fill overlay to keep white bars pure white)
-    if (audioDuration > 0) {
-      const startX = (audioStartOffset / audioDuration) * width;
-      const endOffset = Math.min(audioStartOffset + videoDuration, audioDuration);
-      const selectionWidth = ((endOffset - audioStartOffset) / audioDuration) * width;
-
-      // Only draw border, no fill to avoid making white bars look grayish
-      ctx.strokeStyle = 'rgba(236, 72, 153, 0.6)';
-      ctx.lineWidth = 2;
-      ctx.strokeRect(startX, 0, selectionWidth, height);
-    }
-
-    // Draw waveform bars with complementary color pairing
+    // Draw waveform bars
     audioWaveform.forEach((value, i) => {
       const barHeight = value * (height - 4);
       const x = i * barWidth;
       const y = (height - barHeight) / 2;
 
       const barTime = (i / audioWaveform.length) * audioDuration;
-      const isInSelection = barTime >= audioStartOffset && barTime < audioStartOffset + videoDuration;
+      const isInSelection = barTime >= displayStartOffset && barTime < displayStartOffset + displayDuration;
 
-      // White for selected, muted purple-gray for non-selected (complements pink background)
+      // White for selected, muted for non-selected
       ctx.fillStyle = isInSelection ? '#ffffff' : 'rgba(255, 255, 255, 0.35)';
       ctx.fillRect(x + 1, y, barWidth - 2, barHeight);
     });
+
+    // Draw selection border
+    if (audioDuration > 0) {
+      const startX = (displayStartOffset / audioDuration) * width;
+      const endOffset = Math.min(displayStartOffset + displayDuration, audioDuration);
+      const selectionWidth = ((endOffset - displayStartOffset) / audioDuration) * width;
+
+      ctx.strokeStyle = 'rgba(236, 72, 153, 0.9)';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(startX + 1, 1, selectionWidth - 2, height - 2);
+    }
 
     // Draw playhead if playing
     if (isPlaying && audioPreviewRef.current) {
@@ -306,25 +313,7 @@ const SoundToVideoPopup = ({
       ctx.lineTo(playheadX, height);
       ctx.stroke();
     }
-
-    // Draw start position marker
-    const startMarkerX = (audioStartOffset / audioDuration) * width;
-    ctx.strokeStyle = '#ec4899';
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.moveTo(startMarkerX, 0);
-    ctx.lineTo(startMarkerX, height);
-    ctx.stroke();
-
-    // Draw marker handle
-    ctx.fillStyle = '#ec4899';
-    ctx.beginPath();
-    ctx.moveTo(startMarkerX - 6, 0);
-    ctx.lineTo(startMarkerX + 6, 0);
-    ctx.lineTo(startMarkerX, 10);
-    ctx.closePath();
-    ctx.fill();
-  }, [audioWaveform, audioStartOffset, audioDuration, videoDuration, isPlaying, previewPlayhead]);
+  }, [audioWaveform, audioStartOffset, audioDuration, videoDuration, isPlaying, previewPlayhead, pendingStartOffset, pendingDuration]);
 
   // Update waveform when data changes
   useEffect(() => {
@@ -334,117 +323,154 @@ const SoundToVideoPopup = ({
       });
       return () => cancelAnimationFrame(frame);
     }
-  }, [drawWaveform, visible, audioWaveform, audioStartOffset, isPlaying, previewPlayhead, videoDuration]);
+  }, [drawWaveform, visible, audioWaveform, audioStartOffset, isPlaying, previewPlayhead, videoDuration, pendingStartOffset, pendingDuration]);
 
-  // Handle waveform interaction
-  const handleWaveformMouseDown = useCallback((e) => {
+  // Helper to get mouse/touch X coordinate
+  const getClientX = (e) => {
+    return e.touches ? e.touches[0].clientX : e.clientX;
+  };
+
+  // Handle waveform interaction (similar to video timeline)
+  const handleWaveformMouseDown = useCallback((e, overrideDragType = null) => {
     const canvas = waveformCanvasRef.current;
     if (!canvas || audioDuration === 0) return;
 
     const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const clickPosition = x / rect.width;
+    const x = getClientX(e) - rect.left;
+    const clickPosition = Math.max(0, Math.min(1, x / rect.width));
     const clickTime = clickPosition * audioDuration;
 
+    // Calculate handle zones (10px on each side)
+    const handleZone = 10 / rect.width * audioDuration;
+    const selectionStart = audioStartOffset;
     const selectionEnd = audioStartOffset + videoDuration;
-    const isInsideSelection = clickTime >= audioStartOffset && clickTime <= selectionEnd;
 
-    if (isInsideSelection) {
-      setIsDraggingWaveform(true);
-      setDragStartX(x);
-      setDragStartOffset(audioStartOffset);
-      setHasMovedDuringDrag(false); // Track if user actually drags
-    } else {
-      const maxOffset = Math.max(0, audioDuration - videoDuration);
-      const newOffset = Math.max(0, Math.min(clickTime, maxOffset));
-      setAudioStartOffset(newOffset);
+    let detectedDragType = overrideDragType;
+    if (!overrideDragType) {
+      // Detect which area was clicked
+      if (Math.abs(clickTime - selectionStart) < handleZone) {
+        detectedDragType = 'start';
+      } else if (Math.abs(clickTime - selectionEnd) < handleZone) {
+        detectedDragType = 'end';
+      } else if (clickTime >= selectionStart && clickTime <= selectionEnd) {
+        detectedDragType = 'move';
+      } else {
+        // Clicked outside - jump to that position
+        const maxOffset = Math.max(0, audioDuration - videoDuration);
+        const newOffset = Math.max(0, Math.min(clickTime, maxOffset));
+        setAudioStartOffset(newOffset);
 
-      // If audio was playing, restart at new position
-      if (isPlaying && audioPreviewRef.current) {
-        audioPreviewRef.current.pause();
-        audioPreviewRef.current.currentTime = newOffset;
-        audioPreviewRef.current.play().catch(() => {
-          setIsPlaying(false);
-          setError('Unable to play audio preview');
-        });
+        // Update playhead immediately
+        setPreviewPlayhead(newOffset);
 
-        // Restart playhead animation
-        if (playbackAnimationRef.current) {
-          cancelAnimationFrame(playbackAnimationRef.current);
+        // If playing, restart at new position
+        if (isPlaying && audioPreviewRef.current) {
+          audioPreviewRef.current.currentTime = newOffset;
         }
-        const updatePlayhead = () => {
-          if (audioPreviewRef.current && !audioPreviewRef.current.paused) {
-            setPreviewPlayhead(audioPreviewRef.current.currentTime);
-            // Loop back to start when reaching end of selection
-            if (audioPreviewRef.current.currentTime >= newOffset + videoDuration) {
-              audioPreviewRef.current.currentTime = newOffset;
-              audioPreviewRef.current.play().catch(() => setIsPlaying(false));
-            }
-            playbackAnimationRef.current = requestAnimationFrame(updatePlayhead);
-          }
-        };
-        playbackAnimationRef.current = requestAnimationFrame(updatePlayhead);
+        return;
       }
     }
 
+    setIsDraggingWaveform(true);
+    setDragType(detectedDragType);
+    setDragStartX(x);
+    setDragStartOffset(audioStartOffset);
+    setDragStartDuration(videoDuration);
+    setHasMovedDuringDrag(false);
+    setPendingStartOffset(audioStartOffset);
+    setPendingDuration(videoDuration);
+
     e.preventDefault();
+    e.stopPropagation();
   }, [audioDuration, audioStartOffset, videoDuration, isPlaying]);
 
   const handleWaveformMouseMove = useCallback((e) => {
-    if (!isDraggingWaveform) return;
+    if (!isDraggingWaveform || !dragType) return;
 
     const canvas = waveformCanvasRef.current;
     if (!canvas || audioDuration === 0) return;
 
+    // Prevent scrolling during drag on touch devices
+    if (e.cancelable) {
+      e.preventDefault();
+    }
+
     const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
+    const x = getClientX(e) - rect.left;
     const deltaX = x - dragStartX;
 
     // Mark that user has moved during this drag
-    if (Math.abs(deltaX) > 3) { // Small threshold to distinguish click from drag
+    if (Math.abs(deltaX) > 3) {
       setHasMovedDuringDrag(true);
     }
 
     const deltaTime = (deltaX / rect.width) * audioDuration;
+    const maxDuration = Math.min(MAX_DURATION, audioDuration);
 
-    const maxOffset = Math.max(0, audioDuration - videoDuration);
-    const newOffset = Math.max(0, Math.min(dragStartOffset + deltaTime, maxOffset));
+    let newStartOffset = dragStartOffset;
+    let newDuration = dragStartDuration;
 
-    setAudioStartOffset(newOffset);
-  }, [isDraggingWaveform, dragStartX, dragStartOffset, audioDuration, videoDuration]);
+    if (dragType === 'start') {
+      // Resize from start
+      newStartOffset = Math.max(0, Math.min(dragStartOffset + deltaTime, dragStartOffset + dragStartDuration - 0.25));
+      newDuration = dragStartDuration - (newStartOffset - dragStartOffset);
+    } else if (dragType === 'end') {
+      // Resize from end
+      newDuration = Math.max(0.25, Math.min(dragStartDuration + deltaTime, maxDuration, audioDuration - dragStartOffset));
+    } else if (dragType === 'move') {
+      // Move selection
+      const maxOffset = Math.max(0, audioDuration - dragStartDuration);
+      newStartOffset = Math.max(0, Math.min(dragStartOffset + deltaTime, maxOffset));
+    }
+
+    // Ensure duration is within bounds
+    newDuration = Math.max(0.25, Math.min(newDuration, maxDuration, audioDuration - newStartOffset));
+
+    setPendingStartOffset(newStartOffset);
+    setPendingDuration(newDuration);
+  }, [isDraggingWaveform, dragType, dragStartX, dragStartOffset, dragStartDuration, audioDuration]);
 
   const handleWaveformMouseUp = useCallback((e) => {
     if (!isDraggingWaveform) return;
 
-    const canvas = waveformCanvasRef.current;
-    const wasClick = !hasMovedDuringDrag; // True if user didn't drag, just clicked
+    const wasClick = !hasMovedDuringDrag;
+
+    // Get final values before clearing pending
+    const finalStart = pendingStartOffset !== null ? pendingStartOffset : audioStartOffset;
+    const rawDuration = pendingDuration !== null ? pendingDuration : videoDuration;
     
+    // Round duration down to nearest 0.25s to ensure frame count is divisible at 16fps
+    const finalDuration = Math.floor(rawDuration * 4) / 4;
+
+    // Commit changes
+    setAudioStartOffset(finalStart);
+    setVideoDuration(finalDuration);
+
     setIsDraggingWaveform(false);
+    setDragType(null);
     setHasMovedDuringDrag(false);
 
-    // If it was a simple click (not drag) within the selected area and audio is playing,
-    // move the playback position to where user clicked
-    if (wasClick && isPlaying && canvas && audioPreviewRef.current && audioDuration > 0) {
-      const rect = canvas.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const clickPosition = x / rect.width;
-      const clickTime = clickPosition * audioDuration;
-      
-      const selectionEnd = audioStartOffset + videoDuration;
-      const isInsideSelection = clickTime >= audioStartOffset && clickTime <= selectionEnd;
-      
-      if (isInsideSelection) {
-        // Move playback to clicked position
-        audioPreviewRef.current.currentTime = clickTime;
-        setPreviewPlayhead(clickTime);
-        return; // Don't restart from offset, just move playhead
-      }
-    }
+    // Handle click (seek to position)
+    if (wasClick && audioDuration > 0 && dragType === 'move') {
+      const canvas = waveformCanvasRef.current;
+      if (canvas) {
+        const rect = canvas.getBoundingClientRect();
+        const x = getClientX(e) - rect.left;
+        const clickPosition = Math.max(0, Math.min(1, x / rect.width));
+        const clickTime = clickPosition * audioDuration;
 
-    // If audio was playing when user dragged, restart playback at new position
-    if (hasMovedDuringDrag && isPlaying && audioPreviewRef.current) {
+        // Update playhead visual immediately
+        setPreviewPlayhead(clickTime);
+
+        // Seek audio to clicked position
+        if (audioPreviewRef.current) {
+          audioPreviewRef.current.currentTime = clickTime;
+        }
+      }
+    } else if (hasMovedDuringDrag && isPlaying && audioPreviewRef.current) {
+      // If dragged while playing, restart at new position
       audioPreviewRef.current.pause();
-      audioPreviewRef.current.currentTime = audioStartOffset;
+      audioPreviewRef.current.currentTime = finalStart;
       audioPreviewRef.current.play().catch(() => {
         setIsPlaying(false);
         setError('Unable to play audio preview');
@@ -457,9 +483,8 @@ const SoundToVideoPopup = ({
       const updatePlayhead = () => {
         if (audioPreviewRef.current && !audioPreviewRef.current.paused) {
           setPreviewPlayhead(audioPreviewRef.current.currentTime);
-          // Stop at end of selection and loop
-          if (audioPreviewRef.current.currentTime >= audioStartOffset + videoDuration) {
-            audioPreviewRef.current.currentTime = audioStartOffset;
+          if (audioPreviewRef.current.currentTime >= finalStart + finalDuration) {
+            audioPreviewRef.current.currentTime = finalStart;
             audioPreviewRef.current.play().catch(() => setIsPlaying(false));
           }
           playbackAnimationRef.current = requestAnimationFrame(updatePlayhead);
@@ -467,16 +492,24 @@ const SoundToVideoPopup = ({
       };
       playbackAnimationRef.current = requestAnimationFrame(updatePlayhead);
     }
-  }, [isDraggingWaveform, hasMovedDuringDrag, isPlaying, audioStartOffset, videoDuration, audioDuration]);
 
-  // Global mouse up listener for drag
+    // Clear pending values AFTER committing
+    setPendingStartOffset(null);
+    setPendingDuration(null);
+  }, [isDraggingWaveform, hasMovedDuringDrag, isPlaying, audioStartOffset, videoDuration, audioDuration, pendingStartOffset, pendingDuration, dragType]);
+
+  // Global mouse/touch up listener for drag
   useEffect(() => {
     if (isDraggingWaveform) {
       window.addEventListener('mouseup', handleWaveformMouseUp);
       window.addEventListener('mousemove', handleWaveformMouseMove);
+      window.addEventListener('touchend', handleWaveformMouseUp);
+      window.addEventListener('touchmove', handleWaveformMouseMove, { passive: false });
       return () => {
         window.removeEventListener('mouseup', handleWaveformMouseUp);
         window.removeEventListener('mousemove', handleWaveformMouseMove);
+        window.removeEventListener('touchend', handleWaveformMouseUp);
+        window.removeEventListener('touchmove', handleWaveformMouseMove);
       };
     }
   }, [isDraggingWaveform, handleWaveformMouseUp, handleWaveformMouseMove]);
@@ -632,6 +665,10 @@ const SoundToVideoPopup = ({
   const previewAudioUrl = sourceType === 'upload' ? uploadedAudioUrl : selectedSample?.url;
   // Round max duration down to nearest 0.25s to ensure frame count is divisible at 16fps
   const maxDuration = audioDuration > 0 ? Math.floor(Math.min(audioDuration, MAX_DURATION) * 4) / 4 : MAX_DURATION;
+  
+  // Get visual values (pending during drag, actual otherwise)
+  const visualStartOffset = pendingStartOffset !== null ? pendingStartOffset : audioStartOffset;
+  const visualDuration = pendingDuration !== null ? pendingDuration : videoDuration;
 
   return createPortal(
     <div
@@ -895,12 +932,13 @@ const SoundToVideoPopup = ({
                   position: 'relative',
                   backgroundColor: 'rgba(0, 0, 0, 0.4)',
                   borderRadius: '8px',
-                  overflow: 'hidden',
-                  cursor: isDraggingWaveform ? 'grabbing' : 'crosshair',
+                  overflow: 'visible',
+                  cursor: isDraggingWaveform ? 'grabbing' : 'pointer',
                   userSelect: 'none',
                   border: '1px solid rgba(255, 255, 255, 0.2)'
                 }}
                 onMouseDown={handleWaveformMouseDown}
+                onTouchStart={handleWaveformMouseDown}
               >
                 <canvas
                   ref={waveformCanvasRef}
@@ -913,6 +951,71 @@ const SoundToVideoPopup = ({
                     pointerEvents: 'none'
                   }}
                 />
+                {/* Left resize handle overlay */}
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: '0',
+                    bottom: '0',
+                    left: `calc(${(visualStartOffset / audioDuration) * 100}% - 6px)`,
+                    width: '12px',
+                    cursor: 'ew-resize',
+                    zIndex: 5,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                  onMouseDown={(e) => { e.stopPropagation(); handleWaveformMouseDown(e, 'start'); }}
+                  onTouchStart={(e) => { e.stopPropagation(); handleWaveformMouseDown(e, 'start'); }}
+                >
+                  <div style={{
+                    width: '4px',
+                    height: '28px',
+                    backgroundColor: '#ec4899',
+                    borderRadius: '2px',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.5)'
+                  }} />
+                </div>
+                {/* Right resize handle overlay */}
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: '0',
+                    bottom: '0',
+                    left: `calc(${((visualStartOffset + visualDuration) / audioDuration) * 100}% - 6px)`,
+                    width: '12px',
+                    cursor: 'ew-resize',
+                    zIndex: 5,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                  onMouseDown={(e) => { e.stopPropagation(); handleWaveformMouseDown(e, 'end'); }}
+                  onTouchStart={(e) => { e.stopPropagation(); handleWaveformMouseDown(e, 'end'); }}
+                >
+                  <div style={{
+                    width: '4px',
+                    height: '28px',
+                    backgroundColor: '#ec4899',
+                    borderRadius: '2px',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.5)'
+                  }} />
+                </div>
+                {/* Duration label overlay */}
+                <div style={{
+                  position: 'absolute',
+                  top: '50%',
+                  left: `${((visualStartOffset + visualDuration / 2) / audioDuration) * 100}%`,
+                  transform: 'translate(-50%, -50%)',
+                  fontSize: '11px',
+                  fontWeight: '700',
+                  color: 'white',
+                  textShadow: '0 1px 3px rgba(0,0,0,0.8)',
+                  pointerEvents: 'none',
+                  zIndex: 3
+                }}>
+                  {visualDuration.toFixed(2)}s
+                </div>
               </div>
 
               {/* Time indicators */}
@@ -926,7 +1029,7 @@ const SoundToVideoPopup = ({
               }}>
                 <span>0:00</span>
                 <span style={{ color: '#fff', fontWeight: '700' }}>
-                  Start: {formatTime(audioStartOffset)} • Duration: {sliderDuration}s
+                  Start: {formatTime(visualStartOffset)} • Duration: {visualDuration.toFixed(2)}s
                 </span>
                 <span>{formatTime(audioDuration)}</span>
               </div>
@@ -937,86 +1040,10 @@ const SoundToVideoPopup = ({
                 fontSize: '10px',
                 textAlign: 'center'
               }}>
-                Click to set start • Drag pink area to move selection
+                Click to seek • Drag handles to resize • Drag pink area to move
               </p>
             </div>
           )}
-        </div>
-
-        {/* Duration Slider */}
-        <div style={{
-          background: 'rgba(0, 0, 0, 0.2)',
-          borderRadius: '12px',
-          padding: isMobile ? '14px' : '16px',
-          marginBottom: '16px'
-        }}>
-          <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: '10px'
-          }}>
-            <label style={{
-              color: 'white',
-              fontSize: '13px',
-              fontWeight: '600'
-            }}>
-              ⏱️ Video Duration
-            </label>
-            <span style={{
-              color: 'white',
-              fontSize: '16px',
-              fontWeight: '700',
-              background: 'rgba(255, 255, 255, 0.2)',
-              padding: '4px 12px',
-              borderRadius: '6px'
-            }}>
-              {sliderDuration}s
-            </span>
-          </div>
-          <input
-            type="range"
-            min="0.25"
-            max={maxDuration}
-            step="0.25"
-            value={sliderDuration}
-            onChange={(e) => {
-              const newDuration = parseFloat(e.target.value);
-              setSliderDuration(newDuration); // Only update local slider value
-              setInternalVideoDuration(newDuration); // Update internal for display
-              // Adjust start offset if needed
-              if (audioDuration > 0 && audioStartOffset + newDuration > audioDuration) {
-                setAudioStartOffset(Math.max(0, audioDuration - newDuration));
-              }
-            }}
-            onMouseUp={(e) => {
-              const newDuration = parseFloat(e.target.value);
-              commitDuration(newDuration); // Commit to parent on release
-            }}
-            onTouchEnd={(e) => {
-              const newDuration = parseFloat(e.target.value);
-              commitDuration(newDuration); // Commit to parent on release
-            }}
-            style={{
-              width: '100%',
-              height: '8px',
-              borderRadius: '4px',
-              background: `linear-gradient(to right, white ${(sliderDuration / maxDuration) * 100}%, rgba(255,255,255,0.3) ${(sliderDuration / maxDuration) * 100}%)`,
-              outline: 'none',
-              cursor: 'pointer',
-              WebkitAppearance: 'none'
-            }}
-          />
-          <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            marginTop: '6px',
-            fontSize: '10px',
-            color: 'rgba(255, 255, 255, 0.7)'
-          }}>
-            <span>0.25s</span>
-            <span>{maxDuration}s max</span>
-          </div>
         </div>
 
         {/* Prompt Section */}
@@ -1178,7 +1205,7 @@ const SoundToVideoPopup = ({
               alignItems: 'center'
             }}>
               <span style={{ fontSize: '10px', fontWeight: '500', opacity: 0.8 }}>
-                {`${isBatch ? `📹 ${itemCount} videos • ` : ''}📐 ${videoResolution || '480p'} • ⏱️ ${sliderDuration}s`}
+                {`${isBatch ? `📹 ${itemCount} videos • ` : ''}📐 ${videoResolution || '480p'} • ⏱️ ${visualDuration.toFixed(2)}s`}
               </span>
               <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
                 {costRaw && (
