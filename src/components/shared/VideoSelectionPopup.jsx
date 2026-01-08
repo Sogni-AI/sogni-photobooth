@@ -442,10 +442,10 @@ const VideoSelectionPopup = ({
         style={{
           background: isMobile ? 'rgba(255, 255, 255, 0.98)' : 'linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(250, 250, 255, 0.98) 100%)',
           borderRadius: isMobile ? '16px' : '32px',
-          padding: isMobile ? '16px' : isTablet ? '20px' : '24px',
-          maxWidth: isMobile ? '100%' : '100%',
-          width: '100%',
-          height: isMobile ? `${windowHeight - 20}px` : 'calc(100vh - 40px)',
+          padding: isMobile ? '16px 0 24px 0' : isTablet ? '24px 0' : '32px 0',
+          maxWidth: '100%',
+          width: isMobile ? '100%' : 'auto',
+          height: 'auto',
           maxHeight: isMobile ? `${windowHeight - 20}px` : 'calc(100vh - 40px)',
           boxShadow: '0 24px 80px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(0, 0, 0, 0.05)',
           animation: 'slideUp 0.3s ease',
@@ -464,7 +464,7 @@ const VideoSelectionPopup = ({
           style={{
             position: 'absolute',
             top: isMobile ? '12px' : '20px',
-            right: isMobile ? '12px' : '20px',
+            right: isMobile ? '16px' : '24px',
             width: isMobile ? '32px' : '40px',
             height: isMobile ? '32px' : '40px',
             borderRadius: '50%',
@@ -498,29 +498,33 @@ const VideoSelectionPopup = ({
         <div 
           ref={headerRef}
           style={{ 
-          marginBottom: isMobile ? '16px' : '20px', 
+          marginBottom: isMobile ? '16px' : '24px', 
           textAlign: 'center',
           flexShrink: 0,
-          paddingTop: isMobile ? '4px' : '8px'
+          paddingTop: isMobile ? '0' : '0',
+          paddingLeft: isMobile ? '20px' : '24px',
+          paddingRight: isMobile ? '52px' : '24px'
         }}>
           <h2 style={{
-            margin: '0 0 4px 0',
+            margin: '0 0 6px 0',
             color: '#1a1a1a',
-            fontSize: isMobile ? '28px' : '36px',
+            fontSize: isMobile ? '22px' : '36px',
             fontWeight: '800',
             fontFamily: '"Permanent Marker", cursive',
             letterSpacing: '-0.02em',
             background: 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
-            backgroundClip: 'text'
+            backgroundClip: 'text',
+            lineHeight: '1.2',
+            whiteSpace: 'nowrap'
           }}>
             Choose Your Video Style
           </h2>
           <p style={{
             margin: 0,
             color: '#666',
-            fontSize: isMobile ? '14px' : '15px',
+            fontSize: isMobile ? '12px' : '15px',
             fontWeight: '400',
             letterSpacing: '0.01em'
           }}>
@@ -528,35 +532,33 @@ const VideoSelectionPopup = ({
           </p>
         </div>
 
-        {/* Video Options Grid - Artistic Gallery Layout */}
-        <div 
+        {/* Video Options Carousel - Horizontal Scroll */}
+        <div
           ref={gridContainerRef}
-          className="video-selection-grid"
+          className="video-selection-carousel"
           style={{
-            display: 'grid',
-            gridTemplateColumns: isMobile 
-              ? 'repeat(2, minmax(0, 1fr))' 
-              : 'repeat(4, minmax(0, 1fr))',
-            gridAutoRows: 'min-content',
-            gap: isMobile ? '12px' : '20px',
-            overflowY: 'scroll',
-            overflowX: 'hidden',
-            flex: 1,
-            padding: isMobile ? '0 4px 4px 4px' : '0 4px 4px 4px',
+            display: 'flex',
+            gap: isMobile ? '12px' : '16px',
+            overflowX: 'auto',
+            overflowY: 'hidden',
+            flex: 'none',
+            padding: isMobile ? '4px 20px 8px 20px' : '8px 24px 8px 24px',
+            margin: 'auto 0',
             minHeight: 0,
-            alignItems: 'start',
-            justifyContent: 'stretch',
             width: '100%',
             boxSizing: 'border-box',
             WebkitOverflowScrolling: 'touch',
-            touchAction: 'pan-y',
+            scrollSnapType: 'x mandatory',
+            scrollPaddingLeft: isMobile ? '20px' : '24px',
+            scrollPaddingRight: isMobile ? '20px' : '24px',
+            touchAction: 'pan-x',
             overscrollBehavior: 'contain',
-            // Force hardware acceleration for smooth scrolling on iOS
             transform: 'translateZ(0)',
-            willChange: 'scroll-position'
+            willChange: 'scroll-position',
+            alignItems: 'flex-start'
           }}
         >
-          {videoOptions.map((option, index) => {
+          {videoOptions.map((option) => {
             const isDisabled = option.disabled;
             return (
               <button
@@ -564,29 +566,29 @@ const VideoSelectionPopup = ({
                 onClick={() => !isDisabled && onSelectVideoType(option.id)}
                 disabled={isDisabled}
                 style={{
-                  background: isDisabled 
-                    ? 'linear-gradient(135deg, #E5E7EB 0%, #D1D5DB 100%)' 
+                  background: isDisabled
+                    ? 'linear-gradient(135deg, #E5E7EB 0%, #D1D5DB 100%)'
                     : 'linear-gradient(135deg, #ffffff 0%, #fafafa 100%)',
-                  borderRadius: isMobile ? '20px' : '24px',
+                  borderRadius: isMobile ? '16px' : '20px',
                   padding: 0,
-                  border: isDisabled 
-                    ? '2px solid #D1D5DB' 
+                  border: isDisabled
+                    ? '2px solid #D1D5DB'
                     : '2px solid rgba(0, 0, 0, 0.08)',
                   cursor: isDisabled ? 'not-allowed' : 'pointer',
                   transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
                   textAlign: 'left',
                   position: 'relative',
                   overflow: 'hidden',
-                  boxShadow: isDisabled 
-                    ? '0 2px 8px rgba(0, 0, 0, 0.08)' 
+                  boxShadow: isDisabled
+                    ? '0 2px 8px rgba(0, 0, 0, 0.08)'
                     : '0 4px 20px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.04)',
                   display: 'flex',
                   flexDirection: 'column',
                   opacity: isDisabled ? 0.5 : 1,
-                  width: '100%',
-                  minWidth: 0,
-                  maxWidth: '100%',
-                  backdropFilter: 'blur(10px)',
+                  flexShrink: 0,
+                  width: isMobile ? 'calc(100vw - 100px)' : isTablet ? '280px' : '340px',
+                  minWidth: isMobile ? 'calc(100vw - 100px)' : isTablet ? '280px' : '340px',
+                  scrollSnapAlign: 'start',
                   boxSizing: 'border-box'
                 }}
                 onMouseOver={(e) => {
@@ -609,9 +611,9 @@ const VideoSelectionPopup = ({
                 {/* Video Container - Hero Element - Always 2:3 Aspect Ratio */}
                 <div style={{
                   width: '100%',
-                  maxWidth: '480px',
                   aspectRatio: '2 / 3',
-                  borderRadius: isMobile ? '18px 18px 0 0' : '22px 22px 0 0',
+                  maxHeight: isMobile ? '450px' : isTablet ? '360px' : '420px',
+                  borderRadius: isMobile ? '14px 14px 0 0' : '18px 18px 0 0',
                   background: isDisabled 
                     ? 'linear-gradient(135deg, #E5E7EB 0%, #D1D5DB 100%)'
                     : option.gradient,
@@ -620,7 +622,6 @@ const VideoSelectionPopup = ({
                   isolation: 'isolate',
                   flexShrink: 0,
                   minHeight: 0,
-                  maxHeight: '100%',
                   margin: '0 auto'
                 }}>
                   {/* Placeholder icon - shown while video is loading or if no video */}
@@ -761,10 +762,10 @@ const VideoSelectionPopup = ({
 
                 {/* Content Section */}
                 <div style={{
-                  padding: isMobile ? '12px' : isTablet ? '14px' : '16px',
+                  padding: isMobile ? '14px 12px' : isTablet ? '16px 14px' : '18px 16px',
                   display: 'flex',
                   flexDirection: 'column',
-                  gap: isMobile ? '6px' : isTablet ? '6px' : '8px',
+                  gap: isMobile ? '8px' : isTablet ? '10px' : '12px',
                   flex: '0 0 auto',
                   background: 'transparent',
                   minHeight: 0
@@ -773,11 +774,11 @@ const VideoSelectionPopup = ({
                   <div style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: isMobile ? '6px' : '10px',
-                    marginBottom: '2px'
+                    gap: isMobile ? '8px' : '10px',
+                    marginBottom: 0
                   }}>
                     <span style={{
-                      fontSize: isMobile ? '20px' : isTablet ? '24px' : '28px',
+                      fontSize: isMobile ? '22px' : isTablet ? '26px' : '28px',
                       filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1))',
                       flexShrink: 0
                     }}>
@@ -786,23 +787,23 @@ const VideoSelectionPopup = ({
                     <h3 style={{
                       margin: 0,
                       color: isDisabled ? '#9CA3AF' : '#1a1a1a',
-                      fontSize: isMobile ? '16px' : isTablet ? '18px' : '22px',
+                      fontSize: isMobile ? '16px' : isTablet ? '18px' : '20px',
                       fontWeight: '700',
                       fontFamily: '"Permanent Marker", cursive',
                       letterSpacing: '-0.01em',
                       lineHeight: '1.2',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
-                      whiteSpace: isTablet ? 'normal' : 'nowrap',
+                      whiteSpace: 'nowrap',
                       display: 'flex',
                       alignItems: 'center',
                       gap: '6px',
-                      flexWrap: isTablet ? 'wrap' : 'nowrap'
+                      flexWrap: 'nowrap'
                     }}>
                       {option.title}
                       {option.isNew && (
                         <span style={{
-                          fontSize: '9px',
+                          fontSize: isMobile ? '8px' : '9px',
                           fontWeight: '700',
                           fontFamily: 'system-ui, sans-serif',
                           background: 'linear-gradient(135deg, #10b981, #059669)',
@@ -824,13 +825,15 @@ const VideoSelectionPopup = ({
                   <p style={{
                     margin: 0,
                     color: isDisabled ? '#9CA3AF' : '#666',
-                    fontSize: isMobile ? '11px' : isTablet ? '12px' : '14px',
+                    fontSize: isMobile ? '13px' : isTablet ? '14px' : '13px',
                     lineHeight: '1.4',
                     fontWeight: '400',
                     letterSpacing: '0.01em',
-                    display: 'block',
-                    overflow: 'visible',
-                    textOverflow: 'clip'
+                    display: '-webkit-box',
+                    WebkitLineClamp: isMobile ? 4 : isTablet ? 4 : 3,
+                    WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis'
                   }}>
                     {option.description}
                   </p>
@@ -838,12 +841,12 @@ const VideoSelectionPopup = ({
                   {/* Disabled message */}
                   {isDisabled && (
                     <div style={{
-                      marginTop: '8px',
-                      padding: '8px 12px',
+                      marginTop: '4px',
+                      padding: isMobile ? '6px 8px' : '8px 10px',
                       background: 'rgba(156, 163, 175, 0.15)',
-                      borderRadius: '8px',
+                      borderRadius: '6px',
                       color: '#6B7280',
-                      fontSize: '12px',
+                      fontSize: isMobile ? '11px' : '12px',
                       fontWeight: '600',
                       textAlign: 'center',
                       border: '1px solid rgba(156, 163, 175, 0.2)'
@@ -859,9 +862,9 @@ const VideoSelectionPopup = ({
                       bottom: 0,
                       left: 0,
                       right: 0,
-                      height: '3px',
+                      height: '4px',
                       background: option.gradient,
-                      opacity: 0.6
+                      opacity: 0.7
                     }} />
                   )}
                 </div>
@@ -869,6 +872,7 @@ const VideoSelectionPopup = ({
             );
           })}
         </div>
+
       </div>
 
       {/* CSS animations and scrollbar styling */}

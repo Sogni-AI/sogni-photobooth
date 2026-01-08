@@ -347,26 +347,29 @@ const AnimateReplacePopup = ({
 
     ctx.clearRect(0, 0, width, height);
 
-    const thumbWidth = width / videoThumbnails.length;
+    // Calculate thumbnail width based on video aspect ratio to preserve proportions
+    // Use the stored aspect ratio from when thumbnails were generated
+    const thumbWidth = Math.round(height * videoAspectRatio);
     const cachedImages = thumbnailImagesRef.current;
 
     // Calculate selection bounds in pixels
     const startX = (displayStartOffset / sourceVideoDuration) * width;
     const endX = Math.min(((displayStartOffset + displayDuration) / sourceVideoDuration), 1) * width;
 
-    // Helper to draw all thumbnails (center-aligned to their capture times)
+    // Helper to draw all thumbnails (evenly distributed across timeline)
     const drawAllThumbnails = () => {
       videoThumbnails.forEach((thumb, i) => {
         const img = cachedImages[i] || new Image();
         if (!cachedImages[i]) img.src = thumb;
-        
+
         // Calculate the time this thumbnail represents (center of its time range)
         const thumbnailTime = (i + 0.5) * (sourceVideoDuration / videoThumbnails.length);
         // Position the thumbnail so its CENTER is at this time's pixel position
         const centerX = (thumbnailTime / sourceVideoDuration) * width;
         const x = centerX - (thumbWidth / 2);
-        
+
         if (img.complete && img.naturalWidth > 0) {
+          // Draw maintaining aspect ratio - use the image's natural dimensions
           ctx.drawImage(img, x, 0, thumbWidth, height);
         }
       });
@@ -478,18 +481,13 @@ const AnimateReplacePopup = ({
       else if (clickTime >= selectionStart && clickTime <= selectionEnd) {
         detectedDragType = 'move';
       }
-      // Clicking outside - jump selection to center on that point
+      // Clicking outside - just update playhead position, don't move selection
       else {
-        const maxOffset = Math.max(0, sourceVideoDuration - videoDuration);
-        const newOffset = Math.max(0, Math.min(clickTime - videoDuration / 2, maxOffset));
-        setVideoStartOffset(newOffset);
-        setPreviewPlayhead(newOffset); // Update playhead visual immediately
-        setPendingStartOffset(null);
-        setPendingDuration(null);
+        setPreviewPlayhead(clickTime);
 
-        // Seek video preview to new position
+        // Seek video preview to clicked position
         if (videoPreviewRef.current) {
-          videoPreviewRef.current.currentTime = newOffset;
+          videoPreviewRef.current.currentTime = clickTime;
         }
 
         e.preventDefault();
@@ -672,13 +670,15 @@ const AnimateReplacePopup = ({
         cancelAnimationFrame(playbackAnimationRef.current);
       }
     } else {
-      // Only reset to start if playhead is outside the selection bounds
-      const currentPlayhead = previewPlayhead || video.currentTime;
+      // Use video.currentTime as source of truth for where to resume from
+      // (previewPlayhead state may be stale, especially on mobile)
+      const currentPosition = video.currentTime;
       const endTime = videoStartOffset + videoDuration;
-      const isOutsideSelection = currentPlayhead < videoStartOffset || currentPlayhead >= endTime;
+      const isOutsideSelection = currentPosition < videoStartOffset || currentPosition >= endTime;
 
       if (isOutsideSelection) {
         video.currentTime = videoStartOffset;
+        setPreviewPlayhead(videoStartOffset);
       }
 
       video.play().catch(() => {
@@ -703,7 +703,7 @@ const AnimateReplacePopup = ({
       };
       playbackAnimationRef.current = requestAnimationFrame(updatePlayhead);
     }
-  }, [isPlaying, videoStartOffset, videoDuration, previewPlayhead]);
+  }, [isPlaying, videoStartOffset, videoDuration]);
 
   // Format time helper
   const formatTime = (seconds) => {
@@ -836,13 +836,35 @@ const AnimateReplacePopup = ({
     setVideoThumbnails(null);
     setVideoStartOffset(0);
     setPreviewPlayhead(0);
-    setIsPlaying(false);
     setPendingStartOffset(null);
     setPendingDuration(null);
 
     // Set videoPreviewRef to the selected sample's video element
     if (sampleVideoRefs.current[sample.id]) {
       videoPreviewRef.current = sampleVideoRefs.current[sample.id];
+      // Auto-start playback for immediate visual feedback
+      const video = sampleVideoRefs.current[sample.id];
+      video.currentTime = 0;
+      video.play().catch(() => {});
+      setIsPlaying(true);
+
+      // Start the playhead animation
+      const updatePlayhead = () => {
+        if (videoPreviewRef.current && !videoPreviewRef.current.paused) {
+          const currentTime = videoPreviewRef.current.currentTime;
+          setPreviewPlayhead(currentTime);
+
+          // Loop back to start if we've reached the end of selection
+          if (currentTime >= videoDuration) {
+            videoPreviewRef.current.currentTime = 0;
+          }
+
+          playbackAnimationRef.current = requestAnimationFrame(updatePlayhead);
+        }
+      };
+      playbackAnimationRef.current = requestAnimationFrame(updatePlayhead);
+    } else {
+      setIsPlaying(false);
     }
 
     // Generate thumbnails for timeline
