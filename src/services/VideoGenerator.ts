@@ -404,7 +404,7 @@ export async function generateVideo(options: GenerateVideoOptions): Promise<void
         createParams.referenceVideo = referenceVideo;
       }
       // Add video start offset for trimming
-      if (videoStart !== undefined && videoStart > 0) {
+      if (videoStart !== undefined) {
         createParams.videoStart = videoStart;
       }
       // Add animate-specific settings
