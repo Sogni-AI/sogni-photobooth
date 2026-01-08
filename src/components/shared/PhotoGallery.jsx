@@ -11820,11 +11820,11 @@ const PhotoGallery = ({
                       src={photo.videoUrl}
                       autoPlay
                       loop={true}
-                      muted={photo.videoWorkflowType !== 's2v'}
+                      muted={!['s2v', 'animate-move', 'animate-replace'].includes(photo.videoWorkflowType)}
                       playsInline
                       onLoadedMetadata={(e) => {
                         // For S2V videos, try to unmute and play with audio
-                        if (photo.videoWorkflowType === 's2v') {
+                        if (['s2v', 'animate-move', 'animate-replace'].includes(photo.videoWorkflowType)) {
                           const videoEl = e.currentTarget;
                           videoEl.muted = false;
                           // Try to play with audio - if it fails, show click-to-play overlay
@@ -11845,12 +11845,12 @@ const PhotoGallery = ({
                         height: '100%',
                         objectFit: 'cover',
                         zIndex: 5,
-                        pointerEvents: photo.videoWorkflowType === 's2v' && s2vVideosNeedingClick.has(photo.id) ? 'auto' : 'none'
+                        pointerEvents: ['s2v', 'animate-move', 'animate-replace'].includes(photo.videoWorkflowType) && s2vVideosNeedingClick.has(photo.id) ? 'auto' : 'none'
                       }}
                     />
                     
-                    {/* Click-to-play overlay for S2V videos when audio autoplay is blocked */}
-                    {photo.videoWorkflowType === 's2v' && s2vVideosNeedingClick.has(photo.id) && (
+                    {/* Click-to-play overlay for S2V/Animate videos when audio autoplay is blocked */}
+                    {['s2v', 'animate-move', 'animate-replace'].includes(photo.videoWorkflowType) && s2vVideosNeedingClick.has(photo.id) && (
                       <div
                         onClick={(e) => {
                           e.stopPropagation();

@@ -823,6 +823,11 @@ const AnimateMovePopup = ({
     setPendingStartOffset(null);
     setPendingDuration(null);
 
+    // Set videoPreviewRef to the selected sample's video element
+    if (sampleVideoRefs.current[sample.id]) {
+      videoPreviewRef.current = sampleVideoRefs.current[sample.id];
+    }
+
     // Generate thumbnails for timeline
     await generateThumbnails(sample.url);
   };

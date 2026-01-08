@@ -140,7 +140,7 @@ function SlideshowContent({ job, sogniClient, active, modelName }: SlideshowCont
           src={url}
           loop
           playsInline
-          muted
+          muted={!hasAudio}
           preload="auto"
         />
         <button
