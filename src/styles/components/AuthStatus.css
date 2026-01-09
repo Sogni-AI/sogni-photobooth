@@ -19,6 +19,24 @@
   align-items: center;
 }
 
+/* Tooltip bounce animation for Recent Projects */
+@keyframes tooltipBounce {
+  0% {
+    opacity: 0;
+    transform: translateY(-50%) translateX(-10px);
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(-50%) translateX(5px);
+  }
+  80% {
+    transform: translateY(-50%) translateX(-2px);
+  }
+  100% {
+    transform: translateY(-50%) translateX(0);
+  }
+}
+
 /* Mobile portrait - compact layout with wrapping */
 @media (max-width: 576px) and (orientation: portrait) {
   .auth-status-container {

@@ -244,7 +244,14 @@ const AnimateMovePopup = ({
       const thumbHeight = 60;
       const thumbWidth = Math.round(thumbHeight * aspectRatio);
 
-      const numThumbnails = 20;
+      // Calculate optimal number of thumbnails based on available space
+      // Assume typical canvas width (will be responsive but this gives good initial generation)
+      const typicalCanvasWidth = 700; // Average between mobile and desktop
+      const minThumbnails = 8;
+      const maxThumbnails = 20;
+      const calculatedThumbnails = Math.floor(typicalCanvasWidth / thumbWidth);
+      const numThumbnails = Math.max(minThumbnails, Math.min(maxThumbnails, calculatedThumbnails));
+      
       const interval = duration / numThumbnails;
       const thumbnails = [];
       const canvas = document.createElement('canvas');
@@ -356,21 +363,21 @@ const AnimateMovePopup = ({
     const startX = (displayStartOffset / sourceVideoDuration) * width;
     const endX = Math.min(((displayStartOffset + displayDuration) / sourceVideoDuration), 1) * width;
 
-    // Helper to draw all thumbnails (evenly distributed across timeline)
+    // Helper to draw all thumbnails (evenly distributed across timeline without overlap)
     const drawAllThumbnails = () => {
+      const numThumbs = videoThumbnails.length;
+      const spacing = width / numThumbs; // Equal spacing across width
+      
       videoThumbnails.forEach((thumb, i) => {
         const img = cachedImages[i] || new Image();
         if (!cachedImages[i]) img.src = thumb;
 
-        // Calculate the time this thumbnail represents (center of its time range)
-        const thumbnailTime = (i + 0.5) * (sourceVideoDuration / videoThumbnails.length);
-        // Position the thumbnail so its CENTER is at this time's pixel position
-        const centerX = (thumbnailTime / sourceVideoDuration) * width;
-        const x = centerX - (thumbWidth / 2);
+        // Position thumbnails edge-to-edge across the timeline
+        const x = i * spacing;
 
         if (img.complete && img.naturalWidth > 0) {
-          // Draw maintaining aspect ratio - use the image's natural dimensions
-          ctx.drawImage(img, x, 0, thumbWidth, height);
+          // Draw thumbnail stretched to fit the spacing width
+          ctx.drawImage(img, x, 0, spacing, height);
         }
       });
     };
@@ -850,41 +857,15 @@ const AnimateMovePopup = ({
     await generateThumbnails(sample.url);
 
     // Set videoPreviewRef to the selected sample's video element
-    // and auto-start playback after thumbnails are generated
+    // Start from beginning but don't autoplay - wait for user to click Preview
     if (sampleVideoRefs.current[sample.id]) {
       videoPreviewRef.current = sampleVideoRefs.current[sample.id];
       const video = sampleVideoRefs.current[sample.id];
       
-      // Reset to start and play
+      // Reset to start position
       video.currentTime = 0;
       setPreviewPlayhead(0);
-      
-      // Auto-play after a brief delay to ensure everything is ready
-      setTimeout(() => {
-        video.play().then(() => {
-          setIsPlaying(true);
-          
-          // Start the playhead animation
-          const updatePlayhead = () => {
-            if (videoPreviewRef.current && !videoPreviewRef.current.paused) {
-              const currentTime = videoPreviewRef.current.currentTime;
-              setPreviewPlayhead(currentTime);
-
-              // Loop back to start if we've reached the end of selection
-              const loopEndTime = videoStartOffset + videoDuration;
-              if (currentTime >= loopEndTime) {
-                videoPreviewRef.current.currentTime = videoStartOffset;
-              }
-
-              playbackAnimationRef.current = requestAnimationFrame(updatePlayhead);
-            }
-          };
-          playbackAnimationRef.current = requestAnimationFrame(updatePlayhead);
-        }).catch(() => {
-          // Auto-play failed (likely needs user interaction)
-          setIsPlaying(false);
-        });
-      }, 100);
+      setIsPlaying(false);
     }
   };
 

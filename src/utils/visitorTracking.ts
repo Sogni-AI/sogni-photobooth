@@ -3,6 +3,8 @@
  */
 
 const VISITOR_COOKIE_NAME = 'sogni_has_visited';
+const LOGGED_IN_VISIT_COUNT_KEY = 'sogni_logged_in_visit_count';
+const SHOWN_PROJECTS_TOOLTIP_KEY = 'sogni_shown_projects_tooltip';
 const COOKIE_MAX_AGE = 365 * 24 * 60 * 60; // 1 year in seconds
 
 /**
@@ -46,5 +48,111 @@ export function getAuthButtonText(): string {
  */
 export function getDefaultModalMode(): 'login' | 'signup' {
   return hasVisitedBefore() ? 'login' : 'signup';
+}
+
+/**
+ * Increment the logged-in visit count and return the new count
+ * This tracks how many times a user has visited while authenticated
+ */
+export function incrementLoggedInVisitCount(): number {
+  if (typeof localStorage === 'undefined') {
+    return 1;
+  }
+
+  const currentCount = parseInt(localStorage.getItem(LOGGED_IN_VISIT_COUNT_KEY) || '0', 10);
+  const newCount = currentCount + 1;
+  localStorage.setItem(LOGGED_IN_VISIT_COUNT_KEY, newCount.toString());
+  
+  return newCount;
+}
+
+/**
+ * Get the current logged-in visit count
+ */
+export function getLoggedInVisitCount(): number {
+  if (typeof localStorage === 'undefined') {
+    return 0;
+  }
+
+  return parseInt(localStorage.getItem(LOGGED_IN_VISIT_COUNT_KEY) || '0', 10);
+}
+
+/**
+ * Check if we've already shown the Recent Projects tooltip
+ */
+export function hasShownProjectsTooltip(): boolean {
+  if (typeof localStorage === 'undefined') {
+    return false;
+  }
+
+  return localStorage.getItem(SHOWN_PROJECTS_TOOLTIP_KEY) === 'true';
+}
+
+/**
+ * Mark that we've shown the Recent Projects tooltip
+ */
+export function markProjectsTooltipShown(): void {
+  if (typeof localStorage === 'undefined') {
+    return;
+  }
+
+  localStorage.setItem(SHOWN_PROJECTS_TOOLTIP_KEY, 'true');
+}
+
+/**
+ * Reset the Projects tooltip tracking (for testing/debugging)
+ */
+export function resetProjectsTooltipTracking(): void {
+  if (typeof localStorage === 'undefined') {
+    return;
+  }
+
+  localStorage.removeItem(LOGGED_IN_VISIT_COUNT_KEY);
+  localStorage.removeItem(SHOWN_PROJECTS_TOOLTIP_KEY);
+  console.log('✅ Projects tooltip tracking reset. Visit count and tooltip flag cleared.');
+}
+
+/**
+ * Get debug info about the current tooltip tracking state
+ */
+export function getTooltipTrackingInfo(): void {
+  if (typeof localStorage === 'undefined') {
+    console.log('❌ localStorage not available');
+    return;
+  }
+
+  const visitCount = localStorage.getItem(LOGGED_IN_VISIT_COUNT_KEY) || '0';
+  const tooltipShown = localStorage.getItem(SHOWN_PROJECTS_TOOLTIP_KEY) || 'false';
+  
+  console.log('📊 Current Tooltip Tracking State:');
+  console.log('  - Visit Count:', visitCount);
+  console.log('  - Tooltip Shown:', tooltipShown);
+  console.log('  - Will Show Tooltip:', parseInt(visitCount) >= 2 && tooltipShown !== 'true');
+}
+
+/**
+ * Force trigger the tooltip (for testing)
+ */
+export function forceShowTooltip(): void {
+  if (typeof localStorage === 'undefined') {
+    console.log('❌ localStorage not available');
+    return;
+  }
+
+  // Set visit count to 2 (or higher) and clear the shown flag
+  localStorage.setItem(LOGGED_IN_VISIT_COUNT_KEY, '2');
+  localStorage.removeItem(SHOWN_PROJECTS_TOOLTIP_KEY);
+  console.log('✅ Tooltip tracking prepared. Refresh the page to trigger tooltip.');
+}
+
+// Expose helper functions globally for debugging
+if (typeof window !== 'undefined') {
+  (window as any).resetProjectsTooltipTracking = resetProjectsTooltipTracking;
+  (window as any).getTooltipTrackingInfo = getTooltipTrackingInfo;
+  (window as any).forceShowTooltip = forceShowTooltip;
+  console.log('🛠️ Debug helpers available:');
+  console.log('  - window.getTooltipTrackingInfo() - Check current state');
+  console.log('  - window.forceShowTooltip() - Force tooltip on next refresh');
+  console.log('  - window.resetProjectsTooltipTracking() - Clear all tracking');
 }
 

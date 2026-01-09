@@ -4,7 +4,7 @@ import { useWallet } from '../../hooks/useWallet';
 import { formatTokenAmount, getTokenLabel } from '../../services/walletService';
 import { useRewards } from '../../context/RewardsContext';
 import LoginModal, { LoginModalMode } from './LoginModal';
-import { getAuthButtonText, getDefaultModalMode, markAsVisited } from '../../utils/visitorTracking';
+import { getAuthButtonText, getDefaultModalMode, markAsVisited, incrementLoggedInVisitCount, hasShownProjectsTooltip, markProjectsTooltipShown } from '../../utils/visitorTracking';
 import '../../styles/components/AuthStatus.css';
 
 // Helper to format time remaining
@@ -31,17 +31,27 @@ export const AuthStatus: React.FC<AuthStatusProps> = ({ onPurchaseClick, onSignu
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [loginModalMode, setLoginModalMode] = useState<LoginModalMode>('login');
   const [highlightDailyBoost, setHighlightDailyBoost] = useState(false);
+  const [showProjectsTooltip, setShowProjectsTooltip] = useState(false);
+  const [tooltipPosition, setTooltipPosition] = useState({ top: 0, left: 0 });
   // Track if we've already shown the login boost prompt for this session
   const hasShownLoginBoostRef = useRef(false);
+  // Track if we've already shown the projects tooltip for this session
+  const hasShownProjectsTooltipRef = useRef(false);
   // Compute button text ONCE based on visitor status (before marking as visited)
   // Use useRef to preserve the initial value across renders
   const authButtonTextRef = useRef<string>(getAuthButtonText());
   const authButtonText = authButtonTextRef.current;
   const menuContainerRef = useRef<HTMLDivElement>(null);
+  const projectsButtonRef = useRef<HTMLDivElement>(null);
   
   const { isAuthenticated, authMode, user, logout, isLoading } = useSogniAuth();
   const { balances, tokenType, switchPaymentMethod } = useWallet();
   const { rewards, claimReward, loading: rewardsLoading } = useRewards();
+
+  // Debug: Log when showProjectsTooltip changes
+  useEffect(() => {
+    console.log('🎯 [DEBUG] showProjectsTooltip state changed:', showProjectsTooltip);
+  }, [showProjectsTooltip]);
 
   // Mark visitor on mount (after we've already computed the initial button text)
   useEffect(() => {
@@ -98,11 +108,78 @@ export const AuthStatus: React.FC<AuthStatusProps> = ({ onPurchaseClick, onSignu
     }, 800);
   }, [isAuthenticated, canClaimDailyBoost, rewardsLoading, rewards.length, dailyBoostReward, hasClaimedToday]);
 
+  // Track logged-in visits and show Recent Projects tooltip on second visit or later
+  useEffect(() => {
+    console.log('🔍 [Tooltip Check] useEffect triggered', { isAuthenticated, authMode });
+    
+    // Only track visits when authenticated and not in demo mode
+    if (!isAuthenticated || authMode === 'demo') {
+      console.log('🔍 [Tooltip Check] Skipping - not authenticated or demo mode', { isAuthenticated, authMode });
+      return;
+    }
+
+    // Skip if we've already shown the tooltip in a previous session
+    if (hasShownProjectsTooltip()) {
+      console.log('📊 Projects tooltip already shown in a previous session, skipping');
+      return;
+    }
+
+    // Skip if we've already shown it in this session
+    if (hasShownProjectsTooltipRef.current) {
+      console.log('📊 Projects tooltip already shown in this session, skipping');
+      return;
+    }
+
+    // Increment the visit count
+    const visitCount = incrementLoggedInVisitCount();
+    console.log('📊 Logged-in visit count:', visitCount);
+
+    // On the second visit OR LATER (as long as they haven't seen it), show the Recent Projects tooltip
+    if (visitCount >= 2) {
+      console.log('🎯 Second+ logged-in visit detected - showing Recent Projects tooltip');
+      
+      hasShownProjectsTooltipRef.current = true;
+      
+      // Wait a moment for any animations to complete, then open wallet
+      setTimeout(() => {
+        console.log('🎯 Opening wallet menu...');
+        setShowUserMenu(true);
+        
+          // Show tooltip after menu is open
+          setTimeout(() => {
+            console.log('🎯 Showing tooltip...', { showProjectsTooltip: true });
+            
+            // Calculate tooltip position based on button position
+            if (projectsButtonRef.current) {
+              const buttonElement = projectsButtonRef.current.querySelector('button');
+              if (buttonElement) {
+                const buttonRect = buttonElement.getBoundingClientRect();
+                
+                setTooltipPosition({
+                  top: buttonRect.top + (buttonRect.height / 2) - 22,
+                  left: buttonRect.right - 7
+                });
+              }
+            }
+            
+            setShowProjectsTooltip(true);
+            markProjectsTooltipShown();
+            
+            // Tooltip stays visible until manually dismissed or wallet closes
+          }, 300);
+      }, 1000);
+    } else {
+      console.log('🔍 [Tooltip Check] Visit count too low, need >= 2, got:', visitCount);
+    }
+  }, [isAuthenticated, authMode]);
+
   // Close user menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (showUserMenu && menuContainerRef.current && !menuContainerRef.current.contains(event.target as Node)) {
         setShowUserMenu(false);
+        // Also hide tooltip when menu closes
+        setShowProjectsTooltip(false);
       }
     };
 
@@ -802,14 +879,18 @@ export const AuthStatus: React.FC<AuthStatusProps> = ({ onPurchaseClick, onSignu
 
           {/* Recent Projects Button - only show when NOT in demo mode */}
           {authMode !== 'demo' && onHistoryClick && (
-            <div style={{
-              marginTop: '8px',
-              paddingTop: '8px',
-              borderTop: '1px solid rgba(255, 255, 255, 0.1)'
-            }}>
+            <div 
+              ref={projectsButtonRef}
+              style={{
+                marginTop: '8px',
+                paddingTop: '8px',
+                borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+                position: 'relative'
+              }}>
               <button
                 onClick={() => {
                   setShowUserMenu(false);
+                  setShowProjectsTooltip(false);
                   onHistoryClick();
                 }}
                 style={{
@@ -855,6 +936,72 @@ export const AuthStatus: React.FC<AuthStatusProps> = ({ onPurchaseClick, onSignu
                 </svg>
                 Recent Projects
               </button>
+              
+              {/* Tooltip for Recent Projects - shown on second visit */}
+              {showProjectsTooltip && (
+                <div
+                  onClick={() => {
+                    console.log('🎯 Tooltip clicked - dismissing');
+                    setShowProjectsTooltip(false);
+                  }}
+                  style={{
+                    position: 'fixed',
+                    top: `${tooltipPosition.top}px`,
+                    left: `${tooltipPosition.left}px`,
+                    transform: 'translateY(-50%)',
+                    background: 'linear-gradient(135deg, #ff6b9d 0%, #ffa06b 100%)',
+                    color: '#ffffff',
+                    padding: '16px 20px',
+                    borderRadius: '16px',
+                    fontSize: '15px',
+                    fontWeight: '600',
+                    boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)',
+                    zIndex: 99999,
+                    animation: 'tooltipBounce 0.5s ease-out',
+                    width: '260px',
+                    lineHeight: '1.4',
+                    cursor: 'pointer',
+                    pointerEvents: 'auto',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '14px'
+                  }}
+                >
+                  {/* Arrow pointing left to the button */}
+                  <div
+                    style={{
+                      position: 'absolute',
+                      left: '-12px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      width: 0,
+                      height: 0,
+                      borderTop: '12px solid transparent',
+                      borderBottom: '12px solid transparent',
+                      borderRight: '12px solid #ff6b9d',
+                      filter: 'drop-shadow(-2px 0 4px rgba(0, 0, 0, 0.3))'
+                    }}
+                  />
+                  
+                  {/* Large lightbulb icon */}
+                  <div style={{
+                    fontSize: '32px',
+                    lineHeight: '1',
+                    flexShrink: 0,
+                    display: 'flex',
+                    alignItems: 'center'
+                  }}>
+                    💡
+                  </div>
+                  
+                  {/* Text content */}
+                  <div style={{
+                    flex: 1
+                  }}>
+                    Access your last 24 hours of projects here!
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
