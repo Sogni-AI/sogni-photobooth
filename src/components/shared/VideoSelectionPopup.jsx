@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import PropTypes from 'prop-types';
 import urls from '../../config/urls';
@@ -51,11 +51,13 @@ const VideoSelectionPopup = ({
     's2v': false,
     'batch-s2v': false
   });
-  const promptVideoRefs = React.useRef({});
-  const emojiVideoRefs = React.useRef({});
-  const baldForBaseVideoRefs = React.useRef({});
-  const headerRef = React.useRef(null);
-  const gridContainerRef = React.useRef(null);
+  const promptVideoRefs = useRef({});
+  const emojiVideoRefs = useRef({});
+  const baldForBaseVideoRefs = useRef({});
+  const headerRef = useRef(null);
+  const gridContainerRef = useRef(null);
+  const videoContainerRefs = useRef({});
+  const [visibleVideos, setVisibleVideos] = useState({});
 
 
   // Update video source when index changes - simple approach with preloaded cache
@@ -128,110 +130,6 @@ const VideoSelectionPopup = ({
       }
     }
   }, [baldForBaseVideoIndex]);
-
-  // Preload all videos when popup opens to ensure they're cached on iOS
-  useEffect(() => {
-    if (!visible) return;
-    
-    setPromptVideoIndex(0);
-    setEmojiVideoIndex(0);
-    setBaldForBaseVideoIndex(0);
-    setS2vMuted(true); // Reset mute state when popup opens
-    // Reset loading states when popup opens
-    setVideoLoadedStates({
-      'prompt': false,
-      'emoji': false,
-      'bald-for-base': false,
-      'transition': false,
-      'animate-move': false,
-      'batch-animate-move': false,
-      'animate-replace': false,
-      'batch-animate-replace': false,
-      's2v': false,
-      'batch-s2v': false
-    });
-    
-    // Preload first videos using link preload for better performance
-    const firstVideos = [
-      promptVideos[0],
-      emojiVideos[0],
-      baldForBaseVideos[0],
-      'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/videos/transitions/jen.mp4'
-    ];
-    
-    // Add link preload tags to head for faster loading
-    const preloadLinks = firstVideos.map(videoUrl => {
-      const link = document.createElement('link');
-      link.rel = 'preload';
-      link.as = 'video';
-      link.href = videoUrl;
-      link.crossOrigin = 'anonymous';
-      document.head.appendChild(link);
-      return link;
-    });
-    
-    // Also preload all videos in hidden elements to cache them on iOS
-    const allVideos = [...promptVideos, ...emojiVideos, ...baldForBaseVideos];
-    const preloadVideoElements = allVideos.map((videoUrl) => {
-      const preloadVideo = document.createElement('video');
-      preloadVideo.src = videoUrl;
-      preloadVideo.preload = 'auto';
-      preloadVideo.muted = true;
-      preloadVideo.style.display = 'none';
-      document.body.appendChild(preloadVideo);
-      return preloadVideo;
-    });
-    
-    // Remove preload videos after a delay to allow caching
-    const preloadTimeout = setTimeout(() => {
-      preloadVideoElements.forEach(video => {
-        if (document.body.contains(video)) {
-          document.body.removeChild(video);
-        }
-      });
-    }, 2000);
-    
-    // Reset and play first videos
-    const promptVideoEl = promptVideoRefs.current['prompt'];
-    if (promptVideoEl) {
-      promptVideoEl.src = promptVideos[0];
-      promptVideoEl.load();
-      promptVideoEl.play().catch(err => {
-        console.log('Video autoplay prevented:', err);
-      });
-    }
-    const emojiVideoEl = emojiVideoRefs.current['emoji'];
-    if (emojiVideoEl) {
-      emojiVideoEl.src = emojiVideos[0];
-      emojiVideoEl.load();
-      emojiVideoEl.play().catch(err => {
-        console.log('Video autoplay prevented:', err);
-      });
-    }
-    const baldForBaseVideoEl = baldForBaseVideoRefs.current['bald-for-base'];
-    if (baldForBaseVideoEl) {
-      baldForBaseVideoEl.src = baldForBaseVideos[0];
-      baldForBaseVideoEl.load();
-      baldForBaseVideoEl.play().catch(err => {
-        console.log('Video autoplay prevented:', err);
-      });
-    }
-    
-    // Cleanup function
-    return () => {
-      clearTimeout(preloadTimeout);
-      preloadLinks.forEach(link => {
-        if (document.head.contains(link)) {
-          document.head.removeChild(link);
-        }
-      });
-      preloadVideoElements.forEach(video => {
-        if (document.body.contains(video)) {
-          document.body.removeChild(video);
-        }
-      });
-    };
-  }, [visible]);
 
   // Memoize videoOptions to prevent unnecessary re-renders
   const videoOptions = useMemo(() => {
@@ -329,6 +227,70 @@ const VideoSelectionPopup = ({
 
     return options;
   }, [promptVideoIndex, emojiVideoIndex, baldForBaseVideoIndex, isBatch, photoCount]);
+
+  // Preload all videos when popup opens to ensure they're cached on iOS
+  useEffect(() => {
+    if (!visible) return;
+
+    setPromptVideoIndex(0);
+    setEmojiVideoIndex(0);
+    setBaldForBaseVideoIndex(0);
+    setS2vMuted(true); // Reset mute state when popup opens
+    // Reset loading states when popup opens
+    setVideoLoadedStates({
+      'prompt': false,
+      'emoji': false,
+      'bald-for-base': false,
+      'transition': false,
+      'animate-move': false,
+      'batch-animate-move': false,
+      'animate-replace': false,
+      'batch-animate-replace': false,
+      's2v': false,
+      'batch-s2v': false
+    });
+
+    // Reset visible videos when popup opens
+    setVisibleVideos({});
+
+    // Cleanup function
+    return () => {};
+  }, [visible]);
+
+  // Intersection Observer to track which video tiles are in view
+  useEffect(() => {
+    if (!visible) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          const videoId = entry.target.dataset.videoId;
+          if (videoId) {
+            setVisibleVideos((prev) => ({
+              ...prev,
+              [videoId]: entry.isIntersecting
+            }));
+          }
+        });
+      },
+      {
+        root: gridContainerRef.current,
+        rootMargin: '50px', // Start loading slightly before the tile is visible
+        threshold: 0.1
+      }
+    );
+
+    // Observe all video container elements
+    Object.values(videoContainerRefs.current).forEach((container) => {
+      if (container) {
+        observer.observe(container);
+      }
+    });
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [visible, videoOptions.length]);
 
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
   const [windowHeight, setWindowHeight] = useState(window.innerHeight);
@@ -609,7 +571,14 @@ const VideoSelectionPopup = ({
                 }}
               >
                 {/* Video Container - Hero Element - Always 2:3 Aspect Ratio */}
-                <div style={{
+                <div
+                  ref={(el) => {
+                    if (el) {
+                      videoContainerRefs.current[option.id] = el;
+                    }
+                  }}
+                  data-video-id={option.id}
+                  style={{
                   width: '100%',
                   aspectRatio: '2 / 3',
                   maxHeight: isMobile ? '450px' : isTablet ? '360px' : '420px',
@@ -641,7 +610,7 @@ const VideoSelectionPopup = ({
                     </div>
                   )}
                   
-                  {option.exampleVideo ? (
+                  {option.exampleVideo && visibleVideos[option.id] ? (
                     <>
                       {/* Subtle gradient overlay for depth */}
                       <div style={{

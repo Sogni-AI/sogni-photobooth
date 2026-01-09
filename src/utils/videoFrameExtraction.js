@@ -1,16 +1,17 @@
 /**
  * Video Frame Extraction Utility
  *
- * Extracts the last frame from a video using HTML5 Canvas
+ * Extracts frames from videos using HTML5 Canvas
  * Works entirely client-side without backend dependencies
  */
 
 /**
- * Extract the last frame from a video URL
+ * Extract a frame from a video at a specific time
  * @param {string} videoUrl - URL of the video (can be blob: or https:)
+ * @param {number|'first'|'last'} targetTime - Time in seconds, or 'first'/'last' for convenience
  * @returns {Promise<{buffer: Uint8Array, width: number, height: number}>}
  */
-export async function extractLastFrame(videoUrl) {
+export async function extractFrameAtTime(videoUrl, targetTime = 'last') {
   return new Promise((resolve, reject) => {
     const video = document.createElement('video');
     video.crossOrigin = 'anonymous';
@@ -73,10 +74,18 @@ export async function extractLastFrame(videoUrl) {
     };
 
     const onMetadataLoaded = () => {
-      // Seek to the last frame (duration minus a tiny delta to ensure we get the last frame)
-      // Using 0.001 seconds before end to account for rounding
-      const targetTime = Math.max(0, video.duration - 0.001);
-      video.currentTime = targetTime;
+      let seekTime;
+      if (targetTime === 'first') {
+        // First frame - seek to very beginning
+        seekTime = 0.001; // Small offset to ensure frame is rendered
+      } else if (targetTime === 'last') {
+        // Last frame - seek to end minus small delta
+        seekTime = Math.max(0, video.duration - 0.001);
+      } else {
+        // Specific time
+        seekTime = Math.max(0, Math.min(targetTime, video.duration - 0.001));
+      }
+      video.currentTime = seekTime;
     };
 
     video.addEventListener('loadedmetadata', onMetadataLoaded);
@@ -95,6 +104,24 @@ export async function extractLastFrame(videoUrl) {
     video.src = videoUrl;
     video.load();
   });
+}
+
+/**
+ * Extract the last frame from a video URL
+ * @param {string} videoUrl - URL of the video (can be blob: or https:)
+ * @returns {Promise<{buffer: Uint8Array, width: number, height: number}>}
+ */
+export async function extractLastFrame(videoUrl) {
+  return extractFrameAtTime(videoUrl, 'last');
+}
+
+/**
+ * Extract the first frame from a video URL
+ * @param {string} videoUrl - URL of the video (can be blob: or https:)
+ * @returns {Promise<{buffer: Uint8Array, width: number, height: number}>}
+ */
+export async function extractFirstFrame(videoUrl) {
+  return extractFrameAtTime(videoUrl, 'first');
 }
 
 /**

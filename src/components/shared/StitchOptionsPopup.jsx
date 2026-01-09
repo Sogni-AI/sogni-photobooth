@@ -13,6 +13,7 @@ const StitchOptionsPopup = ({
   onSimpleStitch,
   onInfiniteLoop,
   onDownloadCached,
+  onEditTransitionPrompt, // NEW: callback to edit transition prompt
   videoCount = 0,
   isGenerating = false,
   generationProgress = null, // { phase, current, total, message, transitionStatus }
@@ -484,33 +485,73 @@ const StitchOptionsPopup = ({
                   </div>
 
                   {/* Generate Button */}
-                  <button
-                    onClick={() => onInfiniteLoop()}
-                    style={{
-                      width: '100%',
-                      padding: '14px 20px',
-                      background: 'linear-gradient(135deg, #9333ea 0%, #7c3aed 100%)',
-                      border: 'none',
-                      borderRadius: '10px',
-                      color: '#fff',
-                      cursor: 'pointer',
-                      fontSize: '15px',
-                      fontWeight: '600',
-                      fontFamily: '"Permanent Marker", cursive',
-                      transition: 'all 0.2s ease',
-                      boxShadow: '0 4px 12px rgba(147, 51, 234, 0.3)'
-                    }}
-                    onMouseOver={(e) => {
-                      e.currentTarget.style.transform = 'translateY(-2px)';
-                      e.currentTarget.style.boxShadow = '0 6px 20px rgba(147, 51, 234, 0.4)';
-                    }}
-                    onMouseOut={(e) => {
-                      e.currentTarget.style.transform = 'translateY(0)';
-                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(147, 51, 234, 0.3)';
-                    }}
-                  >
-                    ♾️ Generate Infinite Loop
-                  </button>
+                  <div style={{
+                    display: 'flex',
+                    gap: '8px',
+                    alignItems: 'stretch'
+                  }}>
+                    <button
+                      onClick={() => onInfiniteLoop()}
+                      style={{
+                        flex: 1,
+                        padding: '14px 20px',
+                        background: 'linear-gradient(135deg, #9333ea 0%, #7c3aed 100%)',
+                        border: 'none',
+                        borderRadius: '10px',
+                        color: '#fff',
+                        cursor: 'pointer',
+                        fontSize: '15px',
+                        fontWeight: '600',
+                        fontFamily: '"Permanent Marker", cursive',
+                        transition: 'all 0.2s ease',
+                        boxShadow: '0 4px 12px rgba(147, 51, 234, 0.3)'
+                      }}
+                      onMouseOver={(e) => {
+                        e.currentTarget.style.transform = 'translateY(-2px)';
+                        e.currentTarget.style.boxShadow = '0 6px 20px rgba(147, 51, 234, 0.4)';
+                      }}
+                      onMouseOut={(e) => {
+                        e.currentTarget.style.transform = 'translateY(0)';
+                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(147, 51, 234, 0.3)';
+                      }}
+                    >
+                      ♾️ Generate Infinite Loop
+                    </button>
+                    
+                    {/* Edit Transition Prompt Button */}
+                    {onEditTransitionPrompt && (
+                      <button
+                        onClick={() => onEditTransitionPrompt()}
+                        style={{
+                          padding: '14px 16px',
+                          background: 'rgba(147, 51, 234, 0.15)',
+                          border: '2px solid rgba(147, 51, 234, 0.4)',
+                          borderRadius: '10px',
+                          color: '#7c3aed',
+                          cursor: 'pointer',
+                          fontSize: '11px',
+                          fontWeight: '700',
+                          fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                          transition: 'all 0.2s ease',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.5px'
+                        }}
+                        onMouseOver={(e) => {
+                          e.currentTarget.style.background = 'rgba(147, 51, 234, 0.25)';
+                          e.currentTarget.style.borderColor = 'rgba(147, 51, 234, 0.6)';
+                          e.currentTarget.style.transform = 'translateY(-2px)';
+                        }}
+                        onMouseOut={(e) => {
+                          e.currentTarget.style.background = 'rgba(147, 51, 234, 0.15)';
+                          e.currentTarget.style.borderColor = 'rgba(147, 51, 234, 0.4)';
+                          e.currentTarget.style.transform = 'translateY(0)';
+                        }}
+                        title="Edit transition prompt"
+                      >
+                        ✏️ Edit
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 {/* Cost Footer for Infinite Loop */}
@@ -603,6 +644,7 @@ StitchOptionsPopup.propTypes = {
   onSimpleStitch: PropTypes.func.isRequired,
   onInfiniteLoop: PropTypes.func.isRequired,
   onDownloadCached: PropTypes.func,
+  onEditTransitionPrompt: PropTypes.func, // Optional callback to edit transition prompt
   videoCount: PropTypes.number,
   isGenerating: PropTypes.bool,
   generationProgress: PropTypes.shape({

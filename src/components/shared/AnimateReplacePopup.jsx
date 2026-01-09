@@ -121,6 +121,8 @@ const AnimateReplacePopup = ({
   const thumbnailImagesRef = useRef([]); // Cache loaded thumbnail images to prevent flicker
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
   const [canvasWidth, setCanvasWidth] = useState(400); // Dynamic canvas width
+  const sampleVideoContainerRefs = useRef({});
+  const [visibleSampleVideos, setVisibleSampleVideos] = useState({});
 
   useEffect(() => {
     const handleResize = () => setWindowWidth(window.innerWidth);
@@ -240,16 +242,24 @@ const AnimateReplacePopup = ({
       const aspectRatio = videoWidth / videoHeight;
       setVideoAspectRatio(aspectRatio);
 
-      // Fixed height of 60px, width based on aspect ratio
-      const thumbHeight = 60;
+      // Generate thumbnails at higher resolution for quality, then scale down when drawing
+      // Use 120px height for better quality when stretched
+      const thumbHeight = 120;
       const thumbWidth = Math.round(thumbHeight * aspectRatio);
 
-      // Calculate optimal number of thumbnails based on available space
-      // Assume typical canvas width (will be responsive but this gives good initial generation)
-      const typicalCanvasWidth = 700; // Average between mobile and desktop
-      const minThumbnails = 8;
-      const maxThumbnails = 20;
-      const calculatedThumbnails = Math.floor(typicalCanvasWidth / thumbWidth);
+      // Calculate optimal number of thumbnails based on actual container width
+      // The timeline container width is approximately: popup width - padding
+      // Popup maxWidth: mobile (<768) = 550px, desktop = 750px
+      // Account for popup padding (~30px each side) + section padding (~16px each side) = ~92px
+      const estimatedContainerWidth = window.innerWidth < 768
+        ? Math.min(window.innerWidth - 20, 550) - 92  // Mobile: ~458px max
+        : Math.min(window.innerWidth - 40, 750) - 92; // Desktop: ~658px max
+
+      // Calculate number of thumbnails based on display height (60px) and aspect ratio
+      const displayThumbWidth = Math.round(60 * aspectRatio);
+      const minThumbnails = 6;
+      const maxThumbnails = 24; // Higher cap for wider videos / desktop
+      const calculatedThumbnails = Math.ceil(estimatedContainerWidth / displayThumbWidth);
       const numThumbnails = Math.max(minThumbnails, Math.min(maxThumbnails, calculatedThumbnails));
       
       const interval = duration / numThumbnails;
@@ -724,60 +734,54 @@ const AnimateReplacePopup = ({
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // Preload all sample videos when popup opens (iOS fix - matches VideoSelectionPopup approach)
+  // Reset visible videos when popup opens
   useEffect(() => {
     if (!visible) return;
 
-    // Get all sample video URLs
-    const allVideoUrls = SAMPLE_REPLACEMENT_VIDEOS.map(sample => sample.url);
+    // Reset visible videos
+    setVisibleSampleVideos({});
 
-    // Add link preload tags to head for faster loading
-    const preloadLinks = allVideoUrls.map(videoUrl => {
-      const link = document.createElement('link');
-      link.rel = 'preload';
-      link.as = 'video';
-      link.href = videoUrl;
-      link.crossOrigin = 'anonymous';
-      document.head.appendChild(link);
-      return link;
-    });
-
-    // Also preload all videos in hidden elements to cache them on iOS
-    const preloadVideoElements = allVideoUrls.map((videoUrl) => {
-      const preloadVideo = document.createElement('video');
-      preloadVideo.src = videoUrl;
-      preloadVideo.preload = 'auto';
-      preloadVideo.muted = true;
-      preloadVideo.playsInline = true;
-      preloadVideo.style.display = 'none';
-      document.body.appendChild(preloadVideo);
-      return preloadVideo;
-    });
-
-    // Remove preload videos after a delay to allow caching
-    const preloadTimeout = setTimeout(() => {
-      preloadVideoElements.forEach(video => {
-        if (document.body.contains(video)) {
-          document.body.removeChild(video);
-        }
-      });
-    }, 2000);
-
-    // Cleanup function
-    return () => {
-      clearTimeout(preloadTimeout);
-      preloadLinks.forEach(link => {
-        if (document.head.contains(link)) {
-          document.head.removeChild(link);
-        }
-      });
-      preloadVideoElements.forEach(video => {
-        if (document.body.contains(video)) {
-          document.body.removeChild(video);
-        }
-      });
-    };
+    return () => {};
   }, [visible]);
+
+  // Intersection Observer to track which sample video tiles are in view
+  useEffect(() => {
+    if (!visible) return;
+    
+    // Only observe if no source is selected yet
+    const hasSource = (sourceType === 'sample' && selectedSample) || (sourceType === 'upload' && uploadedVideo);
+    if (hasSource) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          const videoId = entry.target.dataset.videoId;
+          if (videoId) {
+            setVisibleSampleVideos((prev) => ({
+              ...prev,
+              [videoId]: entry.isIntersecting
+            }));
+          }
+        });
+      },
+      {
+        root: null,
+        rootMargin: '50px',
+        threshold: 0.1
+      }
+    );
+
+    // Observe all sample video container elements
+    Object.values(sampleVideoContainerRefs.current).forEach((container) => {
+      if (container) {
+        observer.observe(container);
+      }
+    });
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [visible, sourceType, selectedSample, uploadedVideo]);
 
   // Get video duration when loaded (fallback if thumbnails fail)
   const handleVideoLoadedMetadata = useCallback(() => {
@@ -856,16 +860,40 @@ const AnimateReplacePopup = ({
     // Generate thumbnails for timeline first
     await generateThumbnails(sample.url);
 
-    // Set videoPreviewRef to the selected sample's video element
-    // Start from beginning but don't autoplay - wait for user to click Preview
+    // Set videoPreviewRef to the selected sample's video element and autoplay
     if (sampleVideoRefs.current[sample.id]) {
       videoPreviewRef.current = sampleVideoRefs.current[sample.id];
       const video = sampleVideoRefs.current[sample.id];
-      
-      // Reset to start position
+
+      // Reset to start position and autoplay
       video.currentTime = 0;
       setPreviewPlayhead(0);
-      setIsPlaying(false);
+
+      // Start playback automatically
+      video.play().then(() => {
+        setIsPlaying(true);
+
+        // Start playhead animation
+        const updatePlayhead = () => {
+          if (videoPreviewRef.current && !videoPreviewRef.current.paused) {
+            const currentTime = videoPreviewRef.current.currentTime;
+            const loopEndTime = videoDuration; // Use the video duration set by generateThumbnails
+
+            setPreviewPlayhead(currentTime);
+
+            // Loop back to start if we've reached the end of the selected segment
+            if (currentTime >= loopEndTime) {
+              videoPreviewRef.current.currentTime = 0;
+            }
+
+            playbackAnimationRef.current = requestAnimationFrame(updatePlayhead);
+          }
+        };
+        playbackAnimationRef.current = requestAnimationFrame(updatePlayhead);
+      }).catch((err) => {
+        console.log('Autoplay prevented:', err);
+        setIsPlaying(false);
+      });
     }
   };
 
@@ -1502,6 +1530,12 @@ const AnimateReplacePopup = ({
                   <button
                     key={sample.id}
                     onClick={() => handleSampleSelect(sample)}
+                    ref={(el) => {
+                      if (el) {
+                        sampleVideoContainerRefs.current[sample.id] = el;
+                      }
+                    }}
+                    data-video-id={sample.id}
                     style={{
                       position: 'relative',
                       padding: 0,
@@ -1520,21 +1554,23 @@ const AnimateReplacePopup = ({
                       flexDirection: 'column'
                     }}
                   >
-                    <video
-                      ref={(el) => { sampleVideoRefs.current[sample.id] = el; }}
-                      src={sample.url}
-                      autoPlay
-                      muted
-                      loop
-                      playsInline
-                      preload="auto"
-                      style={{
-                        width: '100%',
-                        height: '100%',
-                        objectFit: 'cover',
-                        pointerEvents: 'none'
-                      }}
-                    />
+                    {visibleSampleVideos[sample.id] && (
+                      <video
+                        ref={(el) => { sampleVideoRefs.current[sample.id] = el; }}
+                        src={sample.url}
+                        autoPlay
+                        muted
+                        loop
+                        playsInline
+                        preload="auto"
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'cover',
+                          pointerEvents: 'none'
+                        }}
+                      />
+                    )}
                     <div style={{
                       position: 'absolute',
                       bottom: 0,

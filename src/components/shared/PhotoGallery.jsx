@@ -61,7 +61,7 @@ import AnimateReplacePopup from './AnimateReplacePopup';
 import SoundToVideoPopup from './SoundToVideoPopup';
 import ConfettiCelebration from './ConfettiCelebration';
 import StitchOptionsPopup from './StitchOptionsPopup';
-import { extractLastFrame } from '../../utils/videoFrameExtraction';
+import { extractLastFrame, extractFirstFrame } from '../../utils/videoFrameExtraction';
 
 // Random video completion messages
 const VIDEO_READY_MESSAGES = [
@@ -892,6 +892,7 @@ const PhotoGallery = ({
   const [showBatchCustomVideoPromptPopup, setShowBatchCustomVideoPromptPopup] = useState(false);
   const [selectedBatchMotionCategory, setSelectedBatchMotionCategory] = useState(null);
   const [showTransitionVideoPopup, setShowTransitionVideoPopup] = useState(false); // Popup before transition video generation
+  const [showTransitionPromptPopup, setShowTransitionPromptPopup] = useState(false); // Popup to edit transition prompt for Infinite Loop
   const [showBaldForBasePopup, setShowBaldForBasePopup] = useState(false); // Popup before Bald for Base video generation (single)
   const [showBatchBaldForBasePopup, setShowBatchBaldForBasePopup] = useState(false); // Popup before Bald for Base video generation (batch)
   const [showPromptVideoPopup, setShowPromptVideoPopup] = useState(false); // Popup before Prompt Video generation (single)
@@ -4767,51 +4768,15 @@ const PhotoGallery = ({
       // Generate hash of photo IDs to check cache validity
       const photosHash = photosWithVideos.map(p => p.id).sort().join('-');
 
-      // Check if we have a cached stitched video for these exact photos
-      if (cachedStitchedVideoBlob && cachedStitchedVideoPhotosHash === photosHash) {
-        console.log('[Stitch All] Using cached stitched video');
+      // TESTING MODE: Clear cache to force regeneration
+      console.log('[Stitch Test] Clearing cache to test all strategies');
+      setCachedStitchedVideoBlob(null);
+      setCachedStitchedVideoPhotosHash(null);
 
-        // Download the cached version immediately
-        const timestamp = new Date().toISOString().split('T')[0];
-        const filename = `sogni-photobooth-stitched-${timestamp}.mp4`;
-
-        // On mobile, use share API
-        const isMobileDevice = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) ||
-                               (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-
-        if (isMobileDevice && navigator.share) {
-          try {
-            const file = new File([cachedStitchedVideoBlob], filename, { type: 'video/mp4' });
-            await navigator.share({
-              files: [file],
-              title: 'My Sogni Photobooth Video',
-              text: 'Check out my stitched video from Sogni AI Photobooth!'
-            });
-          } catch (shareError) {
-            if (shareError.name !== 'AbortError') {
-              console.error('Share failed:', shareError);
-            }
-          }
-        } else {
-          // Desktop - download directly
-          const blobUrl = URL.createObjectURL(cachedStitchedVideoBlob);
-          const link = document.createElement('a');
-          link.href = blobUrl;
-          link.download = filename;
-          link.style.display = 'none';
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
-
-          showToast({
-            title: 'Download Complete',
-            message: 'Stitched video downloaded successfully!',
-            type: 'success'
-          });
-        }
-        return;
-      }
+      // Skip cache check for testing
+      // if (cachedStitchedVideoBlob && cachedStitchedVideoPhotosHash === photosHash) {
+      //   ... cached version logic ...
+      // }
 
       // No cached version - generate stitched video
       setIsBulkDownloading(true);
@@ -4827,60 +4792,42 @@ const PhotoGallery = ({
         filename: `video-${index + 1}.mp4`
       }));
 
-      // Concatenate videos into one seamless video
-      const concatenatedBlob = await concatenateVideos(
+      // Use the working concatenation (CO strategy - extract + ctts)
+      const blob = await concatenateVideos(
         videosToStitch,
         (current, total, message) => {
-          setBulkDownloadProgress({ current, total, message });
-        },
-        null // No audio for non-transition stitching
+          setBulkDownloadProgress({ 
+            current, 
+            total, 
+            message 
+          });
+        }
       );
 
       const elapsedMs = performance.now() - startTime;
       const elapsedSec = (elapsedMs / 1000).toFixed(2);
-      console.log(`[Stitch All] ✅ Complete! ${videosToStitch.length} videos → ${(concatenatedBlob.size / 1024 / 1024).toFixed(2)}MB in ${elapsedSec}s`);
-
-      // Cache the stitched video for future downloads
-      setCachedStitchedVideoBlob(concatenatedBlob);
-      setCachedStitchedVideoPhotosHash(photosHash);
+      console.log(`[Stitch All] Complete in ${elapsedSec}s, size: ${(blob.size / 1024 / 1024).toFixed(2)}MB`);
 
       // Download the stitched video
       const timestamp = new Date().toISOString().split('T')[0];
-      const filename = `sogni-photobooth-stitched-${timestamp}.mp4`;
-
-      // On mobile, use share API
-      const isMobileDevice = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) ||
-                             (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-
-      if (isMobileDevice && navigator.share) {
-        setBulkDownloadProgress({
-          current: videosToStitch.length,
-          total: videosToStitch.length,
-          message: 'Ready! Tap to save video'
-        });
-
-        // Store for mobile share button
-        setReadyTransitionVideo({ blob: concatenatedBlob, filename });
-      } else {
-        // Desktop - download immediately
-        const blobUrl = URL.createObjectURL(concatenatedBlob);
-        const link = document.createElement('a');
-        link.href = blobUrl;
-        link.download = filename;
-        link.style.display = 'none';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
-
-        setBulkDownloadProgress({
-          current: videosToStitch.length,
-          total: videosToStitch.length,
-          message: 'Download complete!'
-        });
-      }
+      const filename = `stitched-video-${timestamp}.mp4`;
+      const blobUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = filename;
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
 
       setIsGeneratingStitchedVideo(false);
+
+      showToast({
+        title: 'Video Created',
+        message: `Stitched ${photosWithVideos.length} videos in ${elapsedSec}s`,
+        type: 'success'
+      });
 
       // Reset after a delay
       setTimeout(() => {
@@ -5017,32 +4964,51 @@ const PhotoGallery = ({
       setInfiniteLoopProgress({
         phase: 'extracting',
         current: 0,
-        total: photosWithVideos.length,
+        total: photosWithVideos.length * 2, // Extract both first AND last frames
         message: 'Preparing to extract video frames...',
         transitionStatus: initialTransitionStatus
       });
 
-      // Phase 1: Extract last frame from each video (in parallel)
-      const framePromises = photosWithVideos.map((photo, i) =>
+      // Phase 1: Extract BOTH first and last frames from each video (in parallel)
+      // - Last frame of video N = START of transition N
+      // - First frame of video N+1 = END of transition N
+      // This ensures transitions work correctly for animate-move/animate-replace workflows
+      // where the video content doesn't match the original reference photo
+      const lastFramePromises = photosWithVideos.map((photo, i) =>
         extractLastFrame(photo.videoUrl).then(frame => {
-          console.log(`[Infinite Loop] Extracted frame ${i + 1}: ${frame.width}x${frame.height}`);
-          return { index: i, frame };
+          console.log(`[Infinite Loop] Extracted last frame ${i + 1}: ${frame.width}x${frame.height}`);
+          return { index: i, frame, type: 'last' };
+        })
+      );
+
+      const firstFramePromises = photosWithVideos.map((photo, i) =>
+        extractFirstFrame(photo.videoUrl).then(frame => {
+          console.log(`[Infinite Loop] Extracted first frame ${i + 1}: ${frame.width}x${frame.height}`);
+          return { index: i, frame, type: 'first' };
         })
       );
 
       // Update progress as frames complete
       let extractedCount = 0;
       const lastFrames = new Array(photosWithVideos.length);
+      const firstFrames = new Array(photosWithVideos.length);
+      const totalFramesToExtract = photosWithVideos.length * 2;
 
-      for (const promise of framePromises) {
+      // Process all frame extractions
+      const allFramePromises = [...lastFramePromises, ...firstFramePromises];
+      for (const promise of allFramePromises) {
         try {
           const result = await promise;
-          lastFrames[result.index] = result.frame;
+          if (result.type === 'last') {
+            lastFrames[result.index] = result.frame;
+          } else {
+            firstFrames[result.index] = result.frame;
+          }
           extractedCount++;
           setInfiniteLoopProgress(prev => ({
             ...prev,
             current: extractedCount,
-            message: `Extracting frames ${extractedCount}/${photosWithVideos.length}...`
+            message: `Extracting frames ${extractedCount}/${totalFramesToExtract}...`
           }));
         } catch (error) {
           console.error(`[Infinite Loop] Frame extraction failed:`, error);
@@ -5057,56 +5023,6 @@ const PhotoGallery = ({
           return;
         }
       }
-
-      // Helper to load an image as buffer
-      const loadImageAsBuffer = async (url) => {
-        return new Promise((resolve, reject) => {
-          const img = new Image();
-          if (url.startsWith('http')) {
-            img.crossOrigin = 'anonymous';
-          }
-
-          img.onload = async () => {
-            const width = img.naturalWidth || img.width;
-            const height = img.naturalHeight || img.height;
-
-            try {
-              if (url.startsWith('blob:')) {
-                const response = await fetch(url);
-                if (response.ok) {
-                  const imageBlob = await response.blob();
-                  const arrayBuffer = await imageBlob.arrayBuffer();
-                  const imageBuffer = new Uint8Array(arrayBuffer);
-                  resolve({ buffer: imageBuffer, width, height });
-                  return;
-                }
-              }
-
-              const canvas = document.createElement('canvas');
-              canvas.width = width;
-              canvas.height = height;
-              const ctx = canvas.getContext('2d');
-              ctx.drawImage(img, 0, 0);
-
-              canvas.toBlob((blob) => {
-                if (blob) {
-                  blob.arrayBuffer().then(arrayBuffer => {
-                    const imageBuffer = new Uint8Array(arrayBuffer);
-                    resolve({ buffer: imageBuffer, width, height });
-                  }).catch(reject);
-                } else {
-                  reject(new Error('Failed to convert canvas to blob'));
-                }
-              }, 'image/png');
-            } catch (error) {
-              reject(error);
-            }
-          };
-
-          img.onerror = () => reject(new Error('Failed to load image'));
-          img.src = url;
-        });
-      };
 
       // Use the transition prompt from settings
       const motionPrompt = settings.videoTransitionPrompt || DEFAULT_SETTINGS.videoTransitionPrompt;
@@ -5125,15 +5041,14 @@ const PhotoGallery = ({
         maxETA: null
       });
 
-      // Pre-load all destination images
-      const endImages = await Promise.all(
-        photosWithVideos.map((photo, i) => {
-          const nextIndex = (i + 1) % photosWithVideos.length;
-          const nextPhoto = photosWithVideos[nextIndex];
-          const nextImageUrl = nextPhoto.enhancedImageUrl || nextPhoto.images?.[0] || nextPhoto.originalDataUrl;
-          return loadImageAsBuffer(nextImageUrl);
-        })
-      );
+      // Build end images array from first frames of NEXT videos
+      // Transition N goes from last frame of video N → first frame of video N+1
+      const endImages = firstFrames.map((_, i) => {
+        const nextIndex = (i + 1) % photosWithVideos.length;
+        return firstFrames[nextIndex];
+      });
+      
+      console.log(`[Infinite Loop] Using extracted first frames for transition endpoints (supports animate-move/animate-replace workflows)`);
 
       // Helper function to generate a single transition with retry support
       const generateSingleTransition = (i, startFrame, endImage, isRetry = false) => {
@@ -5347,6 +5262,14 @@ const PhotoGallery = ({
       }
       console.groupEnd();
 
+      // Calculate which videos have audio (main videos at even indices: 0, 2, 4, ...)
+      // Transitions at odd indices (1, 3, 5, ...) are AI-generated and silent
+      const mainVideoIndices = [];
+      for (let i = 0; i < allVideosToStitch.length; i += 2) {
+        mainVideoIndices.push(i);
+      }
+      console.log(`[Infinite Loop] Audio source indices (main videos): ${mainVideoIndices.join(', ')}`);
+
       const concatenatedBlob = await concatenateVideos(
         allVideosToStitch,
         (current, total, message) => {
@@ -5358,7 +5281,9 @@ const PhotoGallery = ({
             message
           }));
         },
-        null
+        null, // No external audio file
+        // TEMP: Disabled audio preservation for testing
+        false
       );
 
       // Cache the result and create stable URL
@@ -13257,6 +13182,10 @@ const PhotoGallery = ({
         onInfiniteLoop={() => {
           handleInfiniteLoopStitch();
         }}
+        onEditTransitionPrompt={() => {
+          // Show dedicated transition prompt editor popup
+          setShowTransitionPromptPopup(true);
+        }}
         onDownloadCached={() => {
           setShowStitchOptionsPopup(false);
           setShowInfiniteLoopPreview(true);
@@ -13277,6 +13206,195 @@ const PhotoGallery = ({
         videoDuration={settings.videoDuration || 5}
         tokenType={tokenType}
       />
+
+      {/* Transition Prompt Editor Popup - Edit transition prompt before generating */}
+      {showTransitionPromptPopup && createPortal(
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)', // Lighter backdrop to see underlying popup
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10000001, // Higher than StitchOptionsPopup (10000000)
+            padding: '20px',
+            backdropFilter: 'blur(4px)' // Less blur to see underlying popup
+          }}
+          onClick={() => setShowTransitionPromptPopup(false)}
+        >
+          <div
+            style={{
+              backgroundColor: '#ffeb3b',
+              borderRadius: '16px',
+              maxWidth: '520px',
+              width: '100%',
+              boxShadow: '0 24px 80px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.1) inset',
+              animation: 'popupFadeIn 0.25s ease-out'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div style={{
+              padding: '16px 20px',
+              borderBottom: '1px solid rgba(0, 0, 0, 0.1)',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <h3 style={{
+                margin: 0,
+                color: '#000',
+                fontSize: '20px',
+                fontWeight: '700',
+                fontFamily: '"Permanent Marker", cursive',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px'
+              }}>
+                ✨ Transition Prompt
+              </h3>
+              <button
+                onClick={() => setShowTransitionPromptPopup(false)}
+                style={{
+                  background: 'rgba(0, 0, 0, 0.1)',
+                  border: 'none',
+                  borderRadius: '50%',
+                  width: '32px',
+                  height: '32px',
+                  cursor: 'pointer',
+                  fontSize: '20px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#000',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.background = 'rgba(0, 0, 0, 0.2)';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.background = 'rgba(0, 0, 0, 0.1)';
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Content */}
+            <div style={{
+              padding: '20px',
+              backgroundColor: 'rgba(0, 0, 0, 0.03)'
+            }}>
+              <div style={{
+                marginBottom: '16px'
+              }}>
+                <p style={{
+                  margin: '0 0 12px 0',
+                  color: 'rgba(0, 0, 0, 0.7)',
+                  fontSize: '13px',
+                  lineHeight: '1.5'
+                }}>
+                  Describe how you want the AI to transition between your videos. This prompt will be used to generate smooth transitions for the Infinite Loop stitch.
+                </p>
+              </div>
+
+              <textarea
+                value={settings.videoTransitionPrompt ?? DEFAULT_SETTINGS.videoTransitionPrompt ?? ''}
+                onChange={(e) => updateSetting('videoTransitionPrompt', e.target.value)}
+                placeholder="Describe how images should transition..."
+                rows={5}
+                style={{
+                  width: '100%',
+                  padding: '12px 14px',
+                  backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                  border: '2px solid rgba(0, 0, 0, 0.15)',
+                  borderRadius: '10px',
+                  color: '#000',
+                  fontSize: '14px',
+                  lineHeight: '1.6',
+                  resize: 'vertical',
+                  minHeight: '120px',
+                  maxHeight: '250px',
+                  boxSizing: 'border-box',
+                  fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                  transition: 'border-color 0.2s ease'
+                }}
+                onFocus={(e) => {
+                  e.target.style.borderColor = 'rgba(147, 51, 234, 0.5)';
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = 'rgba(0, 0, 0, 0.15)';
+                }}
+              />
+            </div>
+
+            {/* Footer */}
+            <div style={{
+              padding: '16px 20px',
+              borderTop: '1px solid rgba(0, 0, 0, 0.1)',
+              display: 'flex',
+              gap: '10px',
+              justifyContent: 'flex-end'
+            }}>
+              <button
+                onClick={() => {
+                  // Reset to default
+                  updateSetting('videoTransitionPrompt', DEFAULT_SETTINGS.videoTransitionPrompt);
+                }}
+                style={{
+                  padding: '10px 16px',
+                  background: 'rgba(0, 0, 0, 0.1)',
+                  border: 'none',
+                  borderRadius: '8px',
+                  color: '#000',
+                  cursor: 'pointer',
+                  fontSize: '13px',
+                  fontWeight: '600',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.background = 'rgba(0, 0, 0, 0.15)';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.background = 'rgba(0, 0, 0, 0.1)';
+                }}
+              >
+                Reset to Default
+              </button>
+              <button
+                onClick={() => setShowTransitionPromptPopup(false)}
+                style={{
+                  padding: '10px 20px',
+                  background: 'linear-gradient(135deg, #9333ea 0%, #7c3aed 100%)',
+                  border: 'none',
+                  borderRadius: '8px',
+                  color: '#fff',
+                  cursor: 'pointer',
+                  fontSize: '13px',
+                  fontWeight: '700',
+                  transition: 'all 0.2s ease',
+                  boxShadow: '0 2px 8px rgba(147, 51, 234, 0.3)'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-1px)';
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(147, 51, 234, 0.4)';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(147, 51, 234, 0.3)';
+                }}
+              >
+                ✓ Done
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
 
       {/* Infinite Loop Video Preview - Fullscreen playback after generation */}
       {showInfiniteLoopPreview && cachedInfiniteLoopBlob && cachedInfiniteLoopUrl && createPortal(
