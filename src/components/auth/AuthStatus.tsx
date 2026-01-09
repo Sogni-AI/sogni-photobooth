@@ -936,72 +936,6 @@ export const AuthStatus: React.FC<AuthStatusProps> = ({ onPurchaseClick, onSignu
                 </svg>
                 Recent Projects
               </button>
-              
-              {/* Tooltip for Recent Projects - shown on second visit */}
-              {showProjectsTooltip && (
-                <div
-                  onClick={() => {
-                    console.log('🎯 Tooltip clicked - dismissing');
-                    setShowProjectsTooltip(false);
-                  }}
-                  style={{
-                    position: 'fixed',
-                    top: `${tooltipPosition.top}px`,
-                    left: `${tooltipPosition.left}px`,
-                    transform: 'translateY(-50%)',
-                    background: 'linear-gradient(135deg, #ff6b9d 0%, #ffa06b 100%)',
-                    color: '#ffffff',
-                    padding: '16px 20px',
-                    borderRadius: '16px',
-                    fontSize: '15px',
-                    fontWeight: '600',
-                    boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)',
-                    zIndex: 99999,
-                    animation: 'tooltipBounce 0.5s ease-out',
-                    width: '260px',
-                    lineHeight: '1.4',
-                    cursor: 'pointer',
-                    pointerEvents: 'auto',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '14px'
-                  }}
-                >
-                  {/* Arrow pointing left to the button */}
-                  <div
-                    style={{
-                      position: 'absolute',
-                      left: '-12px',
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      width: 0,
-                      height: 0,
-                      borderTop: '12px solid transparent',
-                      borderBottom: '12px solid transparent',
-                      borderRight: '12px solid #ff6b9d',
-                      filter: 'drop-shadow(-2px 0 4px rgba(0, 0, 0, 0.3))'
-                    }}
-                  />
-                  
-                  {/* Large lightbulb icon */}
-                  <div style={{
-                    fontSize: '32px',
-                    lineHeight: '1',
-                    flexShrink: 0,
-                    display: 'flex',
-                    alignItems: 'center'
-                  }}>
-                    💡
-                  </div>
-                  
-                  {/* Text content */}
-                  <div style={{
-                    flex: 1
-                  }}>
-                    Access your last 24 hours of projects here!
-                  </div>
-                </div>
-              )}
             </div>
           )}
 
@@ -1063,6 +997,72 @@ export const AuthStatus: React.FC<AuthStatusProps> = ({ onPurchaseClick, onSignu
         />
       )}
     </div>
+    )}
+    
+    {/* Tooltip for Recent Projects - rendered outside wallet container to avoid clipping */}
+    {showProjectsTooltip && (
+      <div
+        onClick={() => {
+          console.log('🎯 Tooltip clicked - dismissing');
+          setShowProjectsTooltip(false);
+        }}
+        style={{
+          position: 'fixed',
+          top: `${tooltipPosition.top}px`,
+          left: `${tooltipPosition.left}px`,
+          transform: 'translateY(-50%)',
+          background: 'linear-gradient(135deg, #ff6b9d 0%, #ffa06b 100%)',
+          color: '#ffffff',
+          padding: '16px 20px',
+          borderRadius: '16px',
+          fontSize: '15px',
+          fontWeight: '600',
+          boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)',
+          zIndex: 99999,
+          animation: 'tooltipBounce 0.5s ease-out',
+          width: '260px',
+          lineHeight: '1.4',
+          cursor: 'pointer',
+          pointerEvents: 'auto',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '14px'
+        }}
+      >
+        {/* Arrow pointing left to the button */}
+        <div
+          style={{
+            position: 'absolute',
+            left: '-12px',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            width: 0,
+            height: 0,
+            borderTop: '12px solid transparent',
+            borderBottom: '12px solid transparent',
+            borderRight: '12px solid #ff6b9d',
+            filter: 'drop-shadow(-2px 0 4px rgba(0, 0, 0, 0.3))'
+          }}
+        />
+        
+        {/* Large lightbulb icon */}
+        <div style={{
+          fontSize: '32px',
+          lineHeight: '1',
+          flexShrink: 0,
+          display: 'flex',
+          alignItems: 'center'
+        }}>
+          💡
+        </div>
+        
+        {/* Text content */}
+        <div style={{
+          flex: 1
+        }}>
+          Access your last 24 hours of projects here!
+        </div>
+      </div>
     )}
     
     {/* Render modal once, outside conditional to preserve state during auth changes */}
