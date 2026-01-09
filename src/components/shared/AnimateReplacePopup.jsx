@@ -669,6 +669,8 @@ const AnimateReplacePopup = ({
       if (playbackAnimationRef.current) {
         cancelAnimationFrame(playbackAnimationRef.current);
       }
+      // Sync previewPlayhead state with actual video position when pausing
+      setPreviewPlayhead(video.currentTime);
     } else {
       // Use video.currentTime as source of truth for where to resume from
       // (previewPlayhead state may be stale, especially on mobile)
@@ -679,6 +681,9 @@ const AnimateReplacePopup = ({
       if (isOutsideSelection) {
         video.currentTime = videoStartOffset;
         setPreviewPlayhead(videoStartOffset);
+      } else {
+        // Sync state before playing
+        setPreviewPlayhead(currentPosition);
       }
 
       video.play().catch(() => {
@@ -814,14 +819,10 @@ const AnimateReplacePopup = ({
   };
 
   const handleSampleSelect = async (sample) => {
-    // Pause all sample videos except the selected one
-    Object.entries(sampleVideoRefs.current).forEach(([id, videoEl]) => {
+    // Pause all sample videos first
+    Object.values(sampleVideoRefs.current).forEach((videoEl) => {
       if (videoEl) {
-        if (id === sample.id) {
-          videoEl.play().catch(() => {});
-        } else {
-          videoEl.pause();
-        }
+        videoEl.pause();
       }
     });
 
@@ -838,37 +839,53 @@ const AnimateReplacePopup = ({
     setPreviewPlayhead(0);
     setPendingStartOffset(null);
     setPendingDuration(null);
+    setIsPlaying(false);
 
-    // Set videoPreviewRef to the selected sample's video element
-    if (sampleVideoRefs.current[sample.id]) {
-      videoPreviewRef.current = sampleVideoRefs.current[sample.id];
-      // Auto-start playback for immediate visual feedback
-      const video = sampleVideoRefs.current[sample.id];
-      video.currentTime = 0;
-      video.play().catch(() => {});
-      setIsPlaying(true);
-
-      // Start the playhead animation
-      const updatePlayhead = () => {
-        if (videoPreviewRef.current && !videoPreviewRef.current.paused) {
-          const currentTime = videoPreviewRef.current.currentTime;
-          setPreviewPlayhead(currentTime);
-
-          // Loop back to start if we've reached the end of selection
-          if (currentTime >= videoDuration) {
-            videoPreviewRef.current.currentTime = 0;
-          }
-
-          playbackAnimationRef.current = requestAnimationFrame(updatePlayhead);
-        }
-      };
-      playbackAnimationRef.current = requestAnimationFrame(updatePlayhead);
-    } else {
-      setIsPlaying(false);
+    // Stop any existing playback animation
+    if (playbackAnimationRef.current) {
+      cancelAnimationFrame(playbackAnimationRef.current);
     }
 
-    // Generate thumbnails for timeline
+    // Generate thumbnails for timeline first
     await generateThumbnails(sample.url);
+
+    // Set videoPreviewRef to the selected sample's video element
+    // and auto-start playback after thumbnails are generated
+    if (sampleVideoRefs.current[sample.id]) {
+      videoPreviewRef.current = sampleVideoRefs.current[sample.id];
+      const video = sampleVideoRefs.current[sample.id];
+      
+      // Reset to start and play
+      video.currentTime = 0;
+      setPreviewPlayhead(0);
+      
+      // Auto-play after a brief delay to ensure everything is ready
+      setTimeout(() => {
+        video.play().then(() => {
+          setIsPlaying(true);
+          
+          // Start the playhead animation
+          const updatePlayhead = () => {
+            if (videoPreviewRef.current && !videoPreviewRef.current.paused) {
+              const currentTime = videoPreviewRef.current.currentTime;
+              setPreviewPlayhead(currentTime);
+
+              // Loop back to start if we've reached the end of selection
+              const loopEndTime = videoStartOffset + videoDuration;
+              if (currentTime >= loopEndTime) {
+                videoPreviewRef.current.currentTime = videoStartOffset;
+              }
+
+              playbackAnimationRef.current = requestAnimationFrame(updatePlayhead);
+            }
+          };
+          playbackAnimationRef.current = requestAnimationFrame(updatePlayhead);
+        }).catch(() => {
+          // Auto-play failed (likely needs user interaction)
+          setIsPlaying(false);
+        });
+      }, 100);
+    }
   };
 
   const formatCost = (tokenCost, usdCost) => {
