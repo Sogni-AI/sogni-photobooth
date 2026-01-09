@@ -1439,6 +1439,17 @@ const App = () => {
   // Track if we've already handled the gallery deep link for this session
   const galleryDeepLinkHandled = useRef(false);
   
+  // Handle view=projects URL parameter for deep linking to Recent Projects
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const viewParam = url.searchParams.get('view');
+    
+    if (viewParam === 'projects' && authState.isAuthenticated && authState.authMode === 'frontend') {
+      console.log('🎨 Recent Projects deep link detected');
+      setShowRecentProjects(true);
+    }
+  }, [authState.isAuthenticated, authState.authMode]);
+  
   // Handle gallery URL parameter for deep linking to Community Gallery
   // This should only run ONCE on initial load, not when galleryPhotos changes due to user interaction
   useEffect(() => {
