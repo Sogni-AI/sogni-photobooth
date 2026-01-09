@@ -4956,6 +4956,9 @@ const PhotoGallery = ({
       const transitionResolution = firstPhoto.videoResolution || settings.videoResolution || '480p';
       const transitionFramerate = firstPhoto.videoFramerate || settings.videoFramerate || 16;
       
+      // Log source video metadata for debugging
+      console.log(`[Infinite Loop] Source video metadata - workflow: ${firstPhoto.videoWorkflowType || 'i2v'}, stored duration: ${firstPhoto.videoDuration}s, resolution: ${transitionResolution}, fps: ${transitionFramerate}`);
+      
       // CRITICAL: Calculate exact frame count from video duration to ensure perfect matching
       // Transitions MUST have the exact same frame count as segment videos for concatenation
       let transitionFrames;
@@ -7167,6 +7170,7 @@ const PhotoGallery = ({
         setShowVideoDropdown(false);
         setSelectedMotionCategory(null); // Reset category selection
         setVideoTargetPhotoIndex(null); // Clear target when dropdown is dismissed
+        // Note: Don't reopen VideoSelectionPopup on outside clicks, only on explicit close button
       }
     };
 
@@ -8662,7 +8666,7 @@ const PhotoGallery = ({
               }}
               title="Generate videos for all images"
             >
-              <span>🎥</span>
+              <span>🎬</span>
             </button>
           </div>
 
@@ -9602,7 +9606,7 @@ const PhotoGallery = ({
                   overflow: 'visible'
                 }}
               >
-                <span>🎥</span>
+                <span>🎬</span>
                 <span>Video</span>
                 
                 {/* NEW Badge */}
@@ -9748,7 +9752,13 @@ const PhotoGallery = ({
                       
                       {/* Close button - far right */}
                       <button
-                        onClick={() => { setShowVideoDropdown(false); setSelectedMotionCategory(null); }}
+                        onClick={() => { 
+                          setShowVideoDropdown(false); 
+                          setSelectedMotionCategory(null);
+                          if (!isVideoSelectionBatch) {
+                            setShowVideoSelectionPopup(true);
+                          }
+                        }}
                         title="Close"
                         style={{
                           position: 'absolute',
@@ -13989,7 +13999,14 @@ const PhotoGallery = ({
         >
           <div style={{ position: 'relative' }}>
             <button
-              onClick={() => { setShowVideoDropdown(false); setSelectedMotionCategory(null); setVideoTargetPhotoIndex(null); }}
+              onClick={() => { 
+                setShowVideoDropdown(false); 
+                setSelectedMotionCategory(null); 
+                setVideoTargetPhotoIndex(null);
+                if (!isVideoSelectionBatch) {
+                  setShowVideoSelectionPopup(true);
+                }
+              }}
               style={{
                 position: 'absolute', top: '4px', right: '4px', width: '24px', height: '24px',
                 borderRadius: '50%', border: 'none', 
@@ -14084,7 +14101,13 @@ const PhotoGallery = ({
             
             {/* Close button - far right */}
             <button
-              onClick={() => { setShowBatchVideoDropdown(false); setSelectedBatchMotionCategory(null); }}
+              onClick={() => { 
+                setShowBatchVideoDropdown(false); 
+                setSelectedBatchMotionCategory(null);
+                if (isVideoSelectionBatch) {
+                  setShowVideoSelectionPopup(true);
+                }
+              }}
               title="Close"
               style={{
                 position: 'absolute',
@@ -14242,7 +14265,12 @@ const PhotoGallery = ({
       <BaldForBaseConfirmationPopup
         visible={showBaldForBasePopup}
         onConfirm={handleBaldForBaseVideoExecute}
-        onClose={() => setShowBaldForBasePopup(false)}
+        onClose={() => {
+          setShowBaldForBasePopup(false);
+          if (!isVideoSelectionBatch) {
+            setShowVideoSelectionPopup(true);
+          }
+        }}
         loading={baldForBaseLoading}
         costRaw={baldForBaseCostRaw}
         costUSD={baldForBaseUSD}
@@ -14256,7 +14284,12 @@ const PhotoGallery = ({
       <BaldForBaseConfirmationPopup
         visible={showBatchBaldForBasePopup}
         onConfirm={handleBatchBaldForBaseVideoExecute}
-        onClose={() => setShowBatchBaldForBasePopup(false)}
+        onClose={() => {
+          setShowBatchBaldForBasePopup(false);
+          if (isVideoSelectionBatch) {
+            setShowVideoSelectionPopup(true);
+          }
+        }}
         loading={batchBaldForBaseLoading}
         costRaw={batchBaldForBaseCostRaw}
         costUSD={batchBaldForBaseUSD}
@@ -14270,7 +14303,12 @@ const PhotoGallery = ({
       <PromptVideoConfirmationPopup
         visible={showPromptVideoPopup}
         onConfirm={handlePromptVideoExecute}
-        onClose={() => setShowPromptVideoPopup(false)}
+        onClose={() => {
+          setShowPromptVideoPopup(false);
+          if (!isVideoSelectionBatch) {
+            setShowVideoSelectionPopup(true);
+          }
+        }}
         loading={promptVideoLoading}
         costRaw={promptVideoCostRaw}
         costUSD={promptVideoUSD}
@@ -14285,7 +14323,12 @@ const PhotoGallery = ({
       <PromptVideoConfirmationPopup
         visible={showBatchPromptVideoPopup}
         onConfirm={handleBatchPromptVideoExecute}
-        onClose={() => setShowBatchPromptVideoPopup(false)}
+        onClose={() => {
+          setShowBatchPromptVideoPopup(false);
+          if (isVideoSelectionBatch) {
+            setShowVideoSelectionPopup(true);
+          }
+        }}
         loading={batchPromptVideoLoading}
         costRaw={batchPromptVideoCostRaw}
         costUSD={batchPromptVideoUSD}
@@ -14300,7 +14343,12 @@ const PhotoGallery = ({
       <AnimateMovePopup
         visible={showAnimateMovePopup}
         onConfirm={handleAnimateMoveExecute}
-        onClose={() => setShowAnimateMovePopup(false)}
+        onClose={() => {
+          setShowAnimateMovePopup(false);
+          if (!isVideoSelectionBatch) {
+            setShowVideoSelectionPopup(true);
+          }
+        }}
         loading={animateMoveLoading}
         costRaw={animateMoveCostRaw}
         costUSD={animateMoveUSD}
@@ -14318,7 +14366,12 @@ const PhotoGallery = ({
       <AnimateMovePopup
         visible={showBatchAnimateMovePopup}
         onConfirm={handleBatchAnimateMoveExecute}
-        onClose={() => setShowBatchAnimateMovePopup(false)}
+        onClose={() => {
+          setShowBatchAnimateMovePopup(false);
+          if (isVideoSelectionBatch) {
+            setShowVideoSelectionPopup(true);
+          }
+        }}
         loading={batchAnimateMoveLoading}
         costRaw={batchAnimateMoveCostRaw}
         costUSD={batchAnimateMoveUSD}
@@ -14336,7 +14389,12 @@ const PhotoGallery = ({
       <AnimateReplacePopup
         visible={showAnimateReplacePopup}
         onConfirm={handleAnimateReplaceExecute}
-        onClose={() => setShowAnimateReplacePopup(false)}
+        onClose={() => {
+          setShowAnimateReplacePopup(false);
+          if (!isVideoSelectionBatch) {
+            setShowVideoSelectionPopup(true);
+          }
+        }}
         loading={animateReplaceLoading}
         costRaw={animateReplaceCostRaw}
         costUSD={animateReplaceUSD}
@@ -14354,7 +14412,12 @@ const PhotoGallery = ({
       <AnimateReplacePopup
         visible={showBatchAnimateReplacePopup}
         onConfirm={handleBatchAnimateReplaceExecute}
-        onClose={() => setShowBatchAnimateReplacePopup(false)}
+        onClose={() => {
+          setShowBatchAnimateReplacePopup(false);
+          if (isVideoSelectionBatch) {
+            setShowVideoSelectionPopup(true);
+          }
+        }}
         loading={batchAnimateReplaceLoading}
         costRaw={batchAnimateReplaceCostRaw}
         costUSD={batchAnimateReplaceUSD}
@@ -14372,7 +14435,12 @@ const PhotoGallery = ({
       <SoundToVideoPopup
         visible={showS2VPopup}
         onConfirm={handleS2VExecute}
-        onClose={() => setShowS2VPopup(false)}
+        onClose={() => {
+          setShowS2VPopup(false);
+          if (!isVideoSelectionBatch) {
+            setShowVideoSelectionPopup(true);
+          }
+        }}
         loading={s2vLoading}
         costRaw={s2vCostRaw}
         costUSD={s2vUSD}
@@ -14390,7 +14458,12 @@ const PhotoGallery = ({
       <SoundToVideoPopup
         visible={showBatchS2VPopup}
         onConfirm={handleBatchS2VExecute}
-        onClose={() => setShowBatchS2VPopup(false)}
+        onClose={() => {
+          setShowBatchS2VPopup(false);
+          if (isVideoSelectionBatch) {
+            setShowVideoSelectionPopup(true);
+          }
+        }}
         loading={batchS2VLoading}
         costRaw={batchS2VCostRaw}
         costUSD={batchS2VUSD}

@@ -281,22 +281,22 @@ const VideoSelectionPopup = ({
     const animateReplaceVideo = 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/gallery/videos/animate-replace/einstein-yacty-walkout.mp4';
     const soundToVideoVideo = 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/videos/sogni-photobooth-video-demo_832x1216.mp4';
 
-    // Add Video Move option
+    // Add Motion Transfer option
     options.push({
       id: isBatch ? 'batch-animate-move' : 'animate-move',
       icon: '🎬',
-      title: 'Video Move',
+      title: 'Motion Transfer',
       description: 'Transfer character movement from a source video to your image.',
       gradient: 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)',
       exampleVideo: animateMoveVideo,
       isNew: true
     });
 
-    // Add Video Replace option
+    // Add Replace Subject option
     options.push({
       id: isBatch ? 'batch-animate-replace' : 'animate-replace',
       icon: '🔄',
-      title: 'Video Replace',
+      title: 'Replace Subject',
       description: 'Replace the main subject in a video with your character.',
       gradient: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
       exampleVideo: animateReplaceVideo,
