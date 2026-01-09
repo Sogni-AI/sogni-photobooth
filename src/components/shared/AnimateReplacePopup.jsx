@@ -101,6 +101,7 @@ const AnimateReplacePopup = ({
   const [videoStartOffset, setVideoStartOffset] = useState(0);
   const [videoThumbnails, setVideoThumbnails] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
   const [previewPlayhead, setPreviewPlayhead] = useState(0);
   const [isDraggingTimeline, setIsDraggingTimeline] = useState(false);
   const [dragType, setDragType] = useState(null); // 'move', 'start', 'end'
@@ -727,6 +728,15 @@ const AnimateReplacePopup = ({
     }
   }, [isPlaying, videoStartOffset, videoDuration]);
 
+  // Toggle mute state
+  const toggleMute = useCallback(() => {
+    const video = videoPreviewRef.current;
+    if (video) {
+      video.muted = !isMuted;
+    }
+    setIsMuted(!isMuted);
+  }, [isMuted]);
+
   // Format time helper
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
@@ -1171,7 +1181,7 @@ const AnimateReplacePopup = ({
                 <video
                   ref={videoPreviewRef}
                   src={sourceType === 'sample' && selectedSample ? selectedSample.url : uploadedVideoUrl}
-                  muted
+                  muted={isMuted}
                   playsInline
                   onLoadedMetadata={handleVideoLoadedMetadata}
                   style={{
@@ -1198,24 +1208,45 @@ const AnimateReplacePopup = ({
                   }}>
                     ✂️ Select Video Segment
                   </label>
-                  <button
-                    onClick={toggleVideoPreview}
-                    style={{
-                      padding: '6px 14px',
-                      backgroundColor: isPlaying ? '#ef4444' : 'rgba(255, 255, 255, 0.9)',
-                      border: 'none',
-                      borderRadius: '6px',
-                      color: isPlaying ? 'white' : '#ea580c',
-                      cursor: 'pointer',
-                      fontSize: '12px',
-                      fontWeight: '600',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px'
-                    }}
-                  >
-                    {isPlaying ? '⏸ Pause' : '▶ Preview'}
-                  </button>
+                  <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                    <button
+                      onClick={toggleMute}
+                      style={{
+                        padding: '6px 10px',
+                        backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                        border: '1px solid rgba(255, 255, 255, 0.3)',
+                        borderRadius: '6px',
+                        color: 'white',
+                        cursor: 'pointer',
+                        fontSize: '14px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        transition: 'all 0.2s ease'
+                      }}
+                      title={isMuted ? 'Unmute' : 'Mute'}
+                    >
+                      {isMuted ? '🔇' : '🔊'}
+                    </button>
+                    <button
+                      onClick={toggleVideoPreview}
+                      style={{
+                        padding: '6px 14px',
+                        backgroundColor: isPlaying ? '#ef4444' : 'rgba(255, 255, 255, 0.9)',
+                        border: 'none',
+                        borderRadius: '6px',
+                        color: isPlaying ? 'white' : '#ea580c',
+                        cursor: 'pointer',
+                        fontSize: '12px',
+                        fontWeight: '600',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}
+                    >
+                      {isPlaying ? '⏸ Pause' : '▶ Preview'}
+                    </button>
+                  </div>
                 </div>
 
                 {/* Timeline - either canvas with thumbnails or simple gradient bar */}
