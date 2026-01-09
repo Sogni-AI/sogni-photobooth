@@ -10856,7 +10856,7 @@ const PhotoGallery = ({
           const styleDisplayText = getStyleDisplayText(photo);
           const labelText = isReference ? "Reference" : 
             photo.isGalleryImage && photo.promptDisplay ? photo.promptDisplay : 
-            (styleDisplayText || '#SogniPhotobooth');
+            (styleDisplayText || '');
           // Check if this photo represents the currently selected style
           const isCurrentStyle = isPromptSelectorMode && photo.promptKey && photo.promptKey === selectedStyle;
           // Loading or error state

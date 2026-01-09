@@ -9387,6 +9387,88 @@ const App = () => {
     setShowStartMenu(true);
   };
 
+  // Handle using raw image without AI generation
+  // This allows users to use the source image as-is for video workflows
+  const handleUseRawImage = (rawBlob) => {
+    console.log('📸 Using raw image without AI generation');
+    
+    // Hide the adjuster first
+    setShowImageAdjuster(false);
+    
+    // Clean up the URL object to prevent memory leaks
+    if (currentUploadedImageUrl) {
+      URL.revokeObjectURL(currentUploadedImageUrl);
+    }
+    
+    // Reset the current image state
+    setCurrentUploadedImageUrl('');
+    
+    // Validate rawBlob before proceeding
+    if (!rawBlob || !(rawBlob instanceof Blob)) {
+      console.error('❌ Invalid blob received for raw image:', rawBlob);
+      alert('Failed to process image. Please try again.');
+      setShowStartMenu(true);
+      return;
+    }
+    
+    // Create data URL from the raw blob
+    const reader = new FileReader();
+    
+    reader.addEventListener('error', (error) => {
+      console.error('❌ FileReader error when processing raw blob:', error);
+      alert('Failed to process image. Please try again.');
+      setShowStartMenu(true);
+    });
+    
+    reader.addEventListener('load', (event) => {
+      const rawDataUrl = event.target.result;
+      
+      if (!rawDataUrl) {
+        console.error('❌ FileReader produced empty dataUrl');
+        alert('Failed to process image. Please try again.');
+        setShowStartMenu(true);
+        return;
+      }
+      
+      console.log('✅ Successfully loaded raw image, creating batch of', numImages);
+      
+      // IMPORTANT: Hide the photo grid first to prevent PhotoGallery from rendering
+      // during the state transition. This avoids React hook order issues.
+      setShowPhotoGrid(false);
+      
+      // Create the new photos batch
+      const newPhotos = [];
+      const sourceType = currentUploadedSource === 'camera' ? 'camera' : 'upload';
+      
+      for (let i = 0; i < numImages; i++) {
+        newPhotos.push({
+          id: `${Date.now()}-${i}`,
+          generating: false,
+          loading: false,
+          images: [rawDataUrl], // The raw image is the "result"
+          originalDataUrl: rawDataUrl,
+          error: null,
+          newlyArrived: true,
+          isRawImage: true, // Mark as raw image for reference
+          sourceType,
+          taipeiFrameNumber: (i % 6) + 1,
+          framePadding: 0
+        });
+      }
+      
+      // Replace photos while gallery is hidden
+      setRegularPhotos(newPhotos);
+      
+      // Use requestAnimationFrame to ensure state updates are processed
+      // before showing the gallery again
+      requestAnimationFrame(() => {
+        setShowPhotoGrid(true);
+      });
+    });
+    
+    reader.readAsDataURL(rawBlob);
+  };
+
   // Add this to the component state declarations at the top
 
   // Handle thumbnail click to reopen the image adjuster
@@ -10339,6 +10421,7 @@ const App = () => {
             imageUrl={currentUploadedImageUrl}
             onConfirm={handleAdjustedImage}
             onCancel={handleCancelAdjusting}
+            onUseRawImage={handleUseRawImage}
             initialPosition={
               lastAdjustedPhoto?.adjustments?.position || defaultPosition
             }

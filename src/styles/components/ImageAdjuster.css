@@ -766,6 +766,27 @@
   }
 }
 
+/* Use Raw Image - subtle advanced option */
+.use-raw-image-link {
+  position: absolute;
+  bottom: 8px;
+  right: 12px;
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.25);
+  font-size: 10px;
+  cursor: pointer;
+  padding: 4px 6px;
+  transition: color 0.2s ease;
+  font-family: inherit;
+  text-decoration: none;
+}
+
+.use-raw-image-link:hover {
+  color: rgba(255, 255, 255, 0.5);
+  text-decoration: underline;
+}
+
 /* Handle iOS Safari viewport height issues */
 @supports (-webkit-touch-callout: none) {
   .image-adjuster-overlay {

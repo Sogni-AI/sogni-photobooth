@@ -32,7 +32,8 @@ const ImageAdjuster = ({
   onNavigateToVibeExplorer = null,
   photoSource = 'upload', // 'camera' or 'upload'
   onTakeNewPhoto = null,
-  isCameraActive = false // Whether camera is currently running in the background
+  isCameraActive = false, // Whether camera is currently running in the background
+  onUseRawImage = null // Callback when user wants to use raw image without generation
 }) => {
   // Guard against invalid props that could cause render crashes
   if (!imageUrl) {
@@ -615,176 +616,138 @@ const ImageAdjuster = ({
     }
   }, []);
   
+  // Process image with user adjustments (cropping, scaling, positioning)
+  // Returns a promise that resolves with the processed blob
+  const processImageWithAdjustments = useCallback(() => {
+    return new Promise((resolve, reject) => {
+      if (!containerRef.current || !imageRef.current) {
+        reject(new Error('Container or image ref not available'));
+        return;
+      }
+      
+      const image = imageRef.current;
+      
+      // Validate image dimensions
+      if (!image.complete || !image.naturalWidth || !image.naturalHeight || 
+          image.naturalWidth === 0 || image.naturalHeight === 0) {
+        reject(new Error('Image is not ready yet. Please wait for the image to fully load.'));
+        return;
+      }
+      
+      const container = containerRef.current;
+      
+      // Create a canvas to render the adjusted image
+      const canvas = document.createElement('canvas');
+      canvas.width = dimensions.width;
+      canvas.height = dimensions.height;
+      const ctx = canvas.getContext('2d');
+      
+      // Enable high-quality image resampling
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      
+      // Fill with black background
+      ctx.fillStyle = 'black';
+      ctx.fillRect(0, 0, dimensions.width, dimensions.height);
+      
+      // Calculate the image dimensions and fit it within the canvas
+      const imageAspect = image.naturalWidth / image.naturalHeight;
+      const canvasAspect = dimensions.width / dimensions.height;
+      
+      let drawWidth, drawHeight;
+      
+      if (imageAspect > canvasAspect) {
+        drawWidth = dimensions.width;
+        drawHeight = dimensions.width / imageAspect;
+      } else {
+        drawHeight = dimensions.height;
+        drawWidth = dimensions.height * imageAspect;
+      }
+      
+      // Calculate how user adjustments affect the drawing
+      const containerRect = container.getBoundingClientRect();
+      const screenToCanvasX = dimensions.width / containerRect.width;
+      const screenToCanvasY = dimensions.height / containerRect.height;
+      
+      // Apply the scale adjustment
+      drawWidth *= scale;
+      drawHeight *= scale;
+      
+      // Recalculate center offset after scaling
+      const scaledOffsetX = (dimensions.width - drawWidth) / 2;
+      const scaledOffsetY = (dimensions.height - drawHeight) / 2;
+      
+      // Apply position adjustments
+      const adjustedX = scaledOffsetX + (position.x * screenToCanvasX);
+      const adjustedY = scaledOffsetY + (position.y * screenToCanvasY);
+      
+      // Draw the image with all adjustments applied
+      try {
+        ctx.drawImage(image, adjustedX, adjustedY, drawWidth, drawHeight);
+      } catch (drawError) {
+        console.error('[IMAGE_ADJUSTER] ctx.drawImage() failed:', drawError);
+        reject(new Error('Failed to process image. Please try again.'));
+        return;
+      }
+      
+      // Convert to PNG blob
+      try {
+        canvas.toBlob(async (pngBlob) => {
+          if (!pngBlob) {
+            console.error('[IMAGE_ADJUSTER] canvas.toBlob() failed - blob is null');
+            reject(new Error('Failed to process image. Please try again.'));
+            return;
+          }
+          
+          // Convert PNG to high-quality JPEG
+          let finalBlob;
+          try {
+            const { convertPngToHighQualityJpeg } = await import('../../utils/imageProcessing.js');
+            finalBlob = await convertPngToHighQualityJpeg(pngBlob, 0.92, null);
+          } catch (conversionError) {
+            console.warn('ImageAdjuster: JPEG conversion failed, using PNG:', conversionError);
+            finalBlob = pngBlob;
+          }
+          
+          if (!finalBlob) {
+            reject(new Error('Failed to process image. Please try again.'));
+            return;
+          }
+          
+          resolve(finalBlob);
+        }, 'image/png', 1.0);
+      } catch (toBlobError) {
+        console.error('[IMAGE_ADJUSTER] canvas.toBlob() threw error:', toBlobError);
+        reject(new Error('Failed to process image. Please try again.'));
+      }
+    });
+  }, [dimensions, scale, position]);
+  
   // Handle confirm button click
-  const handleConfirm = useCallback(() => {
-    if (!containerRef.current || !imageRef.current) {
-      return;
-    }
-    
+  const handleConfirm = useCallback(async () => {
     // Prevent multiple clicks while processing
     if (isProcessing) {
-      return;
-    }
-    
-    // Check if image is loaded - critical for mobile to prevent crashes
-    const image = imageRef.current;
-    
-    // Validate image dimensions - prevent division by zero or invalid calculations
-    // This check must happen before any calculations to prevent React error #310
-    if (!image.complete || !image.naturalWidth || !image.naturalHeight || 
-        image.naturalWidth === 0 || image.naturalHeight === 0) {
-      alert('Image is not ready yet. Please wait a moment for the image to fully load, then try again.');
       return;
     }
     
     // Set processing state to prevent unmounting
     setIsProcessing(true);
     
-    const container = containerRef.current;
-    
-    // Create a canvas to render the adjusted image
-    const canvas = document.createElement('canvas');
-    canvas.width = dimensions.width;
-    canvas.height = dimensions.height;
-    const ctx = canvas.getContext('2d');
-    
-    // Enable high-quality image resampling for best results when resizing
-    ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = 'high';
-    
-    // Fill with black background to ensure proper borders
-    ctx.fillStyle = 'black';
-    ctx.fillRect(0, 0, dimensions.width, dimensions.height);
-    
-    // Calculate the image dimensions and fit it within the canvas maintaining aspect ratio (contain)
-    const imageAspect = image.naturalWidth / image.naturalHeight;
-    const canvasAspect = dimensions.width / dimensions.height;
-    
-    let drawWidth, drawHeight;
-    
-    if (imageAspect > canvasAspect) {
-      // Image is wider than canvas relative to height
-      drawWidth = dimensions.width;
-      drawHeight = dimensions.width / imageAspect;
-    } else {
-      // Image is taller than canvas relative to width
-      drawHeight = dimensions.height;
-      drawWidth = dimensions.height * imageAspect;
-    }
-    
-    // Calculate how user adjustments affect the drawing
-    // Convert from screen coordinates to canvas coordinates
-    const containerRect = container.getBoundingClientRect();
-    const screenToCanvasX = dimensions.width / containerRect.width;
-    const screenToCanvasY = dimensions.height / containerRect.height;
-    
-    // Apply the scale adjustment
-    drawWidth *= scale;
-    drawHeight *= scale;
-    
-    // Recalculate center offset after scaling
-    const scaledOffsetX = (dimensions.width - drawWidth) / 2;
-    const scaledOffsetY = (dimensions.height - drawHeight) / 2;
-    
-    // Apply position adjustments, converting from screen pixels to canvas pixels
-    const adjustedX = scaledOffsetX + (position.x * screenToCanvasX);
-    const adjustedY = scaledOffsetY + (position.y * screenToCanvasY);
-    
-    // Draw the image with all adjustments applied
-    // Wrap in try-catch to catch any drawImage failures
     try {
-      ctx.drawImage(
-        image,
-        adjustedX,
-        adjustedY,
-        drawWidth,
-        drawHeight
-      );
-    } catch (drawError) {
-      console.error('[IMAGE_ADJUSTER] CRITICAL: ctx.drawImage() failed:', drawError);
-      console.error('[IMAGE_ADJUSTER] Image state at failure:', {
-        complete: image.complete,
-        naturalWidth: image.naturalWidth,
-        naturalHeight: image.naturalHeight,
-        readyState: image.readyState,
-        src: image.src?.substring(0, 50) + '...'
-      });
+      const finalBlob = await processImageWithAdjustments();
+      
+      // Log final file size being transmitted
+      const finalSizeMB = (finalBlob.size / 1024 / 1024).toFixed(2);
+      console.log(`📤 ImageAdjuster transmission size: ${finalSizeMB}MB`);
+      
+      // Call onConfirm with the processed blob
+      onConfirm(finalBlob, { position, scale, batchCount: selectedBatchCount });
+    } catch (error) {
+      console.error('[IMAGE_ADJUSTER] handleConfirm error:', error);
       setIsProcessing(false);
-      alert('Failed to process image. The image may not be fully loaded. Please try again.');
-      return;
+      alert(error.message || 'Failed to process image. Please try again.');
     }
-    
-    // Convert to PNG blob first with maximum quality to preserve details
-    // Wrap in try-catch to catch synchronous errors
-    try {
-      canvas.toBlob(async (pngBlob) => {
-        // Validate that blob was created successfully (can fail on mobile Safari)
-        if (!pngBlob) {
-          console.error('[IMAGE_ADJUSTER] ❌❌❌ CANVAS.TOBLOB() FAILED - BLOB IS NULL/UNDEFINED ❌❌❌');
-          console.error('[IMAGE_ADJUSTER] This is the race condition! Image was not ready when toBlob was called.');
-          console.error('[IMAGE_ADJUSTER] Image state at failure:', {
-            complete: image.complete,
-            naturalWidth: image.naturalWidth,
-            naturalHeight: image.naturalHeight,
-            readyState: image.readyState,
-            src: image.src?.substring(0, 50) + '...'
-          });
-          console.error('[IMAGE_ADJUSTER] Canvas state:', {
-            width: canvas.width,
-            height: canvas.height
-          });
-          setIsProcessing(false);
-          alert('Failed to process image. This can happen on mobile with large images. Please try with a smaller zoom or take a new photo.');
-          return;
-        }
-
-        console.log('[IMAGE_ADJUSTER] ✅ Canvas blob created successfully:', {
-          size: pngBlob.size,
-          type: pngBlob.type
-        });
-
-        // Convert PNG to high-quality JPEG for efficient upload
-        let finalBlob;
-        try {
-          const { convertPngToHighQualityJpeg } = await import('../../utils/imageProcessing.js');
-          // Don't add watermarks to adjusted images - they're used as placeholders
-          // Watermarks should only be applied to final outputs (downloads, shares)
-          finalBlob = await convertPngToHighQualityJpeg(pngBlob, 0.92, null);
-          console.log(`📊 ImageAdjuster: JPEG format selected for upload (no watermark - used as placeholder)`);
-        } catch (conversionError) {
-          console.warn('ImageAdjuster: JPEG conversion failed, using PNG:', conversionError);
-          finalBlob = pngBlob;
-          console.log(`📊 ImageAdjuster: PNG format (fallback)`);
-        }
-
-        // Validate final blob before confirming
-        if (!finalBlob) {
-          console.error('❌ Final blob is null after conversion');
-          setIsProcessing(false);
-          alert('Failed to process image. Please try again.');
-          return;
-        }
-
-        // Log final file size being transmitted
-        const finalSizeMB = (finalBlob.size / 1024 / 1024).toFixed(2);
-        console.log(`📤 ImageAdjuster transmission size: ${finalSizeMB}MB`);
-
-        // ALWAYS call onConfirm with the blob - let the parent handle it
-        // The parent (App.jsx) expects this callback and will handle cleanup
-        // Don't check mounted state here - we want the operation to complete even if component unmounts
-        try {
-          onConfirm(finalBlob, { position, scale, batchCount: selectedBatchCount });
-        } catch (confirmError) {
-          console.error('[IMAGE_ADJUSTER] CRITICAL: onConfirm callback failed:', confirmError);
-          setIsProcessing(false);
-        }
-      }, 'image/png', 1.0);
-    } catch (toBlobError) {
-      console.error('[IMAGE_ADJUSTER] CRITICAL: canvas.toBlob() threw synchronous error:', toBlobError);
-      setIsProcessing(false);
-      alert('Failed to process image. Please try again.');
-    }
-  }, [isProcessing, imageLoaded, dimensions, scale, position, selectedBatchCount, onConfirm]);
+  }, [isProcessing, processImageWithAdjustments, position, scale, selectedBatchCount, onConfirm]);
   
   
   return (
@@ -1062,6 +1025,27 @@ const ImageAdjuster = ({
             slideInPanel={true}
           />
         )}
+        
+        {/* Use Raw Image - subtle advanced option */}
+        {onUseRawImage && headerText !== 'Adjust Your Style Reference' && (
+          <button
+            className="use-raw-image-link"
+            onClick={async () => {
+              try {
+                // Process the image with user's adjustments (crop, scale, position)
+                const processedBlob = await processImageWithAdjustments();
+                // Pass the processed blob to the handler
+                onUseRawImage(processedBlob);
+              } catch (err) {
+                console.error('Failed to process raw image:', err);
+                alert(err.message || 'Failed to process image. Please try again.');
+              }
+            }}
+            title="Skip AI generation and use your cropped/adjusted image as-is"
+          >
+            use unmodified image
+          </button>
+        )}
         </div>
       </div>
     </div>
@@ -1084,7 +1068,8 @@ ImageAdjuster.propTypes = {
   onNavigateToVibeExplorer: PropTypes.func,
   photoSource: PropTypes.oneOf(['camera', 'upload']),
   onTakeNewPhoto: PropTypes.func,
-  isCameraActive: PropTypes.bool
+  isCameraActive: PropTypes.bool,
+  onUseRawImage: PropTypes.func
 };
 
 export default ImageAdjuster; 
