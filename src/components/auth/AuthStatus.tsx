@@ -33,14 +33,16 @@ export const AuthStatus: React.FC<AuthStatusProps> = ({ onPurchaseClick, onSignu
   const [highlightDailyBoost, setHighlightDailyBoost] = useState(false);
   const [showProjectsTooltip, setShowProjectsTooltip] = useState(false);
   const [tooltipPosition, setTooltipPosition] = useState({ top: 0, left: 0 });
+  const [tooltipBelow, setTooltipBelow] = useState(false);
   // Track if we've already shown the login boost prompt for this session
   const hasShownLoginBoostRef = useRef(false);
   // Track if we've already shown the projects tooltip for this session
   const hasShownProjectsTooltipRef = useRef(false);
-  // Compute button text ONCE based on visitor status (before marking as visited)
-  // Use useRef to preserve the initial value across renders
+  // Compute button text and modal mode ONCE based on visitor status (before marking as visited)
+  // Use useRef to preserve the initial values across renders
   const authButtonTextRef = useRef<string>(getAuthButtonText());
   const authButtonText = authButtonTextRef.current;
+  const defaultModalModeRef = useRef<'login' | 'signup'>(getDefaultModalMode());
   const menuContainerRef = useRef<HTMLDivElement>(null);
   const projectsButtonRef = useRef<HTMLDivElement>(null);
   
@@ -154,11 +156,27 @@ export const AuthStatus: React.FC<AuthStatusProps> = ({ onPurchaseClick, onSignu
               const buttonElement = projectsButtonRef.current.querySelector('button');
               if (buttonElement) {
                 const buttonRect = buttonElement.getBoundingClientRect();
+                const tooltipWidth = 260;
+                const screenWidth = window.innerWidth;
                 
-                setTooltipPosition({
-                  top: buttonRect.top + (buttonRect.height / 2) - 22,
-                  left: buttonRect.right - 7
-                });
+                // Check if tooltip would go off screen on the right
+                const wouldOverflow = buttonRect.right + tooltipWidth + 20 > screenWidth;
+                
+                if (wouldOverflow) {
+                  // Position BELOW the button on mobile/small screens
+                  setTooltipBelow(true);
+                  setTooltipPosition({
+                    top: buttonRect.bottom + 12,
+                    left: Math.max(10, buttonRect.left + (buttonRect.width / 2) - (tooltipWidth / 2))
+                  });
+                } else {
+                  // Position to the RIGHT on desktop
+                  setTooltipBelow(false);
+                  setTooltipPosition({
+                    top: buttonRect.top + (buttonRect.height / 2) - 22,
+                    left: buttonRect.right - 7
+                  });
+                }
               }
             }
             
@@ -201,7 +219,8 @@ export const AuthStatus: React.FC<AuthStatusProps> = ({ onPurchaseClick, onSignu
   };
 
   const handleLoginClick = () => {
-    setLoginModalMode(getDefaultModalMode());
+    // Use the pre-computed modal mode (before markAsVisited was called)
+    setLoginModalMode(defaultModalModeRef.current);
     setShowLoginModal(true);
   };
 
@@ -1010,7 +1029,7 @@ export const AuthStatus: React.FC<AuthStatusProps> = ({ onPurchaseClick, onSignu
           position: 'fixed',
           top: `${tooltipPosition.top}px`,
           left: `${tooltipPosition.left}px`,
-          transform: 'translateY(-50%)',
+          transform: tooltipBelow ? 'none' : 'translateY(-50%)',
           background: 'linear-gradient(135deg, #ff6b9d 0%, #ffa06b 100%)',
           color: '#ffffff',
           padding: '16px 20px',
@@ -1029,9 +1048,22 @@ export const AuthStatus: React.FC<AuthStatusProps> = ({ onPurchaseClick, onSignu
           gap: '14px'
         }}
       >
-        {/* Arrow pointing left to the button */}
+        {/* Arrow - points left on desktop, points up on mobile */}
         <div
-          style={{
+          style={tooltipBelow ? {
+            // Arrow pointing UP (for mobile - tooltip below button)
+            position: 'absolute',
+            top: '-12px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            width: 0,
+            height: 0,
+            borderLeft: '12px solid transparent',
+            borderRight: '12px solid transparent',
+            borderBottom: '12px solid #ff6b9d',
+            filter: 'drop-shadow(0 -2px 4px rgba(0, 0, 0, 0.3))'
+          } : {
+            // Arrow pointing LEFT (for desktop - tooltip to the right)
             position: 'absolute',
             left: '-12px',
             top: '50%',
