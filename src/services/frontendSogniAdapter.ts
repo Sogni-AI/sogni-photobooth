@@ -1,5 +1,5 @@
 import { SogniClient } from '@sogni-ai/sogni-client';
-import { trackFrontendGeneration } from './frontendAnalytics';
+import { trackFrontendGeneration, trackVideoGeneration } from './frontendAnalytics';
 
 /**
  * Adapter that wraps the real Sogni Client SDK to emit the same events
@@ -609,14 +609,29 @@ export class FrontendSogniClientAdapter {
         
         // Track analytics for frontend SDK generation (critical for logged-in users)
         // This ensures we capture metrics even when bypassing the backend /generate endpoint
-        trackFrontendGeneration({
-          numberImages: params.numberOfMedia || 1,
-          sourceType: params.sourceType,
-          selectedModel: params.modelId,
-        }).catch(err => {
-          // Log but don't throw - analytics failures shouldn't break generation
-          console.error('[FrontendAdapter] Analytics tracking error:', err);
-        });
+        if (projectType === 'video') {
+          // Track video generation separately
+          trackVideoGeneration({
+            resolution: params.resolution || 'unknown',
+            quality: params.quality || 'unknown',
+            sourceType: params.sourceType,
+            modelId: params.modelId,
+            width: params.width,
+            height: params.height,
+            success: true, // Will track failure separately if generation fails
+          }).catch(err => {
+            console.error('[FrontendAdapter] Video analytics tracking error:', err);
+          });
+        } else {
+          // Track image generation
+          trackFrontendGeneration({
+            numberImages: params.numberOfMedia || 1,
+            sourceType: params.sourceType,
+            selectedModel: params.modelId,
+          }).catch(err => {
+            console.error('[FrontendAdapter] Analytics tracking error:', err);
+          });
+        }
         
         // Create the real project with converted parameters
         console.log(`[FrontendAdapter] Calling realClient.projects.create for ${projectType} project`);

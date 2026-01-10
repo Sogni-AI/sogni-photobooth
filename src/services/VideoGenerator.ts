@@ -471,6 +471,15 @@ export async function generateVideo(options: GenerateVideoOptions): Promise<void
       console.log(`   ${sam2Coordinates}`);
     }
     console.groupEnd();
+
+    // Log the actual createParams being sent to SDK for debugging
+    console.log('📦 FULL createParams being sent to SDK:', JSON.stringify({
+      ...createParams,
+      referenceImage: createParams.referenceImage ? `[Buffer ${(createParams.referenceImage as Uint8Array).length} bytes]` : undefined,
+      referenceVideo: createParams.referenceVideo ? `[Buffer ${(createParams.referenceVideo as Uint8Array).length} bytes]` : undefined,
+      referenceAudio: createParams.referenceAudio ? `[Buffer ${(createParams.referenceAudio as Uint8Array).length} bytes]` : undefined,
+      referenceImageEnd: createParams.referenceImageEnd ? `[Buffer ${(createParams.referenceImageEnd as Uint8Array).length} bytes]` : undefined,
+    }, null, 2));
     
     // Create project with proper error handling
     let project;

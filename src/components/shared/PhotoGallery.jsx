@@ -3165,7 +3165,7 @@ const PhotoGallery = ({
   }, [videoTargetPhotoIndex, selectedPhotoIndex, selectedSubIndex, photos, sogniClient, setPhotos, settings, tokenType, showToast, onOutOfCredits]);
 
   // Handle Animate Move batch execution
-  const handleBatchAnimateMoveExecute = useCallback(async ({ positivePrompt, negativePrompt, videoData, videoUrl, videoDuration: customDuration, videoStartOffset, workflowType, modelVariant }) => {
+  const handleBatchAnimateMoveExecute = useCallback(async ({ positivePrompt, negativePrompt, videoData, videoUrl, videoDuration: customDuration, videoStartOffset, workflowType, modelVariant, splitMode, perImageDuration }) => {
     setShowBatchAnimateMovePopup(false);
     warmUpAudio();
 
@@ -3194,21 +3194,33 @@ const PhotoGallery = ({
     }
 
     // Use custom duration from popup or fall back to settings
-    const duration = customDuration || settings.videoDuration || 5;
+    const baseDuration = customDuration || settings.videoDuration || 5;
+
+    // In split mode, each image gets perImageDuration at sequential offsets
+    // In normal mode, all images use the same duration and offset
+    const imageCount = loadedPhotos.length;
 
     showToast({
       title: '🎬 Batch Animate Move',
-      message: `Starting video generation for ${loadedPhotos.length} image${loadedPhotos.length > 1 ? 's' : ''}...`,
+      message: splitMode
+        ? `Starting ${imageCount} videos (${perImageDuration.toFixed(2)}s each, split from ${baseDuration.toFixed(2)}s selection)...`
+        : `Starting video generation for ${imageCount} image${imageCount > 1 ? 's' : ''}...`,
       type: 'info',
       timeout: 3000
     });
 
-    for (const photo of loadedPhotos) {
+    loadedPhotos.forEach((photo, batchIndex) => {
       const photoIndex = photos.findIndex(p => p.id === photo.id);
-      if (photoIndex === -1 || photo.generatingVideo) continue;
+      if (photoIndex === -1 || photo.generatingVideo) return;
 
       const imageUrl = photo.enhancedImageUrl || photo.images?.[0] || photo.originalDataUrl;
-      if (!imageUrl) continue;
+      if (!imageUrl) return;
+
+      // Calculate per-image duration and start offset for split mode
+      const imageDuration = splitMode ? perImageDuration : baseDuration;
+      const imageStartOffset = splitMode
+        ? videoStartOffset + (batchIndex * perImageDuration)
+        : videoStartOffset;
 
       const img = new Image();
       img.onload = () => {
@@ -3223,13 +3235,13 @@ const PhotoGallery = ({
           resolution: settings.videoResolution || '480p',
           quality: settings.videoQuality || 'fast',
           fps: settings.videoFramerate || 16,
-          duration: duration,
+          duration: imageDuration,
           positivePrompt,
           negativePrompt,
           tokenType,
           workflowType: 'animate-move',
           referenceVideo: videoBuffer,
-          videoStart: videoStartOffset, // Pass video trim start offset
+          videoStart: imageStartOffset, // Per-image start offset in split mode
           modelVariant, // Pass model variant from popup
           onComplete: () => {
             playSonicLogo(settings.soundEnabled);
@@ -3240,7 +3252,7 @@ const PhotoGallery = ({
         });
       };
       img.src = imageUrl;
-    }
+    });
   }, [photos, sogniClient, setPhotos, settings, tokenType, showToast, onOutOfCredits]);
 
   // ==================== ANIMATE REPLACE HANDLERS ====================
@@ -3319,7 +3331,7 @@ const PhotoGallery = ({
   }, [videoTargetPhotoIndex, selectedPhotoIndex, selectedSubIndex, photos, sogniClient, setPhotos, settings, tokenType, showToast, onOutOfCredits]);
 
   // Handle Animate Replace batch execution
-  const handleBatchAnimateReplaceExecute = useCallback(async ({ positivePrompt, negativePrompt, videoData, videoUrl, sam2Coordinates, videoDuration: customDuration, videoStartOffset, workflowType, modelVariant }) => {
+  const handleBatchAnimateReplaceExecute = useCallback(async ({ positivePrompt, negativePrompt, videoData, videoUrl, sam2Coordinates, videoDuration: customDuration, videoStartOffset, workflowType, modelVariant, splitMode, perImageDuration }) => {
     setShowBatchAnimateReplacePopup(false);
     warmUpAudio();
 
@@ -3347,21 +3359,33 @@ const PhotoGallery = ({
     }
 
     // Use custom duration from popup or fall back to settings
-    const duration = customDuration || settings.videoDuration || 5;
+    const baseDuration = customDuration || settings.videoDuration || 5;
+
+    // In split mode, each image gets perImageDuration at sequential offsets
+    // In normal mode, all images use the same duration and offset
+    const imageCount = loadedPhotos.length;
 
     showToast({
       title: '🔄 Batch Animate Replace',
-      message: `Starting video generation for ${loadedPhotos.length} image${loadedPhotos.length > 1 ? 's' : ''}...`,
+      message: splitMode
+        ? `Starting ${imageCount} videos (${perImageDuration.toFixed(2)}s each, split from ${baseDuration.toFixed(2)}s selection)...`
+        : `Starting video generation for ${imageCount} image${imageCount > 1 ? 's' : ''}...`,
       type: 'info',
       timeout: 3000
     });
 
-    for (const photo of loadedPhotos) {
+    loadedPhotos.forEach((photo, batchIndex) => {
       const photoIndex = photos.findIndex(p => p.id === photo.id);
-      if (photoIndex === -1 || photo.generatingVideo) continue;
+      if (photoIndex === -1 || photo.generatingVideo) return;
 
       const imageUrl = photo.enhancedImageUrl || photo.images?.[0] || photo.originalDataUrl;
-      if (!imageUrl) continue;
+      if (!imageUrl) return;
+
+      // Calculate per-image duration and start offset for split mode
+      const imageDuration = splitMode ? perImageDuration : baseDuration;
+      const imageStartOffset = splitMode
+        ? videoStartOffset + (batchIndex * perImageDuration)
+        : videoStartOffset;
 
       const img = new Image();
       img.onload = () => {
@@ -3376,14 +3400,14 @@ const PhotoGallery = ({
           resolution: settings.videoResolution || '480p',
           quality: settings.videoQuality || 'fast',
           fps: settings.videoFramerate || 16,
-          duration: duration,
+          duration: imageDuration,
           positivePrompt,
           negativePrompt,
           tokenType,
           workflowType: 'animate-replace',
           referenceVideo: videoBuffer,
           sam2Coordinates,
-          videoStart: videoStartOffset, // Pass video trim start offset
+          videoStart: imageStartOffset, // Per-image start offset in split mode
           modelVariant, // Pass model variant from popup
           onComplete: () => {
             playSonicLogo(settings.soundEnabled);
@@ -3394,7 +3418,7 @@ const PhotoGallery = ({
         });
       };
       img.src = imageUrl;
-    }
+    });
   }, [photos, sogniClient, setPhotos, settings, tokenType, showToast, onOutOfCredits]);
 
   // ==================== SOUND TO VIDEO (S2V) HANDLERS ====================

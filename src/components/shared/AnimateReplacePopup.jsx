@@ -37,7 +37,7 @@ const SAMPLE_REPLACEMENT_VIDEOS = [
   }
 ];
 
-const MAX_DURATION = 20; // Max 20 seconds
+const BASE_MAX_DURATION = 20; // Max 20 seconds per image
 
 /**
  * AnimateReplacePopup
@@ -96,6 +96,57 @@ const AnimateReplacePopup = ({
   
   const [sourceVideoDuration, setSourceVideoDuration] = useState(0);
   const [videoAspectRatio, setVideoAspectRatio] = useState(9/16); // Default to portrait
+
+  // Split selection mode for batch - splits the timeline segment across all images
+  const [splitSelectionEnabled, setSplitSelectionEnabled] = useState(isBatch && itemCount > 1);
+
+  // Compute dynamic constraints based on split mode
+  const effectiveItemCount = (isBatch && itemCount > 1) ? itemCount : 1;
+  const isSplitMode = splitSelectionEnabled && isBatch && itemCount > 1;
+
+  // In split mode: max = 20s * itemCount, min = 1s * itemCount, step = 0.25s * itemCount
+  // In normal mode: max = 20s, min = 0.25s, step = 0.25s
+  const MAX_DURATION = isSplitMode ? BASE_MAX_DURATION * effectiveItemCount : BASE_MAX_DURATION;
+  const MIN_DURATION = isSplitMode ? 1 * effectiveItemCount : 0.25;
+  const DURATION_STEP = isSplitMode ? 0.25 * effectiveItemCount : 0.25;
+
+  // Check if source video is long enough for split mode (need at least 1s per image)
+  const canUseSplitMode = sourceVideoDuration >= effectiveItemCount;
+
+  // Reset split selection when popup opens or batch settings change
+  useEffect(() => {
+    if (visible) {
+      setSplitSelectionEnabled(isBatch && itemCount > 1);
+    }
+  }, [visible, isBatch, itemCount]);
+
+  // Adjust duration when split mode changes or constraints change
+  useEffect(() => {
+    if (sourceVideoDuration > 0) {
+      // If split mode enabled but video too short, disable it
+      if (isSplitMode && !canUseSplitMode) {
+        setSplitSelectionEnabled(false);
+        return;
+      }
+
+      // Clamp duration to new constraints
+      const effectiveMax = Math.min(sourceVideoDuration - videoStartOffset, MAX_DURATION);
+      let newDuration = videoDuration;
+
+      // Clamp to min/max
+      newDuration = Math.max(MIN_DURATION, Math.min(newDuration, effectiveMax));
+
+      // Round to step
+      newDuration = Math.round(newDuration / DURATION_STEP) * DURATION_STEP;
+
+      // Ensure it's still within bounds after rounding
+      newDuration = Math.max(MIN_DURATION, Math.min(newDuration, effectiveMax));
+
+      if (newDuration !== videoDuration) {
+        setVideoDuration(newDuration);
+      }
+    }
+  }, [isSplitMode, sourceVideoDuration, MIN_DURATION, MAX_DURATION, DURATION_STEP, canUseSplitMode]);
 
   // Video timeline trimmer state
   const [videoStartOffset, setVideoStartOffset] = useState(0);
@@ -222,8 +273,9 @@ const AnimateReplacePopup = ({
       const duration = video.duration;
       setSourceVideoDuration(duration);
 
-      // Set default duration to source video duration or MAX_DURATION, whichever is smaller
-      const defaultDuration = Math.min(duration, MAX_DURATION);
+      // Set default duration to source video duration or base max, whichever is smaller
+      // (split mode constraints will be applied via useEffect if needed)
+      const defaultDuration = Math.min(duration, BASE_MAX_DURATION);
       const roundedDuration = Math.floor(defaultDuration * 4) / 4;
       setVideoDuration(roundedDuration);
       setVideoStartOffset(0);
@@ -312,7 +364,7 @@ const AnimateReplacePopup = ({
 
         const duration = fallbackVideo.duration;
         setSourceVideoDuration(duration);
-        const defaultDuration = Math.min(duration, MAX_DURATION);
+        const defaultDuration = Math.min(duration, BASE_MAX_DURATION);
         const roundedDuration = Math.floor(defaultDuration * 4) / 4;
         setVideoDuration(roundedDuration);
         setVideoStartOffset(0);
@@ -550,7 +602,6 @@ const AnimateReplacePopup = ({
     }
 
     const deltaTime = (deltaX / rect.width) * sourceVideoDuration;
-    const minDuration = 0.25; // Minimum 0.25s duration
 
     if (dragType === 'move') {
       // Move entire selection
@@ -559,20 +610,20 @@ const AnimateReplacePopup = ({
       setPendingStartOffset(newOffset);
     } else if (dragType === 'start') {
       // Adjust start (and inversely adjust duration)
-      const newStart = Math.max(0, Math.min(dragStartOffset + deltaTime, dragStartOffset + dragStartDuration - minDuration));
+      const newStart = Math.max(0, Math.min(dragStartOffset + deltaTime, dragStartOffset + dragStartDuration - MIN_DURATION));
       const newDuration = dragStartOffset + dragStartDuration - newStart;
-      // Round to 0.25s increments
-      const roundedDuration = Math.round(newDuration * 4) / 4;
-      const clampedDuration = Math.min(Math.max(roundedDuration, minDuration), MAX_DURATION);
+      // Round to step increments (0.25s in normal mode, 0.25*itemCount in split mode)
+      const roundedDuration = Math.round(newDuration / DURATION_STEP) * DURATION_STEP;
+      const clampedDuration = Math.min(Math.max(roundedDuration, MIN_DURATION), MAX_DURATION);
       const adjustedStart = dragStartOffset + dragStartDuration - clampedDuration;
       setPendingStartOffset(Math.max(0, adjustedStart));
       setPendingDuration(clampedDuration);
     } else if (dragType === 'end') {
       // Adjust end (duration)
-      const newDuration = Math.max(minDuration, Math.min(dragStartDuration + deltaTime, sourceVideoDuration - dragStartOffset, MAX_DURATION));
-      // Round to 0.25s increments
-      const roundedDuration = Math.round(newDuration * 4) / 4;
-      setPendingDuration(Math.max(minDuration, roundedDuration));
+      const newDuration = Math.max(MIN_DURATION, Math.min(dragStartDuration + deltaTime, sourceVideoDuration - dragStartOffset, MAX_DURATION));
+      // Round to step increments (0.25s in normal mode, 0.25*itemCount in split mode)
+      const roundedDuration = Math.round(newDuration / DURATION_STEP) * DURATION_STEP;
+      setPendingDuration(Math.max(MIN_DURATION, roundedDuration));
     }
 
     // Update video preview position during drag (visual feedback)
@@ -950,7 +1001,9 @@ const AnimateReplacePopup = ({
       videoDuration,
       videoStartOffset,
       workflowType: 'animate-replace',
-      modelVariant // Pass the selected model variant
+      modelVariant, // Pass the selected model variant
+      splitMode: isSplitMode, // Whether to split the selection across batch images
+      perImageDuration: isSplitMode ? videoDuration / effectiveItemCount : videoDuration
     });
   };
 
@@ -1339,7 +1392,9 @@ const AnimateReplacePopup = ({
                     pointerEvents: 'none',
                     zIndex: 3
                   }}>
-                    {visualDuration.toFixed(2)}s
+                    {isSplitMode
+                      ? `${visualDuration.toFixed(1)}s (${(visualDuration / effectiveItemCount).toFixed(2)}s×${effectiveItemCount})`
+                      : `${visualDuration.toFixed(2)}s`}
                   </div>
                 </div>
               ) : (
@@ -1399,7 +1454,9 @@ const AnimateReplacePopup = ({
                       whiteSpace: 'nowrap',
                       pointerEvents: 'none'
                     }}>
-                      {visualDuration.toFixed(2)}s
+                      {isSplitMode
+                        ? `${visualDuration.toFixed(1)}s (${(visualDuration / effectiveItemCount).toFixed(2)}s×${effectiveItemCount})`
+                        : `${visualDuration.toFixed(2)}s`}
                     </div>
                   </div>
 
@@ -1506,7 +1563,9 @@ const AnimateReplacePopup = ({
                     Start: {formatTime(visualStartOffset)}
                   </span>
                   <span style={{ color: '#fff', fontWeight: '700' }}>
-                    Duration: {visualDuration.toFixed(2)}s
+                    {isSplitMode
+                      ? `Total: ${visualDuration.toFixed(2)}s (${(visualDuration / effectiveItemCount).toFixed(2)}s each)`
+                      : `Duration: ${visualDuration.toFixed(2)}s`}
                   </span>
                   <span style={{ color: '#fff' }}>
                     End: {formatTime(visualStartOffset + visualDuration)}
@@ -1521,6 +1580,69 @@ const AnimateReplacePopup = ({
                 }}>
                   Drag edges to resize • Drag middle to move • Click outside to jump
                 </p>
+
+                {/* Split Selection Checkbox - only in batch mode */}
+                {isBatch && itemCount > 1 && (
+                  <div style={{
+                    marginTop: '12px',
+                    padding: '10px 12px',
+                    background: isSplitMode ? 'rgba(249, 115, 22, 0.2)' : 'rgba(255, 255, 255, 0.1)',
+                    borderRadius: '8px',
+                    border: isSplitMode ? '1px solid rgba(249, 115, 22, 0.4)' : '1px solid rgba(255, 255, 255, 0.2)'
+                  }}>
+                    <label style={{
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: '10px',
+                      cursor: canUseSplitMode ? 'pointer' : 'not-allowed',
+                      opacity: canUseSplitMode ? 1 : 0.6
+                    }}>
+                      <input
+                        type="checkbox"
+                        checked={splitSelectionEnabled && canUseSplitMode}
+                        onChange={(e) => canUseSplitMode && setSplitSelectionEnabled(e.target.checked)}
+                        disabled={!canUseSplitMode}
+                        style={{
+                          width: '18px',
+                          height: '18px',
+                          marginTop: '2px',
+                          accentColor: '#f97316',
+                          cursor: canUseSplitMode ? 'pointer' : 'not-allowed'
+                        }}
+                      />
+                      <div style={{ flex: 1 }}>
+                        <span style={{
+                          color: 'white',
+                          fontSize: '12px',
+                          fontWeight: '600'
+                        }}>
+                          Split the selection between your {itemCount} images
+                        </span>
+                        {canUseSplitMode ? (
+                          <p style={{
+                            margin: '4px 0 0 0',
+                            color: 'rgba(255, 255, 255, 0.7)',
+                            fontSize: '10px',
+                            lineHeight: '1.4'
+                          }}>
+                            {isSplitMode
+                              ? `Each image will get ${(videoDuration / itemCount).toFixed(2)}s of video, creating a continuous sequence.`
+                              : 'All images will use the same video segment.'}
+                          </p>
+                        ) : (
+                          <p style={{
+                            margin: '4px 0 0 0',
+                            color: 'rgba(239, 68, 68, 0.9)',
+                            fontSize: '10px',
+                            lineHeight: '1.4'
+                          }}>
+                            ⚠️ Video is too short. Need at least {itemCount}s for {itemCount} images to share.
+                          </p>
+                        )}
+                      </div>
+                    </label>
+                  </div>
+                )}
               </div>
 
               {/* SAM2 Info Note */}
@@ -1781,7 +1903,11 @@ const AnimateReplacePopup = ({
               alignItems: 'center'
             }}>
               <span style={{ fontSize: '10px', fontWeight: '500', opacity: 0.8 }}>
-                {`${isBatch ? `📹 ${itemCount} videos • ` : ''}📐 ${videoResolution || '480p'} • ⏱️ ${videoDuration}s`}
+                {isBatch
+                  ? isSplitMode
+                    ? `📹 ${itemCount} videos • 📐 ${videoResolution || '480p'} • ⏱️ ${(videoDuration / effectiveItemCount).toFixed(2)}s each`
+                    : `📹 ${itemCount} videos • 📐 ${videoResolution || '480p'} • ⏱️ ${videoDuration}s each`
+                  : `📐 ${videoResolution || '480p'} • ⏱️ ${videoDuration}s`}
               </span>
               <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
                 {costRaw && (
@@ -1789,14 +1915,18 @@ const AnimateReplacePopup = ({
                     {(() => {
                       const costValue = typeof costRaw === 'number' ? costRaw : parseFloat(costRaw);
                       if (isNaN(costValue)) return null;
+                      // In split mode, cost is already calculated as (totalDuration × itemCount) by parent,
+                      // but it should just be totalDuration cost, so divide by itemCount
+                      const adjustedCost = isSplitMode ? costValue / effectiveItemCount : costValue;
                       const tokenLabel = getTokenLabel(tokenType);
-                      return `${costValue.toFixed(2)} ${tokenLabel}`;
+                      return `${adjustedCost.toFixed(2)} ${tokenLabel}`;
                     })()}
                   </span>
                 )}
                 {costUSD && (
                   <span style={{ fontWeight: '400', opacity: 0.75, fontSize: '10px' }}>
-                    ≈ ${costUSD.toFixed(2)} USD
+                    {/* In split mode, adjust USD cost similarly */}
+                    ≈ ${(isSplitMode ? costUSD / effectiveItemCount : costUSD).toFixed(2)} USD
                   </span>
                 )}
               </div>
