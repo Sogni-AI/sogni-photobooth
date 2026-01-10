@@ -259,16 +259,23 @@ router.post('/track/video-generation', async (req, res) => {
       resolution, 
       quality, 
       modelId, 
+      sourceType,
       width, 
       height, 
       success = true, 
       errorMessage 
     } = req.body;
     
+    // Track video batch generated (like batches_generated for photos)
+    await trackMetric('video_batches_generated', 1);
+    
     // Track video generation attempt
     await trackMetric('videos_generated_attempts', 1);
     
     if (success) {
+      // Track total videos generated (like photos_generated)
+      await trackMetric('videos_generated', 1);
+      
       // Track successful video generation
       await trackMetric('videos_generated_success', 1);
       
@@ -283,19 +290,28 @@ router.post('/track/video-generation', async (req, res) => {
       if (quality) {
         await trackMetric(`videos_generated_${quality}`, 1);
       }
+      
+      // Track source type (camera vs upload) for videos
+      if (sourceType === 'camera') {
+        await trackMetric('videos_taken_camera', 1);
+      } else if (sourceType === 'upload') {
+        await trackMetric('videos_uploaded_browse', 1);
+      }
     } else {
       // Track failed video generation
       await trackMetric('videos_generated_failed', 1);
     }
     
-    console.log(`[Analytics API] ✅ Video generation tracked: ${resolution}, ${quality}, success: ${success}${errorMessage ? `, error: ${errorMessage}` : ''}`);
+    console.log(`[Analytics API] ✅ Video generation tracked: 1 video, resolution: ${resolution || 'unknown'}, quality: ${quality || 'unknown'}, sourceType: ${sourceType || 'unknown'}, model: ${modelId || 'unknown'}, success: ${success}${errorMessage ? `, error: ${errorMessage}` : ''}`);
     
     res.json({ 
       success: true, 
       message: 'Video generation tracked successfully',
       tracked: {
+        videos: 1,
         resolution,
         quality,
+        sourceType: sourceType || 'unknown',
         success,
         dimensions: width && height ? `${width}x${height}` : null
       }
