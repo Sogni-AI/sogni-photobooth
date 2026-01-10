@@ -1616,7 +1616,7 @@ const AnimateReplacePopup = ({
                           fontSize: '12px',
                           fontWeight: '600'
                         }}>
-                          Split the selection between your {itemCount} images
+                          🎬 Montage Mode
                         </span>
                         {canUseSplitMode ? (
                           <p style={{
@@ -1625,9 +1625,9 @@ const AnimateReplacePopup = ({
                             fontSize: '10px',
                             lineHeight: '1.4'
                           }}>
-                            {isSplitMode
-                              ? `Each image will get ${(videoDuration / itemCount).toFixed(2)}s of video, creating a continuous sequence.`
-                              : 'All images will use the same video segment.'}
+                          {isSplitMode
+                            ? `Each image will get ${(videoDuration / itemCount).toFixed(2)}s of video, creating a continuous sequence.`
+                            : 'Each image will get the full video segment.'}
                           </p>
                         ) : (
                           <p style={{
@@ -1636,7 +1636,7 @@ const AnimateReplacePopup = ({
                             fontSize: '10px',
                             lineHeight: '1.4'
                           }}>
-                            ⚠️ Video is too short. Need at least {itemCount}s for {itemCount} images to share.
+                            ⚠️ Audio is too short. Need at least {itemCount}s for {itemCount} images.
                           </p>
                         )}
                       </div>

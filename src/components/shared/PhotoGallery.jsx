@@ -1238,6 +1238,9 @@ const PhotoGallery = ({
   // Track S2V videos that need user interaction to play with audio
   const [s2vVideosNeedingClick, setS2vVideosNeedingClick] = useState(new Set());
   
+  // Track which video currently has audio unmuted (only one at a time)
+  const [unmutedVideoId, setUnmutedVideoId] = useState(null);
+  
   // State for transition video mode - tracks if we're in transition batch mode and the photo order
   const [transitionVideoQueue, setTransitionVideoQueue] = useState([]);
   const [isTransitionMode, setIsTransitionMode] = useState(false);
@@ -3497,7 +3500,7 @@ const PhotoGallery = ({
   }, [videoTargetPhotoIndex, selectedPhotoIndex, selectedSubIndex, photos, sogniClient, setPhotos, settings, tokenType, showToast, onOutOfCredits]);
 
   // Handle Sound to Video batch execution
-  const handleBatchS2VExecute = useCallback(async ({ positivePrompt, negativePrompt, audioData, audioUrl, audioStartOffset, videoDuration: customDuration, workflowType, modelVariant }) => {
+  const handleBatchS2VExecute = useCallback(async ({ positivePrompt, negativePrompt, audioData, audioUrl, audioStartOffset, videoDuration: customDuration, workflowType, modelVariant, splitMode, perImageDuration }) => {
     setShowBatchS2VPopup(false);
     warmUpAudio();
 
@@ -3525,21 +3528,33 @@ const PhotoGallery = ({
     }
 
     // Use custom duration from popup or fall back to settings
-    const duration = customDuration || settings.videoDuration || 5;
+    const baseDuration = customDuration || settings.videoDuration || 5;
+
+    // In split mode, each image gets perImageDuration at sequential offsets
+    // In normal mode, all images use the same duration and offset
+    const imageCount = loadedPhotos.length;
 
     showToast({
       title: '🎤 Batch Sound to Video',
-      message: `Starting video generation for ${loadedPhotos.length} image${loadedPhotos.length > 1 ? 's' : ''}...`,
+      message: splitMode
+        ? `Starting ${imageCount} videos (${perImageDuration.toFixed(2)}s each, split from ${baseDuration.toFixed(2)}s selection)...`
+        : `Starting video generation for ${imageCount} image${imageCount > 1 ? 's' : ''}...`,
       type: 'info',
       timeout: 3000
     });
 
-    for (const photo of loadedPhotos) {
+    loadedPhotos.forEach((photo, batchIndex) => {
       const photoIndex = photos.findIndex(p => p.id === photo.id);
-      if (photoIndex === -1 || photo.generatingVideo) continue;
+      if (photoIndex === -1 || photo.generatingVideo) return;
 
       const imageUrl = photo.enhancedImageUrl || photo.images?.[0] || photo.originalDataUrl;
-      if (!imageUrl) continue;
+      if (!imageUrl) return;
+
+      // Calculate per-image duration and audio start offset for split mode
+      const imageDuration = splitMode ? perImageDuration : baseDuration;
+      const imageAudioStartOffset = splitMode
+        ? audioStartOffset + (batchIndex * perImageDuration)
+        : audioStartOffset;
 
       const img = new Image();
       img.onload = () => {
@@ -3554,14 +3569,14 @@ const PhotoGallery = ({
           resolution: settings.videoResolution || '480p',
           quality: settings.videoQuality || 'fast',
           fps: settings.videoFramerate || 16,
-          duration: duration,
+          duration: imageDuration,
           positivePrompt,
           negativePrompt,
           tokenType,
           workflowType: 's2v',
           referenceAudio: audioBuffer,
-          audioStart: audioStartOffset || 0,
-          audioDuration: duration,
+          audioStart: imageAudioStartOffset || 0,
+          audioDuration: imageDuration,
           modelVariant, // Pass model variant from popup
           onComplete: () => {
             playSonicLogo(settings.soundEnabled);
@@ -3572,7 +3587,7 @@ const PhotoGallery = ({
         });
       };
       img.src = imageUrl;
-    }
+    });
   }, [photos, sogniClient, setPhotos, settings, tokenType, showToast, onOutOfCredits]);
 
   // Handle batch video generation for all images
@@ -11726,6 +11741,7 @@ const PhotoGallery = ({
                     onMouseDown={(e) => {
                       e.stopPropagation();
                       e.preventDefault();
+                      const wasPlaying = playingGeneratedVideoIds.has(photo.id);
                       // Toggle generated video playback (multiple videos can play simultaneously)
                       setPlayingGeneratedVideoIds(prev => {
                         const newSet = new Set(prev);
@@ -11736,6 +11752,10 @@ const PhotoGallery = ({
                         }
                         return newSet;
                       });
+                      // Clear unmuted state if stopping this video
+                      if (wasPlaying) {
+                        setUnmutedVideoId(prev => prev === photo.id ? null : prev);
+                      }
                     }}
                     style={{
                       position: 'absolute',
@@ -11772,19 +11792,21 @@ const PhotoGallery = ({
                 {/* AI-Generated Video Overlay - Show when generated video is playing */}
                 {photo.videoUrl && !photo.generatingVideo && playingGeneratedVideoIds.has(photo.id) && (
                   // All photos play their own video in a simple loop
-                  // S2V videos play with audio enabled
+                  // S2V/Animate videos can have audio - only one unmuted at a time
                   <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 4 }}>
                     <video
                       key={`video-${photo.id}-${photo.videoWorkflowType}`}
                       src={photo.videoUrl}
                       autoPlay
                       loop={true}
-                      muted={!['s2v', 'animate-move', 'animate-replace'].includes(photo.videoWorkflowType)}
+                      muted={!['s2v', 'animate-move', 'animate-replace'].includes(photo.videoWorkflowType) || unmutedVideoId !== photo.id}
                       playsInline
                       onLoadedMetadata={(e) => {
-                        // For S2V videos, try to unmute and play with audio
+                        // For S2V/Animate videos, try to unmute and play with audio (muting any previous)
                         if (['s2v', 'animate-move', 'animate-replace'].includes(photo.videoWorkflowType)) {
                           const videoEl = e.currentTarget;
+                          // Set this as the unmuted video (will mute others)
+                          setUnmutedVideoId(photo.id);
                           videoEl.muted = false;
                           // Try to play with audio - if it fails, show click-to-play overlay
                           const playPromise = videoEl.play();
@@ -11792,6 +11814,7 @@ const PhotoGallery = ({
                             playPromise.catch(() => {
                               // Autoplay with audio blocked, show click-to-play overlay
                               setS2vVideosNeedingClick(prev => new Set([...prev, photo.id]));
+                              videoEl.muted = true;
                             });
                           }
                         }
@@ -11808,6 +11831,66 @@ const PhotoGallery = ({
                       }}
                     />
                     
+                    {/* Mute/Unmute button for videos with audio */}
+                    {['s2v', 'animate-move', 'animate-replace'].includes(photo.videoWorkflowType) && !s2vVideosNeedingClick.has(photo.id) && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          e.preventDefault();
+                          const videoEl = e.currentTarget.parentElement.querySelector('video');
+                          if (unmutedVideoId === photo.id) {
+                            // Mute this video
+                            setUnmutedVideoId(null);
+                            if (videoEl) videoEl.muted = true;
+                          } else {
+                            // Unmute this video (mutes others via state)
+                            setUnmutedVideoId(photo.id);
+                            if (videoEl) {
+                              videoEl.muted = false;
+                              videoEl.play().catch(() => {});
+                            }
+                          }
+                        }}
+                        style={{
+                          position: 'absolute',
+                          bottom: '8px',
+                          right: '8px',
+                          width: '32px',
+                          height: '32px',
+                          borderRadius: '50%',
+                          border: 'none',
+                          background: 'rgba(0, 0, 0, 0.6)',
+                          color: 'white',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          zIndex: 7,
+                          transition: 'all 0.2s ease',
+                          backdropFilter: 'blur(4px)'
+                        }}
+                        onMouseOver={(e) => {
+                          e.currentTarget.style.background = 'rgba(236, 72, 153, 0.8)';
+                          e.currentTarget.style.transform = 'scale(1.1)';
+                        }}
+                        onMouseOut={(e) => {
+                          e.currentTarget.style.background = 'rgba(0, 0, 0, 0.6)';
+                          e.currentTarget.style.transform = 'scale(1)';
+                        }}
+                        title={unmutedVideoId === photo.id ? 'Mute' : 'Unmute'}
+                      >
+                        <svg fill="currentColor" width="16" height="16" viewBox="0 0 24 24">
+                          {unmutedVideoId === photo.id ? (
+                            // Speaker with sound waves (unmuted)
+                            <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+                          ) : (
+                            // Speaker with X (muted)
+                            <path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/>
+                          )}
+                        </svg>
+                      </button>
+                    )}
+                    
                     {/* Click-to-play overlay for S2V/Animate videos when audio autoplay is blocked */}
                     {['s2v', 'animate-move', 'animate-replace'].includes(photo.videoWorkflowType) && s2vVideosNeedingClick.has(photo.id) && (
                       <div
@@ -11815,6 +11898,8 @@ const PhotoGallery = ({
                           e.stopPropagation();
                           const videoEl = e.currentTarget.parentElement.querySelector('video');
                           if (videoEl) {
+                            // Set this as the unmuted video (mutes others)
+                            setUnmutedVideoId(photo.id);
                             videoEl.muted = false;
                             videoEl.play().then(() => {
                               setS2vVideosNeedingClick(prev => {

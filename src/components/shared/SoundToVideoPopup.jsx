@@ -103,7 +103,7 @@ const SAMPLE_AUDIO_TRACKS = [
   }
 ];
 
-const MAX_DURATION = 20; // Max 20 seconds
+const BASE_MAX_DURATION = 20; // Max 20 seconds per image
 
 /**
  * SoundToVideoPopup
@@ -133,7 +133,37 @@ const SoundToVideoPopup = ({
   const [uploadedAudioUrl, setUploadedAudioUrl] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [error, setError] = useState('');
-  
+
+  // Audio waveform and timeline state
+  const [audioStartOffset, setAudioStartOffset] = useState(0);
+  const [audioDuration, setAudioDuration] = useState(0);
+  const [audioWaveform, setAudioWaveform] = useState(null);
+  const [previewPlayhead, setPreviewPlayhead] = useState(0);
+  const [isDraggingWaveform, setIsDraggingWaveform] = useState(false);
+  const [dragType, setDragType] = useState(null); // 'start', 'end', 'move'
+  const [dragStartX, setDragStartX] = useState(0);
+  const [dragStartOffset, setDragStartOffset] = useState(0);
+  const [dragStartDuration, setDragStartDuration] = useState(0);
+  const [hasMovedDuringDrag, setHasMovedDuringDrag] = useState(false);
+  const [pendingStartOffset, setPendingStartOffset] = useState(null);
+  const [pendingDuration, setPendingDuration] = useState(null);
+
+  // Montage mode - splits the audio segment across all images (checked by default)
+  const [montageEnabled, setMontageEnabled] = useState(true);
+
+  // Compute montage mode constraints
+  const effectiveItemCount = (isBatch && itemCount > 1) ? itemCount : 1;
+  const isMontageMode = montageEnabled && isBatch && itemCount > 1;
+
+  // In montage mode: max = 20s * itemCount, min = 1s * itemCount, step = 0.25s * itemCount
+  // In normal mode: max = 20s, min = 0.25s, step = 0.25s
+  const MAX_DURATION = isMontageMode ? BASE_MAX_DURATION * effectiveItemCount : BASE_MAX_DURATION;
+  const MIN_DURATION = isMontageMode ? 1 * effectiveItemCount : 0.25;
+  const DURATION_STEP = isMontageMode ? 0.25 * effectiveItemCount : 0.25;
+
+  // Check if audio is long enough for montage mode (need at least 1s per image)
+  const canUseMontageMode = audioDuration >= effectiveItemCount;
+
   // Use external model variant state if provided (for cost estimation), otherwise use internal
   const modelVariant = externalModelVariant !== undefined ? externalModelVariant : 'speed';
   const setModelVariant = onModelVariantChange || (() => {});
@@ -160,18 +190,41 @@ const SoundToVideoPopup = ({
       setInternalVideoDuration(externalVideoDuration);
     }
   }, [externalVideoDuration]);
-  const [audioStartOffset, setAudioStartOffset] = useState(0);
-  const [audioDuration, setAudioDuration] = useState(0);
-  const [audioWaveform, setAudioWaveform] = useState(null);
-  const [previewPlayhead, setPreviewPlayhead] = useState(0);
-  const [isDraggingWaveform, setIsDraggingWaveform] = useState(false);
-  const [dragType, setDragType] = useState(null); // 'start', 'end', 'move'
-  const [dragStartX, setDragStartX] = useState(0);
-  const [dragStartOffset, setDragStartOffset] = useState(0);
-  const [dragStartDuration, setDragStartDuration] = useState(0);
-  const [hasMovedDuringDrag, setHasMovedDuringDrag] = useState(false);
-  const [pendingStartOffset, setPendingStartOffset] = useState(null);
-  const [pendingDuration, setPendingDuration] = useState(null);
+
+  // Reset montage mode when popup opens or batch settings change
+  useEffect(() => {
+    if (visible) {
+      setMontageEnabled(true); // Always default to checked
+    }
+  }, [visible, isBatch, itemCount]);
+
+  // Adjust duration when montage mode changes or constraints change
+  useEffect(() => {
+    if (visible && audioDuration > 0) {
+      // If montage mode enabled but audio too short, disable it
+      if (isMontageMode && !canUseMontageMode) {
+        setMontageEnabled(false);
+      }
+
+      // Clamp duration to new constraints
+      const effectiveMax = Math.min(audioDuration - audioStartOffset, MAX_DURATION);
+      let newDuration = videoDuration;
+
+      // Clamp to min/max
+      if (newDuration > effectiveMax) {
+        newDuration = effectiveMax;
+      } else if (newDuration < MIN_DURATION) {
+        newDuration = MIN_DURATION;
+      }
+
+      // Round to step increments
+      newDuration = Math.round(newDuration / DURATION_STEP) * DURATION_STEP;
+
+      if (newDuration !== videoDuration) {
+        setVideoDuration(newDuration);
+      }
+    }
+  }, [isMontageMode, audioDuration, MIN_DURATION, MAX_DURATION, DURATION_STEP, canUseMontageMode, audioStartOffset, visible]);
 
   const audioInputRef = useRef(null);
   const audioPreviewRef = useRef(null);
@@ -248,9 +301,10 @@ const SoundToVideoPopup = ({
       setAudioWaveform(normalized);
       setAudioDuration(audioBuffer.duration);
 
-      // Set default duration to min of audio duration and MAX_DURATION
+      // Set default duration to min of audio duration and base max (20s)
       // Round down to nearest 0.25s to ensure frame count is divisible at 16fps
-      const defaultDuration = Math.min(audioBuffer.duration, MAX_DURATION);
+      // (montage mode constraints will be applied via useEffect if needed)
+      const defaultDuration = Math.min(audioBuffer.duration, BASE_MAX_DURATION);
       const roundedDuration = Math.floor(defaultDuration * 4) / 4;
       setVideoDuration(roundedDuration);
     } catch (err) {
@@ -405,30 +459,37 @@ const SoundToVideoPopup = ({
     }
 
     const deltaTime = (deltaX / rect.width) * audioDuration;
-    const maxDuration = Math.min(MAX_DURATION, audioDuration);
 
     let newStartOffset = dragStartOffset;
     let newDuration = dragStartDuration;
 
     if (dragType === 'start') {
-      // Resize from start
-      newStartOffset = Math.max(0, Math.min(dragStartOffset + deltaTime, dragStartOffset + dragStartDuration - 0.25));
-      newDuration = dragStartDuration - (newStartOffset - dragStartOffset);
+      // Adjust start (resize from left)
+      const newStart = Math.max(0, Math.min(dragStartOffset + deltaTime, dragStartOffset + dragStartDuration - MIN_DURATION));
+      const newDuration = dragStartOffset + dragStartDuration - newStart;
+      // Round to step increments (0.25s in normal mode, 0.25*itemCount in montage mode)
+      const roundedDuration = Math.round(newDuration / DURATION_STEP) * DURATION_STEP;
+      const clampedDuration = Math.min(Math.max(roundedDuration, MIN_DURATION), MAX_DURATION);
+      const adjustedStart = dragStartOffset + dragStartDuration - clampedDuration;
+      setPendingStartOffset(Math.max(0, adjustedStart));
+      setPendingDuration(clampedDuration);
+      return;
     } else if (dragType === 'end') {
-      // Resize from end
-      newDuration = Math.max(0.25, Math.min(dragStartDuration + deltaTime, maxDuration, audioDuration - dragStartOffset));
+      // Adjust end (duration)
+      const newDuration = Math.max(MIN_DURATION, Math.min(dragStartDuration + deltaTime, audioDuration - dragStartOffset, MAX_DURATION));
+      // Round to step increments (0.25s in normal mode, 0.25*itemCount in montage mode)
+      const roundedDuration = Math.round(newDuration / DURATION_STEP) * DURATION_STEP;
+      setPendingDuration(Math.max(MIN_DURATION, roundedDuration));
+      return;
     } else if (dragType === 'move') {
       // Move selection
       const maxOffset = Math.max(0, audioDuration - dragStartDuration);
       newStartOffset = Math.max(0, Math.min(dragStartOffset + deltaTime, maxOffset));
     }
 
-    // Ensure duration is within bounds
-    newDuration = Math.max(0.25, Math.min(newDuration, maxDuration, audioDuration - newStartOffset));
-
     setPendingStartOffset(newStartOffset);
-    setPendingDuration(newDuration);
-  }, [isDraggingWaveform, dragType, dragStartX, dragStartOffset, dragStartDuration, audioDuration]);
+    setPendingDuration(dragStartDuration);
+  }, [isDraggingWaveform, dragType, dragStartX, dragStartOffset, dragStartDuration, audioDuration, MIN_DURATION, MAX_DURATION, DURATION_STEP]);
 
   const handleWaveformMouseUp = useCallback((e) => {
     if (!isDraggingWaveform) return;
@@ -438,9 +499,9 @@ const SoundToVideoPopup = ({
     // Get final values before clearing pending
     const finalStart = pendingStartOffset !== null ? pendingStartOffset : audioStartOffset;
     const rawDuration = pendingDuration !== null ? pendingDuration : videoDuration;
-    
-    // Round duration down to nearest 0.25s to ensure frame count is divisible at 16fps
-    const finalDuration = Math.floor(rawDuration * 4) / 4;
+
+    // Round duration to step increments to ensure frame count is divisible at 16fps
+    const finalDuration = Math.round(rawDuration / DURATION_STEP) * DURATION_STEP;
 
     // Commit changes
     setAudioStartOffset(finalStart);
@@ -496,7 +557,7 @@ const SoundToVideoPopup = ({
     // Clear pending values AFTER committing
     setPendingStartOffset(null);
     setPendingDuration(null);
-  }, [isDraggingWaveform, hasMovedDuringDrag, isPlaying, audioStartOffset, videoDuration, audioDuration, pendingStartOffset, pendingDuration, dragType]);
+  }, [isDraggingWaveform, hasMovedDuringDrag, isPlaying, audioStartOffset, videoDuration, audioDuration, pendingStartOffset, pendingDuration, dragType, DURATION_STEP]);
 
   // Global mouse/touch up listener for drag
   useEffect(() => {
@@ -636,7 +697,9 @@ const SoundToVideoPopup = ({
       audioStartOffset,
       videoDuration,
       workflowType: 's2v',
-      modelVariant // Pass the selected model variant
+      modelVariant, // Pass the selected model variant
+      splitMode: isMontageMode, // Whether to split the audio across batch images
+      perImageDuration: isMontageMode ? videoDuration / effectiveItemCount : videoDuration
     });
   };
 
@@ -1042,6 +1105,69 @@ const SoundToVideoPopup = ({
               }}>
                 Click to seek • Drag handles to resize • Drag pink area to move
               </p>
+
+              {/* Montage Mode Checkbox - only in batch mode */}
+              {isBatch && itemCount > 1 && (
+                <div style={{
+                  marginTop: '12px',
+                  padding: '10px 12px',
+                  background: isMontageMode ? 'rgba(236, 72, 153, 0.2)' : 'rgba(255, 255, 255, 0.1)',
+                  borderRadius: '8px',
+                  border: isMontageMode ? '1px solid rgba(236, 72, 153, 0.4)' : '1px solid rgba(255, 255, 255, 0.2)'
+                }}>
+                  <label style={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '10px',
+                    cursor: canUseMontageMode ? 'pointer' : 'not-allowed',
+                    opacity: canUseMontageMode ? 1 : 0.6
+                  }}>
+                    <input
+                      type="checkbox"
+                      checked={montageEnabled && canUseMontageMode}
+                      onChange={(e) => canUseMontageMode && setMontageEnabled(e.target.checked)}
+                      disabled={!canUseMontageMode}
+                      style={{
+                        width: '18px',
+                        height: '18px',
+                        marginTop: '2px',
+                        accentColor: '#ec4899',
+                        cursor: canUseMontageMode ? 'pointer' : 'not-allowed'
+                      }}
+                    />
+                    <div style={{ flex: 1 }}>
+                      <span style={{
+                        color: 'white',
+                        fontSize: '12px',
+                        fontWeight: '600'
+                      }}>
+                        🎬 Montage Mode
+                      </span>
+                      {canUseMontageMode ? (
+                        <p style={{
+                          margin: '4px 0 0 0',
+                          color: 'rgba(255, 255, 255, 0.7)',
+                          fontSize: '10px',
+                          lineHeight: '1.4'
+                        }}>
+                          {isMontageMode
+                            ? `Each image will get ${(videoDuration / itemCount).toFixed(2)}s of audio, creating a single montage video.`
+                            : 'Each image will get the full audio segment to generate seprate full videos each.'}
+                        </p>
+                      ) : (
+                        <p style={{
+                          margin: '4px 0 0 0',
+                          color: 'rgba(239, 68, 68, 0.9)',
+                          fontSize: '10px',
+                          lineHeight: '1.4'
+                        }}>
+                          ⚠️ Audio is too short. Need at least {itemCount}s for {itemCount} images.
+                        </p>
+                      )}
+                    </div>
+                  </label>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -1111,10 +1237,10 @@ const SoundToVideoPopup = ({
             }}
           >
             <option value="speed" style={{ background: '#1a1a1a', color: 'white' }}>
-              ⚡ Fast (~3-5 min)
+              ⚡ Fast (~{isMontageMode ? Math.ceil((videoDuration / itemCount) * 0.25) : Math.ceil(videoDuration * 0.25)}-{isMontageMode ? Math.ceil((videoDuration / itemCount) * 0.33) : Math.ceil(videoDuration * 0.33)} min)
             </option>
             <option value="quality" style={{ background: '#1a1a1a', color: 'white' }}>
-              💎 Best Quality (~20-25 min)
+              💎 Best Quality (~{isMontageMode ? Math.ceil((videoDuration / itemCount) * 1.3) : Math.ceil(videoDuration * 1.3)}-{isMontageMode ? Math.ceil((videoDuration / itemCount) * 1.67) : Math.ceil(videoDuration * 1.67)} min)
             </option>
           </select>
         </div>
@@ -1205,7 +1331,11 @@ const SoundToVideoPopup = ({
               alignItems: 'center'
             }}>
               <span style={{ fontSize: '10px', fontWeight: '500', opacity: 0.8 }}>
-                {`${isBatch ? `📹 ${itemCount} videos • ` : ''}📐 ${videoResolution || '480p'} • ⏱️ ${visualDuration.toFixed(2)}s`}
+                {isBatch
+                  ? isMontageMode
+                    ? `🎬 ${itemCount} images • ${(visualDuration / itemCount).toFixed(2)}s each • 📐 ${videoResolution || '480p'}`
+                    : `📹 ${itemCount} videos • ⏱️ ${visualDuration.toFixed(2)}s • 📐 ${videoResolution || '480p'}`
+                  : `📐 ${videoResolution || '480p'} • ⏱️ ${visualDuration.toFixed(2)}s`}
               </span>
               <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
                 {costRaw && (
@@ -1213,14 +1343,18 @@ const SoundToVideoPopup = ({
                     {(() => {
                       const costValue = typeof costRaw === 'number' ? costRaw : parseFloat(costRaw);
                       if (isNaN(costValue)) return null;
+                      // In montage mode, cost is already calculated as (totalDuration × itemCount) by parent,
+                      // so divide by itemCount to show per-image cost
+                      const adjustedCost = isMontageMode ? costValue / effectiveItemCount : costValue;
                       const tokenLabel = getTokenLabel(tokenType);
-                      return `${costValue.toFixed(2)} ${tokenLabel}`;
+                      return `${adjustedCost.toFixed(2)} ${tokenLabel}`;
                     })()}
                   </span>
                 )}
                 {costUSD && (
                   <span style={{ fontWeight: '400', opacity: 0.75, fontSize: '10px' }}>
-                    ≈ ${costUSD.toFixed(2)} USD
+                    {/* In montage mode, adjust USD cost similarly */}
+                    ≈ ${(isMontageMode ? costUSD / effectiveItemCount : costUSD).toFixed(2)} USD
                   </span>
                 )}
               </div>
