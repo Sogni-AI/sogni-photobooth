@@ -28,8 +28,8 @@ function getSogniRestUrl() {
   return 'https://api.sogni.ai';
 }
 
-// Fetch 10 jobs at a time
-const PAGE_SIZE = 10;
+// Fetch 50 jobs at a time to reduce round trips and loading flashes
+const PAGE_SIZE = 50;
 
 // Map API job status to our JobStatus type
 const JOB_STATUS_MAP: Record<string, JobStatus> = {
@@ -108,9 +108,11 @@ export function useProjectHistory({ sogniClient }: UseProjectHistoryOptions) {
 
   // Track if we're currently fetching to prevent duplicate requests
   const fetchingRef = useRef(false);
+  // Track if we're prefetching the next page silently
+  const prefetchingRef = useRef(false);
 
   // Fetch a page of job history
-  const fetchPage = useCallback(async (offset: number = 0) => {
+  const fetchPage = useCallback(async (offset: number = 0, isPrefetch: boolean = false) => {
     if (!sogniClient) {
       setState(prev => ({ ...prev, error: 'Not authenticated', loading: false }));
       return;
@@ -123,10 +125,18 @@ export function useProjectHistory({ sogniClient }: UseProjectHistoryOptions) {
     }
 
     // Prevent duplicate fetches
-    if (fetchingRef.current) return;
-    fetchingRef.current = true;
+    if (isPrefetch) {
+      if (prefetchingRef.current) return;
+      prefetchingRef.current = true;
+    } else {
+      if (fetchingRef.current) return;
+      fetchingRef.current = true;
+    }
 
-    setState(prev => ({ ...prev, loading: true, error: null }));
+    // Only show loading indicator for non-prefetch requests
+    if (!isPrefetch) {
+      setState(prev => ({ ...prev, loading: true, error: null }));
+    }
 
     try {
       const params = {
@@ -242,14 +252,20 @@ export function useProjectHistory({ sogniClient }: UseProjectHistoryOptions) {
       });
     } catch (error) {
       console.error('Failed to fetch project history:', error);
-      setState(prev => ({
-        ...prev,
-        loading: false,
-        initialized: true,
-        error: error instanceof Error ? error.message : 'Failed to fetch history'
-      }));
+      if (!isPrefetch) {
+        setState(prev => ({
+          ...prev,
+          loading: false,
+          initialized: true,
+          error: error instanceof Error ? error.message : 'Failed to fetch history'
+        }));
+      }
     } finally {
-      fetchingRef.current = false;
+      if (isPrefetch) {
+        prefetchingRef.current = false;
+      } else {
+        fetchingRef.current = false;
+      }
     }
   }, [sogniClient]);
 
@@ -270,6 +286,13 @@ export function useProjectHistory({ sogniClient }: UseProjectHistoryOptions) {
   const loadMore = useCallback(() => {
     if (!state.loading && state.hasMore) {
       fetchPage(state.offset);
+    }
+  }, [fetchPage, state.loading, state.hasMore, state.offset]);
+
+  // Prefetch next page silently (no loading indicator)
+  const prefetchNext = useCallback(() => {
+    if (!state.loading && state.hasMore && !prefetchingRef.current) {
+      fetchPage(state.offset, true);
     }
   }, [fetchPage, state.loading, state.hasMore, state.offset]);
 
@@ -344,6 +367,7 @@ export function useProjectHistory({ sogniClient }: UseProjectHistoryOptions) {
     visibleProjects,
     refresh,
     loadMore,
+    prefetchNext,
     hideJob,
     deleteProject
   };

@@ -136,6 +136,66 @@
   transform: scale(1.1);
 }
 
+/* Media Type Filter */
+.recent-projects-filter {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+  padding: 4px;
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 12px;
+  width: fit-content;
+}
+
+.recent-projects-filter-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.recent-projects-filter-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+}
+
+.recent-projects-filter-btn.active {
+  background: rgba(255, 255, 255, 0.95);
+  color: #333;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.recent-projects-filter-btn.active:hover {
+  background: #ffffff;
+}
+
+.recent-projects-filter-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.2);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.recent-projects-filter-btn.active .recent-projects-filter-count {
+  background: rgba(0, 0, 0, 0.1);
+}
+
 /* Loading State */
 .recent-projects-loading {
   display: flex;
@@ -279,6 +339,50 @@
 .recent-project-date {
   font-size: 0.75rem;
   color: rgba(255, 255, 255, 0.7);
+}
+
+/* Pin Button */
+.recent-project-pin-btn {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 193, 7, 0.5);
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 1rem;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  padding: 0;
+}
+
+.recent-project-pin-btn:hover {
+  background: rgba(255, 193, 7, 0.3);
+  border-color: rgba(255, 193, 7, 0.8);
+  transform: scale(1.1);
+}
+
+.recent-project-pin-btn-active {
+  background: rgba(255, 193, 7, 0.4);
+  border-color: rgba(255, 193, 7, 0.9);
+}
+
+.recent-project-pin-btn-active:hover {
+  background: rgba(255, 193, 7, 0.5);
+}
+
+/* Pinned Project Badge */
+.recent-project-pin-badge {
+  margin-right: 6px;
+  font-size: 0.875rem;
+}
+
+/* Pinned Project Card Style */
+.recent-project-pinned {
+  border: 2px solid rgba(255, 193, 7, 0.6);
+  box-shadow: 0 4px 16px rgba(255, 193, 7, 0.2);
 }
 
 .recent-project-delete-btn {
@@ -502,6 +606,25 @@
 
   .recent-projects-scroll-container {
     padding: 16px;
+  }
+
+  .recent-projects-filter {
+    gap: 4px;
+    padding: 3px;
+    margin-bottom: 16px;
+  }
+
+  .recent-projects-filter-btn {
+    padding: 6px 10px;
+    font-size: 0.75rem;
+    gap: 4px;
+  }
+
+  .recent-projects-filter-count {
+    min-width: 18px;
+    height: 18px;
+    padding: 0 4px;
+    font-size: 0.6875rem;
   }
 
   .recent-projects-desc-wrapper {
