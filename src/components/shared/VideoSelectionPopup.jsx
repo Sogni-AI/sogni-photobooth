@@ -39,6 +39,9 @@ const VideoSelectionPopup = ({
   const [emojiVideoIndex, setEmojiVideoIndex] = useState(0);
   const [baldForBaseVideoIndex, setBaldForBaseVideoIndex] = useState(0);
   const [s2vMuted, setS2vMuted] = useState(true); // S2V video muted by default
+  const [animateMoveMuted, setAnimateMoveMuted] = useState(true); // Animate Move video muted by default
+  const [animateReplaceMuted, setAnimateReplaceMuted] = useState(true); // Animate Replace video muted by default
+  const [transitionMuted, setTransitionMuted] = useState(true); // Transition videos muted by default
   const [videoLoadedStates, setVideoLoadedStates] = useState({
     'prompt': false,
     'emoji': false,
@@ -175,8 +178,8 @@ const VideoSelectionPopup = ({
     });
 
     // Example video URLs for Video Move and Video Replace workflows
-    const animateMoveVideo = 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/gallery/videos/animate-move/animate-move-fast-techno-viking-mark-blade.mp4';
-    const animateReplaceVideo = 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/gallery/videos/animate-replace/einstein-yacty-walkout.mp4';
+    const animateMoveVideo = 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/videos/transitions/wan-animate-move-medly.mp4';
+    const animateReplaceVideo = 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/videos/transitions/wan-animate-replace-medly.mp4';
     const soundToVideoVideo = 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/videos/sogni-photobooth-video-demo_832x1216.mp4';
 
     // Add Motion Transfer option
@@ -236,6 +239,9 @@ const VideoSelectionPopup = ({
     setEmojiVideoIndex(0);
     setBaldForBaseVideoIndex(0);
     setS2vMuted(true); // Reset mute state when popup opens
+    setAnimateMoveMuted(true); // Reset animate move mute state when popup opens
+    setAnimateReplaceMuted(true); // Reset animate replace mute state when popup opens
+    setTransitionMuted(true); // Reset transition mute state when popup opens
     // Reset loading states when popup opens
     setVideoLoadedStates({
       'prompt': false,
@@ -594,7 +600,13 @@ const VideoSelectionPopup = ({
                   margin: '0 auto'
                 }}>
                   {/* Placeholder icon - shown while video is loading or if no video */}
-                  {(!option.exampleVideo || !videoLoadedStates[option.id === 'batch-transition' ? 'transition' : option.id]) && (
+                  {(!option.exampleVideo || !videoLoadedStates[
+                    option.id === 'batch-transition' ? 'transition' :
+                    option.id === 'batch-animate-move' ? 'animate-move' :
+                    option.id === 'batch-animate-replace' ? 'animate-replace' :
+                    option.id === 'batch-s2v' ? 's2v' :
+                    option.id
+                  ]) && (
                     <div style={{
                       position: 'absolute',
                       top: '50%',
@@ -622,7 +634,13 @@ const VideoSelectionPopup = ({
                         background: 'linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.15) 100%)',
                         zIndex: 2,
                         pointerEvents: 'none',
-                        opacity: videoLoadedStates[option.id] ? 1 : 0,
+                        opacity: videoLoadedStates[
+                          option.id === 'batch-transition' ? 'transition' :
+                          option.id === 'batch-animate-move' ? 'animate-move' :
+                          option.id === 'batch-animate-replace' ? 'animate-replace' :
+                          option.id === 'batch-s2v' ? 's2v' :
+                          option.id
+                        ] ? 1 : 0,
                         transition: 'opacity 0.3s ease'
                       }} />
                       {/* Single video element - simple approach matching Bald For Base popup */}
@@ -639,18 +657,32 @@ const VideoSelectionPopup = ({
                         }}
                         src={option.exampleVideo}
                         autoPlay
-                        muted={option.id === 's2v' || option.id === 'batch-s2v' ? s2vMuted : true}
+                        muted={
+                          (option.id === 's2v' || option.id === 'batch-s2v') ? s2vMuted :
+                          (option.id === 'animate-move' || option.id === 'batch-animate-move') ? animateMoveMuted :
+                          (option.id === 'animate-replace' || option.id === 'batch-animate-replace') ? animateReplaceMuted :
+                          (option.id === 'transition' || option.id === 'batch-transition') ? transitionMuted :
+                          true
+                        }
                         playsInline
                         preload="auto"
                         loop={!option.exampleVideos}
                         onLoadedData={() => {
-                          // Handle both 'transition' and 'batch-transition' IDs
-                          const stateKey = option.id === 'batch-transition' ? 'transition' : option.id;
+                          // Handle batch variants - map to base key
+                          const stateKey = option.id === 'batch-transition' ? 'transition' :
+                                          option.id === 'batch-animate-move' ? 'animate-move' :
+                                          option.id === 'batch-animate-replace' ? 'animate-replace' :
+                                          option.id === 'batch-s2v' ? 's2v' :
+                                          option.id;
                           setVideoLoadedStates(prev => ({ ...prev, [stateKey]: true }));
                         }}
                         onCanPlay={() => {
                           // Also mark as loaded on canplay for faster feedback
-                          const stateKey = option.id === 'batch-transition' ? 'transition' : option.id;
+                          const stateKey = option.id === 'batch-transition' ? 'transition' :
+                                          option.id === 'batch-animate-move' ? 'animate-move' :
+                                          option.id === 'batch-animate-replace' ? 'animate-replace' :
+                                          option.id === 'batch-s2v' ? 's2v' :
+                                          option.id;
                           setVideoLoadedStates(prev => ({ ...prev, [stateKey]: true }));
                         }}
                         onEnded={() => {
@@ -668,15 +700,28 @@ const VideoSelectionPopup = ({
                           top: 0,
                           left: 0,
                           zIndex: 0,
-                          opacity: videoLoadedStates[option.id === 'batch-transition' ? 'transition' : option.id] ? 1 : 0,
+                          opacity: videoLoadedStates[
+                            option.id === 'batch-transition' ? 'transition' :
+                            option.id === 'batch-animate-move' ? 'animate-move' :
+                            option.id === 'batch-animate-replace' ? 'animate-replace' :
+                            option.id === 'batch-s2v' ? 's2v' :
+                            option.id
+                          ] ? 1 : 0,
                           transition: 'opacity 0.3s ease'
                         }}
                       />
-                      {/* Mute/Unmute button for S2V videos */}
-                      {(option.id === 's2v' || option.id === 'batch-s2v') && videoLoadedStates[option.id] && (
+                      {/* Mute/Unmute button - only show one per video type */}
+                      {((option.id === 's2v' || option.id === 'batch-s2v') && 
+                        videoLoadedStates[option.id === 'batch-s2v' ? 's2v' : option.id]) ? (
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
+                            // When unmuting S2V, mute other video types
+                            if (s2vMuted) {
+                              setAnimateMoveMuted(true);
+                              setAnimateReplaceMuted(true);
+                              setTransitionMuted(true);
+                            }
                             setS2vMuted(!s2vMuted);
                           }}
                           style={{
@@ -710,7 +755,139 @@ const VideoSelectionPopup = ({
                         >
                           {s2vMuted ? '🔇' : '🔊'}
                         </button>
-                      )}
+                      ) : ((option.id === 'animate-move' || option.id === 'batch-animate-move') && 
+                            videoLoadedStates[option.id === 'batch-animate-move' ? 'animate-move' : option.id]) ? (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            // When unmuting animate move, mute other video types
+                            if (animateMoveMuted) {
+                              setS2vMuted(true);
+                              setAnimateReplaceMuted(true);
+                              setTransitionMuted(true);
+                            }
+                            setAnimateMoveMuted(!animateMoveMuted);
+                          }}
+                          style={{
+                            position: 'absolute',
+                            bottom: '12px',
+                            right: '12px',
+                            width: '36px',
+                            height: '36px',
+                            borderRadius: '50%',
+                            border: 'none',
+                            background: 'rgba(0, 0, 0, 0.7)',
+                            color: 'white',
+                            fontSize: '18px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            transition: 'all 0.2s ease',
+                            zIndex: 10,
+                            backdropFilter: 'blur(10px)',
+                            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)'
+                          }}
+                          onMouseOver={(e) => {
+                            e.currentTarget.style.background = 'rgba(0, 0, 0, 0.85)';
+                            e.currentTarget.style.transform = 'scale(1.1)';
+                          }}
+                          onMouseOut={(e) => {
+                            e.currentTarget.style.background = 'rgba(0, 0, 0, 0.7)';
+                            e.currentTarget.style.transform = 'scale(1)';
+                          }}
+                        >
+                          {animateMoveMuted ? '🔇' : '🔊'}
+                        </button>
+                      ) : ((option.id === 'animate-replace' || option.id === 'batch-animate-replace') && 
+                            videoLoadedStates[option.id === 'batch-animate-replace' ? 'animate-replace' : option.id]) ? (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            // When unmuting animate replace, mute other video types
+                            if (animateReplaceMuted) {
+                              setS2vMuted(true);
+                              setAnimateMoveMuted(true);
+                              setTransitionMuted(true);
+                            }
+                            setAnimateReplaceMuted(!animateReplaceMuted);
+                          }}
+                          style={{
+                            position: 'absolute',
+                            bottom: '12px',
+                            right: '12px',
+                            width: '36px',
+                            height: '36px',
+                            borderRadius: '50%',
+                            border: 'none',
+                            background: 'rgba(0, 0, 0, 0.7)',
+                            color: 'white',
+                            fontSize: '18px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            transition: 'all 0.2s ease',
+                            zIndex: 10,
+                            backdropFilter: 'blur(10px)',
+                            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)'
+                          }}
+                          onMouseOver={(e) => {
+                            e.currentTarget.style.background = 'rgba(0, 0, 0, 0.85)';
+                            e.currentTarget.style.transform = 'scale(1.1)';
+                          }}
+                          onMouseOut={(e) => {
+                            e.currentTarget.style.background = 'rgba(0, 0, 0, 0.7)';
+                            e.currentTarget.style.transform = 'scale(1)';
+                          }}
+                        >
+                          {animateReplaceMuted ? '🔇' : '🔊'}
+                        </button>
+                      ) : ((option.id === 'transition' || option.id === 'batch-transition') && 
+                            videoLoadedStates['transition']) ? (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            // When unmuting transition videos, mute other video types
+                            if (transitionMuted) {
+                              setS2vMuted(true);
+                              setAnimateMoveMuted(true);
+                              setAnimateReplaceMuted(true);
+                            }
+                            setTransitionMuted(!transitionMuted);
+                          }}
+                          style={{
+                            position: 'absolute',
+                            bottom: '12px',
+                            right: '12px',
+                            width: '36px',
+                            height: '36px',
+                            borderRadius: '50%',
+                            border: 'none',
+                            background: 'rgba(0, 0, 0, 0.7)',
+                            color: 'white',
+                            fontSize: '18px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            transition: 'all 0.2s ease',
+                            zIndex: 10,
+                            backdropFilter: 'blur(10px)',
+                            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)'
+                          }}
+                          onMouseOver={(e) => {
+                            e.currentTarget.style.background = 'rgba(0, 0, 0, 0.85)';
+                            e.currentTarget.style.transform = 'scale(1.1)';
+                          }}
+                          onMouseOut={(e) => {
+                            e.currentTarget.style.background = 'rgba(0, 0, 0, 0.7)';
+                            e.currentTarget.style.transform = 'scale(1)';
+                          }}
+                        >
+                          {transitionMuted ? '🔇' : '🔊'}
+                        </button>
+                      ) : null}
                     </>
                   ) : null}
                   
