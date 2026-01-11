@@ -312,6 +312,58 @@ async function concatenateMP4s_Base(buffers, options = {}) {
           if (v.getUint32(12) > 0) audioSampleDelta = v.getUint32(20);
         }
         
+        // Check for edit list to determine:
+        // 1. media_time: encoder priming samples to skip at the START
+        // 2. segment_duration: total playable duration (to trim trailing samples at END)
+        // This is critical for seamless audio concatenation between clips
+        let samplesToSkip = 0;
+        let maxSamplesToInclude = Infinity; // By default, include all samples after skipping
+        
+        // Get movie timescale for segment_duration conversion
+        const mvhd = findBox(moovBuf, 8, moovBuf.byteLength, 'mvhd');
+        let fileMovieTimescale = 1000;
+        if (mvhd) {
+          const mvhdView = new DataView(moovBuf, mvhd.start, mvhd.size);
+          const mvhdVersion = mvhdView.getUint8(8);
+          fileMovieTimescale = mvhdVersion === 0 ? mvhdView.getUint32(20) : mvhdView.getUint32(28);
+        }
+        
+        const edts = findBox(moovBuf, aTrak.contentStart, aTrak.end, 'edts');
+        if (edts) {
+          const elst = findBox(moovBuf, edts.contentStart, edts.end, 'elst');
+          if (elst) {
+            const elstView = new DataView(moovBuf, elst.start, elst.size);
+            const elstVersion = elstView.getUint8(8);
+            const entryCount = elstView.getUint32(12);
+            
+            if (entryCount > 0) {
+              let segmentDuration, mediaTime;
+              if (elstVersion === 0) {
+                segmentDuration = elstView.getUint32(16);
+                mediaTime = elstView.getInt32(20);
+              } else {
+                segmentDuration = Number(elstView.getBigUint64(16));
+                mediaTime = Number(elstView.getBigInt64(24));
+              }
+              
+              // Skip encoder priming samples at the start
+              if (mediaTime > 0) {
+                samplesToSkip = Math.floor(mediaTime / audioSampleDelta);
+              }
+              
+              // Calculate max samples to include based on segment duration
+              // segment_duration is in movie timescale, convert to audio samples
+              // Use Math.floor instead of Math.ceil to avoid rounding up and including too few samples
+              if (segmentDuration > 0) {
+                const segmentDurationInAudioTimescale = (segmentDuration * audioTimescale) / fileMovieTimescale;
+                maxSamplesToInclude = Math.floor(segmentDurationInAudioTimescale / audioSampleDelta + 0.5); // Round to nearest
+              }
+              
+              console.log(`[CO] File ${fileIdx + 1} edit list: media_time=${mediaTime} (skip ${samplesToSkip}), segment_duration=${segmentDuration} (max ${maxSamplesToInclude} samples)`);
+            }
+          }
+        }
+        
         const stszView = new DataView(moovBuf, stsz.start, stsz.size);
         const stcoView = new DataView(moovBuf, stco.start, stco.size);
         const sampleCount = stszView.getUint32(16);
@@ -335,6 +387,10 @@ async function concatenateMP4s_Base(buffers, options = {}) {
         }
         
         let sampleIdx = 0;
+        let skippedCount = 0;
+        let includedCount = 0;
+        const samplesBeforeThisFile = allAudioSamples.length;
+        
         for (let chunkIdx = 0; chunkIdx < chunkCount && sampleIdx < sampleCount; chunkIdx++) {
           let samplesInChunk = 1;
           for (const entry of stscEntries) {
@@ -343,13 +399,35 @@ async function concatenateMP4s_Base(buffers, options = {}) {
           let byteOffset = chunkOffsets[chunkIdx];
           for (let s = 0; s < samplesInChunk && sampleIdx < sampleCount; s++) {
             const sampleSize = sampleSizes[sampleIdx];
+            
+            // Skip encoder priming samples (as indicated by edit list media_time)
+            if (skippedCount < samplesToSkip) {
+              skippedCount++;
+              byteOffset += sampleSize;
+              sampleIdx++;
+              continue;
+            }
+            
+            // Stop if we've included enough samples (as indicated by edit list segment_duration)
+            if (includedCount >= maxSamplesToInclude) {
+              sampleIdx++;
+              byteOffset += sampleSize;
+              continue;
+            }
+            
             if (byteOffset + sampleSize <= origBuf.length) {
               allAudioSamples.push(origBuf.slice(byteOffset, byteOffset + sampleSize));
               allAudioSizes.push(sampleSize);
+              includedCount++;
             }
             byteOffset += sampleSize;
             sampleIdx++;
           }
+        }
+        
+        const extractedFromFile = allAudioSamples.length - samplesBeforeThisFile;
+        if (samplesToSkip > 0 || maxSamplesToInclude < Infinity) {
+          console.log(`[CO] File ${fileIdx + 1}: Extracted ${extractedFromFile} samples (skipped ${skippedCount} start, limit ${maxSamplesToInclude})`);
         }
       }
     }
@@ -1064,6 +1142,9 @@ function concatenateSourceAudioTracks(videoBuffers) {
  * Extract audio track with actual audio sample data from a video buffer
  * This properly extracts just the audio bytes from the mdat, not the whole mdat
  * 
+ * IMPORTANT: Respects edit list (elst) to skip encoder priming samples.
+ * AAC encoders add ~2048 samples of delay that need to be skipped for seamless concatenation.
+ * 
  * @param {ArrayBuffer} buffer - Source video buffer
  * @returns {Object|null} - Audio track info with extracted samples, or null
  */
@@ -1151,16 +1232,59 @@ function extractAudioTrackWithSamples(buffer) {
   // Get mdhd for timescale
   const mdhd = findNestedBoxInRange(moovBuffer, audioTrak.contentStart, audioTrak.end, ['mdia', 'mdhd']);
   let timescale = 44100;
-  let duration = 0;
   if (mdhd) {
     const v = new DataView(moovBuffer, mdhd.start, mdhd.size);
     const version = v.getUint8(8);
-    if (version === 0) {
-      timescale = v.getUint32(20);
-      duration = v.getUint32(24);
-    } else {
-      timescale = v.getUint32(28);
-      duration = Number(v.getBigUint64(32));
+    timescale = version === 0 ? v.getUint32(20) : v.getUint32(28);
+  }
+  
+  // Check for edit list (elst) to determine:
+  // 1. media_time: encoder priming samples to skip at START
+  // 2. segment_duration: max playable duration (to trim at END)
+  let samplesToSkip = 0;
+  let maxSamplesToInclude = sampleSizes.length; // Default: all samples
+  
+  // Get movie timescale for segment_duration conversion
+  const mvhd = findBox(moovBuffer, 8, moovBuffer.byteLength, 'mvhd');
+  let movieTimescale = 1000;
+  if (mvhd) {
+    const mvhdView = new DataView(moovBuffer, mvhd.start, mvhd.size);
+    const mvhdVersion = mvhdView.getUint8(8);
+    movieTimescale = mvhdVersion === 0 ? mvhdView.getUint32(20) : mvhdView.getUint32(28);
+  }
+  
+  const edts = findBox(moovBuffer, audioTrak.contentStart, audioTrak.end, 'edts');
+  if (edts) {
+    const elst = findBox(moovBuffer, edts.contentStart, edts.end, 'elst');
+    if (elst) {
+      const elstView = new DataView(moovBuffer, elst.start, elst.size);
+      const elstVersion = elstView.getUint8(8);
+      const entryCount = elstView.getUint32(12);
+      
+      if (entryCount > 0) {
+        let segmentDuration, mediaTime;
+        if (elstVersion === 0) {
+          segmentDuration = elstView.getUint32(16);
+          mediaTime = elstView.getInt32(20);
+        } else {
+          segmentDuration = Number(elstView.getBigUint64(16));
+          mediaTime = Number(elstView.getBigInt64(24));
+        }
+        
+        // Skip encoder priming samples at the start
+        if (mediaTime > 0) {
+          samplesToSkip = Math.floor(mediaTime / sampleDelta);
+        }
+        
+        // Calculate max samples to include based on segment duration
+        // Use Math.floor + 0.5 to round to nearest sample
+        if (segmentDuration > 0) {
+          const segmentDurationInTimescale = (segmentDuration * timescale) / movieTimescale;
+          maxSamplesToInclude = Math.floor(segmentDurationInTimescale / sampleDelta + 0.5);
+        }
+
+        console.log(`[Audio Extract] Edit list: media_time=${mediaTime} (skip ${samplesToSkip}), segment_duration=${segmentDuration} (max ${maxSamplesToInclude} samples)`);
+      }
     }
   }
   
@@ -1170,7 +1294,9 @@ function extractAudioTrackWithSamples(buffer) {
     buffer,
     chunkOffsets,
     stscEntries,
-    sampleSizes
+    sampleSizes,
+    samplesToSkip, // Samples to skip at start for encoder priming
+    maxSamplesToInclude // Max samples to include (for segment duration limit)
   );
   
   if (!audioBytes || audioBytes.byteLength === 0) {
@@ -1178,13 +1304,23 @@ function extractAudioTrackWithSamples(buffer) {
     return null;
   }
   
+  // Calculate actual samples extracted
+  const actualSamplesExtracted = Math.min(sampleSizes.length - samplesToSkip, maxSamplesToInclude);
+  
+  // Adjust sample sizes array to match extracted samples
+  const adjustedSampleSizes = sampleSizes.slice(samplesToSkip, samplesToSkip + actualSamplesExtracted);
+  
+  // Adjust duration to account for actual samples
+  const adjustedDuration = actualSamplesExtracted * sampleDelta;
+  
   return {
-    sampleSizes,
+    sampleSizes: adjustedSampleSizes,
     audioMdatData: audioBytes,
     timescale,
     sampleDelta,
-    duration,
-    stsdBox
+    duration: adjustedDuration,
+    stsdBox,
+    skippedSamples: samplesToSkip // Track for debugging
   };
 }
 
@@ -1195,21 +1331,38 @@ function extractAudioTrackWithSamples(buffer) {
  * @param {number[]} chunkOffsets - Absolute file offsets for each chunk
  * @param {Object[]} stscEntries - Sample-to-chunk mapping
  * @param {number[]} sampleSizes - Size of each sample
+ * @param {number} samplesToSkip - Number of samples to skip at the start (encoder priming)
+ * @param {number} maxSamplesToInclude - Maximum samples to include (for segment duration trimming)
  * @returns {Uint8Array} - Extracted audio sample data
  */
-function extractAudioSamplesFromMdat(fileBuffer, chunkOffsets, stscEntries, sampleSizes) {
+function extractAudioSamplesFromMdat(fileBuffer, chunkOffsets, stscEntries, sampleSizes, samplesToSkip = 0, maxSamplesToInclude = Infinity) {
   if (chunkOffsets.length === 0 || sampleSizes.length === 0) {
     return null;
   }
   
-  // Calculate total audio size
-  const totalSize = sampleSizes.reduce((sum, size) => sum + size, 0);
+  // Calculate actual number of samples to extract
+  const availableSamples = sampleSizes.length - samplesToSkip;
+  const samplesToExtract = Math.min(availableSamples, maxSamplesToInclude);
+  
+  // Calculate total audio size for samples we'll extract
+  let totalSize = 0;
+  for (let i = samplesToSkip; i < samplesToSkip + samplesToExtract; i++) {
+    totalSize += sampleSizes[i];
+  }
+  
+  if (totalSize === 0) {
+    console.warn(`[Audio Extract] No audio data after skipping ${samplesToSkip} samples`);
+    return null;
+  }
+  
   const audioData = new Uint8Array(totalSize);
   
   // Build a map of which samples are in which chunk
   // stsc tells us: starting from chunk X, each chunk has Y samples
   let sampleIndex = 0;
   let writeOffset = 0;
+  let skippedCount = 0;
+  let includedCount = 0;
   
   for (let chunkIdx = 0; chunkIdx < chunkOffsets.length; chunkIdx++) {
     // Find the stsc entry for this chunk
@@ -1226,6 +1379,19 @@ function extractAudioSamplesFromMdat(fileBuffer, chunkOffsets, stscEntries, samp
     for (let s = 0; s < samplesInChunk && sampleIndex < sampleSizes.length; s++) {
       const sampleSize = sampleSizes[sampleIndex];
       
+      // Skip encoder priming samples
+      if (skippedCount < samplesToSkip) {
+        skippedCount++;
+        chunkReadOffset += sampleSize;
+        sampleIndex++;
+        continue;
+      }
+      
+      // Stop if we've included enough samples (segment duration limit)
+      if (includedCount >= samplesToExtract) {
+        break;
+      }
+      
       // Copy sample data from file buffer to audio data
       const sampleData = new Uint8Array(fileBuffer, chunkReadOffset, sampleSize);
       audioData.set(sampleData, writeOffset);
@@ -1233,7 +1399,17 @@ function extractAudioSamplesFromMdat(fileBuffer, chunkOffsets, stscEntries, samp
       chunkReadOffset += sampleSize;
       writeOffset += sampleSize;
       sampleIndex++;
+      includedCount++;
     }
+    
+    // Exit outer loop if we've extracted enough
+    if (includedCount >= samplesToExtract) {
+      break;
+    }
+  }
+  
+  if (samplesToSkip > 0 || maxSamplesToInclude < Infinity) {
+    console.log(`[Audio Extract] Skipped ${skippedCount} start, extracted ${includedCount} samples (${writeOffset} bytes), limit was ${maxSamplesToInclude}`);
   }
   
   return audioData;
