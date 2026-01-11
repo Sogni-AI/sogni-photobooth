@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
 import {
   shouldSkipConfirmation,
   setSkipConfirmation,
@@ -32,7 +32,7 @@ const CancelConfirmationPopup: React.FC<CancelConfirmationPopupProps> = ({
 }) => {
   const modalRef = useRef<HTMLDivElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
-  const [dontRemindChecked, setDontRemindChecked] = useState(true); // Default checked
+  const [dontRemindChecked, setDontRemindChecked] = useState(false); // Default unchecked - show popup by default
   const [refundEstimate, setRefundEstimate] = useState<RefundEstimate | null>(null);
 
   // Calculate refund estimate when popup opens
@@ -94,8 +94,17 @@ const CancelConfirmationPopup: React.FC<CancelConfirmationPopupProps> = ({
   };
 
   const getProgressDisplay = () => {
-    if (totalItems > 1 && itemsCompleted > 0) {
-      return `${itemsCompleted} of ${totalItems} items completed`;
+    const inProgressCount = totalItems - itemsCompleted;
+    if (totalItems > 1) {
+      if (itemsCompleted > 0 && inProgressCount > 0) {
+        return `${itemsCompleted} of ${totalItems} completed, ${inProgressCount} in progress`;
+      }
+      if (itemsCompleted > 0) {
+        return `${itemsCompleted} of ${totalItems} items completed`;
+      }
+      if (inProgressCount > 0) {
+        return `${inProgressCount} item${inProgressCount > 1 ? 's' : ''} in progress (~${Math.round(progress)}%)`;
+      }
     }
     if (progress > 0) {
       return `${Math.round(progress)}% complete`;
@@ -212,15 +221,20 @@ export function useCancelConfirmation() {
     itemsCompleted: number;
     totalItems: number;
     onConfirm: () => void;
+    onCancel?: () => void;
   } | null>(null);
+  
+  // Track last update values to prevent unnecessary state updates
+  const lastUpdateRef = useRef<{ progress: number; itemsCompleted: number; totalItems: number } | null>(null);
 
-  const requestCancel = (params: {
+  const requestCancel = useCallback((params: {
     projectId: string;
     projectType?: 'image' | 'video' | 'enhancement' | 'transition';
     progress?: number;
     itemsCompleted?: number;
     totalItems?: number;
     onConfirm: () => void;
+    onCancel?: () => void;
   }) => {
     // If user opted out of confirmations, cancel immediately
     if (shouldSkipConfirmation()) {
@@ -228,6 +242,9 @@ export function useCancelConfirmation() {
       return;
     }
 
+    // Reset last update ref when opening new popup
+    lastUpdateRef.current = null;
+    
     // Show confirmation popup
     setPendingCancel({
       projectId: params.projectId,
@@ -235,32 +252,83 @@ export function useCancelConfirmation() {
       progress: params.progress || 0,
       itemsCompleted: params.itemsCompleted || 0,
       totalItems: params.totalItems || 1,
-      onConfirm: params.onConfirm
+      onConfirm: params.onConfirm,
+      onCancel: params.onCancel
     });
     setShowPopup(true);
-  };
+  }, []);
 
-  const handleClose = () => {
-    setShowPopup(false);
-    setPendingCancel(null);
-  };
-
-  const handleConfirm = () => {
-    console.log('[CancelHook] handleConfirm called');
-    console.log('[CancelHook] pendingCancel:', pendingCancel);
-    if (pendingCancel?.onConfirm) {
-      console.log('[CancelHook] Calling onConfirm callback');
-      pendingCancel.onConfirm();
-    } else {
-      console.log('[CancelHook] No onConfirm callback available');
+  // Update progress/counts while popup is open (for dynamic updates)
+  // Memoized to prevent infinite re-render loops
+  const updateProgress = useCallback((progress: number, itemsCompleted: number, totalItems: number) => {
+    // Only update if values actually changed (prevents infinite loops)
+    const last = lastUpdateRef.current;
+    if (last && 
+        last.progress === progress && 
+        last.itemsCompleted === itemsCompleted && 
+        last.totalItems === totalItems) {
+      return;
     }
-    handleClose();
-  };
+    
+    lastUpdateRef.current = { progress, itemsCompleted, totalItems };
+    
+    setPendingCancel(prev => {
+      if (!prev) return null;
+      // Double-check values actually changed
+      if (prev.progress === progress && 
+          prev.itemsCompleted === itemsCompleted && 
+          prev.totalItems === totalItems) {
+        return prev;
+      }
+      return {
+        ...prev,
+        progress,
+        itemsCompleted,
+        totalItems
+      };
+    });
+  }, []);
+
+  // Auto-close popup when there's nothing left to cancel
+  const dismissIfComplete = useCallback(() => {
+    setShowPopup(prev => {
+      if (prev) {
+        setPendingCancel(null);
+        lastUpdateRef.current = null;
+        return false;
+      }
+      return prev;
+    });
+  }, []);
+
+  const handleClose = useCallback(() => {
+    setPendingCancel(prev => {
+      if (prev?.onCancel) {
+        prev.onCancel();
+      }
+      return null;
+    });
+    setShowPopup(false);
+    lastUpdateRef.current = null;
+  }, []);
+
+  const handleConfirm = useCallback(() => {
+    setPendingCancel(prev => {
+      if (prev?.onConfirm) {
+        prev.onConfirm();
+      }
+      return null;
+    });
+    setShowPopup(false);
+    lastUpdateRef.current = null;
+  }, []);
 
   return {
     showPopup,
     pendingCancel,
     requestCancel,
+    updateProgress,
+    dismissIfComplete,
     handleClose,
     handleConfirm
   };

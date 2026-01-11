@@ -545,7 +545,30 @@ function RecentProjects({ sogniClient, onClose, onReuseProject }: RecentProjects
   return (
     <div className="recent-projects-page">
       <div className="recent-projects-header">
-        <h2>Recent Projects</h2>
+        <div className="recent-projects-header-left">
+          <h2>Recent Projects</h2>
+          {/* Media type filter - compact, left-aligned */}
+          <div className="recent-projects-filter">
+            <button
+              className={`recent-projects-filter-btn${mediaFilter === 'all' ? ' active' : ''}`}
+              onClick={() => setMediaFilter('all')}
+            >
+              All <span className="recent-projects-filter-count">{countsLoading ? '…' : projectCounts.all}</span>
+            </button>
+            <button
+              className={`recent-projects-filter-btn${mediaFilter === 'image' ? ' active' : ''}`}
+              onClick={() => setMediaFilter('image')}
+            >
+              Photos <span className="recent-projects-filter-count">{countsLoading ? '…' : projectCounts.image}</span>
+            </button>
+            <button
+              className={`recent-projects-filter-btn${mediaFilter === 'video' ? ' active' : ''}`}
+              onClick={() => setMediaFilter('video')}
+            >
+              Videos <span className="recent-projects-filter-count">{countsLoading ? '…' : projectCounts.video}</span>
+            </button>
+          </div>
+        </div>
         <button
           className="recent-projects-close-btn"
           onClick={onClose}
@@ -571,28 +594,6 @@ function RecentProjects({ sogniClient, onClose, onReuseProject }: RecentProjects
             </button>
           </div>
         )}
-
-        {/* Media type filter */}
-        <div className="recent-projects-filter">
-          <button
-            className={`recent-projects-filter-btn${mediaFilter === 'all' ? ' active' : ''}`}
-            onClick={() => setMediaFilter('all')}
-          >
-            All <span className="recent-projects-filter-count">{countsLoading ? '…' : projectCounts.all}</span>
-          </button>
-          <button
-            className={`recent-projects-filter-btn${mediaFilter === 'image' ? ' active' : ''}`}
-            onClick={() => setMediaFilter('image')}
-          >
-            Photos <span className="recent-projects-filter-count">{countsLoading ? '…' : projectCounts.image}</span>
-          </button>
-          <button
-            className={`recent-projects-filter-btn${mediaFilter === 'video' ? ' active' : ''}`}
-            onClick={() => setMediaFilter('video')}
-          >
-            Videos <span className="recent-projects-filter-count">{countsLoading ? '…' : projectCounts.video}</span>
-          </button>
-        </div>
 
         {/* Error state */}
         {error && (

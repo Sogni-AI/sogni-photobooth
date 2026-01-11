@@ -1,20 +1,20 @@
-/* AuthStatus Component Styles */
+/* AuthStatus Component Styles - Starface Inspired */
 
-/* Daily Boost Glow Animation - More obvious and faster */
+/* Daily Boost Glow Animation */
 @keyframes dailyBoostGlow {
   0%, 100% {
-    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.6), 0 0 20px rgba(16, 185, 129, 0.7);
-    filter: brightness(1);
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.6), 0 4px 0 #1a1a1a;
+    transform: translate(0, 0);
   }
   50% {
-    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.8), 0 0 30px rgba(16, 185, 129, 0.9);
-    filter: brightness(1.15);
+    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.8), 0 6px 0 #1a1a1a;
+    transform: translate(-1px, -1px);
   }
 }
 
 /* Auth status wrapper positioning adjustments */
 .auth-status-wrapper {
-  transition: left 0.3s ease;
+  transition: left 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
   display: flex;
   align-items: center;
 }
@@ -23,17 +23,17 @@
 @keyframes tooltipBounce {
   0% {
     opacity: 0;
-    transform: translateY(-50%) translateX(-10px);
+    transform: translateY(-50%) translateX(-10px) scale(0.9);
   }
   60% {
     opacity: 1;
-    transform: translateY(-50%) translateX(5px);
+    transform: translateY(-50%) translateX(5px) scale(1.05);
   }
   80% {
-    transform: translateY(-50%) translateX(-2px);
+    transform: translateY(-50%) translateX(-2px) scale(0.98);
   }
   100% {
-    transform: translateY(-50%) translateX(0);
+    transform: translateY(-50%) translateX(0) scale(1);
   }
 }
 
@@ -77,155 +77,21 @@
   }
 }
 
-/* Cosmic Wallet Theme Animations */
-@keyframes floatParticles {
-  0% {
-    transform: translate(0, 0) scale(1);
-    opacity: 0.3;
-  }
-  25% {
-    transform: translate(10px, -15px) scale(1.1);
-    opacity: 0.5;
-  }
-  50% {
-    transform: translate(-5px, -25px) scale(0.9);
-    opacity: 0.4;
-  }
-  75% {
-    transform: translate(15px, -10px) scale(1.05);
-    opacity: 0.5;
-  }
-  100% {
-    transform: translate(0, 0) scale(1);
-    opacity: 0.3;
-  }
-}
-
-@keyframes driftCloud1 {
-  0% {
-    transform: translate(0, 0) scale(1);
-    opacity: 0.15;
-  }
-  50% {
-    transform: translate(30px, 20px) scale(1.2);
-    opacity: 0.25;
-  }
-  100% {
-    transform: translate(0, 0) scale(1);
-    opacity: 0.15;
-  }
-}
-
-@keyframes driftCloud2 {
-  0% {
-    transform: translate(0, 0) scale(1);
-    opacity: 0.12;
-  }
-  50% {
-    transform: translate(-25px, 15px) scale(1.15);
-    opacity: 0.22;
-  }
-  100% {
-    transform: translate(0, 0) scale(1);
-    opacity: 0.12;
-  }
-}
-
-@keyframes pulseGlow {
-  0%, 100% {
-    opacity: 0.4;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.7;
-    transform: scale(1.1);
-  }
-}
-
-
+/* Starface-Inspired Wallet Container */
 .cosmic-wallet-container {
   position: relative;
   overflow: hidden;
-  background: 
-    radial-gradient(ellipse at top left, rgba(102, 126, 234, 0.15) 0%, transparent 50%),
-    radial-gradient(ellipse at bottom right, rgba(118, 75, 162, 0.15) 0%, transparent 50%),
-    linear-gradient(135deg, #050810 0%, #0a0e1a 25%, #0f1419 50%, #0a0e1a 75%, #050810 100%);
-  border: 1px solid rgba(102, 126, 234, 0.4);
+  background: #FFED4E;
+  border: 4px solid #1a1a1a;
+  box-shadow: 6px 6px 0 #1a1a1a;
 }
 
-.cosmic-wallet-container::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-image: 
-    /* Floating particles - subtle stars */
-    radial-gradient(1px 1px at 15% 25%, rgba(255, 255, 255, 0.6), transparent),
-    radial-gradient(1px 1px at 35% 45%, rgba(255, 255, 255, 0.5), transparent),
-    radial-gradient(1px 1px at 55% 15%, rgba(255, 255, 255, 0.6), transparent),
-    radial-gradient(1px 1px at 75% 65%, rgba(255, 255, 255, 0.5), transparent),
-    radial-gradient(1px 1px at 25% 75%, rgba(255, 255, 255, 0.6), transparent),
-    radial-gradient(1px 1px at 85% 35%, rgba(255, 255, 255, 0.5), transparent),
-    radial-gradient(1px 1px at 45% 85%, rgba(255, 255, 255, 0.6), transparent),
-    radial-gradient(1px 1px at 65% 55%, rgba(255, 255, 255, 0.5), transparent),
-    radial-gradient(0.5px 0.5px at 10% 50%, rgba(255, 255, 255, 0.4), transparent),
-    radial-gradient(0.5px 0.5px at 90% 20%, rgba(255, 255, 255, 0.4), transparent),
-    radial-gradient(0.5px 0.5px at 50% 90%, rgba(255, 255, 255, 0.4), transparent),
-    radial-gradient(0.5px 0.5px at 30% 10%, rgba(255, 255, 255, 0.4), transparent),
-    radial-gradient(0.5px 0.5px at 70% 80%, rgba(255, 255, 255, 0.4), transparent),
-    radial-gradient(0.5px 0.5px at 5% 70%, rgba(255, 255, 255, 0.4), transparent),
-    radial-gradient(0.5px 0.5px at 95% 60%, rgba(255, 255, 255, 0.4), transparent),
-    radial-gradient(0.5px 0.5px at 20% 40%, rgba(255, 255, 255, 0.4), transparent),
-    radial-gradient(0.5px 0.5px at 80% 50%, rgba(255, 255, 255, 0.4), transparent),
-    radial-gradient(0.5px 0.5px at 40% 20%, rgba(255, 255, 255, 0.4), transparent),
-    radial-gradient(0.5px 0.5px at 60% 80%, rgba(255, 255, 255, 0.4), transparent);
-  background-size: 100% 100%;
-  background-position: 0% 0%;
-  animation: floatParticles 20s ease-in-out infinite;
-  pointer-events: none;
-  z-index: 0;
-}
-
-.cosmic-wallet-container::after {
-  content: '';
-  position: absolute;
-  top: -20%;
-  left: -10%;
-  width: 150%;
-  height: 150%;
-  background: radial-gradient(ellipse at 30% 40%, rgba(102, 126, 234, 0.2) 0%, transparent 50%);
-  animation: driftCloud1 25s ease-in-out infinite;
-  pointer-events: none;
-  z-index: 0;
-}
-
-/* Floating cosmic clouds */
-.cosmic-wallet-container .star-trail-1 {
-  position: absolute;
-  top: -15%;
-  right: -10%;
-  width: 140%;
-  height: 140%;
-  background: radial-gradient(ellipse at 70% 60%, rgba(118, 75, 162, 0.18) 0%, transparent 50%);
-  animation: driftCloud2 30s ease-in-out infinite;
-  animation-delay: 2s;
-  pointer-events: none;
-  z-index: 0;
-}
-
+/* Remove all the cosmic overlay effects */
+.cosmic-wallet-container::before,
+.cosmic-wallet-container::after,
+.cosmic-wallet-container .star-trail-1,
 .cosmic-wallet-container .star-trail-2 {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 120%;
-  height: 120%;
-  background: radial-gradient(circle at center, rgba(0, 213, 255, 0.1) 0%, transparent 40%);
-  animation: pulseGlow 8s ease-in-out infinite;
-  pointer-events: none;
-  z-index: 0;
+  display: none;
 }
 
 .cosmic-wallet-content {
@@ -233,21 +99,52 @@
   z-index: 1;
 }
 
-/* Sparkler Effect for Spark Points Logo */
+/* Shimmer animation for active payment buttons - sweeps LEFT to RIGHT */
+@keyframes shimmerSweep {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(200%);
+  }
+}
+
+@keyframes subtleGlow {
+  0%, 100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+/* Sparkle twinkle for extra magic */
+@keyframes twinkle {
+  0%, 100% {
+    opacity: 0;
+    transform: scale(0);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Sparkler Effect for Spark Points Logo - Keep the animation! */
 @keyframes sparklerBurst {
   0% {
     transform: translate(0, 0) scale(0);
     opacity: 0;
   }
-  5% {
+  10% {
     opacity: 1;
     transform: translate(0, 0) scale(1.2);
   }
-  15% {
+  30% {
     opacity: 1;
     transform: translate(calc(var(--sparkler-x) * 0.3), calc(var(--sparkler-y) * 0.3)) scale(1);
   }
-  50% {
+  70% {
     opacity: 0.8;
     transform: translate(calc(var(--sparkler-x) * 0.7), calc(var(--sparkler-y) * 0.7)) scale(0.8);
   }
@@ -277,116 +174,118 @@
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 3px;
-  height: 3px;
-  margin-top: -1.5px;
-  margin-left: -1.5px;
+  width: 4px;
+  height: 4px;
+  margin-top: -2px;
+  margin-left: -2px;
   border-radius: 50%;
   pointer-events: none;
-  z-index: 0;
-  background: radial-gradient(circle, #ffffff 0%, rgba(255, 255, 255, 0.8) 40%, transparent 100%);
-  box-shadow: 0 0 4px #ffffff, 0 0 8px rgba(255, 255, 255, 0.8), 0 0 12px rgba(255, 255, 255, 0.4);
+  z-index: -1;
+  background: radial-gradient(circle, #1a1a1a 0%, #1a1a1a 40%, rgba(26, 26, 26, 0.8) 60%, transparent 100%);
+  box-shadow: 
+    0 0 3px rgba(26, 26, 26, 0.6),
+    0 0 6px rgba(26, 26, 26, 0.4);
 }
 
 .sparkler-particle-1 {
   --sparkler-x: 18px;
   --sparkler-y: -12px;
-  animation: sparklerBurst 0.8s ease-out infinite, sparklerFlicker 0.15s ease-in-out infinite;
+  animation: sparklerBurst 2s ease-out infinite, sparklerFlicker 0.15s ease-in-out infinite;
   animation-delay: 0s, 0s;
 }
 
 .sparkler-particle-2 {
   --sparkler-x: 15px;
   --sparkler-y: 15px;
-  animation: sparklerBurst 0.8s ease-out infinite, sparklerFlicker 0.15s ease-in-out infinite;
-  animation-delay: 0.3s, 0.05s;
+  animation: sparklerBurst 2s ease-out infinite, sparklerFlicker 0.15s ease-in-out infinite;
+  animation-delay: 0.6s, 0.05s;
 }
 
 .sparkler-particle-3 {
   --sparkler-x: -15px;
   --sparkler-y: 15px;
-  animation: sparklerBurst 0.8s ease-out infinite, sparklerFlicker 0.15s ease-in-out infinite;
-  animation-delay: 0.6s, 0.1s;
+  animation: sparklerBurst 2s ease-out infinite, sparklerFlicker 0.15s ease-in-out infinite;
+  animation-delay: 1.2s, 0.1s;
 }
 
 .sparkler-particle-4 {
   --sparkler-x: -18px;
   --sparkler-y: -12px;
-  animation: sparklerBurst 0.8s ease-out infinite, sparklerFlicker 0.15s ease-in-out infinite;
-  animation-delay: 0.9s, 0.15s;
+  animation: sparklerBurst 2s ease-out infinite, sparklerFlicker 0.15s ease-in-out infinite;
+  animation-delay: 1.8s, 0.15s;
 }
 
 .sparkler-particle-5 {
   --sparkler-x: 0px;
   --sparkler-y: -20px;
-  animation: sparklerBurst 0.8s ease-out infinite, sparklerFlicker 0.15s ease-in-out infinite;
-  animation-delay: 1.2s, 0.2s;
+  animation: sparklerBurst 2s ease-out infinite, sparklerFlicker 0.15s ease-in-out infinite;
+  animation-delay: 2.4s, 0.2s;
 }
 
 .sparkler-particle-6 {
   --sparkler-x: 20px;
   --sparkler-y: 0px;
-  animation: sparklerBurst 0.8s ease-out infinite, sparklerFlicker 0.15s ease-in-out infinite;
-  animation-delay: 1.5s, 0.25s;
+  animation: sparklerBurst 2s ease-out infinite, sparklerFlicker 0.15s ease-in-out infinite;
+  animation-delay: 3s, 0.25s;
 }
 
 .sparkler-particle-7 {
   --sparkler-x: 0px;
   --sparkler-y: 20px;
-  animation: sparklerBurst 0.8s ease-out infinite, sparklerFlicker 0.15s ease-in-out infinite;
-  animation-delay: 1.8s, 0.3s;
+  animation: sparklerBurst 2s ease-out infinite, sparklerFlicker 0.15s ease-in-out infinite;
+  animation-delay: 3.6s, 0.3s;
 }
 
 .sparkler-particle-8 {
   --sparkler-x: -20px;
   --sparkler-y: 0px;
-  animation: sparklerBurst 0.8s ease-out infinite, sparklerFlicker 0.15s ease-in-out infinite;
-  animation-delay: 2.1s, 0.35s;
+  animation: sparklerBurst 2s ease-out infinite, sparklerFlicker 0.15s ease-in-out infinite;
+  animation-delay: 4.2s, 0.35s;
 }
 
 .sparkler-particle-9 {
   --sparkler-x: 12px;
   --sparkler-y: -16px;
-  animation: sparklerBurst 0.8s ease-out infinite, sparklerFlicker 0.15s ease-in-out infinite;
-  animation-delay: 2.4s, 0.4s;
+  animation: sparklerBurst 2s ease-out infinite, sparklerFlicker 0.15s ease-in-out infinite;
+  animation-delay: 4.8s, 0.4s;
 }
 
 .sparkler-particle-10 {
   --sparkler-x: 16px;
   --sparkler-y: 12px;
-  animation: sparklerBurst 0.8s ease-out infinite, sparklerFlicker 0.15s ease-in-out infinite;
-  animation-delay: 2.7s, 0.45s;
+  animation: sparklerBurst 2s ease-out infinite, sparklerFlicker 0.15s ease-in-out infinite;
+  animation-delay: 5.4s, 0.45s;
 }
 
 .sparkler-particle-11 {
   --sparkler-x: -12px;
   --sparkler-y: 16px;
-  animation: sparklerBurst 0.8s ease-out infinite, sparklerFlicker 0.15s ease-in-out infinite;
-  animation-delay: 3s, 0.5s;
+  animation: sparklerBurst 2s ease-out infinite, sparklerFlicker 0.15s ease-in-out infinite;
+  animation-delay: 6s, 0.5s;
 }
 
 .sparkler-particle-12 {
   --sparkler-x: -16px;
   --sparkler-y: -16px;
-  animation: sparklerBurst 0.8s ease-out infinite, sparklerFlicker 0.15s ease-in-out infinite;
-  animation-delay: 3.3s, 0.55s;
+  animation: sparklerBurst 2s ease-out infinite, sparklerFlicker 0.15s ease-in-out infinite;
+  animation-delay: 6.6s, 0.55s;
 }
 
-/* SOGNI Token Particle Effect */
+/* SOGNI Token Particle Effect - Keep the animation! */
 @keyframes sogniParticle {
   0% {
     transform: translate(0, 0) scale(0);
     opacity: 0;
   }
-  5% {
+  10% {
     opacity: 1;
     transform: translate(0, 0) scale(1.2);
   }
-  15% {
+  30% {
     opacity: 1;
     transform: translate(calc(var(--sogni-x) * 0.3), calc(var(--sogni-y) * 0.3)) scale(1);
   }
-  50% {
+  70% {
     opacity: 0.8;
     transform: translate(calc(var(--sogni-x) * 0.7), calc(var(--sogni-y) * 0.7)) scale(0.8);
   }
@@ -416,71 +315,71 @@
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 3px;
-  height: 3px;
-  margin-top: -1.5px;
-  margin-left: -1.5px;
+  width: 4px;
+  height: 4px;
+  margin-top: -2px;
+  margin-left: -2px;
   border-radius: 50%;
   pointer-events: none;
-  z-index: 0;
-  background: radial-gradient(circle, #ffffff 0%, rgba(255, 255, 255, 0.8) 40%, transparent 100%);
-  box-shadow: 0 0 4px #ffffff, 0 0 8px rgba(255, 255, 255, 0.8), 0 0 12px rgba(255, 255, 255, 0.4);
+  z-index: -1;
+  background: radial-gradient(circle, #1a1a1a 0%, #1a1a1a 40%, rgba(26, 26, 26, 0.8) 60%, transparent 100%);
+  box-shadow: 
+    0 0 3px rgba(26, 26, 26, 0.6),
+    0 0 6px rgba(26, 26, 26, 0.4);
 }
 
 .sogni-particle-1 {
   --sogni-x: 20px;
   --sogni-y: -16px;
-  animation: sogniParticle 0.8s ease-out infinite, sogniFlicker 0.15s ease-in-out infinite;
+  animation: sogniParticle 2s ease-out infinite, sogniFlicker 0.15s ease-in-out infinite;
   animation-delay: 0s, 0s;
 }
 
 .sogni-particle-2 {
   --sogni-x: 18px;
   --sogni-y: 18px;
-  animation: sogniParticle 0.8s ease-out infinite, sogniFlicker 0.15s ease-in-out infinite;
-  animation-delay: 0.3s, 0.05s;
+  animation: sogniParticle 2s ease-out infinite, sogniFlicker 0.15s ease-in-out infinite;
+  animation-delay: 0.6s, 0.05s;
 }
 
 .sogni-particle-3 {
   --sogni-x: -18px;
   --sogni-y: 18px;
-  animation: sogniParticle 0.8s ease-out infinite, sogniFlicker 0.15s ease-in-out infinite;
-  animation-delay: 0.6s, 0.1s;
+  animation: sogniParticle 2s ease-out infinite, sogniFlicker 0.15s ease-in-out infinite;
+  animation-delay: 1.2s, 0.1s;
 }
 
 .sogni-particle-4 {
   --sogni-x: -20px;
   --sogni-y: -16px;
-  animation: sogniParticle 0.8s ease-out infinite, sogniFlicker 0.15s ease-in-out infinite;
-  animation-delay: 0.9s, 0.15s;
+  animation: sogniParticle 2s ease-out infinite, sogniFlicker 0.15s ease-in-out infinite;
+  animation-delay: 1.8s, 0.15s;
 }
 
 .sogni-particle-5 {
   --sogni-x: 0px;
   --sogni-y: -24px;
-  animation: sogniParticle 0.8s ease-out infinite, sogniFlicker 0.15s ease-in-out infinite;
-  animation-delay: 1.2s, 0.2s;
+  animation: sogniParticle 2s ease-out infinite, sogniFlicker 0.15s ease-in-out infinite;
+  animation-delay: 2.4s, 0.2s;
 }
 
 .sogni-particle-6 {
   --sogni-x: 24px;
   --sogni-y: 0px;
-  animation: sogniParticle 0.8s ease-out infinite, sogniFlicker 0.15s ease-in-out infinite;
-  animation-delay: 1.5s, 0.25s;
+  animation: sogniParticle 2s ease-out infinite, sogniFlicker 0.15s ease-in-out infinite;
+  animation-delay: 3s, 0.25s;
 }
 
 .sogni-particle-7 {
   --sogni-x: 0px;
   --sogni-y: 24px;
-  animation: sogniParticle 0.8s ease-out infinite, sogniFlicker 0.15s ease-in-out infinite;
-  animation-delay: 1.8s, 0.3s;
+  animation: sogniParticle 2s ease-out infinite, sogniFlicker 0.15s ease-in-out infinite;
+  animation-delay: 3.6s, 0.3s;
 }
 
 .sogni-particle-8 {
   --sogni-x: -24px;
   --sogni-y: 0px;
-  animation: sogniParticle 0.8s ease-out infinite, sogniFlicker 0.15s ease-in-out infinite;
-  animation-delay: 2.1s, 0.35s;
+  animation: sogniParticle 2s ease-out infinite, sogniFlicker 0.15s ease-in-out infinite;
+  animation-delay: 4.2s, 0.35s;
 }
-
-

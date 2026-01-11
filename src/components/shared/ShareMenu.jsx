@@ -12,6 +12,7 @@ const ShareMenu = ({
   onSubmitToGallery,
   onShareQRCode,
   onSubmitToPromptContest,
+  onOpen,
   disabled = false,
   hasPromptKey = false,
   isCustomPromptWithWinterContext = false,
@@ -41,6 +42,9 @@ const ShareMenu = ({
 
   const handleMenuToggle = (e) => {
     e.stopPropagation();
+    if (!isOpen && onOpen) {
+      onOpen(); // Call onOpen when opening the menu
+    }
     setIsOpen(!isOpen);
   };
 
@@ -166,6 +170,7 @@ ShareMenu.propTypes = {
   onSubmitToGallery: PropTypes.func.isRequired,
   onShareQRCode: PropTypes.func,
   onSubmitToPromptContest: PropTypes.func,
+  onOpen: PropTypes.func,
   disabled: PropTypes.bool,
   hasPromptKey: PropTypes.bool,
   isCustomPromptWithWinterContext: PropTypes.bool,

@@ -34,9 +34,9 @@ import { useVideoCostEstimation } from '../../hooks/useVideoCostEstimation.ts';
 import { getTokenLabel } from '../../services/walletService';
 import { useToastContext } from '../../context/ToastContext';
 import { generateGalleryFilename, getPortraitFolderWithFallback } from '../../utils/galleryLoader';
-import { generateVideo, cancelVideoGeneration, downloadVideo } from '../../services/VideoGenerator.ts';
+import { generateVideo, cancelVideoGeneration, cancelAllActiveVideoProjects, downloadVideo } from '../../services/VideoGenerator.ts';
 import CancelConfirmationPopup, { useCancelConfirmation } from './CancelConfirmationPopup.tsx';
-import { shouldSkipConfirmation } from '../../services/cancellationService.ts';
+import { shouldSkipConfirmation, clearSkipConfirmation } from '../../services/cancellationService.ts';
 import { 
   hasSeenVideoIntro, 
   hasGeneratedVideo, 
@@ -57,12 +57,12 @@ import CustomVideoPromptPopup from './CustomVideoPromptPopup';
 import BaldForBaseConfirmationPopup from './BaldForBaseConfirmationPopup';
 import PromptVideoConfirmationPopup from './PromptVideoConfirmationPopup';
 import VideoSelectionPopup from './VideoSelectionPopup';
-import TransitionVideoCompleteNotification from './TransitionVideoCompleteNotification';
 import AnimateMovePopup from './AnimateMovePopup';
 import AnimateReplacePopup from './AnimateReplacePopup';
 import SoundToVideoPopup from './SoundToVideoPopup';
 import ConfettiCelebration from './ConfettiCelebration';
 import StitchOptionsPopup from './StitchOptionsPopup';
+import VideoReviewPopup from './VideoReviewPopup';
 import { extractLastFrame, extractFirstFrame } from '../../utils/videoFrameExtraction';
 
 // Random video completion messages
@@ -931,21 +931,110 @@ const PhotoGallery = ({
   const [cachedInfiniteLoopUrl, setCachedInfiniteLoopUrl] = useState(null); // Stable URL to prevent re-renders from restarting video
   const [showInfiniteLoopPreview, setShowInfiniteLoopPreview] = useState(false);
   const infiniteLoopVideoRef = useRef(null);
+  const infiniteLoopCancelledRef = useRef(false); // Track if infinite loop was cancelled
+  
+  // Transition review state (for reviewing/regenerating individual transitions before stitching)
+  const [showTransitionReview, setShowTransitionReview] = useState(false);
+  const [pendingTransitions, setPendingTransitions] = useState([]); // Array of { url, index, fromVideoIndex, toVideoIndex, status }
+  const [transitionReviewData, setTransitionReviewData] = useState(null); // { photosWithVideos, lastFrames, firstFrames, transitionFrames, etc. }
+  const [regeneratingTransitionIndex, setRegeneratingTransitionIndex] = useState(null);
+  const [regenerationProgress, setRegenerationProgress] = useState(null);
+
+  // Segment review state (for montage modes: S2V, Animate Move, Animate Replace, Batch Transition)
+  const [showSegmentReview, setShowSegmentReview] = useState(false);
+  const [pendingSegments, setPendingSegments] = useState([]); // Array of { url, index, photoId, status, thumbnail }
+  const [segmentReviewData, setSegmentReviewData] = useState(null); // { workflowType, photoIds, regenerateParams, etc. }
+  const [regeneratingSegmentIndex, setRegeneratingSegmentIndex] = useState(null);
+  const [segmentRegenerationProgress, setSegmentRegenerationProgress] = useState(null);
+  // Per-segment progress tracking arrays (mirrors infiniteLoopProgress structure)
+  const [segmentProgress, setSegmentProgress] = useState(null); // { itemETAs, itemProgress, itemWorkers, itemStatuses, itemElapsed }
+  // Track active montage batch for completion detection
+  const [activeMontagePhotoIds, setActiveMontagePhotoIds] = useState(null); // Array of photo IDs in current batch
+  const [activeMontageWorkflowType, setActiveMontageWorkflowType] = useState(null); // 's2v' | 'animate-move' | 'animate-replace' | 'batch-transition'
+  const montageCompletedRef = useRef(new Set()); // Track which photo IDs have completed in current batch
 
   // Cancel confirmation popup state
   const {
     showPopup: showCancelConfirmation,
     pendingCancel,
     requestCancel,
+    updateProgress: updateCancelProgress,
+    dismissIfComplete: dismissCancelPopup,
     handleClose: handleCancelConfirmationClose,
     handleConfirm: handleCancelConfirmationConfirm
   } = useCancelConfirmation();
   const [cancelRateLimited, setCancelRateLimited] = useState(false);
   const [cancelCooldownSeconds, setCancelCooldownSeconds] = useState(0);
 
+  // Check if any videos are currently generating (for showing cancel button during batch video ops)
+  const hasGeneratingVideos = photos.some(p => !p.hidden && p.generatingVideo);
+  
+  // Recalculate isGenerating based on current photos state to avoid stale prop values
+  const hasGeneratingPhotos = photos.some(p => !p.hidden && (p.generating || p.loading));
+
+  // Check if infinite loop transitions are generating (not tracked in photos array)
+  const hasGeneratingInfiniteLoopTransitions = pendingTransitions?.some(t => t.status === 'generating') ?? false;
+
+  // Auto-dismiss cancel popup when generation completes (nothing left to cancel)
+  useEffect(() => {
+    if (showCancelConfirmation && !hasGeneratingPhotos && !activeProjectReference?.current && !hasGeneratingVideos && !hasGeneratingInfiniteLoopTransitions) {
+      dismissCancelPopup();
+    }
+  }, [showCancelConfirmation, hasGeneratingPhotos, activeProjectReference, hasGeneratingVideos, hasGeneratingInfiniteLoopTransitions, dismissCancelPopup]);
+
+  // Update cancel popup progress dynamically as photos/videos complete
+  // Uses pendingCancel.projectType to determine whether to calculate image or video progress
+  const cancelProjectType = pendingCancel?.projectType;
+  useEffect(() => {
+    if (!showCancelConfirmation || !cancelProjectType) return;
+    
+    if (cancelProjectType === 'video') {
+      // Calculate video progress - count videos completed vs generating
+      const completedVideos = photos.filter(p => !p.hidden && p.videoUrl && !p.generatingVideo);
+      const generatingVideos = photos.filter(p => !p.hidden && p.generatingVideo);
+      
+      const completedCount = completedVideos.length;
+      const totalCount = completedCount + generatingVideos.length;
+      
+      // For videos, use videoProgress if available, otherwise estimate
+      let totalProgress = completedCount * 100;
+      generatingVideos.forEach(p => {
+        totalProgress += (p.videoProgress || 0);
+      });
+      const averageProgress = totalCount > 0 ? totalProgress / totalCount : 0;
+      
+      updateCancelProgress(averageProgress, completedCount, totalCount);
+    } else {
+      // Calculate image progress (default)
+      const completedPhotos = photos.filter(p => !p.hidden && !p.loading && !p.generating && !p.error && p.images && p.images.length > 0 && !p.isOriginal);
+      const generatingPhotos = photos.filter(p => !p.hidden && (p.loading || p.generating));
+      
+      const completedCount = completedPhotos.length;
+      const totalCount = completedCount + generatingPhotos.length;
+      
+      // Calculate weighted progress including partial progress of in-progress items
+      // Each completed photo = 100%, each generating photo = its progress%
+      let totalProgress = completedCount * 100;
+      generatingPhotos.forEach(p => {
+        totalProgress += (p.progress || 0);
+      });
+      const averageProgress = totalCount > 0 ? totalProgress / totalCount : 0;
+      
+      updateCancelProgress(averageProgress, completedCount, totalCount);
+    }
+  }, [showCancelConfirmation, cancelProjectType, photos, updateCancelProgress]);
+
   // Track retry attempts for montage mode video generation
   // Key: photo.id, Value: number of retry attempts
   const videoRetryAttempts = useRef(new Map());
+
+  // Refs for montage auto-stitch (declared here, effect is after state declarations)
+  const montageAutoStitchInProgressRef = useRef(false);
+  const montageStitchCompletedRef = useRef(false); // Prevents re-stitching after completion
+  // Store audio/video source info for montage stitching (mutes individual clips, uses single parent audio)
+  // For S2V: { type: 's2v', audioBuffer, audioUrl, startOffset, duration }
+  // For Animate Move/Replace: { type: 'animate-move'|'animate-replace', videoBuffer, videoUrl, startOffset, duration }
+  const activeMontageAudioSourceRef = useRef(null);
 
   // Video cost estimation - include selectedPhotoIndex to bust cache when switching photos
   const { loading: videoLoading, cost: videoCostRaw, costInUSD: videoUSD, refetch: refetchVideoCost } = useVideoCostEstimation({
@@ -1258,6 +1347,9 @@ const PhotoGallery = ({
   // Track which video currently has audio unmuted (only one at a time)
   const [unmutedVideoId, setUnmutedVideoId] = useState(null);
   
+  // Track which s2v videos have played audio once (so we can auto-mute after first play)
+  const [s2vVideosPlayedOnce, setS2vVideosPlayedOnce] = useState(new Set());
+  
   // State for transition video mode - tracks if we're in transition batch mode and the photo order
   const [transitionVideoQueue, setTransitionVideoQueue] = useState([]);
   const [isTransitionMode, setIsTransitionMode] = useState(false);
@@ -1278,18 +1370,13 @@ const PhotoGallery = ({
   const [isGeneratingStitchedVideo, setIsGeneratingStitchedVideo] = useState(false);
   const [showDownloadTip, setShowDownloadTip] = useState(false);
   const [hasShownInfiniteLoopTipThisBatch, setHasShownInfiniteLoopTipThisBatch] = useState(false);
+  const [stitchedVideoMuted, setStitchedVideoMuted] = useState(false);
+  const stitchedVideoRef = useRef(null);
 
   // State for caching stitched video blob (works with any workflow, not just transition mode)
   const [cachedStitchedVideoBlob, setCachedStitchedVideoBlob] = useState(null);
   const [cachedStitchedVideoPhotosHash, setCachedStitchedVideoPhotosHash] = useState(null);
 
-  // State for transition video complete notification
-  const [showTransitionVideoNotification, setShowTransitionVideoNotification] = useState(false);
-  const [transitionVideoNotificationCount, setTransitionVideoNotificationCount] = useState(0);
-  
-  // State for confetti celebration when transition video is ready
-  const [showTransitionConfetti, setShowTransitionConfetti] = useState(false);
-  
   // Refs to store functions so they're accessible in closures
   const generateStitchedVideoRef = useRef(null);
   const handleProceedDownloadRef = useRef(null);
@@ -1337,6 +1424,12 @@ const PhotoGallery = ({
     return videosCategory && videosCategory.prompts && Object.prototype.hasOwnProperty.call(videosCategory.prompts, promptKey);
   }, []);
   
+  // Clear the "skip cancel confirmation" cookie on mount so users see the popup
+  // This ensures new users and users who had the old default always see the confirmation
+  useEffect(() => {
+    clearSkipConfirmation();
+  }, []);
+
   // Cleanup video and fullscreen when leaving the view
   useEffect(() => {
     if (selectedPhotoIndex === null) {
@@ -1410,13 +1503,6 @@ const PhotoGallery = ({
     return () => clearInterval(etaCheckInterval);
   }, [photos]);
 
-  // Hide confetti immediately when background animations are disabled
-  useEffect(() => {
-    if (!backgroundAnimationsEnabled && showTransitionConfetti) {
-      setShowTransitionConfetti(false);
-    }
-  }, [backgroundAnimationsEnabled, showTransitionConfetti]);
-
   // Update theme group state when initialThemeGroupState prop changes
   useEffect(() => {
     if (isPromptSelectorMode && initialThemeGroupState) {
@@ -1475,6 +1561,271 @@ const PhotoGallery = ({
   
   // Get toast notification system
   const { showToast } = useToastContext();
+
+  // Detect montage batch completion - auto-stitch and show final video
+  // (User can click "Remix Video" to review/regenerate segments)
+  useEffect(() => {
+    // Only check if we have an active montage batch
+    if (!activeMontagePhotoIds || activeMontagePhotoIds.length === 0) {
+      return;
+    }
+
+    // Prevent duplicate stitching - check all guards
+    if (montageAutoStitchInProgressRef.current || montageStitchCompletedRef.current) {
+      return;
+    }
+
+    // Also skip if segment review or overlay is showing
+    if (showStitchedVideoOverlay || showSegmentReview) {
+      return;
+    }
+    
+    // Skip if we already have pendingSegments (new unified flow shows VideoReviewPopup immediately)
+    // This means we're using the new flow where user manually clicks "Stitch All"
+    if (pendingSegments && pendingSegments.length > 0) {
+      console.log('[Montage] Skipping auto-stitch - using manual VideoReviewPopup flow');
+      return;
+    }
+
+    // Check if all montage photos have completed videos (not generating)
+    const montagePhotos = photos.filter(p => activeMontagePhotoIds.includes(p.id));
+    const allComplete = montagePhotos.every(p => p.videoUrl && !p.generatingVideo);
+    const anyGenerating = montagePhotos.some(p => p.generatingVideo);
+
+    // If all complete and not generating, auto-stitch and show final video
+    // (This path is only for legacy flows that don't use VideoReviewPopup)
+    if (allComplete && !anyGenerating && montagePhotos.length === activeMontagePhotoIds.length) {
+      console.log(`[Montage] All ${montagePhotos.length} segments complete, auto-stitching (legacy flow)...`);
+      montageAutoStitchInProgressRef.current = true;
+      montageStitchCompletedRef.current = true; // Mark as completed to prevent loops
+
+      // Capture workflow type and audio source before they might change
+      const currentWorkflowType = activeMontageWorkflowType;
+      const audioSource = activeMontageAudioSourceRef.current;
+      console.log('[Montage Complete] Captured audioSource from ref:', audioSource);
+
+      // Build segments array for later remix (in order of activeMontagePhotoIds)
+      const segmentsForReview = activeMontagePhotoIds.map((photoId, index) => {
+        const photo = photos.find(p => p.id === photoId);
+        return {
+          url: photo?.videoUrl || '',
+          index,
+          photoId,
+          status: 'ready',
+          thumbnail: photo?.enhancedImageUrl || photo?.images?.[0] || photo?.originalDataUrl
+        };
+      });
+
+      // Store segments and workflow data for remix functionality (including audio source for re-stitching)
+      console.log('[Montage Complete] Setting segmentReviewData with audioSource:', audioSource);
+      setPendingSegments(segmentsForReview);
+      setSegmentReviewData({
+        workflowType: currentWorkflowType,
+        photoIds: [...activeMontagePhotoIds], // Copy to preserve
+        photos: montagePhotos,
+        audioSource: audioSource // Store audio/video source info for stitching with parent audio
+      });
+
+      // Clear active montage tracking now to prevent re-triggering
+      // (segment data is preserved for remix)
+      setActiveMontagePhotoIds(null);
+      setActiveMontageWorkflowType(null);
+      activeMontageAudioSourceRef.current = null; // Clear after capturing
+
+      // Auto-stitch the segments with parent audio (muting individual clip audio)
+      (async () => {
+        try {
+          setIsGeneratingStitchedVideo(true);
+          setBulkDownloadProgress({
+            current: 0,
+            total: segmentsForReview.length,
+            message: 'Stitching segments together...'
+          });
+
+          const videosToStitch = segmentsForReview.map((segment, index) => ({
+            url: segment.url,
+            filename: `segment-${index + 1}.mp4`
+          }));
+
+          // Prepare audio options from the stored audio source (for parent audio overlay)
+          let audioOptions = null;
+          if (audioSource) {
+            try {
+              if (audioSource.type === 's2v') {
+                // For S2V: Use the audio file directly
+                setBulkDownloadProgress({ current: 0, total: segmentsForReview.length, message: 'Preparing audio track...' });
+                
+                // Convert Uint8Array to ArrayBuffer properly
+                let audioBuffer = audioSource.audioBuffer;
+                if (audioBuffer instanceof Uint8Array) {
+                  // Slice to create a clean ArrayBuffer (handles byte offset issues)
+                  audioBuffer = audioBuffer.buffer.slice(
+                    audioBuffer.byteOffset,
+                    audioBuffer.byteOffset + audioBuffer.byteLength
+                  );
+                }
+                
+                if (audioBuffer) {
+                  audioOptions = {
+                    buffer: audioBuffer,
+                    startOffset: audioSource.startOffset || 0
+                  };
+                  console.log(`[Montage] Using S2V audio: offset=${audioSource.startOffset}s, duration=${audioSource.duration}s, bufferSize=${audioBuffer.byteLength}`);
+                }
+              } else if (audioSource.type === 'animate-move' || audioSource.type === 'animate-replace') {
+                // For Animate Move/Replace: Extract audio from the source video
+                setBulkDownloadProgress({ current: 0, total: segmentsForReview.length, message: 'Extracting audio from source video...' });
+                
+                // Convert Uint8Array to ArrayBuffer properly
+                let videoBuffer = audioSource.videoBuffer;
+                if (videoBuffer instanceof Uint8Array) {
+                  // Slice to create a clean ArrayBuffer (handles byte offset issues)
+                  videoBuffer = videoBuffer.buffer.slice(
+                    videoBuffer.byteOffset,
+                    videoBuffer.byteOffset + videoBuffer.byteLength
+                  );
+                }
+                
+                if (videoBuffer) {
+                  audioOptions = {
+                    buffer: videoBuffer,
+                    startOffset: audioSource.startOffset || 0,
+                    isVideoSource: true // Flag to indicate this is a video file to extract audio from
+                  };
+                  console.log(`[Montage] Using ${audioSource.type} video audio: offset=${audioSource.startOffset}s, duration=${audioSource.duration}s, bufferSize=${videoBuffer.byteLength}`);
+                }
+              }
+            } catch (audioError) {
+              console.warn('[Montage] Failed to prepare audio options, continuing without parent audio:', audioError);
+              // Continue without audio rather than failing
+            }
+          }
+
+          const concatenatedBlob = await concatenateVideos(
+            videosToStitch,
+            (current, total, message) => {
+              setBulkDownloadProgress({ current, total, message });
+            },
+            audioOptions, // Pass audio options to mux parent audio track
+            false // Don't preserve source audio from individual clips (we're using parent audio)
+          );
+
+          // Create blob URL and show video overlay directly
+          const blobUrl = URL.createObjectURL(concatenatedBlob);
+          setStitchedVideoUrl(blobUrl);
+
+          setIsGeneratingStitchedVideo(false);
+          setBulkDownloadProgress({ current: 0, total: 0, message: '' });
+
+          // Close segment review and show video overlay directly (user already reviewed segments)
+          setShowSegmentReview(false);
+          setShowStitchedVideoOverlay(true);
+
+        } catch (error) {
+          console.error('[Montage] Auto-stitch failed:', error);
+          // Only show toast for final error (not individual retry errors)
+          showToast({
+            title: 'Stitching Failed',
+            message: 'Failed to stitch videos. You can try using Remix to regenerate segments.',
+            type: 'error'
+          });
+          setIsGeneratingStitchedVideo(false);
+          setBulkDownloadProgress({ current: 0, total: 0, message: '' });
+          // Reset the completed flag so user can try again after fixing
+          montageStitchCompletedRef.current = false;
+        } finally {
+          montageAutoStitchInProgressRef.current = false;
+        }
+      })();
+    }
+  }, [photos, activeMontagePhotoIds, activeMontageWorkflowType, showStitchedVideoOverlay, showSegmentReview, showToast, pendingSegments]);
+
+  // Sync photo progress to segmentProgress for the VideoReviewPopup
+  // This extracts ETA, worker name, progress, status, elapsed time from each photo
+  useEffect(() => {
+    // Only sync if segment review is showing and we have pending segments
+    if (!showSegmentReview || !pendingSegments || pendingSegments.length === 0) {
+      setSegmentProgress(null);
+      return;
+    }
+
+    // Check if any segments are generating (need progress tracking)
+    const anyGenerating = pendingSegments.some(s => s.status === 'generating' || s.status === 'regenerating');
+    if (!anyGenerating) {
+      // All done, clear progress
+      setSegmentProgress(null);
+      return;
+    }
+
+    // Extract progress from photos for each segment
+    const itemETAs = [];
+    const itemProgress = [];
+    const itemWorkers = [];
+    const itemStatuses = [];
+    const itemElapsed = [];
+
+    pendingSegments.forEach(segment => {
+      const photo = photos.find(p => p.id === segment.photoId);
+      if (photo && photo.generatingVideo) {
+        itemETAs.push(photo.videoETA || 0);
+        itemProgress.push(photo.videoProgress || 0);
+        itemWorkers.push(photo.videoWorkerName || '');
+        itemStatuses.push(photo.videoStatus || '');
+        itemElapsed.push(photo.videoElapsed || 0);
+      } else {
+        // Segment not generating, use defaults
+        itemETAs.push(0);
+        itemProgress.push(0);
+        itemWorkers.push('');
+        itemStatuses.push('');
+        itemElapsed.push(0);
+      }
+    });
+
+    setSegmentProgress({
+      itemETAs,
+      itemProgress,
+      itemWorkers,
+      itemStatuses,
+      itemElapsed
+    });
+  }, [showSegmentReview, pendingSegments, photos]);
+
+  // Populate segment data for Batch Transition when complete (for Remix functionality)
+  // This doesn't auto-stitch - Batch Transition uses its own notification/stitch flow
+  useEffect(() => {
+    // Only run when all transition videos complete
+    if (!allTransitionVideosComplete || transitionVideoQueue.length === 0) {
+      return;
+    }
+
+    // Don't re-populate if we already have segment data
+    if (pendingSegments.length > 0 && segmentReviewData?.workflowType === 'batch-transition') {
+      return;
+    }
+
+    // Build segments from the transition video queue
+    const segmentsForRemix = transitionVideoQueue.map((photoId, index) => {
+      const photo = photos.find(p => p.id === photoId);
+      return {
+        url: photo?.videoUrl || '',
+        index,
+        photoId,
+        status: 'ready',
+        thumbnail: photo?.enhancedImageUrl || photo?.images?.[0] || photo?.originalDataUrl
+      };
+    }).filter(s => s.url); // Only include photos that have videos
+
+    if (segmentsForRemix.length > 0) {
+      console.log(`[Batch Transition] Populating segment data for Remix (${segmentsForRemix.length} segments)`);
+      setPendingSegments(segmentsForRemix);
+      setSegmentReviewData({
+        workflowType: 'batch-transition',
+        photoIds: [...transitionVideoQueue],
+        photos: photos.filter(p => transitionVideoQueue.includes(p.id))
+      });
+    }
+  }, [allTransitionVideosComplete, transitionVideoQueue, photos, pendingSegments, segmentReviewData]);
   
   // State to track if gallery carousel has entries
   const [hasGalleryEntries, setHasGalleryEntries] = useState(false);
@@ -1600,6 +1951,9 @@ const PhotoGallery = ({
       // Clear stitched video cache for new batch
       setCachedStitchedVideoBlob(null);
       setCachedStitchedVideoPhotosHash(null);
+      
+      // Reset infinite loop tip flag for new batch (when actual batch change is detected)
+      setHasShownInfiniteLoopTipThisBatch(false);
     }
     
     // Update the previous length ref
@@ -1744,8 +2098,8 @@ const PhotoGallery = ({
     setCachedStitchedVideoBlob(null);
     setCachedStitchedVideoPhotosHash(null);
     
-    // Reset infinite loop tip flag for new batch
-    setHasShownInfiniteLoopTipThisBatch(false);
+    // Note: We DON'T reset hasShownInfiniteLoopTipThisBatch here because user hasn't confirmed yet.
+    // It will be reset when photos array changes (new batch actually starts)
 
     // Stop any playing audio
     if (inlineAudioRef.current) {
@@ -1792,14 +2146,9 @@ const PhotoGallery = ({
 
   // Handle cancellation of image generation with confirmation popup
   const handleCancelImageGeneration = useCallback(() => {
-    console.log('[Cancel] handleCancelImageGeneration called');
-    console.log('[Cancel] isGenerating:', isGenerating);
-    console.log('[Cancel] activeProjectReference.current:', activeProjectReference.current);
-    console.log('[Cancel] sogniClient:', sogniClient);
-    console.log('[Cancel] sogniClient.cancelProject:', sogniClient?.cancelProject);
-
-    if (!isGenerating || !activeProjectReference.current) {
-      console.log('[Cancel] No active generation to cancel - exiting early');
+    // Allow cancel if there's an active project (even if isGenerating is false - early cancel)
+    if (!activeProjectReference.current) {
+      console.log('[Cancel] No active project to cancel');
       return;
     }
 
@@ -1812,12 +2161,11 @@ const PhotoGallery = ({
     const progress = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
 
     const performCancel = async () => {
-      console.log('[Cancel] performCancel called for project:', projectId);
+      console.log('[Cancel] Cancelling project:', projectId);
       try {
+        // Try to cancel via API if available
         if (sogniClient && sogniClient.cancelProject) {
-          console.log('[Cancel] Calling sogniClient.cancelProject...');
           const result = await sogniClient.cancelProject(projectId);
-          console.log('[Cancel] cancelProject result:', result);
 
           // Check for rate limiting
           if (result?.rateLimited) {
@@ -1831,55 +2179,67 @@ const PhotoGallery = ({
             });
             return;
           }
-
-          activeProjectReference.current = null;
-          setShowMoreButtonDuringGeneration(false);
-
-          // Update photo states - mark incomplete jobs
-          setPhotos(prev => prev.map(photo => {
-            if (photo.loading || photo.generating) {
-              return {
-                ...photo,
-                loading: false,
-                generating: false,
-                error: 'Cancelled'
-              };
-            }
-            return photo;
-          }));
-
-          const completedMsg = completedCount > 0
-            ? `${completedCount} image${completedCount !== 1 ? 's' : ''} completed, remaining cancelled`
-            : 'Generation cancelled';
-
-          showToast({
-            title: 'Generation Cancelled',
-            message: completedMsg,
-            type: 'info',
-            timeout: 3000
-          });
+        } else {
+          // No cancelProject method - just do local cleanup
+          console.log('[Cancel] No cancelProject method available, doing local cleanup only');
         }
+
+        // Clear local state regardless of whether API cancel succeeded
+        activeProjectReference.current = null;
+        setShowMoreButtonDuringGeneration(false);
+
+        // Update photo states - hide incomplete jobs AND clear generating/loading flags
+        setPhotos(prev => prev.map(photo => {
+          if (photo.loading || photo.generating) {
+            return {
+              ...photo,
+              loading: false,
+              generating: false,
+              hidden: true
+            };
+          }
+          return photo;
+        }));
+
+        const completedMsg = completedCount > 0
+          ? `${completedCount} image${completedCount !== 1 ? 's' : ''} completed, remaining cancelled`
+          : 'Generation cancelled';
+
+        showToast({
+          title: 'Generation Cancelled',
+          message: completedMsg,
+          type: 'info',
+          timeout: 3000
+        });
       } catch (error) {
         console.error('Error cancelling generation:', error);
+        
+        // Still clear local state on error so user isn't stuck
+        activeProjectReference.current = null;
+        setShowMoreButtonDuringGeneration(false);
+        setPhotos(prev => prev.map(photo => {
+          if (photo.loading || photo.generating) {
+            return { ...photo, loading: false, generating: false, hidden: true };
+          }
+          return photo;
+        }));
+        
         showToast({
-          title: 'Cancel Failed',
-          message: 'Could not cancel generation. Please try again.',
-          type: 'error',
+          title: 'Generation Cancelled',
+          message: 'Generation stopped (server cancel may have failed)',
+          type: 'warning',
           timeout: 4000
         });
       }
     };
 
     // Check if user has opted out of confirmations
-    console.log('[Cancel] shouldSkipConfirmation:', shouldSkipConfirmation());
     if (shouldSkipConfirmation()) {
-      console.log('[Cancel] Skipping confirmation, calling performCancel directly');
       performCancel();
       return;
     }
 
     // Show confirmation popup
-    console.log('[Cancel] Showing confirmation popup');
     requestCancel({
       projectId,
       projectType: 'image',
@@ -1889,6 +2249,71 @@ const PhotoGallery = ({
       onConfirm: performCancel
     });
   }, [isGenerating, activeProjectReference, sogniClient, photos, showToast, setPhotos, requestCancel]);
+
+  // Handle cancellation of all video generations
+  const handleCancelAllVideos = useCallback(() => {
+    // Find all photos that are generating videos
+    const generatingPhotos = photos.filter(p => !p.hidden && p.generatingVideo && p.videoProjectId);
+    
+    if (generatingPhotos.length === 0) {
+      console.log('[Cancel Videos] No videos generating');
+      return;
+    }
+
+    const totalCount = generatingPhotos.length;
+    const completedCount = photos.filter(p => !p.hidden && p.videoUrl && !p.generatingVideo).length;
+
+    const performCancel = async () => {
+      console.log(`[Cancel Videos] Cancelling ${totalCount} video(s) using bulk cancel`);
+      
+      try {
+        // Use bulk cancel to cancel all at once (bypasses per-item rate limiting)
+        const result = await cancelAllActiveVideoProjects(setPhotos);
+        
+        console.log(`[Cancel Videos] Bulk cancel result: ${result.cancelled} cancelled, ${result.failed} failed`);
+        
+        if (result.cancelled > 0) {
+          showToast({
+            title: 'Videos Cancelled',
+            message: `${result.cancelled} video${result.cancelled !== 1 ? 's' : ''} cancelled. You will be refunded for incomplete work.`,
+            type: 'info',
+            timeout: 4000
+          });
+        } else {
+          showToast({
+            title: 'Videos Cancelled',
+            message: 'Video generation was cancelled.',
+            type: 'info',
+            timeout: 3000
+          });
+        }
+      } catch (error) {
+        console.error('[Cancel Videos] Error during bulk cancel:', error);
+        showToast({
+          title: 'Cancellation Error',
+          message: 'There was an error cancelling the videos. Some may still complete.',
+          type: 'warning',
+          timeout: 4000
+        });
+      }
+    };
+
+    // Check if user has opted out of confirmations
+    if (shouldSkipConfirmation()) {
+      performCancel();
+      return;
+    }
+
+    // Show confirmation popup
+    requestCancel({
+      projectId: 'batch-video',
+      projectType: 'video',
+      progress: 0,
+      itemsCompleted: completedCount,
+      totalItems: totalCount + completedCount,
+      onConfirm: performCancel
+    });
+  }, [photos, sogniClient, setPhotos, showToast, requestCancel]);
 
   // Generate QR code when qrCodeData changes
   useEffect(() => {
@@ -3302,7 +3727,7 @@ const PhotoGallery = ({
 
     setShowVideoNewBadge(false);
 
-    // Fetch video data if URL provided
+    // Fetch video data if URL provided (needed for both montage source storage and video generation)
     let videoBuffer = videoData;
     if (!videoBuffer && videoUrl) {
       try {
@@ -3317,6 +3742,56 @@ const PhotoGallery = ({
 
     // Use custom duration from popup or fall back to settings
     const baseDuration = customDuration || settings.videoDuration || 5;
+
+    // Set up montage tracking for segment review (only in split mode)
+    if (splitMode) {
+      const photoIds = loadedPhotos.map(p => p.id);
+      console.log(`[Animate Move Montage] Setting up tracking for ${photoIds.length} segments`);
+      
+      // CRITICAL: Reset ALL montage state to prevent stale data from previous batches
+      setActiveMontagePhotoIds(photoIds);
+      setActiveMontageWorkflowType('animate-move');
+      montageCompletedRef.current.clear();
+      montageStitchCompletedRef.current = false; // Reset for new batch
+      montageAutoStitchInProgressRef.current = false; // Reset auto-stitch flag
+      
+      // Clear any previous segment review data
+      setPendingSegments([]);
+      setSegmentReviewData(null);
+      setShowStitchedVideoOverlay(false);
+      setShowSegmentReview(false);
+      
+      // Initialize segment review with generating status immediately (like Infinite Loop)
+      const initialSegments = photoIds.map((photoId, index) => {
+        const photo = loadedPhotos.find(p => p.id === photoId);
+        return {
+          url: '',
+          index,
+          photoId,
+          status: 'generating',
+          thumbnail: photo?.enhancedImageUrl || photo?.images?.[0] || photo?.originalDataUrl
+        };
+      });
+      setPendingSegments(initialSegments);
+      setSegmentReviewData({
+        workflowType: 'animate-move',
+        photoIds: [...photoIds],
+        photos: loadedPhotos
+      });
+      
+      // Show VideoReviewPopup immediately for segment review
+      setShowSegmentReview(true);
+
+      // Store video source info for montage stitching (mutes individual clips, uses audio from source video)
+      activeMontageAudioSourceRef.current = {
+        type: 'animate-move',
+        videoBuffer: videoBuffer,
+        videoUrl: videoUrl,
+        startOffset: videoStartOffset || 0,
+        duration: baseDuration // Total duration of the video selection
+      };
+      console.log(`[Animate Move Montage] Stored video source: offset=${videoStartOffset}s, duration=${baseDuration}s`);
+    }
 
     // In split mode, each image gets perImageDuration at sequential offsets
     // In normal mode, all images use the same duration and offset
@@ -3371,14 +3846,42 @@ const PhotoGallery = ({
             referenceVideoUrl: videoUrl,
             isMontageSegment: splitMode,
             segmentIndex: splitMode ? batchIndex : undefined,
-            onComplete: () => {
+            onComplete: (videoUrl) => {
               // Clear retry count on success
               videoRetryAttempts.current.delete(photo.id);
               playSonicLogo(settings.soundEnabled);
-              setPlayingGeneratedVideoIds(prev => new Set([...prev, photo.id]));
+              
+              // Update pendingSegments to mark this segment as ready
+              if (splitMode) {
+                setPendingSegments(prev => {
+                  const updated = [...prev];
+                  const segmentIndex = updated.findIndex(s => s.photoId === photo.id);
+                  if (segmentIndex !== -1) {
+                    updated[segmentIndex] = { ...updated[segmentIndex], url: videoUrl, status: 'ready' };
+                  }
+                  return updated;
+                });
+              }
+              
+              // Don't auto-play videos during segment review mode
+              if (!splitMode) {
+                setPlayingGeneratedVideoIds(prev => new Set([...prev, photo.id]));
+              }
             },
             onError: (error) => {
               console.error('[BATCH ANIMATE MOVE] Error:', error);
+              
+              // Update pendingSegments to mark this segment as failed (after retries exhausted)
+              if (splitMode && retryCount >= 1) {
+                setPendingSegments(prev => {
+                  const updated = [...prev];
+                  const segmentIndex = updated.findIndex(s => s.photoId === photo.id);
+                  if (segmentIndex !== -1) {
+                    updated[segmentIndex] = { ...updated[segmentIndex], status: 'failed' };
+                  }
+                  return updated;
+                });
+              }
               
               // Check if this is a montage mode video and we haven't exhausted retries
               if (splitMode && retryCount < 1) {
@@ -3515,6 +4018,7 @@ const PhotoGallery = ({
 
     setShowVideoNewBadge(false);
 
+    // Fetch video data if URL provided (needed for both montage source storage and video generation)
     let videoBuffer = videoData;
     if (!videoBuffer && videoUrl) {
       try {
@@ -3529,6 +4033,56 @@ const PhotoGallery = ({
 
     // Use custom duration from popup or fall back to settings
     const baseDuration = customDuration || settings.videoDuration || 5;
+
+    // Set up montage tracking for segment review (only in split mode)
+    if (splitMode) {
+      const photoIds = loadedPhotos.map(p => p.id);
+      console.log(`[Animate Replace Montage] Setting up tracking for ${photoIds.length} segments`);
+      
+      // CRITICAL: Reset ALL montage state to prevent stale data from previous batches
+      setActiveMontagePhotoIds(photoIds);
+      setActiveMontageWorkflowType('animate-replace');
+      montageCompletedRef.current.clear();
+      montageStitchCompletedRef.current = false; // Reset for new batch
+      montageAutoStitchInProgressRef.current = false; // Reset auto-stitch flag
+      
+      // Clear any previous segment review data
+      setPendingSegments([]);
+      setSegmentReviewData(null);
+      setShowStitchedVideoOverlay(false);
+      setShowSegmentReview(false);
+      
+      // Initialize segment review with generating status immediately (like Infinite Loop)
+      const initialSegments = photoIds.map((photoId, index) => {
+        const photo = loadedPhotos.find(p => p.id === photoId);
+        return {
+          url: '',
+          index,
+          photoId,
+          status: 'generating',
+          thumbnail: photo?.enhancedImageUrl || photo?.images?.[0] || photo?.originalDataUrl
+        };
+      });
+      setPendingSegments(initialSegments);
+      setSegmentReviewData({
+        workflowType: 'animate-replace',
+        photoIds: [...photoIds],
+        photos: loadedPhotos
+      });
+      
+      // Show VideoReviewPopup immediately for segment review
+      setShowSegmentReview(true);
+
+      // Store video source info for montage stitching (mutes individual clips, uses audio from source video)
+      activeMontageAudioSourceRef.current = {
+        type: 'animate-replace',
+        videoBuffer: videoBuffer,
+        videoUrl: videoUrl,
+        startOffset: videoStartOffset || 0,
+        duration: baseDuration // Total duration of the video selection
+      };
+      console.log(`[Animate Replace Montage] Stored video source: offset=${videoStartOffset}s, duration=${baseDuration}s`);
+    }
 
     // In split mode, each image gets perImageDuration at sequential offsets
     // In normal mode, all images use the same duration and offset
@@ -3584,14 +4138,42 @@ const PhotoGallery = ({
             referenceVideoUrl: videoUrl,
             isMontageSegment: splitMode,
             segmentIndex: splitMode ? batchIndex : undefined,
-            onComplete: () => {
+            onComplete: (videoUrl) => {
               // Clear retry count on success
               videoRetryAttempts.current.delete(photo.id);
               playSonicLogo(settings.soundEnabled);
-              setPlayingGeneratedVideoIds(prev => new Set([...prev, photo.id]));
+              
+              // Update pendingSegments to mark this segment as ready
+              if (splitMode) {
+                setPendingSegments(prev => {
+                  const updated = [...prev];
+                  const segmentIndex = updated.findIndex(s => s.photoId === photo.id);
+                  if (segmentIndex !== -1) {
+                    updated[segmentIndex] = { ...updated[segmentIndex], url: videoUrl, status: 'ready' };
+                  }
+                  return updated;
+                });
+              }
+              
+              // Don't auto-play videos during segment review mode
+              if (!splitMode) {
+                setPlayingGeneratedVideoIds(prev => new Set([...prev, photo.id]));
+              }
             },
             onError: (error) => {
               console.error('[BATCH ANIMATE REPLACE] Error:', error);
+              
+              // Update pendingSegments to mark this segment as failed (after retries exhausted)
+              if (splitMode && retryCount >= 1) {
+                setPendingSegments(prev => {
+                  const updated = [...prev];
+                  const segmentIndex = updated.findIndex(s => s.photoId === photo.id);
+                  if (segmentIndex !== -1) {
+                    updated[segmentIndex] = { ...updated[segmentIndex], status: 'failed' };
+                  }
+                  return updated;
+                });
+              }
               
               // Check if this is a montage mode video and we haven't exhausted retries
               if (splitMode && retryCount < 1) {
@@ -3728,6 +4310,7 @@ const PhotoGallery = ({
 
     setShowVideoNewBadge(false);
 
+    // Fetch audio buffer first (needed for both montage source storage and video generation)
     let audioBuffer = audioData;
     if (!audioBuffer && audioUrl) {
       try {
@@ -3742,6 +4325,57 @@ const PhotoGallery = ({
 
     // Use custom duration from popup or fall back to settings
     const baseDuration = customDuration || settings.videoDuration || 5;
+
+    // Set up montage tracking for segment review (only in split mode)
+    if (splitMode) {
+      const photoIds = loadedPhotos.map(p => p.id);
+      console.log(`[S2V Montage] Setting up tracking for ${photoIds.length} segments`);
+      
+      // CRITICAL: Reset ALL montage state to prevent stale data from previous batches
+      setActiveMontagePhotoIds(photoIds);
+      setActiveMontageWorkflowType('s2v');
+      montageCompletedRef.current.clear();
+      montageStitchCompletedRef.current = false; // Reset for new batch
+      montageAutoStitchInProgressRef.current = false; // Reset auto-stitch flag
+      
+      // Clear any previous segment review data
+      setPendingSegments([]);
+      setSegmentReviewData(null);
+      setShowStitchedVideoOverlay(false);
+      setShowSegmentReview(false);
+      
+      // Initialize segment review with generating status immediately (like Infinite Loop)
+      const initialSegments = photoIds.map((photoId, index) => {
+        const photo = loadedPhotos.find(p => p.id === photoId);
+        return {
+          url: '',
+          index,
+          photoId,
+          status: 'generating',
+          thumbnail: photo?.enhancedImageUrl || photo?.images?.[0] || photo?.originalDataUrl
+        };
+      });
+      setPendingSegments(initialSegments);
+      setSegmentReviewData({
+        workflowType: 's2v',
+        photoIds: [...photoIds],
+        photos: loadedPhotos
+      });
+      
+      // Show VideoReviewPopup immediately for segment review
+      setShowSegmentReview(true);
+      
+      // Store audio source info for montage stitching (mutes individual clips, uses single parent audio)
+      console.log('[S2V Batch] Storing audio source in ref - audioBuffer size:', audioBuffer?.byteLength || audioBuffer?.length);
+      activeMontageAudioSourceRef.current = {
+        type: 's2v',
+        audioBuffer: audioBuffer,
+        audioUrl: audioUrl,
+        startOffset: audioStartOffset || 0,
+        duration: baseDuration // Total duration of the audio selection
+      };
+      console.log(`[S2V Montage] Stored audio source: offset=${audioStartOffset}s, duration=${baseDuration}s`);
+    }
 
     // In split mode, each image gets perImageDuration at sequential offsets
     // In normal mode, all images use the same duration and offset
@@ -3797,14 +4431,43 @@ const PhotoGallery = ({
             referenceAudioUrl: audioUrl,
             isMontageSegment: splitMode,
             segmentIndex: splitMode ? batchIndex : undefined,
-            onComplete: () => {
+            onComplete: (videoUrl) => {
               // Clear retry count on success
               videoRetryAttempts.current.delete(photo.id);
               playSonicLogo(settings.soundEnabled);
-              setPlayingGeneratedVideoIds(prev => new Set([...prev, photo.id]));
+              
+              // Update pendingSegments to mark this segment as ready
+              if (splitMode) {
+                setPendingSegments(prev => {
+                  const updated = [...prev];
+                  const segmentIndex = updated.findIndex(s => s.photoId === photo.id);
+                  if (segmentIndex !== -1) {
+                    updated[segmentIndex] = { ...updated[segmentIndex], url: videoUrl, status: 'ready' };
+                  }
+                  return updated;
+                });
+              }
+              
+              // Don't auto-play videos during segment review mode
+              if (!splitMode) {
+                setPlayingGeneratedVideoIds(prev => new Set([...prev, photo.id]));
+              }
             },
             onError: (error) => {
               console.error('[BATCH S2V] Error:', error);
+              
+              // Update pendingSegments to mark this segment as failed (before retry)
+              if (splitMode) {
+                setPendingSegments(prev => {
+                  const updated = [...prev];
+                  const segmentIndex = updated.findIndex(s => s.photoId === photo.id);
+                  if (segmentIndex !== -1 && retryCount >= 1) {
+                    // Only mark as failed after retries exhausted
+                    updated[segmentIndex] = { ...updated[segmentIndex], status: 'failed' };
+                  }
+                  return updated;
+                });
+              }
               
               // Check if this is a montage mode video and we haven't exhausted retries
               if (splitMode && retryCount < 1) {
@@ -3852,23 +4515,12 @@ const PhotoGallery = ({
   const handleRegenerateVideo = useCallback(async (photo, photoIndex) => {
     if (!photo || photo.generatingVideo) return;
 
-    const workflowType = photo.videoWorkflowType;
+    const workflowType = photo.videoWorkflowType || 'default';
     const regenerateParams = photo.videoRegenerateParams;
 
-    // Check if this video can be regenerated
-    if (!workflowType || workflowType === 'default' || workflowType === 'i2v') {
-      // For basic I2V videos, just show a message - they don't have stored params
-      showToast({
-        title: 'Use Video Menu',
-        message: 'To regenerate this video, use the Video button to create a new one.',
-        type: 'info',
-        timeout: 4000
-      });
-      return;
-    }
-
     // For S2V, Animate Move, Animate Replace - check if we have regeneration params
-    if (!regenerateParams) {
+    const isAdvancedWorkflow = ['s2v', 'animate-move', 'animate-replace'].includes(workflowType);
+    if (isAdvancedWorkflow && !regenerateParams) {
       showToast({
         title: 'Cannot Regenerate',
         message: 'Regeneration parameters not available. Please create a new video.',
@@ -3886,19 +4538,21 @@ const PhotoGallery = ({
 
     warmUpAudio();
 
-    // Show toast
+    // Get workflow display name
     const workflowNames = {
       's2v': 'Sound to Video',
       'animate-move': 'Animate Move',
-      'animate-replace': 'Animate Replace'
+      'animate-replace': 'Animate Replace',
+      'default': 'Video',
+      'i2v': 'Video'
     };
-    const segmentInfo = regenerateParams.isMontageSegment
+    const segmentInfo = regenerateParams?.isMontageSegment
       ? ` (Segment ${(regenerateParams.segmentIndex || 0) + 1})`
       : '';
     
     showToast({
       title: '🔄 Regenerating Video',
-      message: `Regenerating ${workflowNames[workflowType] || workflowType}${segmentInfo}...`,
+      message: `Regenerating ${workflowNames[workflowType] || 'video'}${segmentInfo}...`,
       type: 'info',
       timeout: 3000
     });
@@ -3907,14 +4561,14 @@ const PhotoGallery = ({
     const img = new Image();
     img.onload = async () => {
       try {
-        // Fetch reference media if needed
+        // Fetch reference media if needed (only for advanced workflows)
         let referenceBuffer = null;
         
-        if (workflowType === 's2v' && regenerateParams.referenceAudioUrl) {
+        if (workflowType === 's2v' && regenerateParams?.referenceAudioUrl) {
           const response = await fetch(regenerateParams.referenceAudioUrl);
           const arrayBuffer = await response.arrayBuffer();
           referenceBuffer = new Uint8Array(arrayBuffer);
-        } else if ((workflowType === 'animate-move' || workflowType === 'animate-replace') && regenerateParams.referenceVideoUrl) {
+        } else if ((workflowType === 'animate-move' || workflowType === 'animate-replace') && regenerateParams?.referenceVideoUrl) {
           const response = await fetch(regenerateParams.referenceVideoUrl);
           const arrayBuffer = await response.arrayBuffer();
           referenceBuffer = new Uint8Array(arrayBuffer);
@@ -3936,16 +4590,17 @@ const PhotoGallery = ({
           positivePrompt: photo.videoMotionPrompt || '',
           negativePrompt: photo.videoNegativePrompt || '',
           tokenType,
-          workflowType,
+          // For I2V/default, don't pass workflowType so it uses default
+          workflowType: isAdvancedWorkflow ? workflowType : undefined,
           modelVariant: photo.videoModelVariant,
           // Regeneration metadata (preserve for next regeneration)
-          isMontageSegment: regenerateParams.isMontageSegment,
-          segmentIndex: regenerateParams.segmentIndex,
+          isMontageSegment: regenerateParams?.isMontageSegment,
+          segmentIndex: regenerateParams?.segmentIndex,
           onComplete: () => {
             playSonicLogo(settings.soundEnabled);
             showToast({
               title: '✅ Video Regenerated',
-              message: `${workflowNames[workflowType] || workflowType}${segmentInfo} complete!`,
+              message: `${workflowNames[workflowType] || 'Video'}${segmentInfo} complete!`,
               type: 'success',
               timeout: 3000
             });
@@ -4275,24 +4930,60 @@ const PhotoGallery = ({
     }
 
     // Set transition mode and store the queue of photo IDs in order
+    const photoIds = loadedPhotos.map(p => p.id);
     setIsTransitionMode(true);
-    setTransitionVideoQueue(loadedPhotos.map(p => p.id));
+    setTransitionVideoQueue(photoIds);
     setAllTransitionVideosComplete(false);  // Reset sync mode for new batch
     setTransitionVideoDownloaded(false);  // Reset download flag for new batch
     setCurrentVideoIndexByPhoto({});  // Reset video indices
-    
+
     // Clean up music state for new batch
     if (appliedMusic?.audioUrl) {
       URL.revokeObjectURL(appliedMusic.audioUrl);
     }
     setAppliedMusic(null);
     setIsInlineAudioMuted(false);
+
+    // CRITICAL: Reset ALL montage/segment state to prevent stale data from previous batches
+    montageStitchCompletedRef.current = false;
+    montageAutoStitchInProgressRef.current = false;
+    
+    // Clear any previous segment review data
+    setPendingSegments([]);
+    setSegmentReviewData(null);
+    setShowStitchedVideoOverlay(false);
+    setShowSegmentReview(false);
+    
+    // Initialize segment review with generating status immediately (like Infinite Loop)
+    const initialSegments = photoIds.map((photoId, index) => {
+      const photo = loadedPhotos.find(p => p.id === photoId);
+      return {
+        url: '',
+        index,
+        photoId,
+        status: 'generating',
+        thumbnail: photo?.enhancedImageUrl || photo?.images?.[0] || photo?.originalDataUrl
+      };
+    });
+    setPendingSegments(initialSegments);
+    setSegmentReviewData({
+      workflowType: 'batch-transition',
+      photoIds: [...photoIds],
+      photos: loadedPhotos
+    });
+    
+    // Show segment review popup immediately (like Infinite Loop's TransitionReviewPopup)
+    setShowSegmentReview(true);
     if (inlineAudioRef.current) {
       inlineAudioRef.current.pause();
     }
 
     // Hide the NEW badge after first video generation attempt
     setShowVideoNewBadge(false);
+
+    // NOTE: Batch Transition uses its own existing flow with transitionVideoQueue,
+    // allTransitionVideosComplete, music integration, and notification popup.
+    // Do NOT add montage tracking here - it would conflict with the existing flow.
 
     // Use transition prompt from settings (with default fallback from DEFAULT_SETTINGS)
     const motionPrompt = settings.videoTransitionPrompt || DEFAULT_SETTINGS.videoTransitionPrompt;
@@ -4512,19 +5203,10 @@ const PhotoGallery = ({
           }
           
           if (successCount > 0 && errorCount === 0) {
-            // Show impactful notification instead of simple toast
-            setTransitionVideoNotificationCount(successCount);
-            setShowTransitionVideoNotification(true);
-            
-            // Trigger confetti celebration if background animations are enabled
-            if (backgroundAnimationsEnabled) {
-              // Reset confetti state first, then trigger new animation
-              setShowTransitionConfetti(false);
-              // Small delay to ensure state reset
-              setTimeout(() => {
-                setShowTransitionConfetti(true);
-              }, 300);
-            }
+            // Batch Transition uses VideoReviewPopup (shown immediately at start)
+            // So we don't need the "Your Video is Ready!" notification
+            // User can stitch directly from the review popup when ready
+            console.log('[Transition] All videos complete. User can stitch from VideoReviewPopup.');
           } else if (successCount > 0) {
             showToast({
               title: 'Partial Success',
@@ -4576,12 +5258,22 @@ const PhotoGallery = ({
           tokenType: tokenType,
           referenceImage: currentImage.buffer,
           referenceImageEnd: nextImage.buffer,
-          onComplete: () => {
+          onComplete: (videoUrl) => {
             successCount++;
             console.log(`[Transition]${retryLabel} Video ${i + 1} completed successfully`);
             
             // Play sonic logo and auto-play this video immediately as it completes
             playSonicLogo(settings.soundEnabled);
+            
+            // Update pendingSegments to mark this segment as ready
+            setPendingSegments(prev => {
+              const updated = [...prev];
+              const segmentIndex = updated.findIndex(s => s.photoId === photo.id);
+              if (segmentIndex !== -1) {
+                updated[segmentIndex] = { ...updated[segmentIndex], url: videoUrl, status: 'ready' };
+              }
+              return updated;
+            });
             
             // Set this polaroid to play its own video
             setCurrentVideoIndexByPhoto(prev => ({
@@ -4589,8 +5281,8 @@ const PhotoGallery = ({
               [photo.id]: i
             }));
             
-            // Start playing this video immediately
-            setPlayingGeneratedVideoIds(prev => new Set([...prev, photo.id]));
+            // Don't auto-play videos on polaroids during segment review mode
+            // (they can preview in the segment review popup)
             
             checkCompletion();
           },
@@ -4626,6 +5318,17 @@ const PhotoGallery = ({
               // Max retries reached
               errorCount++;
               console.log(`[Transition] Video ${i + 1} failed after ${MAX_RETRIES} retry attempt(s)`);
+              
+              // Update pendingSegments to mark this segment as failed
+              setPendingSegments(prev => {
+                const updated = [...prev];
+                const segmentIndex = updated.findIndex(s => s.photoId === photo.id);
+                if (segmentIndex !== -1) {
+                  updated[segmentIndex] = { ...updated[segmentIndex], status: 'failed' };
+                }
+                return updated;
+              });
+              
               checkCompletion();
             }
           },
@@ -5246,16 +5949,74 @@ const PhotoGallery = ({
         filename: `video-${index + 1}.mp4`
       }));
 
-      // Use the working concatenation (CO strategy - extract + ctts) with audio fix
+      // Check if this is from a montage mode (S2V, Animate Move, Animate Replace) with stored audio source
+      // If so, use the parent audio technique (mute individual clips, use single parent audio)
+      let audioOptions = null;
+      const audioSource = segmentReviewData?.audioSource;
+      console.log('[Stitch All] segmentReviewData:', segmentReviewData);
+      console.log('[Stitch All] audioSource:', audioSource);
+      console.log('[Stitch All] workflowType:', segmentReviewData?.workflowType);
+      if (audioSource && ['s2v', 'animate-move', 'animate-replace'].includes(segmentReviewData?.workflowType)) {
+        try {
+          if (audioSource.type === 's2v') {
+            // For S2V: Use the audio file directly
+            setBulkDownloadProgress({ current: 0, total: photosWithVideos.length, message: 'Preparing audio track...' });
+            
+            // Convert Uint8Array to ArrayBuffer properly
+            let audioBuffer = audioSource.audioBuffer;
+            if (audioBuffer instanceof Uint8Array) {
+              audioBuffer = audioBuffer.buffer.slice(
+                audioBuffer.byteOffset,
+                audioBuffer.byteOffset + audioBuffer.byteLength
+              );
+            }
+            
+            if (audioBuffer) {
+              audioOptions = {
+                buffer: audioBuffer,
+                startOffset: audioSource.startOffset || 0
+              };
+              console.log(`[Stitch All] Using S2V parent audio: offset=${audioSource.startOffset}s, duration=${audioSource.duration}s`);
+            }
+          } else if (audioSource.type === 'animate-move' || audioSource.type === 'animate-replace') {
+            // For Animate Move/Replace: Extract audio from the source video
+            setBulkDownloadProgress({ current: 0, total: photosWithVideos.length, message: 'Extracting audio from source video...' });
+            
+            // Convert Uint8Array to ArrayBuffer properly
+            let videoBuffer = audioSource.videoBuffer;
+            if (videoBuffer instanceof Uint8Array) {
+              videoBuffer = videoBuffer.buffer.slice(
+                videoBuffer.byteOffset,
+                videoBuffer.byteOffset + videoBuffer.byteLength
+              );
+            }
+            
+            if (videoBuffer) {
+              audioOptions = {
+                buffer: videoBuffer,
+                startOffset: audioSource.startOffset || 0,
+                isVideoSource: true
+              };
+              console.log(`[Stitch All] Using ${audioSource.type} parent audio: offset=${audioSource.startOffset}s, duration=${audioSource.duration}s`);
+            }
+          }
+        } catch (audioError) {
+          console.warn('[Stitch All] Failed to prepare parent audio, using individual clip audio:', audioError);
+        }
+      }
+
+      // Use the working concatenation (CO strategy - extract + ctts) with optional parent audio
       const blob = await concatenateVideos(
         videosToStitch,
         (current, total, message) => {
-          setBulkDownloadProgress({ 
-            current, 
-            total, 
-            message 
+          setBulkDownloadProgress({
+            current,
+            total,
+            message
           });
-        }
+        },
+        audioOptions, // Pass audio options for parent audio (null if not montage mode)
+        !audioOptions // If no parent audio, preserve source audio from clips
       );
 
       const elapsedMs = performance.now() - startTime;
@@ -5309,7 +6070,7 @@ const PhotoGallery = ({
         setBulkDownloadProgress({ current: 0, total: 0, message: '' });
       }, 3000);
     }
-  }, [photos, filteredPhotos, isPromptSelectorMode, isBulkDownloading, cachedStitchedVideoBlob, cachedStitchedVideoPhotosHash, showToast, setIsBulkDownloading, setBulkDownloadProgress]);
+  }, [photos, filteredPhotos, isPromptSelectorMode, isBulkDownloading, cachedStitchedVideoBlob, cachedStitchedVideoPhotosHash, segmentReviewData, showToast, setIsBulkDownloading, setBulkDownloadProgress]);
 
   // Handle Infinite Loop Stitch - generates AI transitions between videos for seamless looping
   const handleInfiniteLoopStitch = useCallback(async () => {
@@ -5317,6 +6078,9 @@ const PhotoGallery = ({
       console.log('[Infinite Loop] Already in progress');
       return;
     }
+
+    // Reset cancellation flag at start
+    infiniteLoopCancelledRef.current = false;
 
     try {
       // Get the correct photos array based on mode
@@ -5366,8 +6130,9 @@ const PhotoGallery = ({
       let transitionDuration;
       try {
         const videoDuration = await getVideoDuration(firstPhoto.videoUrl);
-        // Calculate exact frames: duration * fps + 1 (at base fps 16)
-        const calculatedFrames = Math.round(videoDuration * 16) + 1;
+        // Calculate exact frames: duration * 16 + 1 (at base fps 16)
+        // Round the entire calculation to handle floating point precision issues
+        const calculatedFrames = Math.round(videoDuration * 16 + 1);
         
         // VALIDATION: Check if video exceeds i2v transition workflow limit (161 frames = 10s)
         if (calculatedFrames > 161) {
@@ -5414,6 +6179,10 @@ const PhotoGallery = ({
       // Initialize transition status for parallel tracking
       const initialTransitionStatus = Array(transitionCount).fill('pending');
 
+      // IMPORTANT: Close the StitchOptionsPopup BEFORE showing any generation UI
+      // This prevents the yellow popup from flashing during the transition to VideoReviewPopup
+      setShowStitchOptionsPopup(false);
+
       setIsGeneratingInfiniteLoop(true);
       setInfiniteLoopProgress({
         phase: 'extracting',
@@ -5422,6 +6191,21 @@ const PhotoGallery = ({
         message: 'Preparing to extract video frames...',
         transitionStatus: initialTransitionStatus
       });
+
+      // Show VideoReviewPopup immediately for better UX
+      // Initialize with empty transitions that will be populated during generation
+      const initialTransitions = Array(transitionCount).fill(null).map((_, i) => ({
+        url: '',
+        index: i,
+        fromVideoIndex: i,
+        toVideoIndex: (i + 1) % photosWithVideos.length,
+        status: 'generating',
+        // Include thumbnail data for preview during generation
+        startThumbnail: null, // Will be populated after frame extraction
+        endThumbnail: null
+      }));
+      setPendingTransitions(initialTransitions);
+      setShowTransitionReview(true);
 
       // Phase 1: Extract BOTH first and last frames from each video (in parallel)
       // - Last frame of video N = START of transition N
@@ -5482,6 +6266,53 @@ const PhotoGallery = ({
       const motionPrompt = settings.videoTransitionPrompt || DEFAULT_SETTINGS.videoTransitionPrompt;
       const negativePrompt = settings.videoNegativePrompt || '';
 
+      // Check if cancelled during frame extraction
+      if (infiniteLoopCancelledRef.current) {
+        console.log('[Infinite Loop] Cancelled during frame extraction phase');
+        return;
+      }
+
+      // Build end images array from first frames of NEXT videos
+      // Transition N goes from last frame of video N → first frame of video N+1
+      const endImages = firstFrames.map((_, i) => {
+        const nextIndex = (i + 1) % photosWithVideos.length;
+        return firstFrames[nextIndex];
+      });
+
+      // Update pendingTransitions with extracted frame thumbnails for preview
+      // The frame.buffer contains PNG-encoded data, so we convert it to a data URL via Blob
+      const frameToDataUrl = (frame) => {
+        if (!frame || !frame.buffer) return null;
+        try {
+          const blob = new Blob([frame.buffer], { type: 'image/png' });
+          return URL.createObjectURL(blob);
+        } catch (error) {
+          console.warn('[Infinite Loop] Failed to create thumbnail URL:', error);
+          return null;
+        }
+      };
+
+      setPendingTransitions(prev => prev.map((t, i) => ({
+        ...t,
+        startThumbnail: frameToDataUrl(lastFrames[i]),
+        endThumbnail: frameToDataUrl(endImages[i])
+      })));
+
+      // Store review data for remix functionality
+      setTransitionReviewData({
+        photosWithVideos,
+        lastFrames,
+        firstFrames,
+        endImages,
+        transitionFrames,
+        transitionResolution,
+        transitionFramerate,
+        motionPrompt,
+        negativePrompt
+      });
+
+      console.log(`[Infinite Loop] Using extracted first frames for transition endpoints (supports animate-move/animate-replace workflows)`);
+
       // Phase 2: Generate ALL transition videos in parallel
       const generatedTransitionUrls = new Array(transitionCount);
 
@@ -5492,17 +6323,12 @@ const PhotoGallery = ({
         message: `Generating ${transitionCount} transitions in parallel...`,
         transitionStatus: Array(transitionCount).fill('generating'),
         transitionETAs: Array(transitionCount).fill(null),
+        transitionProgress: Array(transitionCount).fill(0),
+        transitionWorkers: Array(transitionCount).fill(null),
+        transitionStatuses: Array(transitionCount).fill(null),
+        transitionElapsed: Array(transitionCount).fill(null),
         maxETA: null
       });
-
-      // Build end images array from first frames of NEXT videos
-      // Transition N goes from last frame of video N → first frame of video N+1
-      const endImages = firstFrames.map((_, i) => {
-        const nextIndex = (i + 1) % photosWithVideos.length;
-        return firstFrames[nextIndex];
-      });
-      
-      console.log(`[Infinite Loop] Using extracted first frames for transition endpoints (supports animate-move/animate-replace workflows)`);
 
       // Helper function to generate a single transition with retry support
       const generateSingleTransition = (i, startFrame, endImage, isRetry = false) => {
@@ -5512,26 +6338,41 @@ const PhotoGallery = ({
           const tempPhotoId = `infinite-loop-transition-${i}-${Date.now()}`;
           
           // Create a temporary photo object to track this transition's ETA
-          const tempPhoto = { 
+          // Use 'let' so we can accumulate state across updates (important for workerName fallback)
+          let currentTempPhoto = { 
             id: tempPhotoId, 
             images: [], 
             generatingVideo: false,
             videoETA: null,
-            videoElapsed: null
+            videoElapsed: null,
+            videoWorkerName: null
           };
 
           // Custom setPhotos function that captures ETA updates for this specific transition
+          // IMPORTANT: We must persist state between updates because workerName is only sent
+          // in certain events (like 'started') and subsequent 'progress' events use fallback
           const captureETAUpdates = (updateFn) => {
-            const updated = updateFn([tempPhoto]);
+            const updated = updateFn([currentTempPhoto]);
             if (updated[0]) {
-              const { videoETA } = updated[0];
+              // Persist the updated state for next update call
+              currentTempPhoto = updated[0];
+              const { videoETA, videoProgress, videoWorkerName, videoStatus, videoElapsed } = updated[0];
               
               // Update immediately - no throttling needed since each transition has its own display
               setInfiniteLoopProgress(prev => {
                 if (!prev || prev.transitionStatus?.[i] === 'complete') return prev;
                 
                 const newETAs = [...(prev.transitionETAs || [])];
+                const newProgress = [...(prev.transitionProgress || [])];
+                const newWorkers = [...(prev.transitionWorkers || [])];
+                const newStatuses = [...(prev.transitionStatuses || [])];
+                const newElapsed = [...(prev.transitionElapsed || [])];
+                
                 newETAs[i] = videoETA;
+                newProgress[i] = videoProgress || 0;
+                newWorkers[i] = videoWorkerName;
+                newStatuses[i] = videoStatus;
+                newElapsed[i] = videoElapsed;
                 
                 // Calculate the maximum ETA across all active transitions
                 const maxETA = Math.max(...newETAs.filter(eta => eta !== null && eta > 0), 0);
@@ -5539,6 +6380,10 @@ const PhotoGallery = ({
                 return {
                   ...prev,
                   transitionETAs: newETAs,
+                  transitionProgress: newProgress,
+                  transitionWorkers: newWorkers,
+                  transitionStatuses: newStatuses,
+                  transitionElapsed: newElapsed,
                   maxETA: maxETA > 0 ? maxETA : null
                 };
               });
@@ -5548,7 +6393,7 @@ const PhotoGallery = ({
           console.log(`[Infinite Loop] ${isRetry ? 'RETRY: ' : ''}Starting transition ${i + 1}: video ${i + 1} → photo ${nextIndex + 1}, ${transitionFrames} frames`);
 
           generateVideo({
-            photo: tempPhoto,
+            photo: currentTempPhoto,
             photoIndex: 0,
             subIndex: 0,
             imageWidth: startFrame.width,
@@ -5568,6 +6413,13 @@ const PhotoGallery = ({
               console.log(`[Infinite Loop] Transition ${i + 1} complete: ${videoUrl}`);
               generatedTransitionUrls[i] = videoUrl;
               playSonicLogo(settings.soundEnabled);
+
+              // Update pendingTransitions for VideoReviewPopup
+              setPendingTransitions(prev => {
+                const updated = [...prev];
+                updated[i] = { ...updated[i], url: videoUrl, status: 'ready' };
+                return updated;
+              });
 
               // Use functional update to ensure we get the latest state
               setInfiniteLoopProgress(prev => {
@@ -5603,6 +6455,13 @@ const PhotoGallery = ({
             onError: (error) => {
               console.error(`[Infinite Loop] Transition ${i + 1} failed${isRetry ? ' (retry)' : ''}:`, error);
 
+              // Update pendingTransitions for VideoReviewPopup
+              setPendingTransitions(prev => {
+                const updated = [...prev];
+                updated[i] = { ...updated[i], status: 'failed' };
+                return updated;
+              });
+
               // Use functional update for error state
               setInfiniteLoopProgress(prev => {
                 if (!prev) return prev;
@@ -5634,6 +6493,13 @@ const PhotoGallery = ({
 
       // Wait for all transitions to complete (first attempt)
       const results = await Promise.allSettled(transitionPromises);
+
+      // Check if cancelled during video generation
+      if (infiniteLoopCancelledRef.current) {
+        console.log('[Infinite Loop] Cancelled during video generation phase');
+        setShowTransitionReview(false);
+        return;
+      }
 
       // Check for failures and retry once
       const failedResults = results
@@ -5685,15 +6551,194 @@ const PhotoGallery = ({
         console.log(`[Infinite Loop] All retries succeeded!`);
       }
 
-      // Phase 3: Stitch all videos together
-      setInfiniteLoopProgress(prev => ({
+      // Check if cancelled before stitching
+      if (infiniteLoopCancelledRef.current) {
+        console.log('[Infinite Loop] Cancelled before stitching phase');
+        setShowTransitionReview(false);
+        return;
+      }
+
+      // Phase 3: All transitions generated - update state and let user decide when to stitch
+      // User can now preview each transition, regenerate any they don't like, and click "Stitch All Videos"
+      console.log('[Infinite Loop] All transitions generated, waiting for user to stitch...');
+
+      // Update transitionReviewData with endImages (needed for regeneration)
+      // pendingTransitions already have the URLs from the onComplete callbacks
+      setTransitionReviewData(prev => ({
         ...prev,
-        phase: 'stitching',
-        current: 0,
-        total: photosWithVideos.length + transitionCount,
-        message: 'Stitching all videos together...'
+        endImages,
+        transitionCount,
+        photosHash
       }));
 
+      // Generation complete - reset generation state but keep review popup open
+      setIsGeneratingInfiniteLoop(false);
+      setInfiniteLoopProgress(null);
+
+      // VideoReviewPopup is already open (set earlier)
+      // All transitions now have status: 'ready' from the onComplete callbacks
+      // User can preview, regenerate, and manually click "Stitch All Videos"
+
+    } catch (error) {
+      console.error('[Infinite Loop] Error:', error);
+      showToast({
+        title: 'Infinite Loop Failed',
+        message: error.message || 'Failed to create infinite loop. Please try again.',
+        type: 'error'
+      });
+      setIsGeneratingInfiniteLoop(false);
+      setInfiniteLoopProgress(null);
+      setShowStitchOptionsPopup(false);
+      setShowTransitionReview(false);
+    }
+  }, [photos, filteredPhotos, isPromptSelectorMode, isBulkDownloading, isGeneratingInfiniteLoop, sogniClient, settings, tokenType, showToast, cachedInfiniteLoopBlob, cachedInfiniteLoopHash]);
+
+  // Handle regenerating a single transition
+  const handleRegenerateTransition = useCallback(async (transitionIndex) => {
+    if (!transitionReviewData || !pendingTransitions[transitionIndex]) {
+      console.error('[Transition Review] No data for regeneration');
+      return;
+    }
+
+    const { lastFrames, firstFrames, transitionFrames, transitionResolution, transitionFramerate, motionPrompt, negativePrompt, photosWithVideos } = transitionReviewData;
+    
+    console.log(`[Transition Review] Regenerating transition ${transitionIndex + 1}`);
+    
+    // Mark transition as regenerating
+    setPendingTransitions(prev => prev.map((t, i) => 
+      i === transitionIndex ? { ...t, status: 'regenerating' } : t
+    ));
+    setRegeneratingTransitionIndex(transitionIndex);
+    setRegenerationProgress({ progress: 0, eta: null, message: 'Starting regeneration...' });
+
+    try {
+      const startFrame = lastFrames[transitionIndex];
+      const nextIndex = (transitionIndex + 1) % photosWithVideos.length;
+      const endImage = firstFrames[nextIndex];
+      
+      // Generate the transition
+      const newTransitionUrl = await new Promise((resolve, reject) => {
+        const tempPhotoId = `transition-regen-${transitionIndex}-${Date.now()}`;
+        // Use 'let' so we can accumulate state across updates (important for workerName fallback)
+        let currentTempPhoto = { 
+          id: tempPhotoId, 
+          images: [], 
+          generatingVideo: false,
+          videoETA: null,
+          videoWorkerName: null
+        };
+
+        // Capture ETA updates including worker info, status, elapsed time
+        // IMPORTANT: We must persist state between updates because workerName is only sent
+        // in certain events (like 'started') and subsequent 'progress' events use fallback
+        const captureETAUpdates = (updateFn) => {
+          const updated = updateFn([currentTempPhoto]);
+          if (updated[0]) {
+            // Persist the updated state for next update call
+            currentTempPhoto = updated[0];
+            const { videoETA, videoProgress, videoWorkerName, videoStatus, videoElapsed } = updated[0];
+            setRegenerationProgress(prev => ({
+              ...prev,
+              progress: videoProgress || 0,
+              eta: videoETA,
+              workerName: videoWorkerName,
+              status: videoStatus,
+              elapsed: videoElapsed,
+              message: videoETA ? `~${Math.ceil(videoETA)}s remaining` : (videoStatus || 'Generating...')
+            }));
+          }
+        };
+
+        generateVideo({
+          photo: currentTempPhoto,
+          photoIndex: 0,
+          subIndex: 0,
+          imageWidth: startFrame.width,
+          imageHeight: startFrame.height,
+          sogniClient,
+          setPhotos: captureETAUpdates,
+          resolution: transitionResolution,
+          quality: settings.videoQuality || 'fast',
+          fps: transitionFramerate,
+          frames: transitionFrames,
+          positivePrompt: motionPrompt,
+          negativePrompt: negativePrompt,
+          tokenType: tokenType,
+          referenceImage: startFrame.buffer,
+          referenceImageEnd: endImage.buffer,
+          onComplete: (videoUrl) => {
+            console.log(`[Transition Review] Transition ${transitionIndex + 1} regenerated: ${videoUrl}`);
+            resolve(videoUrl);
+          },
+          onError: (error) => {
+            console.error(`[Transition Review] Transition ${transitionIndex + 1} regeneration failed:`, error);
+            reject(error);
+          }
+        });
+      });
+
+      // Update the transition with new URL
+      setPendingTransitions(prev => prev.map((t, i) => 
+        i === transitionIndex ? { ...t, url: newTransitionUrl, status: 'ready' } : t
+      ));
+      
+      showToast({
+        title: '✨ Transition Regenerated!',
+        message: `Transition ${transitionIndex + 1} has been regenerated.`,
+        type: 'success',
+        timeout: 3000
+      });
+
+    } catch (error) {
+      console.error(`[Transition Review] Regeneration failed:`, error);
+      
+      // Mark as failed but keep old URL
+      setPendingTransitions(prev => prev.map((t, i) => 
+        i === transitionIndex ? { ...t, status: 'ready' } : t // Keep as ready so user can try again
+      ));
+      
+      showToast({
+        title: 'Regeneration Failed',
+        message: error.message || 'Failed to regenerate transition. Try again.',
+        type: 'error',
+        timeout: 4000
+      });
+    } finally {
+      setRegeneratingTransitionIndex(null);
+      setRegenerationProgress(null);
+    }
+  }, [transitionReviewData, pendingTransitions, sogniClient, settings, tokenType, showToast]);
+
+  // Handle final stitching after review
+  const handleStitchAfterReview = useCallback(async () => {
+    if (!transitionReviewData || pendingTransitions.length === 0) {
+      console.error('[Transition Review] No data for stitching');
+      return;
+    }
+
+    const { photosWithVideos, photosHash } = transitionReviewData;
+    const transitionCount = pendingTransitions.length;
+    
+    console.log(`[Transition Review] Starting final stitch with ${photosWithVideos.length} videos and ${transitionCount} transitions`);
+    
+    // Close review immediately and show preview with stitching progress
+    setShowTransitionReview(false);
+    
+    // Small delay to allow review popup to close smoothly before showing preview
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    setIsGeneratingInfiniteLoop(true);
+    setInfiniteLoopProgress({
+      phase: 'stitching',
+      current: 0,
+      total: photosWithVideos.length + transitionCount,
+      message: 'Stitching all videos together...'
+    });
+    
+    // Show infinite loop preview immediately with stitching progress
+    setShowInfiniteLoopPreview(true);
+
+    try {
       // Build the final video sequence: video1, trans1, video2, trans2, ..., videoN, transN
       const allVideosToStitch = [];
       for (let i = 0; i < photosWithVideos.length; i++) {
@@ -5702,27 +6747,19 @@ const PhotoGallery = ({
           filename: `video-${i + 1}.mp4`
         });
         allVideosToStitch.push({
-          url: generatedTransitionUrls[i],
+          url: pendingTransitions[i].url,
           filename: `transition-${i + 1}.mp4`
         });
       }
 
-      console.log(`[Infinite Loop] Stitching ${allVideosToStitch.length} videos`);
+      console.log(`[Transition Review] Stitching ${allVideosToStitch.length} videos`);
       
       // Validate all videos before stitching
-      console.group('[Infinite Loop] Pre-stitch validation');
+      console.group('[Transition Review] Pre-stitch validation');
       for (let i = 0; i < allVideosToStitch.length; i++) {
         console.log(`  ${i + 1}. ${allVideosToStitch[i].filename} - ${allVideosToStitch[i].url?.substring(0, 80)}...`);
       }
       console.groupEnd();
-
-      // Calculate which videos have audio (main videos at even indices: 0, 2, 4, ...)
-      // Transitions at odd indices (1, 3, 5, ...) are AI-generated and silent
-      const mainVideoIndices = [];
-      for (let i = 0; i < allVideosToStitch.length; i += 2) {
-        mainVideoIndices.push(i);
-      }
-      console.log(`[Infinite Loop] Audio source indices (main videos): ${mainVideoIndices.join(', ')}`);
 
       const concatenatedBlob = await concatenateVideos(
         allVideosToStitch,
@@ -5736,8 +6773,7 @@ const PhotoGallery = ({
           }));
         },
         null, // No external audio file
-        // TEMP: Disabled audio preservation for testing
-        false
+        false // Audio preservation disabled for now
       );
 
       // Cache the result and create stable URL
@@ -5749,14 +6785,13 @@ const PhotoGallery = ({
       }
       setCachedInfiniteLoopUrl(URL.createObjectURL(concatenatedBlob));
 
-      // Phase 4: Show preview
-      setInfiniteLoopProgress(prev => ({
-        ...prev,
+      // Complete!
+      setInfiniteLoopProgress({
         phase: 'complete',
         current: 1,
         total: 1,
         message: 'Infinite loop ready!'
-      }));
+      });
 
       showToast({
         title: '♾️ Infinite Loop Complete!',
@@ -5765,26 +6800,452 @@ const PhotoGallery = ({
         timeout: 5000
       });
 
-      // Show the preview after a short delay
-      setTimeout(() => {
-        setIsGeneratingInfiniteLoop(false);
-        setInfiniteLoopProgress(null);
-        setShowStitchOptionsPopup(false);
-        setShowInfiniteLoopPreview(true);
-      }, 1500);
+      // Complete - clear stitching progress
+      setIsGeneratingInfiniteLoop(false);
+      setInfiniteLoopProgress(null);
+      // Preview is already showing from earlier, just update it with completed state
 
     } catch (error) {
-      console.error('[Infinite Loop] Error:', error);
+      console.error('[Transition Review] Stitching failed:', error);
       showToast({
-        title: 'Infinite Loop Failed',
-        message: error.message || 'Failed to create infinite loop. Please try again.',
+        title: 'Stitching Failed',
+        message: error.message || 'Failed to stitch videos. Please try again.',
         type: 'error'
       });
       setIsGeneratingInfiniteLoop(false);
       setInfiniteLoopProgress(null);
-      setShowStitchOptionsPopup(false);
+      // Go back to review instead of closing
+      setShowTransitionReview(true);
     }
-  }, [photos, filteredPhotos, isPromptSelectorMode, isBulkDownloading, isGeneratingInfiniteLoop, sogniClient, settings, tokenType, showToast, cachedInfiniteLoopBlob, cachedInfiniteLoopHash]);
+  }, [transitionReviewData, pendingTransitions, cachedInfiniteLoopUrl, showToast]);
+
+  // Handle closing transition review - go back to infinite loop preview
+  const handleCloseTransitionReview = useCallback(async () => {
+    console.log('[Transition Review] User closed review');
+
+    // Cancel any active regeneration (in case regeneration is in progress)
+    if (regeneratingTransitionIndex !== null) {
+      try {
+        await cancelAllActiveVideoProjects(setPhotos);
+      } catch (error) {
+        console.error('[Transition Review] Error cancelling projects:', error);
+      }
+      setRegeneratingTransitionIndex(null);
+      setRegenerationProgress(null);
+    }
+
+    // Close the review popup
+    setShowTransitionReview(false);
+
+    // If we have a cached infinite loop video, show it again
+    if (cachedInfiniteLoopUrl) {
+      setShowInfiniteLoopPreview(true);
+    }
+  }, [setPhotos, regeneratingTransitionIndex, cachedInfiniteLoopUrl]);
+
+  // Handle cancelling infinite loop generation during initial creation
+  // This shows the CancelConfirmationPopup with refund estimate
+  const handleCancelInfiniteLoopGeneration = useCallback(() => {
+    console.log('[Infinite Loop Cancel] Cancel requested, pendingTransitions:', pendingTransitions?.length);
+    
+    if (!pendingTransitions || pendingTransitions.length === 0) {
+      // Nothing to cancel - just close
+      console.log('[Infinite Loop Cancel] No transitions to cancel, closing...');
+      setShowTransitionReview(false);
+      setIsGeneratingInfiniteLoop(false);
+      setInfiniteLoopProgress(null);
+      infiniteLoopCancelledRef.current = true;
+      return;
+    }
+
+    // Calculate progress
+    const completedCount = pendingTransitions.filter(t => t.status === 'ready').length;
+    const generatingCount = pendingTransitions.filter(t => t.status === 'generating').length;
+    const totalCount = pendingTransitions.length;
+    const progress = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+
+    console.log(`[Infinite Loop Cancel] Status - completed: ${completedCount}, generating: ${generatingCount}, total: ${totalCount}, progress: ${progress}%`);
+
+    // Perform cancellation action
+    const performCancel = async () => {
+      console.log('[Infinite Loop Cancel] Performing cancellation...');
+      infiniteLoopCancelledRef.current = true;
+      
+      try {
+        // Cancel all active video projects (this will cancel transitions across all projects)
+        const result = await cancelAllActiveVideoProjects(setPhotos);
+        console.log('[Infinite Loop Cancel] Cancel result:', result);
+      } catch (error) {
+        console.error('[Infinite Loop Cancel] Error cancelling projects:', error);
+      }
+
+      // Clean up state
+      setShowTransitionReview(false);
+      setIsGeneratingInfiniteLoop(false);
+      setInfiniteLoopProgress(null);
+      setPendingTransitions([]);
+      setTransitionReviewData(null);
+
+      showToast({
+        title: 'Generation Cancelled',
+        message: `Cancelled infinite loop generation. ${completedCount} of ${totalCount} transitions were completed.`,
+        type: 'info'
+      });
+    };
+
+    // If nothing is actively generating (all done or failed), just close without confirmation
+    if (generatingCount === 0) {
+      console.log('[Infinite Loop Cancel] Nothing generating, just closing...');
+      setShowTransitionReview(false);
+      // Don't show infinite loop preview - transitions may be incomplete
+      return;
+    }
+
+    // Check if user has opted out of confirmation
+    if (shouldSkipConfirmation()) {
+      console.log('[Infinite Loop Cancel] User opted out of confirmation, cancelling immediately...');
+      performCancel();
+      return;
+    }
+
+    // Temporarily hide the VideoReviewPopup to show the cancel confirmation popup
+    console.log('[Infinite Loop Cancel] Temporarily hiding VideoReviewPopup to show cancel confirmation...');
+    setShowTransitionReview(false);
+
+    // Show confirmation popup with refund estimate
+    console.log('[Infinite Loop Cancel] Showing cancel confirmation popup...');
+    requestCancel({
+      projectId: 'infinite-loop-transitions',
+      projectType: 'video',
+      progress,
+      itemsCompleted: completedCount,
+      totalItems: totalCount,
+      onConfirm: performCancel,
+      onCancel: () => {
+        // User cancelled the cancellation - re-show the VideoReviewPopup
+        console.log('[Infinite Loop Cancel] User cancelled the cancellation, re-showing VideoReviewPopup...');
+        setShowTransitionReview(true);
+      }
+    });
+  }, [pendingTransitions, setPhotos, showToast, requestCancel]);
+
+  // Handle regenerating a single segment in montage review
+  const handleRegenerateSegment = useCallback(async (segmentIndex) => {
+    if (!segmentReviewData || !pendingSegments[segmentIndex]) {
+      console.error('[Segment Review] No data for regeneration');
+      return;
+    }
+
+    const segment = pendingSegments[segmentIndex];
+    const photo = photos.find(p => p.id === segment.photoId);
+    const photoIndex = photos.findIndex(p => p.id === segment.photoId);
+
+    if (!photo || photoIndex === -1) {
+      console.error('[Segment Review] Photo not found for regeneration');
+      showToast({
+        title: 'Regeneration Failed',
+        message: 'Could not find the photo for this segment.',
+        type: 'error'
+      });
+      return;
+    }
+
+    // For advanced workflows (S2V, Animate Move, Animate Replace), check regeneration params
+    // For I2V/default workflow, regeneration params are optional (uses stored prompts on photo)
+    const isAdvancedWorkflow = ['s2v', 'animate-move', 'animate-replace'].includes(photo.videoWorkflowType);
+    if (isAdvancedWorkflow && !photo.videoRegenerateParams) {
+      console.error('[Segment Review] No regeneration params for advanced workflow');
+      showToast({
+        title: 'Cannot Regenerate',
+        message: 'Regeneration parameters not available for this segment.',
+        type: 'warning'
+      });
+      return;
+    }
+
+    console.log(`[Segment Review] Regenerating segment ${segmentIndex + 1} (photo: ${photo.id}, workflow: ${photo.videoWorkflowType || 'default'})`);
+
+    // Update segment status to regenerating
+    setPendingSegments(prev => {
+      const updated = [...prev];
+      updated[segmentIndex] = { ...updated[segmentIndex], status: 'regenerating' };
+      return updated;
+    });
+    setRegeneratingSegmentIndex(segmentIndex);
+
+    // Use the existing regenerate handler - it will trigger onComplete which updates the photo
+    // We need to watch for the video URL change to update the segment
+    const originalVideoUrl = photo.videoUrl;
+
+    // Call the regeneration handler
+    await handleRegenerateVideo(photo, photoIndex);
+
+    // The regeneration happens asynchronously via generateVideo callbacks
+    // We'll detect completion via the useEffect that watches photos changes
+  }, [segmentReviewData, pendingSegments, photos, handleRegenerateVideo, showToast]);
+
+  // Watch for segment regeneration completion
+  useEffect(() => {
+    if (regeneratingSegmentIndex === null || !pendingSegments[regeneratingSegmentIndex]) {
+      return;
+    }
+
+    const segment = pendingSegments[regeneratingSegmentIndex];
+    const photo = photos.find(p => p.id === segment.photoId);
+
+    if (!photo) return;
+
+    // Check if video regeneration completed (has new URL and not generating)
+    if (photo.videoUrl && !photo.generatingVideo && photo.videoUrl !== segment.url) {
+      console.log(`[Segment Review] Segment ${regeneratingSegmentIndex + 1} regeneration complete`);
+
+      // Update segment with new URL
+      setPendingSegments(prev => {
+        const updated = [...prev];
+        updated[regeneratingSegmentIndex] = {
+          ...updated[regeneratingSegmentIndex],
+          url: photo.videoUrl,
+          status: 'ready',
+          thumbnail: photo.enhancedImageUrl || photo.images?.[0] || photo.originalDataUrl
+        };
+        return updated;
+      });
+
+      setRegeneratingSegmentIndex(null);
+      setSegmentRegenerationProgress(null);
+
+      showToast({
+        title: '✨ Segment Regenerated!',
+        message: `Segment ${regeneratingSegmentIndex + 1} has been regenerated.`,
+        type: 'success',
+        timeout: 3000
+      });
+    }
+  }, [photos, regeneratingSegmentIndex, pendingSegments, showToast]);
+
+  // Handle final stitching after segment review
+  const handleStitchAfterSegmentReview = useCallback(async () => {
+    if (!segmentReviewData || pendingSegments.length === 0) {
+      console.error('[Segment Review] No data for stitching');
+      return;
+    }
+
+    const segmentCount = pendingSegments.length;
+    const audioSource = segmentReviewData.audioSource;
+
+    console.log(`[Segment Review] Starting final stitch with ${segmentCount} segments`);
+
+    setShowSegmentReview(false);
+    setIsGeneratingStitchedVideo(true);
+    setBulkDownloadProgress({
+      current: 0,
+      total: segmentCount,
+      message: 'Stitching all segments together...'
+    });
+
+    try {
+      // Build the video sequence in order
+      const videosToStitch = pendingSegments.map((segment, index) => ({
+        url: segment.url,
+        filename: `segment-${index + 1}.mp4`
+      }));
+
+      console.log(`[Segment Review] Stitching ${videosToStitch.length} videos`);
+
+      // Prepare audio options from the stored audio source (for parent audio overlay)
+      let audioOptions = null;
+      if (audioSource) {
+        try {
+          if (audioSource.type === 's2v') {
+            // For S2V: Use the audio file directly
+            setBulkDownloadProgress({ current: 0, total: segmentCount, message: 'Preparing audio track...' });
+            
+            // Convert Uint8Array to ArrayBuffer properly
+            let audioBuffer = audioSource.audioBuffer;
+            if (audioBuffer instanceof Uint8Array) {
+              // Slice to create a clean ArrayBuffer (handles byte offset issues)
+              audioBuffer = audioBuffer.buffer.slice(
+                audioBuffer.byteOffset,
+                audioBuffer.byteOffset + audioBuffer.byteLength
+              );
+            }
+            
+            if (audioBuffer) {
+              audioOptions = {
+                buffer: audioBuffer,
+                startOffset: audioSource.startOffset || 0
+              };
+              console.log(`[Segment Review] Using S2V audio: offset=${audioSource.startOffset}s, duration=${audioSource.duration}s, bufferSize=${audioBuffer.byteLength}`);
+            }
+          } else if (audioSource.type === 'animate-move' || audioSource.type === 'animate-replace') {
+            // For Animate Move/Replace: Extract audio from the source video
+            setBulkDownloadProgress({ current: 0, total: segmentCount, message: 'Extracting audio from source video...' });
+            
+            // Convert Uint8Array to ArrayBuffer properly
+            let videoBuffer = audioSource.videoBuffer;
+            if (videoBuffer instanceof Uint8Array) {
+              // Slice to create a clean ArrayBuffer (handles byte offset issues)
+              videoBuffer = videoBuffer.buffer.slice(
+                videoBuffer.byteOffset,
+                videoBuffer.byteOffset + videoBuffer.byteLength
+              );
+            }
+            
+            if (videoBuffer) {
+              audioOptions = {
+                buffer: videoBuffer,
+                startOffset: audioSource.startOffset || 0,
+                isVideoSource: true // Flag to indicate this is a video file to extract audio from
+              };
+              console.log(`[Segment Review] Using ${audioSource.type} video audio: offset=${audioSource.startOffset}s, duration=${audioSource.duration}s, bufferSize=${videoBuffer.byteLength}`);
+            }
+          }
+        } catch (audioError) {
+          console.warn('[Segment Review] Failed to prepare audio options, continuing without parent audio:', audioError);
+          // Continue without audio rather than failing
+        }
+      }
+
+      const concatenatedBlob = await concatenateVideos(
+        videosToStitch,
+        (current, total, message) => {
+          setBulkDownloadProgress({
+            current,
+            total,
+            message
+          });
+        },
+        audioOptions, // Pass audio options to mux parent audio track
+        false // Don't preserve source audio from individual clips (we're using parent audio)
+      );
+
+      // Create blob URL for preview and show overlay directly
+      const blobUrl = URL.createObjectURL(concatenatedBlob);
+      setStitchedVideoUrl(blobUrl);
+
+      // Complete!
+      setIsGeneratingStitchedVideo(false);
+      setBulkDownloadProgress({ current: 0, total: 0, message: '' });
+
+      // Close segment review and show video overlay directly (user already reviewed segments)
+      setShowSegmentReview(false);
+      setShowStitchedVideoOverlay(true);
+
+      // Keep pendingSegments and segmentReviewData for Remix functionality
+      // But clear the active montage tracking to prevent re-stitching
+      setActiveMontagePhotoIds(null);
+      setActiveMontageWorkflowType(null);
+      montageCompletedRef.current.clear();
+
+    } catch (error) {
+      console.error('[Segment Review] Stitching failed:', error);
+      showToast({
+        title: 'Stitching Failed',
+        message: error.message || 'Failed to stitch videos. Please try again.',
+        type: 'error'
+      });
+      setIsGeneratingStitchedVideo(false);
+      setBulkDownloadProgress({ current: 0, total: 0, message: '' });
+      // Go back to review instead of closing
+      setShowSegmentReview(true);
+    }
+  }, [segmentReviewData, pendingSegments, showToast]);
+
+  // Handle closing segment review - go back to video preview
+  const handleCloseSegmentReview = useCallback(async () => {
+    console.log('[Segment Review] User closed review');
+
+    // Cancel any active regeneration (in case regeneration is in progress)
+    if (regeneratingSegmentIndex !== null) {
+      try {
+        await cancelAllActiveVideoProjects(setPhotos);
+      } catch (error) {
+        console.error('[Segment Review] Error cancelling projects:', error);
+      }
+      setRegeneratingSegmentIndex(null);
+      setSegmentRegenerationProgress(null);
+    }
+
+    // Close the review popup
+    setShowSegmentReview(false);
+
+    // If we have a stitched video, show it again
+    if (stitchedVideoUrl) {
+      setShowStitchedVideoOverlay(true);
+    }
+  }, [setPhotos, regeneratingSegmentIndex, stitchedVideoUrl]);
+
+  // Handle cancelling segment generation during initial creation
+  // This shows the CancelConfirmationPopup with refund estimate
+  const handleCancelSegmentGeneration = useCallback(async () => {
+    console.log('[Segment Cancel] Cancel requested, pendingSegments:', pendingSegments?.length);
+
+    if (!pendingSegments || pendingSegments.length === 0) {
+      // Nothing to cancel - just close
+      console.log('[Segment Cancel] No segments to cancel, closing...');
+      setShowSegmentReview(false);
+      setSegmentProgress(null);
+      return;
+    }
+
+    // Count in-progress segments
+    const generatingSegments = pendingSegments.filter(s => s.status === 'generating' || s.status === 'regenerating');
+    console.log('[Segment Cancel] Generating segments:', generatingSegments.length);
+
+    if (generatingSegments.length === 0) {
+      // Nothing generating - just close
+      setShowSegmentReview(false);
+      setSegmentProgress(null);
+      return;
+    }
+
+    // Temporarily hide the VideoReviewPopup to show the cancel confirmation popup
+    console.log('[Segment Cancel] Temporarily hiding VideoReviewPopup to show cancel confirmation...');
+    setShowSegmentReview(false);
+
+    // Request cancellation through the centralized cancel confirmation flow
+    requestCancel({
+      projectType: 'video',
+      progress: Math.round((pendingSegments.filter(s => s.status === 'ready').length / pendingSegments.length) * 100),
+      itemsCompleted: pendingSegments.filter(s => s.status === 'ready').length,
+      totalItems: pendingSegments.length,
+      onConfirm: async () => {
+        try {
+          // Cancel all active video projects
+          await cancelAllActiveVideoProjects(setPhotos);
+
+          // Close popup and clear state
+          setShowSegmentReview(false);
+          setSegmentProgress(null);
+          setPendingSegments([]);
+          setSegmentReviewData(null);
+          setActiveMontagePhotoIds(null);
+          setActiveMontageWorkflowType(null);
+          montageCompletedRef.current.clear();
+          montageStitchCompletedRef.current = false;
+          montageAutoStitchInProgressRef.current = false;
+
+          showToast({
+            title: 'Generation Cancelled',
+            message: 'Your credits will be refunded for any incomplete work.',
+            type: 'info'
+          });
+        } catch (error) {
+          console.error('[Segment Cancel] Error cancelling:', error);
+          showToast({
+            title: 'Cancel Failed',
+            message: 'Failed to cancel generation. Please try again.',
+            type: 'error'
+          });
+        }
+      },
+      onCancel: () => {
+        // User cancelled the cancellation - re-show the VideoReviewPopup
+        console.log('[Segment Cancel] User cancelled the cancellation, re-showing VideoReviewPopup...');
+        setShowSegmentReview(true);
+      }
+    });
+  }, [pendingSegments, setPhotos, requestCancel, showToast]);
 
   // Handle sharing stitched video - stitches if needed, then shares via Web Share API
   const handleShareStitchedVideo = useCallback(async () => {
@@ -5867,13 +7328,56 @@ const PhotoGallery = ({
           filename: `video-${index + 1}.mp4`
         }));
 
-        // Concatenate videos into one seamless video
+        // Check if this is from a montage mode with stored audio source
+        let audioOptions = null;
+        const audioSource = segmentReviewData?.audioSource;
+        if (audioSource && ['s2v', 'animate-move', 'animate-replace'].includes(segmentReviewData?.workflowType)) {
+          try {
+            if (audioSource.type === 's2v') {
+              let audioBuffer = audioSource.audioBuffer;
+              if (audioBuffer instanceof Uint8Array) {
+                audioBuffer = audioBuffer.buffer.slice(
+                  audioBuffer.byteOffset,
+                  audioBuffer.byteOffset + audioBuffer.byteLength
+                );
+              }
+              if (audioBuffer) {
+                audioOptions = {
+                  buffer: audioBuffer,
+                  startOffset: audioSource.startOffset || 0
+                };
+                console.log(`[Share Stitched] Using S2V parent audio`);
+              }
+            } else if (audioSource.type === 'animate-move' || audioSource.type === 'animate-replace') {
+              let videoBuffer = audioSource.videoBuffer;
+              if (videoBuffer instanceof Uint8Array) {
+                videoBuffer = videoBuffer.buffer.slice(
+                  videoBuffer.byteOffset,
+                  videoBuffer.byteOffset + videoBuffer.byteLength
+                );
+              }
+              if (videoBuffer) {
+                audioOptions = {
+                  buffer: videoBuffer,
+                  startOffset: audioSource.startOffset || 0,
+                  isVideoSource: true
+                };
+                console.log(`[Share Stitched] Using ${audioSource.type} parent audio`);
+              }
+            }
+          } catch (audioError) {
+            console.warn('[Share Stitched] Failed to prepare parent audio:', audioError);
+          }
+        }
+
+        // Concatenate videos into one seamless video (with optional parent audio for montage mode)
         const concatenatedBlob = await concatenateVideos(
           videosToStitch,
           (current, total, message) => {
             setBulkDownloadProgress({ current, total, message });
           },
-          null // No audio for non-transition stitching
+          audioOptions,
+          !audioOptions // Preserve source audio only if not using parent audio
         );
 
         const elapsedMs = performance.now() - startTime;
@@ -5954,7 +7458,7 @@ const PhotoGallery = ({
         type: 'error'
       });
     }
-  }, [photos, filteredPhotos, isPromptSelectorMode, isBulkDownloading, cachedInfiniteLoopBlob, cachedStitchedVideoBlob, cachedStitchedVideoPhotosHash, readyTransitionVideo, isTransitionMode, transitionVideoQueue, stitchedVideoUrl, showToast, setIsBulkDownloading, setBulkDownloadProgress]);
+  }, [photos, filteredPhotos, isPromptSelectorMode, isBulkDownloading, cachedInfiniteLoopBlob, cachedStitchedVideoBlob, cachedStitchedVideoPhotosHash, readyTransitionVideo, isTransitionMode, transitionVideoQueue, stitchedVideoUrl, segmentReviewData, showToast, setIsBulkDownloading, setBulkDownloadProgress]);
 
   // Handle sharing stitched video to Twitter - stitch if needed, then open Twitter share modal
   const handleShareStitchedVideoToTwitter = useCallback(async () => {
@@ -6008,12 +7512,55 @@ const PhotoGallery = ({
           filename: `video-${index + 1}.mp4`
         }));
 
+        // Check if this is from a montage mode with stored audio source
+        let audioOptions = null;
+        const audioSource = segmentReviewData?.audioSource;
+        if (audioSource && ['s2v', 'animate-move', 'animate-replace'].includes(segmentReviewData?.workflowType)) {
+          try {
+            if (audioSource.type === 's2v') {
+              let audioBuffer = audioSource.audioBuffer;
+              if (audioBuffer instanceof Uint8Array) {
+                audioBuffer = audioBuffer.buffer.slice(
+                  audioBuffer.byteOffset,
+                  audioBuffer.byteOffset + audioBuffer.byteLength
+                );
+              }
+              if (audioBuffer) {
+                audioOptions = {
+                  buffer: audioBuffer,
+                  startOffset: audioSource.startOffset || 0
+                };
+                console.log(`[Twitter Share Stitched] Using S2V parent audio`);
+              }
+            } else if (audioSource.type === 'animate-move' || audioSource.type === 'animate-replace') {
+              let videoBuffer = audioSource.videoBuffer;
+              if (videoBuffer instanceof Uint8Array) {
+                videoBuffer = videoBuffer.buffer.slice(
+                  videoBuffer.byteOffset,
+                  videoBuffer.byteOffset + videoBuffer.byteLength
+                );
+              }
+              if (videoBuffer) {
+                audioOptions = {
+                  buffer: videoBuffer,
+                  startOffset: audioSource.startOffset || 0,
+                  isVideoSource: true
+                };
+                console.log(`[Twitter Share Stitched] Using ${audioSource.type} parent audio`);
+              }
+            }
+          } catch (audioError) {
+            console.warn('[Twitter Share Stitched] Failed to prepare parent audio:', audioError);
+          }
+        }
+
         videoBlob = await concatenateVideos(
           videosToStitch,
           (current, total, message) => {
             setBulkDownloadProgress({ current, total, message });
           },
-          null
+          audioOptions,
+          !audioOptions
         );
 
         // Cache the stitched video
@@ -6068,7 +7615,7 @@ const PhotoGallery = ({
         type: 'error'
       });
     }
-  }, [photos, filteredPhotos, isPromptSelectorMode, cachedInfiniteLoopBlob, cachedStitchedVideoBlob, cachedStitchedVideoPhotosHash, readyTransitionVideo, isTransitionMode, transitionVideoQueue, handleShareToX, showToast, setIsBulkDownloading, setBulkDownloadProgress]);
+  }, [photos, filteredPhotos, isPromptSelectorMode, cachedInfiniteLoopBlob, cachedStitchedVideoBlob, cachedStitchedVideoPhotosHash, readyTransitionVideo, isTransitionMode, transitionVideoQueue, segmentReviewData, handleShareToX, showToast, setIsBulkDownloading, setBulkDownloadProgress]);
 
   // Handle sharing stitched video via Web Share API
   const handleShareStitchedVideoViaWebShare = useCallback(async () => {
@@ -7787,6 +9334,14 @@ const PhotoGallery = ({
   const isExtensionMode = window.extensionMode;
 
   const handlePhotoSelect = useCallback(async (index, e) => {
+    // Close dropdowns if open
+    if (showMoreDropdown) {
+      setShowMoreDropdown(false);
+    }
+    if (showSlideshowDownloadDropdown) {
+      setShowSlideshowDownloadDropdown(false);
+    }
+    
     // Ignore clicks on the favorite button or its children
     const target = e.target;
     const currentTarget = e.currentTarget;
@@ -7861,7 +9416,7 @@ const PhotoGallery = ({
         });
       });
     }
-  }, [selectedPhotoIndex, setSelectedPhotoIndex, preGenerateAdjacentFrames, isPromptSelectorMode, filteredPhotos, photos, onPromptSelect, handleBackToCamera, isExtensionMode]);
+  }, [selectedPhotoIndex, setSelectedPhotoIndex, preGenerateAdjacentFrames, isPromptSelectorMode, filteredPhotos, photos, onPromptSelect, handleBackToCamera, isExtensionMode, showMoreDropdown, showSlideshowDownloadDropdown]);
 
 
   // Detect if running as PWA - MUST be called before any early returns to maintain hook order
@@ -8663,7 +10218,15 @@ const PhotoGallery = ({
       )}
 
       {/* Bottom right button container - holds separate Download and Video buttons */}
-      {!isPromptSelectorMode && selectedPhotoIndex === null && photos && photos.length > 0 && photos.filter(p => !p.hidden && !p.error && p.images && p.images.length > 0).length > 0 && (
+      {/* Show when: has completed photos with images, OR has generating/loading photos (for cancel button), OR can start new batch */}
+      {!isPromptSelectorMode && selectedPhotoIndex === null && (
+        (photos && photos.length > 0 && (
+          photos.filter(p => !p.hidden && !p.error && p.images && p.images.length > 0).length > 0 ||
+          photos.some(p => !p.hidden && (p.generating || p.loading)) ||
+          hasGeneratingVideos
+        )) ||
+        lastPhotoData?.blob // Show container if user can start a new batch (even after full cancellation)
+      ) && (
         <div style={{ 
           position: 'fixed', 
           right: '32px', 
@@ -8673,10 +10236,11 @@ const PhotoGallery = ({
           alignItems: 'center',
           zIndex: 10000000 
         }}>
-          {/* Download Button - Standalone */}
-          <div 
-            className="batch-download-button-container" 
-            style={{ 
+          {/* Download Button - Only show when there are completed images */}
+          {photos && photos.filter(p => !p.hidden && !p.error && p.images && p.images.length > 0).length > 0 && (
+            <div 
+              className="batch-download-button-container" 
+              style={{ 
               position: 'relative',
               background: 'linear-gradient(135deg, #ff5252, #e53935)',
               borderRadius: '8px',
@@ -8704,6 +10268,10 @@ const PhotoGallery = ({
                 // Hide download tip when button is clicked
                 if (showDownloadTip) {
                   setShowDownloadTip(false);
+                }
+                // Close slideshow download dropdown if open
+                if (showSlideshowDownloadDropdown) {
+                  setShowSlideshowDownloadDropdown(false);
                 }
                 // Always show download options dropdown
                 setShowMoreDropdown(prev => !prev);
@@ -8978,9 +10546,11 @@ const PhotoGallery = ({
               document.body
             )}
           </div>
+          )}
 
-          {/* Video Button - Standalone with camera icon (RED) */}
-          <div 
+          {/* Video Button - Only show when there are completed images */}
+          {photos && photos.filter(p => !p.hidden && !p.error && p.images && p.images.length > 0).length > 0 && (
+            <div 
             className="batch-video-button-container" 
             style={{ 
               position: 'relative',
@@ -9007,6 +10577,10 @@ const PhotoGallery = ({
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
+                // Close download dropdown if open
+                if (showMoreDropdown) {
+                  setShowMoreDropdown(false);
+                }
                 // Show video selection popup
                 if (isAuthenticated) {
                   setIsVideoSelectionBatch(true);
@@ -9048,6 +10622,7 @@ const PhotoGallery = ({
               <span>🎬</span>
             </button>
           </div>
+          )}
 
           {/* Share Button - Shows when there are 2+ videos to stitch and share */}
           {(() => {
@@ -9085,6 +10660,7 @@ const PhotoGallery = ({
                     onShareViaWebShare={handleShareStitchedVideoViaWebShare}
                     onShareQRCode={handleShareStitchedVideoQRCode}
                     onSubmitToGallery={handleSubmitStitchedVideoToGallery}
+                    onOpen={() => setShowMoreDropdown(false)}
                     showWebShare={isWebShareSupported()}
                     isMobileDevice={isMobile()}
                     disabled={isBulkDownloading}
@@ -9206,15 +10782,23 @@ const PhotoGallery = ({
             </div>
           )}
 
-          {/* Cancel button - shown during generation */}
-          {isGenerating && selectedPhotoIndex === null && (
+          {/* Cancel button - shown during image generation, video generation, or when project is active */}
+          {/* Use hasGeneratingPhotos (local calculation) instead of isGenerating (prop) to avoid stale state */}
+          {(hasGeneratingPhotos || activeProjectReference?.current || hasGeneratingVideos) && selectedPhotoIndex === null && (
             <button
               className="cancel-generation-btn"
               onMouseDown={(e) => {
-                console.log('[Cancel Button] MOUSE DOWN - Click intercepted!');
-                alert('Cancel button clicked! Check console for logs.');
                 e.stopPropagation();
-                handleCancelImageGeneration();
+                // Close download dropdown if open
+                if (showMoreDropdown) {
+                  setShowMoreDropdown(false);
+                }
+                // Determine which cancel handler to call
+                if (hasGeneratingPhotos || activeProjectReference?.current) {
+                  handleCancelImageGeneration();
+                } else if (hasGeneratingVideos) {
+                  handleCancelAllVideos();
+                }
               }}
               style={{
                 background: 'linear-gradient(135deg, #ff6b6b, #ee5a24)',
@@ -9236,18 +10820,24 @@ const PhotoGallery = ({
                 fontSize: '15px',
                 fontFamily: '"Permanent Marker", cursive',
               }}
-              title="Cancel current generation"
+              title={hasGeneratingVideos && !hasGeneratingPhotos && !activeProjectReference?.current ? "Cancel video generation" : "Cancel current generation"}
             >
               <span style={{ fontSize: '16px' }}>✕</span>
               CANCEL
             </button>
           )}
 
-          {/* New Batch button - shown when NOT generating */}
-          {!isGenerating && selectedPhotoIndex === null && (
+          {/* New Batch button - shown when NOT generating images AND no active project AND no videos generating */}
+          {!hasGeneratingPhotos && !activeProjectReference?.current && !hasGeneratingVideos && selectedPhotoIndex === null && (
             <button
               className="more-photos-btn"
-              onClick={handleMoreButtonClick}
+              onClick={() => {
+                // Close download dropdown if open
+                if (showMoreDropdown) {
+                  setShowMoreDropdown(false);
+                }
+                handleMoreButtonClick();
+              }}
               disabled={!isSogniReady || (!lastPhotoData.blob && photos.filter(p => !p.hidden && !p.error && p.images && p.images.length > 0).length === 0)}
               style={{
                 background: 'linear-gradient(135deg, #ff5252, #e53935)',
@@ -9281,6 +10871,10 @@ const PhotoGallery = ({
         <button
           className="view-photos-btn corner-btn"
           onClick={() => {
+            // Close download dropdown if open
+            if (showMoreDropdown) {
+              setShowMoreDropdown(false);
+            }
             // Navigate back to menu
             handleBackToCamera();
           }}
@@ -9295,6 +10889,13 @@ const PhotoGallery = ({
       {selectedPhotoIndex !== null && (isPromptSelectorMode ? filteredPhotos.length > 1 : photos.length > 1) && (
         <>
           <button className="photo-nav-btn prev" onClick={() => {
+            // Close dropdowns if open
+            if (showMoreDropdown) {
+              setShowMoreDropdown(false);
+            }
+            if (showSlideshowDownloadDropdown) {
+              setShowSlideshowDownloadDropdown(false);
+            }
             // Use filtered photos in prompt selector mode, regular photos otherwise
             const currentPhotosArray = isPromptSelectorMode ? filteredPhotos : photos;
             let prevIndex = selectedPhotoIndex - 1;
@@ -9306,6 +10907,13 @@ const PhotoGallery = ({
             &#8249;
           </button>
           <button className="photo-nav-btn next" onClick={() => {
+            // Close dropdowns if open
+            if (showMoreDropdown) {
+              setShowMoreDropdown(false);
+            }
+            if (showSlideshowDownloadDropdown) {
+              setShowSlideshowDownloadDropdown(false);
+            }
             // Use filtered photos in prompt selector mode, regular photos otherwise
             const currentPhotosArray = isPromptSelectorMode ? filteredPhotos : photos;
             let nextIndex = selectedPhotoIndex + 1;
@@ -9318,7 +10926,16 @@ const PhotoGallery = ({
           </button>
           <button 
             className="photo-close-btn" 
-            onClick={() => setSelectedPhotoIndex(null)}
+            onClick={() => {
+              // Close dropdowns if open
+              if (showMoreDropdown) {
+                setShowMoreDropdown(false);
+              }
+              if (showSlideshowDownloadDropdown) {
+                setShowSlideshowDownloadDropdown(false);
+              }
+              setSelectedPhotoIndex(null);
+            }}
             style={{
               position: 'fixed',
               top: '20px',
@@ -9361,7 +10978,16 @@ const PhotoGallery = ({
       {selectedPhotoIndex !== null && photos.length === 1 && (
         <button 
           className="photo-close-btn" 
-          onClick={() => setSelectedPhotoIndex(null)}
+          onClick={() => {
+            // Close dropdowns if open
+            if (showMoreDropdown) {
+              setShowMoreDropdown(false);
+            }
+            if (showSlideshowDownloadDropdown) {
+              setShowSlideshowDownloadDropdown(false);
+            }
+            setSelectedPhotoIndex(null);
+          }}
           style={{
             position: 'fixed',
             top: '20px',
@@ -9485,6 +11111,16 @@ const PhotoGallery = ({
                   // This will use the same gallery submission flow but with winter context
                   handleGallerySubmitRequest();
                 }}
+                onOpen={() => {
+                  // Close download dropdown if open
+                  if (showMoreDropdown) {
+                    setShowMoreDropdown(false);
+                  }
+                  // Close slideshow download dropdown if open
+                  if (showSlideshowDownloadDropdown) {
+                    setShowSlideshowDownloadDropdown(false);
+                  }
+                }}
                 showWebShare={isWebShareSupported()}
                 isMobileDevice={isMobile()}
                 disabled={
@@ -9514,6 +11150,10 @@ const PhotoGallery = ({
                 className="action-button download-btn"
                 onClick={(e) => {
                   e.stopPropagation();
+                  // Close main download dropdown if open
+                  if (showMoreDropdown) {
+                    setShowMoreDropdown(false);
+                  }
                   setShowSlideshowDownloadDropdown(prev => !prev);
                 }}
                 disabled={
@@ -11556,12 +13196,18 @@ const PhotoGallery = ({
                         </button>
                       )}
                       {/* Refresh button - show for failed images or when not generating/loading */}
-                      {(photo.error || (!photo.generating && !photo.loading)) && (photo.positivePrompt || photo.stylePrompt) && (
+                      {/* For videos with regenerate params, this will regenerate the video instead */}
+                      {(photo.error || (!photo.generating && !photo.loading)) && (photo.positivePrompt || photo.stylePrompt || photo.videoRegenerateParams) && (
                         <button
                           className="photo-refresh-btn"
                           onMouseDown={(e) => {
                             e.stopPropagation();
-                            onRefreshPhoto(index);
+                            // If photo has video regenerate params, regenerate video instead of image
+                            if (photo.videoRegenerateParams && ['s2v', 'animate-move', 'animate-replace'].includes(photo.videoWorkflowType)) {
+                              handleRegenerateVideo(photo, index);
+                            } else {
+                              onRefreshPhoto(index);
+                            }
                           }}
                           style={{
                             position: 'absolute',
@@ -11593,7 +13239,9 @@ const PhotoGallery = ({
                             e.currentTarget.style.background = 'rgba(0, 0, 0, 0.7)';
                             e.currentTarget.style.transform = 'scale(0.8)';
                           }}
-                          title="Refresh this image"
+                          title={photo.videoRegenerateParams && ['s2v', 'animate-move', 'animate-replace'].includes(photo.videoWorkflowType) 
+                            ? "Regenerate this video" 
+                            : "Refresh this image"}
                         >
                           <svg width="11" height="11" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                             <path fill="#ffffff" d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
@@ -11604,16 +13252,28 @@ const PhotoGallery = ({
                         className="photo-hide-btn"
                         onMouseDown={(e) => {
                           e.stopPropagation();
-                          setPhotos(prev => {
-                            const updated = [...prev];
-                            if (updated[index]) {
-                              updated[index] = {
-                                ...updated[index],
-                                hidden: true
-                              };
-                            }
-                            return updated;
-                          });
+                          // If video is playing, stop it instead of hiding the photo
+                          if (playingGeneratedVideoIds.has(photo.id)) {
+                            setPlayingGeneratedVideoIds(prev => {
+                              const newSet = new Set(prev);
+                              newSet.delete(photo.id);
+                              return newSet;
+                            });
+                            // Also clear unmuted state if this was the unmuted video
+                            setUnmutedVideoId(prev => prev === photo.id ? null : prev);
+                          } else {
+                            // No video playing, hide the photo
+                            setPhotos(prev => {
+                              const updated = [...prev];
+                              if (updated[index]) {
+                                updated[index] = {
+                                  ...updated[index],
+                                  hidden: true
+                                };
+                              }
+                              return updated;
+                            });
+                          }
                         }}
                         style={{
                           position: 'absolute',
@@ -11645,7 +13305,7 @@ const PhotoGallery = ({
                           e.currentTarget.style.background = 'rgba(0, 0, 0, 0.7)';
                           e.currentTarget.style.transform = 'scale(0.8)';
                         }}
-                        title="Hide this image"
+                        title={playingGeneratedVideoIds.has(photo.id) ? "Stop video" : "Hide this image"}
                       >
                         ×
                       </button>
@@ -12289,30 +13949,53 @@ const PhotoGallery = ({
                 {/* AI-Generated Video Overlay - Show when generated video is playing */}
                 {photo.videoUrl && !photo.generatingVideo && playingGeneratedVideoIds.has(photo.id) && (
                   // All photos play their own video in a simple loop
-                  // S2V/Animate videos can have audio - only one unmuted at a time
+                  // S2V/Animate videos can have audio - only one unmuted at a time, mutes after first play
                   <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 4 }}>
                     <video
                       key={`video-${photo.id}-${photo.videoWorkflowType}`}
                       src={photo.videoUrl}
                       autoPlay
                       loop={true}
-                      muted={!['s2v', 'animate-move', 'animate-replace'].includes(photo.videoWorkflowType) || unmutedVideoId !== photo.id}
+                      muted={!['s2v', 'animate-move', 'animate-replace'].includes(photo.videoWorkflowType) || unmutedVideoId !== photo.id || s2vVideosPlayedOnce.has(photo.id)}
                       playsInline
                       onLoadedMetadata={(e) => {
                         // For S2V/Animate videos, try to unmute and play with audio (muting any previous)
                         if (['s2v', 'animate-move', 'animate-replace'].includes(photo.videoWorkflowType)) {
                           const videoEl = e.currentTarget;
-                          // Set this as the unmuted video (will mute others)
-                          setUnmutedVideoId(photo.id);
-                          videoEl.muted = false;
-                          // Try to play with audio - if it fails, show click-to-play overlay
-                          const playPromise = videoEl.play();
-                          if (playPromise !== undefined) {
-                            playPromise.catch(() => {
-                              // Autoplay with audio blocked, show click-to-play overlay
-                              setS2vVideosNeedingClick(prev => new Set([...prev, photo.id]));
-                              videoEl.muted = true;
-                            });
+                          // Only unmute if this video hasn't played audio yet
+                          if (!s2vVideosPlayedOnce.has(photo.id)) {
+                            // Set this as the unmuted video (will mute others)
+                            setUnmutedVideoId(photo.id);
+                            videoEl.muted = false;
+                            // Try to play with audio - if it fails, show click-to-play overlay
+                            const playPromise = videoEl.play();
+                            if (playPromise !== undefined) {
+                              playPromise.catch(() => {
+                                // Autoplay with audio blocked, show click-to-play overlay
+                                setS2vVideosNeedingClick(prev => new Set([...prev, photo.id]));
+                                videoEl.muted = true;
+                              });
+                            }
+                          } else {
+                            // Already played once, start muted
+                            videoEl.muted = true;
+                          }
+                        }
+                      }}
+                      onTimeUpdate={(e) => {
+                        // For S2V/Animate videos, auto-mute when video completes first play
+                        // We use onTimeUpdate + duration check since loop=true prevents onEnded
+                        if (['s2v', 'animate-move', 'animate-replace'].includes(photo.videoWorkflowType)) {
+                          const videoEl = e.currentTarget;
+                          const duration = videoEl.duration;
+                          const currentTime = videoEl.currentTime;
+                          
+                          // If we're near the end of the video (within 0.2s) and haven't marked as played once
+                          if (duration > 0 && currentTime >= duration - 0.2 && !s2vVideosPlayedOnce.has(photo.id) && unmutedVideoId === photo.id) {
+                            // Mark as played once and mute
+                            setS2vVideosPlayedOnce(prev => new Set([...prev, photo.id]));
+                            setUnmutedVideoId(null);
+                            videoEl.muted = true;
                           }
                         }
                       }}
@@ -12341,6 +14024,12 @@ const PhotoGallery = ({
                             if (videoEl) videoEl.muted = true;
                           } else {
                             // Unmute this video (mutes others via state)
+                            // Remove from played-once set so it can auto-mute again after next play
+                            setS2vVideosPlayedOnce(prev => {
+                              const newSet = new Set(prev);
+                              newSet.delete(photo.id);
+                              return newSet;
+                            });
                             setUnmutedVideoId(photo.id);
                             if (videoEl) {
                               videoEl.muted = false;
@@ -12396,6 +14085,12 @@ const PhotoGallery = ({
                           const videoEl = e.currentTarget.parentElement.querySelector('video');
                           if (videoEl) {
                             // Set this as the unmuted video (mutes others)
+                            // Remove from played-once set so it can auto-mute again after this play
+                            setS2vVideosPlayedOnce(prev => {
+                              const newSet = new Set(prev);
+                              newSet.delete(photo.id);
+                              return newSet;
+                            });
                             setUnmutedVideoId(photo.id);
                             videoEl.muted = false;
                             videoEl.play().then(() => {
@@ -13096,13 +14791,19 @@ const PhotoGallery = ({
                         </svg>
                       </button>
                     )}
-                    {/* Refresh button - only show if photo has a prompt */}
-                    {(photo.positivePrompt || photo.stylePrompt) && (
+                    {/* Refresh button - only show if photo has a prompt or video regenerate params */}
+                    {/* For videos with regenerate params, this will regenerate the video instead */}
+                    {(photo.positivePrompt || photo.stylePrompt || photo.videoRegenerateParams) && (
                       <button
                         className="photo-refresh-btn"
                         onMouseDown={(e) => {
                           e.stopPropagation();
-                          onRefreshPhoto(index);
+                          // If photo has video regenerate params, regenerate video instead of image
+                          if (photo.videoRegenerateParams && ['s2v', 'animate-move', 'animate-replace'].includes(photo.videoWorkflowType)) {
+                            handleRegenerateVideo(photo, index);
+                          } else {
+                            onRefreshPhoto(index);
+                          }
                         }}
                         style={{
                           position: 'absolute',
@@ -13134,7 +14835,9 @@ const PhotoGallery = ({
                           e.currentTarget.style.background = 'rgba(0, 0, 0, 0.7)';
                           e.currentTarget.style.transform = 'scale(0.8)';
                         }}
-                        title="Refresh this image"
+                        title={photo.videoRegenerateParams && ['s2v', 'animate-move', 'animate-replace'].includes(photo.videoWorkflowType) 
+                          ? "Regenerate this video" 
+                          : "Refresh this image"}
                       >
                         <svg width="11" height="11" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                           <path fill="#ffffff" d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
@@ -13145,16 +14848,28 @@ const PhotoGallery = ({
                       className="photo-hide-btn"
                       onMouseDown={(e) => {
                         e.stopPropagation();
-                        setPhotos(prev => {
-                          const updated = [...prev];
-                          if (updated[index]) {
-                            updated[index] = {
-                              ...updated[index],
-                              hidden: true
-                            };
-                          }
-                          return updated;
-                        });
+                        // If video is playing, stop it instead of hiding the photo
+                        if (playingGeneratedVideoIds.has(photo.id)) {
+                          setPlayingGeneratedVideoIds(prev => {
+                            const newSet = new Set(prev);
+                            newSet.delete(photo.id);
+                            return newSet;
+                          });
+                          // Also clear unmuted state if this was the unmuted video
+                          setUnmutedVideoId(prev => prev === photo.id ? null : prev);
+                        } else {
+                          // No video playing, hide the photo
+                          setPhotos(prev => {
+                            const updated = [...prev];
+                            if (updated[index]) {
+                              updated[index] = {
+                                ...updated[index],
+                                hidden: true
+                              };
+                            }
+                            return updated;
+                          });
+                        }
                       }}
                       style={{
                         position: 'absolute',
@@ -13186,7 +14901,7 @@ const PhotoGallery = ({
                         e.currentTarget.style.background = 'rgba(0, 0, 0, 0.7)';
                         e.currentTarget.style.transform = 'scale(0.8)';
                       }}
-                      title="Hide this image"
+                      title={playingGeneratedVideoIds.has(photo.id) ? "Stop video" : "Hide this image"}
                     >
                       ×
                     </button>
@@ -13796,6 +15511,48 @@ const PhotoGallery = ({
           setShowStitchOptionsPopup(false);
           setShowInfiniteLoopPreview(true);
         }}
+        onCancel={async () => {
+          // Set cancellation flag to stop any ongoing async operations
+          infiniteLoopCancelledRef.current = true;
+          
+          // Cancel all active video generation projects (transition videos)
+          console.log('[Infinite Loop] User cancelled generation - cancelling all active video projects');
+          
+          try {
+            // Cancel all active video projects (includes transition videos)
+            const result = await cancelAllActiveVideoProjects(setPhotos);
+            
+            console.log(`[Infinite Loop] Cancelled ${result.cancelled} projects, ${result.failed} failed`);
+            
+            // Reset state
+            setIsGeneratingInfiniteLoop(false);
+            setInfiniteLoopProgress(null);
+            setShowStitchOptionsPopup(false);
+            
+            showToast({
+              title: 'Generation Cancelled',
+              message: result.cancelled > 0 
+                ? `Cancelled ${result.cancelled} transition video${result.cancelled !== 1 ? 's' : ''}. You will be refunded for incomplete work.`
+                : 'Infinite loop generation was cancelled.',
+              type: 'info',
+              timeout: 4000
+            });
+          } catch (error) {
+            console.error('[Infinite Loop] Error cancelling projects:', error);
+            
+            // Still reset state even if cancellation failed
+            setIsGeneratingInfiniteLoop(false);
+            setInfiniteLoopProgress(null);
+            setShowStitchOptionsPopup(false);
+            
+            showToast({
+              title: 'Cancellation Error',
+              message: 'There was an error cancelling the generation. Some videos may still complete.',
+              type: 'warning',
+              timeout: 4000
+            });
+          }
+        }}
         videoCount={(() => {
           const currentPhotosArray = isPromptSelectorMode ? filteredPhotos : photos;
           return currentPhotosArray.filter(
@@ -13811,6 +15568,46 @@ const PhotoGallery = ({
         videoResolution={settings.videoResolution || '480p'}
         videoDuration={settings.videoDuration || 5}
         tokenType={tokenType}
+      />
+
+      {/* Infinite Loop Review Popup - Review and regenerate individual transitions before stitching */}
+      <VideoReviewPopup
+        visible={showTransitionReview}
+        onClose={handleCloseTransitionReview}
+        onStitchAll={handleStitchAfterReview}
+        onRegenerateItem={handleRegenerateTransition}
+        onCancelGeneration={handleCancelInfiniteLoopGeneration}
+        items={pendingTransitions?.map(t => ({
+          ...t,
+          fromIndex: t.fromVideoIndex,
+          toIndex: t.toVideoIndex
+        })) || []}
+        workflowType="infinite-loop"
+        regeneratingIndex={regeneratingTransitionIndex}
+        regenerationProgress={regenerationProgress}
+        itemETAs={infiniteLoopProgress?.transitionETAs || []}
+        itemProgress={infiniteLoopProgress?.transitionProgress || []}
+        itemWorkers={infiniteLoopProgress?.transitionWorkers || []}
+        itemStatuses={infiniteLoopProgress?.transitionStatuses || []}
+        itemElapsed={infiniteLoopProgress?.transitionElapsed || []}
+      />
+
+      {/* Segment Review Popup - Review and regenerate montage segments (S2V, Animate Move/Replace, Batch Transition) */}
+      <VideoReviewPopup
+        visible={showSegmentReview}
+        onClose={handleCloseSegmentReview}
+        onStitchAll={handleStitchAfterSegmentReview}
+        onRegenerateItem={handleRegenerateSegment}
+        onCancelGeneration={handleCancelSegmentGeneration}
+        items={pendingSegments}
+        workflowType={segmentReviewData?.workflowType || 's2v'}
+        regeneratingIndex={regeneratingSegmentIndex}
+        regenerationProgress={segmentRegenerationProgress}
+        itemETAs={segmentProgress?.itemETAs || []}
+        itemProgress={segmentProgress?.itemProgress || []}
+        itemWorkers={segmentProgress?.itemWorkers || []}
+        itemStatuses={segmentProgress?.itemStatuses || []}
+        itemElapsed={segmentProgress?.itemElapsed || []}
       />
 
       {/* Transition Prompt Editor Popup - Edit transition prompt before generating */}
@@ -14063,10 +15860,8 @@ const PhotoGallery = ({
           <div style={{
             position: 'relative',
             maxWidth: '90vw',
-            maxHeight: '80vh',
-            borderRadius: '16px',
-            overflow: 'hidden',
-            boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)'
+            maxHeight: '90vh',
+            overflow: 'hidden'
           }}>
             <video
               ref={infiniteLoopVideoRef}
@@ -14076,9 +15871,10 @@ const PhotoGallery = ({
               playsInline
               controls
               style={{
-                maxWidth: '90vw',
-                maxHeight: '80vh',
-                display: 'block'
+                maxWidth: '100%',
+                maxHeight: '100%',
+                display: 'block',
+                objectFit: 'contain'
               }}
             />
 
@@ -14188,48 +15984,44 @@ const PhotoGallery = ({
                 </button>
               )}
 
-              {/* Create New Button */}
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  // Revoke the old URL to prevent memory leak
-                  if (cachedInfiniteLoopUrl) {
-                    URL.revokeObjectURL(cachedInfiniteLoopUrl);
-                  }
-                  setCachedInfiniteLoopBlob(null);
-                  setCachedInfiniteLoopHash(null);
-                  setCachedInfiniteLoopUrl(null);
-                  setShowInfiniteLoopPreview(false);
-                  setShowStitchOptionsPopup(true);
-                }}
-                title="Create New"
-                style={{
-                  width: '40px',
-                  height: '40px',
-                  borderRadius: '50%',
-                  background: 'rgba(0, 0, 0, 0.6)',
-                  border: 'none',
-                  color: '#fff',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
-                  transition: 'all 0.2s ease'
-                }}
-                onMouseOver={e => {
-                  e.currentTarget.style.background = 'rgba(147, 51, 234, 0.9)';
-                  e.currentTarget.style.transform = 'scale(1.1)';
-                }}
-                onMouseOut={e => {
-                  e.currentTarget.style.background = 'rgba(0, 0, 0, 0.6)';
-                  e.currentTarget.style.transform = 'scale(1)';
-                }}
-              >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 6v3l4-4-4-4v3c-4.42 0-8 3.58-8 8 0 1.57.46 3.03 1.24 4.26L6.7 14.8c-.45-.83-.7-1.79-.7-2.8 0-3.31 2.69-6 6-6zm6.76 1.74L17.3 9.2c.44.84.7 1.79.7 2.8 0 3.31-2.69 6-6 6v-3l-4 4 4 4v-3c4.42 0 8-3.58 8-8 0-1.57-.46-3.03-1.24-4.26z"/>
-                </svg>
-              </button>
+              {/* Remix Button - opens transition review to regenerate individual transitions */}
+              {pendingTransitions.length > 0 && transitionReviewData && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowInfiniteLoopPreview(false);
+                    setShowTransitionReview(true);
+                  }}
+                  title="Remix - Regenerate transitions"
+                  style={{
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '50%',
+                    background: 'rgba(0, 0, 0, 0.6)',
+                    border: 'none',
+                    color: '#fff',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                    transition: 'all 0.2s ease'
+                  }}
+                  onMouseOver={e => {
+                    e.currentTarget.style.background = 'rgba(147, 51, 234, 0.9)';
+                    e.currentTarget.style.transform = 'scale(1.1)';
+                  }}
+                  onMouseOut={e => {
+                    e.currentTarget.style.background = 'rgba(0, 0, 0, 0.6)';
+                    e.currentTarget.style.transform = 'scale(1)';
+                  }}
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 6v3l4-4-4-4v3c-4.42 0-8 3.58-8 8 0 1.57.46 3.03 1.24 4.26L6.7 14.8c-.45-.83-.7-1.79-.7-2.8 0-3.31 2.69-6 6-6zm6.76 1.74L17.3 9.2c.44.84.7 1.79.7 2.8 0 3.31-2.69 6-6 6v-3l-4 4 4 4v-3c4.42 0 8-3.58 8-8 0-1.57-.46-3.03-1.24-4.26z"/>
+                  </svg>
+                </button>
+              )}
+
             </div>
           </div>
         </div>,
@@ -15250,7 +17042,7 @@ const PhotoGallery = ({
         />
       )}
 
-      {/* Stitched Video Overlay - Shows the concatenated video */}
+      {/* Stitched Video Overlay - Uses same template as Infinite Loop */}
       {showStitchedVideoOverlay && stitchedVideoUrl && createPortal(
         <div
           style={{
@@ -15261,6 +17053,7 @@ const PhotoGallery = ({
             bottom: 0,
             backgroundColor: 'rgba(0, 0, 0, 0.95)',
             display: 'flex',
+            flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
             zIndex: 10000000,
@@ -15272,73 +17065,212 @@ const PhotoGallery = ({
               URL.revokeObjectURL(stitchedVideoUrl);
               setStitchedVideoUrl(null);
             }
-            // Show tip over download button after closing overlay
             setShowDownloadTip(true);
-            // Hide tip after 8 seconds
-            setTimeout(() => {
-              setShowDownloadTip(false);
-            }, 8000);
+            setTimeout(() => setShowDownloadTip(false), 8000);
           }}
         >
-          <div
+          {/* Close Button */}
+          <button
+            onClick={() => {
+              setShowStitchedVideoOverlay(false);
+              if (stitchedVideoUrl) {
+                URL.revokeObjectURL(stitchedVideoUrl);
+                setStitchedVideoUrl(null);
+              }
+              setShowDownloadTip(true);
+              setTimeout(() => setShowDownloadTip(false), 8000);
+            }}
             style={{
-              position: 'relative',
-              maxWidth: '90vw',
-              maxHeight: '90vh',
-              width: '100%',
-              height: '100%',
+              position: 'absolute',
+              top: '20px',
+              right: '20px',
+              background: 'rgba(0, 0, 0, 0.6)',
+              border: 'none',
+              borderRadius: '50%',
+              width: '40px',
+              height: '40px',
+              cursor: 'pointer',
+              color: '#fff',
+              fontSize: '24px',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center'
+              justifyContent: 'center',
+              zIndex: 99999,
+              boxShadow: '0 2px 10px rgba(0,0,0,0.3)',
+              transition: 'all 0.2s ease'
             }}
-            onClick={(e) => e.stopPropagation()}
+            onMouseOver={e => {
+              e.currentTarget.style.background = 'rgba(255, 83, 83, 0.8)';
+              e.currentTarget.style.transform = 'scale(1.05)';
+            }}
+            onMouseOut={e => {
+              e.currentTarget.style.background = 'rgba(0, 0, 0, 0.6)';
+              e.currentTarget.style.transform = 'scale(1)';
+            }}
+          >
+            ×
+          </button>
+
+          {/* Video Player Container */}
+          <div style={{
+            position: 'relative',
+            maxWidth: '90vw',
+            maxHeight: '80vh',
+            borderRadius: '16px',
+            overflow: 'hidden',
+            boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)'
+          }}
+          onClick={(e) => e.stopPropagation()}
           >
             <video
+              ref={stitchedVideoRef}
               src={stitchedVideoUrl}
-              controls
               autoPlay
               loop
+              playsInline
+              controls
               style={{
-                maxWidth: '100%',
-                maxHeight: '100%',
-                width: 'auto',
-                height: 'auto'
+                maxWidth: '90vw',
+                maxHeight: '80vh',
+                display: 'block'
               }}
             />
-            <button
-              onClick={() => {
-                setShowStitchedVideoOverlay(false);
-                if (stitchedVideoUrl) {
-                  URL.revokeObjectURL(stitchedVideoUrl);
-                  setStitchedVideoUrl(null);
-                }
-                // Show tip over download button after closing overlay
-                setShowDownloadTip(true);
-                // Hide tip after 8 seconds
-                setTimeout(() => {
-                  setShowDownloadTip(false);
-                }, 8000);
-              }}
-              style={{
-                position: 'absolute',
-                top: '20px',
-                right: '20px',
-                background: 'rgba(0, 0, 0, 0.7)',
-                border: 'none',
-                borderRadius: '50%',
-                width: '40px',
-                height: '40px',
-                color: '#fff',
-                fontSize: '24px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                zIndex: 10000001
-              }}
-            >
-              ×
-            </button>
+
+            {/* Action Icons - Bottom right overlay (same as Infinite Loop template) */}
+            <div style={{
+              position: 'absolute',
+              bottom: '60px',
+              right: '12px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '8px',
+              zIndex: 10
+            }}>
+              {/* Download Button */}
+              <button
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  const timestamp = new Date().toISOString().split('T')[0];
+                  const filename = `sogni-video-${timestamp}.mp4`;
+                  try {
+                    await downloadVideo(stitchedVideoUrl, filename);
+                    showToast({
+                      title: '✅ Download Started',
+                      message: 'Your video is being downloaded!',
+                      type: 'success'
+                    });
+                  } catch (err) {
+                    showToast({
+                      title: 'Download Failed',
+                      message: 'Failed to download video. Please try again.',
+                      type: 'error'
+                    });
+                  }
+                }}
+                title="Download"
+                style={{
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '50%',
+                  background: 'rgba(0, 0, 0, 0.6)',
+                  border: 'none',
+                  color: '#fff',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseOver={e => {
+                  e.currentTarget.style.background = 'rgba(76, 175, 80, 0.9)';
+                  e.currentTarget.style.transform = 'scale(1.1)';
+                }}
+                onMouseOut={e => {
+                  e.currentTarget.style.background = 'rgba(0, 0, 0, 0.6)';
+                  e.currentTarget.style.transform = 'scale(1)';
+                }}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+                </svg>
+              </button>
+
+              {/* Share Button (if supported) */}
+              {navigator.share && navigator.canShare && (
+                <button
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    await handleShareStitchedVideo();
+                  }}
+                  title="Share"
+                  style={{
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '50%',
+                    background: 'rgba(0, 0, 0, 0.6)',
+                    border: 'none',
+                    color: '#fff',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                    transition: 'all 0.2s ease'
+                  }}
+                  onMouseOver={e => {
+                    e.currentTarget.style.background = 'rgba(33, 150, 243, 0.9)';
+                    e.currentTarget.style.transform = 'scale(1.1)';
+                  }}
+                  onMouseOut={e => {
+                    e.currentTarget.style.background = 'rgba(0, 0, 0, 0.6)';
+                    e.currentTarget.style.transform = 'scale(1)';
+                  }}
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"/>
+                  </svg>
+                </button>
+              )}
+
+              {/* Remix Button - opens segment review to regenerate individual segments */}
+              {pendingSegments.length > 0 && segmentReviewData && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowStitchedVideoOverlay(false);
+                    setShowSegmentReview(true);
+                  }}
+                  title="Remix - Regenerate segments"
+                  style={{
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '50%',
+                    background: 'rgba(0, 0, 0, 0.6)',
+                    border: 'none',
+                    color: '#fff',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                    transition: 'all 0.2s ease'
+                  }}
+                  onMouseOver={e => {
+                    e.currentTarget.style.background = 'rgba(147, 51, 234, 0.9)';
+                    e.currentTarget.style.transform = 'scale(1.1)';
+                  }}
+                  onMouseOut={e => {
+                    e.currentTarget.style.background = 'rgba(0, 0, 0, 0.6)';
+                    e.currentTarget.style.transform = 'scale(1)';
+                  }}
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 6v3l4-4-4-4v3c-4.42 0-8 3.58-8 8 0 1.57.46 3.03 1.24 4.26L6.7 14.8c-.45-.83-.7-1.79-.7-2.8 0-3.31 2.69-6 6-6zm6.76 1.74L17.3 9.2c.44.84.7 1.79.7 2.8 0 3.31-2.69 6-6 6v-3l-4 4 4 4v-3c4.42 0 8-3.58 8-8 0-1.57-.46-3.03-1.24-4.26z"/>
+                  </svg>
+                </button>
+              )}
+            </div>
           </div>
         </div>,
         document.body
@@ -15475,32 +17407,7 @@ const PhotoGallery = ({
         document.body
       )}
 
-      {/* Confetti Celebration for Transition Video Completion */}
-      <ConfettiCelebration
-        isVisible={showTransitionConfetti && backgroundAnimationsEnabled}
-        onComplete={() => setShowTransitionConfetti(false)}
-      />
-
-      {/* Transition Video Complete Notification */}
-      <TransitionVideoCompleteNotification
-        isVisible={showTransitionVideoNotification}
-        videoCount={transitionVideoNotificationCount}
-        onViewVideo={() => {
-          // Generate stitched video and show in overlay
-          if (generateStitchedVideoRef.current) {
-            generateStitchedVideoRef.current();
-          } else {
-            console.error('[Notification] generateStitchedVideoRef.current is not available');
-          }
-          setShowTransitionVideoNotification(false);
-        }}
-        onDismiss={() => {
-          setShowTransitionVideoNotification(false);
-        }}
-      />
-
       {/* Cancel Confirmation Popup */}
-      {console.log('[Render] CancelConfirmationPopup isOpen:', showCancelConfirmation, 'pendingCancel:', pendingCancel)}
       <CancelConfirmationPopup
         isOpen={showCancelConfirmation}
         onClose={handleCancelConfirmationClose}

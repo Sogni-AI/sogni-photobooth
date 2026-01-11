@@ -84,8 +84,11 @@ export async function concatenateVideos(videos, onProgress = null, audioOptions 
 
   if (onProgress) onProgress(videos.length, videos.length, 'Concatenating...');
 
+  // Determine if we should strip source audio (when parent audio will be added)
+  const stripSourceAudio = audioOptions && audioOptions.buffer ? true : false;
+  
   // Use the working concatenation (CO strategy - extract + ctts) with audio fix
-  let result = await concatenateMP4s_WithEditList(videoBuffers, 'CO');
+  let result = await concatenateMP4s_WithEditList(videoBuffers, 'CO', stripSourceAudio);
   
   // If preserveSourceAudio is requested, try to extract and concatenate audio from source videos
   if (preserveSourceAudio && !audioOptions) {
@@ -116,13 +119,27 @@ export async function concatenateVideos(videos, onProgress = null, audioOptions 
     }
   }
   
-  // If audio options provided, mux the audio track (Beta feature - external audio file)
+  // If audio options provided, mux the audio track (Beta feature - external audio file or video source)
   if (audioOptions && audioOptions.buffer) {
     if (onProgress) onProgress(videos.length, videos.length, 'Adding music track...');
+    console.log('[Concatenate] Adding parent audio track (source audio was stripped)');
     try {
-      result = await muxAudioTrack(result, audioOptions.buffer, audioOptions.startOffset || 0);
+      if (audioOptions.isVideoSource) {
+        // Extract audio from video source file, then mux it
+        console.log('[Concatenate] Extracting audio from video source file...');
+        const audioBuffer = audioOptions.buffer instanceof ArrayBuffer 
+          ? audioOptions.buffer 
+          : audioOptions.buffer.buffer || audioOptions.buffer;
+        result = await muxAudioTrack(result, audioBuffer, audioOptions.startOffset || 0);
+        console.log('[Concatenate] Parent audio (from video source) muxed successfully');
+      } else {
+        // Regular audio file (M4A)
+        console.log('[Concatenate] Muxing M4A audio file...');
+        result = await muxAudioTrack(result, audioOptions.buffer, audioOptions.startOffset || 0);
+        console.log('[Concatenate] Parent audio (M4A) muxed successfully');
+      }
     } catch (error) {
-      console.error('Failed to add audio track:', error);
+      console.error('[Concatenate] Failed to add parent audio track:', error);
       // Continue without audio rather than failing completely
     }
   }
@@ -134,12 +151,15 @@ export async function concatenateVideos(videos, onProgress = null, audioOptions 
  * Concatenate MP4 files with Edit List for QuickTime/iOS compatibility
  * Uses normal file order (ftyp + mdat + moov) with edit list to map timeline
  * 
- * TESTING MODE: Generates 3 variants with different audio trimming strategies
+ * @param {Array} buffers - Array of video ArrayBuffers
+ * @param {string} strategy - Concatenation strategy (CO is the working solution)
+ * @param {boolean} stripSourceAudio - If true, don't include audio from source videos
  */
-async function concatenateMP4s_WithEditList(buffers, strategy = 'CO') {
+async function concatenateMP4s_WithEditList(buffers, strategy = 'CO', stripSourceAudio = false) {
   const options = {
     // CO strategy: Extract video+audio samples, combine ctts entries for B-frame support
     extractedWithProperCtts: true,
+    stripSourceAudio: stripSourceAudio,
   };
   
   // Legacy strategy support (CO is the working solution)
@@ -147,7 +167,7 @@ async function concatenateMP4s_WithEditList(buffers, strategy = 'CO') {
     console.warn(`[Concatenate] Strategy ${strategy} is deprecated, using CO`);
   }
   
-  console.log('[Concatenate] Using CO strategy (extract + ctts) with audio fix');
+  console.log(`[Concatenate] Using CO strategy (extract + ctts)${stripSourceAudio ? ' - stripping source audio' : ' with audio fix'}`);
   const result = await concatenateMP4s_Base(buffers, options);
   return result;
 }
@@ -230,15 +250,12 @@ async function concatenateMP4s_Base(buffers, options = {}) {
       if (ctts) {
         const cttsView = new DataView(moovBuf, ctts.start, ctts.size);
         const entryCount = cttsView.getUint32(12);
-        console.log(`[CO] File ${fileIdx} has ${entryCount} ctts entries`);
         for (let i = 0; i < entryCount; i++) {
           allCttsEntries.push({
             sampleCount: cttsView.getUint32(16 + i * 8),
             sampleOffset: cttsView.getInt32(20 + i * 8) // Can be negative in version 1
           });
         }
-      } else {
-        console.log(`[CO] File ${fileIdx} has NO ctts box`);
       }
       
       const stszView = new DataView(moovBuf, stsz.start, stsz.size);
@@ -282,13 +299,17 @@ async function concatenateMP4s_Base(buffers, options = {}) {
       }
     }
     
-    // Extract audio samples
+    // Extract audio samples (unless stripping source audio for parent audio overlay)
     const allAudioSizes = [];
     const allAudioSamples = [];
     let audioSampleDelta = 1024;
     let audioTimescale = 44100;
     
-    if (audioTrak) {
+    if (options.stripSourceAudio) {
+      console.log('[Strategy CO] Stripping source audio - will add parent audio later');
+    }
+    
+    if (audioTrak && !options.stripSourceAudio) {
       const audioMdia = findBox(file1MoovBuffer, audioTrak.contentStart, audioTrak.end, 'mdia');
       const audioMdhd = findBox(file1MoovBuffer, audioMdia.contentStart, audioMdia.end, 'mdhd');
       const audioMdhdView = new DataView(file1MoovBuffer, audioMdhd.start, audioMdhd.size);
@@ -330,7 +351,6 @@ async function concatenateMP4s_Base(buffers, options = {}) {
         // See: ComfyUI/workflows/wan2.2/ - TrimAudioDuration should use audioStart + (skippedFrames/fps)
         samplesToSkip = 1;
         maxSamplesToInclude = sampleCount - samplesToSkip - 1;
-        console.log(`[CO] File ${fileIdx + 1}: Audio fix - skip 1 start, trim 1 end -> ${maxSamplesToInclude} samples`);
         
         const sampleSizes = [];
         for (let i = 0; i < sampleCount; i++) sampleSizes.push(stszView.getUint32(20 + i * 4));
@@ -391,12 +411,8 @@ async function concatenateMP4s_Base(buffers, options = {}) {
         
         const extractedFromFile = allAudioSamples.length - samplesBeforeThisFile;
         const trimmedFromEnd = sampleCount - skippedCount - extractedFromFile;
-        console.log(`[CO] File ${fileIdx + 1}: Extracted ${extractedFromFile} audio samples (skipped ${skippedCount} start, trimmed ${trimmedFromEnd} end)`);
       }
     }
-    
-    console.log(`[CO] Video: ${allVideoSizes.length} samples, Audio: ${allAudioSizes.length} samples`);
-    console.log(`[CO] Total ctts entries: ${allCttsEntries.length}`);
     
     // Calculate durations to check if audio needs looping
     const file1Tables = parseSampleTables(file1.moov, true);
@@ -413,8 +429,6 @@ async function concatenateMP4s_Base(buffers, options = {}) {
       const originalAudioSamples = [...allAudioSamples];
       const originalSampleCount = originalAudioSizes.length;
       
-      console.log(`[CO] Audio needs looping: have ${originalSampleCount} samples, need ${expectedAudioSamples} samples`);
-      
       // Loop until we have enough samples
       while (allAudioSizes.length < expectedAudioSamples) {
         const samplesToAdd = Math.min(originalSampleCount, expectedAudioSamples - allAudioSizes.length);
@@ -423,8 +437,6 @@ async function concatenateMP4s_Base(buffers, options = {}) {
           allAudioSamples.push(originalAudioSamples[i]);
         }
       }
-      
-      console.log(`[CO] Audio looped: now have ${allAudioSizes.length} samples`);
     }
     
     // Build combined mdat
@@ -484,7 +496,6 @@ async function concatenateMP4s_Base(buffers, options = {}) {
     const stblParts = [videoStsdBytes, newVideoStts, newVideoStsc, newVideoStsz, newVideoStco, newVideoStss];
     if (newVideoCtts) {
       stblParts.push(newVideoCtts);
-      console.log(`[CO] Added ctts box: ${newVideoCtts.byteLength} bytes`);
     }
     const newVideoStbl = wrapBox('stbl', concatArrays(stblParts));
     
@@ -530,10 +541,14 @@ async function concatenateMP4s_Base(buffers, options = {}) {
     
     const newMvhd = updateMvhdDuration(new Uint8Array(file1MoovBuffer, mvhd.start, mvhd.size), videoMovieDuration);
     const moovParts = [newMvhd, newVideoTrak];
-    if (newAudioTrak) moovParts.push(newAudioTrak);
+    if (newAudioTrak) {
+      moovParts.push(newAudioTrak);
+      console.log('[Strategy CO] Including source audio track in output');
+    } else {
+      console.log('[Strategy CO] Output is video-only (no source audio)');
+    }
     const newMoov = wrapBox('moov', concatArrays(moovParts));
     
-    console.log(`[CO] Built moov: ${newMoov.byteLength} bytes`);
     return concatArrays([file1.ftyp, newMdat, newMoov]);
   }
 }

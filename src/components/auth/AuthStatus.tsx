@@ -388,52 +388,54 @@ export const AuthStatus: React.FC<AuthStatusProps> = ({ onPurchaseClick, onSignu
           {authMode !== 'demo' && balances && (
             <>
               <div style={{
-                padding: '8px 12px',
-                fontSize: '13px',
-                color: '#ffffff',
-                fontWeight: '600',
-                letterSpacing: '0.02em',
+                padding: '4px 0 12px 0',
+                fontSize: '15px',
+                color: '#1a1a1a',
+                fontWeight: '800',
+                letterSpacing: '-0.02em',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '6px',
-                position: 'relative'
+                position: 'relative',
+                textTransform: 'lowercase'
               }}>
-                <span>Paying with</span>
+                <span style={{ opacity: 0.7 }}>paying with</span>
                 <a
                   href="https://www.sogni.ai/assets"
                   target="_blank"
                   rel="noopener noreferrer"
                   style={{
                     position: 'absolute',
-                    top: '4px',
-                    right: '8px',
-                    width: '20px',
-                    height: '20px',
+                    top: '8px',
+                    right: '12px',
+                    width: '24px',
+                    height: '24px',
                     borderRadius: '50%',
-                    background: 'rgba(102, 126, 234, 0.3)',
-                    border: '1px solid rgba(102, 126, 234, 0.5)',
-                    color: '#ffffff',
+                    background: '#ffffff',
+                    border: '3px solid #1a1a1a',
+                    color: '#1a1a1a',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    fontSize: '12px',
-                    fontWeight: '700',
+                    fontSize: '14px',
+                    fontWeight: '800',
                     textDecoration: 'none',
                     cursor: 'pointer',
-                    transition: 'all 0.2s ease',
-                    zIndex: 10
+                    transition: 'all 0.25s cubic-bezier(0.68, -0.55, 0.265, 1.55)',
+                    zIndex: 10,
+                    boxShadow: '3px 3px 0 #1a1a1a'
                   }}
                   onMouseOver={(e) => {
-                    e.currentTarget.style.background = 'rgba(102, 126, 234, 0.6)';
-                    e.currentTarget.style.borderColor = 'rgba(102, 126, 234, 0.8)';
-                    e.currentTarget.style.transform = 'scale(1.1)';
-                    e.currentTarget.style.boxShadow = '0 0 10px rgba(102, 126, 234, 0.5)';
+                    e.currentTarget.style.background = '#ff3366';
+                    e.currentTarget.style.color = '#ffffff';
+                    e.currentTarget.style.transform = 'translate(-1px, -1px)';
+                    e.currentTarget.style.boxShadow = '4px 4px 0 #1a1a1a';
                   }}
                   onMouseOut={(e) => {
-                    e.currentTarget.style.background = 'rgba(102, 126, 234, 0.3)';
-                    e.currentTarget.style.borderColor = 'rgba(102, 126, 234, 0.5)';
-                    e.currentTarget.style.transform = 'scale(1)';
-                    e.currentTarget.style.boxShadow = 'none';
+                    e.currentTarget.style.background = '#ffffff';
+                    e.currentTarget.style.color = '#1a1a1a';
+                    e.currentTarget.style.transform = 'translate(0, 0)';
+                    e.currentTarget.style.boxShadow = '3px 3px 0 #1a1a1a';
                   }}
                   title="Learn about SOGNI Token vs Spark Points"
                 >
@@ -443,12 +445,13 @@ export const AuthStatus: React.FC<AuthStatusProps> = ({ onPurchaseClick, onSignu
               <div 
                 style={{
                   display: 'flex',
-                  marginBottom: '8px',
-                  padding: '6px',
-                  borderRadius: '12px',
-                  gap: '6px',
-                  background: 'rgba(255, 255, 255, 0.03)',
-                  border: '1px solid rgba(102, 126, 234, 0.1)'
+                  marginBottom: '16px',
+                  padding: '8px',
+                  borderRadius: '60px',
+                  gap: '8px',
+                  background: '#ffffff',
+                  border: '4px solid #1a1a1a',
+                  boxShadow: '5px 5px 0 #1a1a1a'
                 }}
               >
                 <button
@@ -460,69 +463,67 @@ export const AuthStatus: React.FC<AuthStatusProps> = ({ onPurchaseClick, onSignu
                   }}
                   style={{
                     flex: 1,
-                    border: tokenType === 'sogni' ? '2px solid #00D5FF' : '2px solid transparent',
+                    border: tokenType === 'sogni' ? '3px solid #1a1a1a' : '3px solid transparent',
                     background: tokenType === 'sogni' 
-                      ? 'linear-gradient(135deg, #00D5FF, #0099CC)' 
-                      : 'rgba(255, 255, 255, 0.05)',
-                    color: tokenType === 'sogni' ? '#0a0e1a' : 'rgba(255, 255, 255, 0.7)',
+                      ? 'linear-gradient(135deg, #ff3366 0%, #ff6b9d 50%, #ffa5c8 100%)' 
+                      : '#ffffff',
+                    color: tokenType === 'sogni' ? '#ffffff' : '#1a1a1a',
                     cursor: 'pointer',
-                    borderRadius: '10px',
-                    padding: '12px 16px',
+                    borderRadius: '60px',
+                    padding: '16px 20px',
                     fontSize: '13px',
-                    fontWeight: tokenType === 'sogni' ? '700' : '500',
+                    fontWeight: '800',
                     textAlign: 'center',
                     outline: 'none',
-                    transition: 'all 0.3s ease',
+                    transition: 'all 0.25s cubic-bezier(0.68, -0.55, 0.265, 1.55)',
                     whiteSpace: 'nowrap',
                     boxShadow: tokenType === 'sogni' 
-                      ? '0 4px 15px rgba(0, 213, 255, 0.4), 0 0 0 1px rgba(0, 213, 255, 0.2)' 
+                      ? '0 3px 0 #1a1a1a, inset 0 1px 0 rgba(255,255,255,0.4)' 
                       : 'none',
-                    transform: tokenType === 'sogni' ? 'scale(1.02)' : 'scale(1)',
+                    transform: tokenType === 'sogni' ? 'translateY(0)' : 'translateY(0)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    gap: '6px',
+                    gap: '8px',
                     position: 'relative',
                     zIndex: 2,
-                    overflow: 'visible'
+                    overflow: 'visible',
+                    textTransform: 'lowercase',
+                    textShadow: tokenType === 'sogni' ? '0 1px 2px rgba(0,0,0,0.2)' : 'none'
                   }}
                   onMouseOver={(e) => {
                     if (tokenType !== 'sogni') {
-                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
-                      e.currentTarget.style.color = 'rgba(255, 255, 255, 0.9)';
-                      e.currentTarget.style.transform = 'scale(1.02)';
+                      e.currentTarget.style.borderColor = 'rgba(26, 26, 26, 0.2)';
+                      e.currentTarget.style.transform = 'translateY(-1px)';
+                      e.currentTarget.style.boxShadow = '0 2px 0 rgba(26, 26, 26, 0.15)';
                       const svg = e.currentTarget.querySelector('svg');
                       if (svg) {
-                        svg.style.opacity = '0.9';
-                        svg.style.transform = 'scale(1.15)';
+                        svg.style.transform = 'scale(1.1)';
                       }
                     } else {
-                      e.currentTarget.style.transform = 'scale(1.05)';
-                      e.currentTarget.style.boxShadow = '0 6px 20px rgba(0, 213, 255, 0.5), 0 0 0 1px rgba(0, 213, 255, 0.3)';
+                      e.currentTarget.style.transform = 'translateY(-1px)';
+                      e.currentTarget.style.boxShadow = '0 4px 0 #1a1a1a, inset 0 1px 0 rgba(255,255,255,0.4)';
                       const svg = e.currentTarget.querySelector('svg');
                       if (svg) {
-                        svg.style.transform = 'scale(1.3)';
-                        svg.style.filter = 'drop-shadow(0 0 6px rgba(0, 213, 255, 0.8)) drop-shadow(0 2px 6px rgba(0, 0, 0, 0.4))';
+                        svg.style.transform = 'scale(1.25)';
                       }
                     }
                   }}
                   onMouseOut={(e) => {
                     if (tokenType !== 'sogni') {
-                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
-                      e.currentTarget.style.color = 'rgba(255, 255, 255, 0.7)';
-                      e.currentTarget.style.transform = 'scale(1)';
+                      e.currentTarget.style.borderColor = 'transparent';
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = 'none';
                       const svg = e.currentTarget.querySelector('svg');
                       if (svg) {
-                        svg.style.opacity = '0.6';
                         svg.style.transform = 'scale(1)';
                       }
                     } else {
-                      e.currentTarget.style.transform = 'scale(1.02)';
-                      e.currentTarget.style.boxShadow = '0 4px 15px rgba(0, 213, 255, 0.4), 0 0 0 1px rgba(0, 213, 255, 0.2)';
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = '0 3px 0 #1a1a1a, inset 0 1px 0 rgba(255,255,255,0.4)';
                       const svg = e.currentTarget.querySelector('svg');
                       if (svg) {
                         svg.style.transform = 'scale(1.2)';
-                        svg.style.filter = 'drop-shadow(0 0 4px rgba(0, 213, 255, 0.6)) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3))';
                       }
                     }
                   }}
@@ -536,7 +537,7 @@ export const AuthStatus: React.FC<AuthStatusProps> = ({ onPurchaseClick, onSignu
                       transform: 'translateY(-50%)',
                       width: '32px',
                       height: '32px',
-                      zIndex: 1
+                      zIndex: 2
                     }}
                   >
                     {tokenType === 'sogni' && (
@@ -560,11 +561,13 @@ export const AuthStatus: React.FC<AuthStatusProps> = ({ onPurchaseClick, onSignu
                         fill: 'currentColor',
                         display: 'block',
                         flexShrink: 0,
+                        position: 'relative',
+                        zIndex: 3,
                         transform: tokenType === 'sogni' 
                           ? 'scale(1.2)' 
                           : 'scale(1)',
                         filter: tokenType === 'sogni' 
-                          ? 'drop-shadow(0 0 4px rgba(0, 213, 255, 0.6)) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3))' 
+                          ? 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3))' 
                           : 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2))',
                         transition: 'all 0.3s ease',
                         opacity: tokenType === 'sogni' ? 1 : 0.6
@@ -591,7 +594,7 @@ export const AuthStatus: React.FC<AuthStatusProps> = ({ onPurchaseClick, onSignu
                     </g>
                     </svg>
                   </div>
-                  <span style={{ marginLeft: '24px' }}>SOGNI Token</span>
+                  <span style={{ marginLeft: '24px', position: 'relative', zIndex: 2 }}>sogni token</span>
                 </button>
                 <button
                   onClick={() => {
@@ -602,69 +605,67 @@ export const AuthStatus: React.FC<AuthStatusProps> = ({ onPurchaseClick, onSignu
                   }}
                   style={{
                     flex: 1,
-                    border: tokenType === 'spark' ? '2px solid #ff6b6b' : '2px solid transparent',
+                    border: tokenType === 'spark' ? '3px solid #1a1a1a' : '3px solid transparent',
                     background: tokenType === 'spark' 
-                      ? 'linear-gradient(135deg, #ff6b6b, #ffa502)' 
-                      : 'rgba(255, 255, 255, 0.05)',
-                    color: tokenType === 'spark' ? '#ffffff' : 'rgba(255, 255, 255, 0.7)',
+                      ? 'linear-gradient(135deg, #14b8a6 0%, #2dd4bf 50%, #5eead4 100%)' 
+                      : '#ffffff',
+                    color: tokenType === 'spark' ? '#ffffff' : '#1a1a1a',
                     cursor: 'pointer',
-                    borderRadius: '10px',
-                    padding: '12px 16px',
+                    borderRadius: '60px',
+                    padding: '16px 20px',
                     fontSize: '13px',
-                    fontWeight: tokenType === 'spark' ? '700' : '500',
+                    fontWeight: '800',
                     textAlign: 'center',
                     outline: 'none',
-                    transition: 'all 0.3s ease',
+                    transition: 'all 0.25s cubic-bezier(0.68, -0.55, 0.265, 1.55)',
                     whiteSpace: 'nowrap',
                     boxShadow: tokenType === 'spark' 
-                      ? '0 4px 15px rgba(255, 107, 107, 0.4), 0 0 0 1px rgba(255, 107, 107, 0.2)' 
+                      ? '0 3px 0 #1a1a1a, inset 0 1px 0 rgba(255,255,255,0.4)' 
                       : 'none',
-                    transform: tokenType === 'spark' ? 'scale(1.02)' : 'scale(1)',
+                    transform: tokenType === 'spark' ? 'translateY(0)' : 'translateY(0)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    gap: '6px',
+                    gap: '8px',
                     position: 'relative',
                     overflow: 'visible',
-                    zIndex: 2
+                    zIndex: 2,
+                    textTransform: 'lowercase',
+                    textShadow: tokenType === 'spark' ? '0 1px 2px rgba(0,0,0,0.2)' : 'none'
                   }}
                   onMouseOver={(e) => {
                     if (tokenType !== 'spark') {
-                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
-                      e.currentTarget.style.color = 'rgba(255, 255, 255, 0.9)';
-                      e.currentTarget.style.transform = 'scale(1.02)';
+                      e.currentTarget.style.borderColor = 'rgba(26, 26, 26, 0.2)';
+                      e.currentTarget.style.transform = 'translateY(-1px)';
+                      e.currentTarget.style.boxShadow = '0 2px 0 rgba(26, 26, 26, 0.15)';
                       const svg = e.currentTarget.querySelector('svg');
                       if (svg) {
-                        svg.style.opacity = '0.9';
-                        svg.style.transform = 'scale(1.15) rotate(8deg)';
+                        svg.style.transform = 'scale(1.1) rotate(8deg)';
                       }
                     } else {
-                      e.currentTarget.style.transform = 'scale(1.05)';
-                      e.currentTarget.style.boxShadow = '0 6px 20px rgba(255, 107, 107, 0.5), 0 0 0 1px rgba(255, 107, 107, 0.3)';
+                      e.currentTarget.style.transform = 'translateY(-1px)';
+                      e.currentTarget.style.boxShadow = '0 4px 0 #1a1a1a, inset 0 1px 0 rgba(255,255,255,0.4)';
                       const svg = e.currentTarget.querySelector('svg');
                       if (svg) {
-                        svg.style.transform = 'scale(1.3) rotate(8deg)';
-                        svg.style.filter = 'drop-shadow(0 0 8px rgba(255, 107, 107, 1)) drop-shadow(0 0 12px rgba(255, 165, 2, 0.6)) drop-shadow(0 2px 6px rgba(0, 0, 0, 0.4))';
+                        svg.style.transform = 'scale(1.25) rotate(8deg)';
                       }
                     }
                   }}
                   onMouseOut={(e) => {
                     if (tokenType !== 'spark') {
-                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
-                      e.currentTarget.style.color = 'rgba(255, 255, 255, 0.7)';
-                      e.currentTarget.style.transform = 'scale(1)';
+                      e.currentTarget.style.borderColor = 'transparent';
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = 'none';
                       const svg = e.currentTarget.querySelector('svg');
                       if (svg) {
-                        svg.style.opacity = '0.6';
                         svg.style.transform = 'scale(1) rotate(0deg)';
                       }
                     } else {
-                      e.currentTarget.style.transform = 'scale(1.02)';
-                      e.currentTarget.style.boxShadow = '0 4px 15px rgba(255, 107, 107, 0.4), 0 0 0 1px rgba(255, 107, 107, 0.2)';
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = '0 3px 0 #1a1a1a, inset 0 1px 0 rgba(255,255,255,0.4)';
                       const svg = e.currentTarget.querySelector('svg');
                       if (svg) {
                         svg.style.transform = 'scale(1.2) rotate(5deg)';
-                        svg.style.filter = 'drop-shadow(0 0 6px rgba(255, 107, 107, 0.8)) drop-shadow(0 0 10px rgba(255, 165, 2, 0.4)) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3))';
                       }
                     }
                   }}
@@ -678,7 +679,7 @@ export const AuthStatus: React.FC<AuthStatusProps> = ({ onPurchaseClick, onSignu
                       transform: 'translateY(-50%)',
                       width: '32px',
                       height: '32px',
-                      zIndex: 1
+                      zIndex: 2
                     }}
                   >
                     {tokenType === 'spark' && (
@@ -706,11 +707,13 @@ export const AuthStatus: React.FC<AuthStatusProps> = ({ onPurchaseClick, onSignu
                         fill: 'currentColor',
                         display: 'block',
                         flexShrink: 0,
+                        position: 'relative',
+                        zIndex: 3,
                         transform: tokenType === 'spark' 
                           ? 'scale(1.2) rotate(5deg)' 
                           : 'scale(1) rotate(0deg)',
                         filter: tokenType === 'spark' 
-                          ? 'drop-shadow(0 0 6px rgba(255, 107, 107, 0.8)) drop-shadow(0 0 10px rgba(255, 165, 2, 0.4)) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3))' 
+                          ? 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3))' 
                           : 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2))',
                         transition: 'all 0.3s ease',
                         opacity: tokenType === 'spark' ? 1 : 0.6
@@ -719,23 +722,23 @@ export const AuthStatus: React.FC<AuthStatusProps> = ({ onPurchaseClick, onSignu
                     <path d="M9.92301 1.1764C10.6242 0.251095 12.0169 0.251096 12.0445 1.1764L12.1576 4.97111C12.1663 5.26202 12.3269 5.49138 12.5973 5.59903L16.1244 7.0032C16.9845 7.34559 16.5082 8.65433 15.3989 8.99672L10.8495 10.4009C10.5008 10.5085 10.1732 10.7379 9.95276 11.0288L7.07732 14.8235C6.37616 15.7488 4.98344 15.7488 4.95585 14.8235L4.84273 11.0288C4.83406 10.7379 4.67346 10.5085 4.40305 10.4009L0.875887 8.99672C0.015819 8.65433 0.492163 7.34559 1.60147 7.0032L6.15079 5.59903C6.49955 5.49138 6.82712 5.26202 7.04756 4.97111L9.92301 1.1764Z" />
                     </svg>
                   </div>
-                  <span style={{ marginLeft: '24px' }}>Spark Points</span>
+                  <span style={{ marginLeft: '24px', position: 'relative', zIndex: 2 }}>spark points</span>
                 </button>
               </div>
 
               {/* Action Buttons Section - Daily Boost and Buy Spark */}
               <div style={{
-                padding: '8px 12px',
+                padding: '12px 0',
                 display: 'flex',
                 flexDirection: 'column',
-                gap: '8px'
+                gap: '10px'
               }}>
                 {/* Premium Badge - only for Spark */}
                 {tokenType === 'spark' && hasPremiumSpark && (
                   <div style={{
                     fontSize: '12px',
-                    color: '#00D5FF',
-                    fontWeight: '600',
+                    color: '#1a1a1a',
+                    fontWeight: '700',
                     textAlign: 'left',
                     display: 'flex',
                     flexDirection: 'column',
@@ -764,7 +767,7 @@ export const AuthStatus: React.FC<AuthStatusProps> = ({ onPurchaseClick, onSignu
                       </span>
                       Premium Boosted!
                     </div>
-                    <div style={{ fontSize: '11px', opacity: 0.9 }}>
+                    <div style={{ fontSize: '11px', color: '#1a1a1a', opacity: 0.7 }}>
                       {formatTokenAmount(balances?.spark.premiumCredit || '0')} premium credits left
                     </div>
                   </div>
@@ -793,34 +796,38 @@ export const AuthStatus: React.FC<AuthStatusProps> = ({ onPurchaseClick, onSignu
                           alignItems: 'center',
                           justifyContent: 'center',
                           gap: '6px',
-                          border: canClaimDailyBoost ? '2px solid #10b981' : '2px solid #4a5568',
-                          background: canClaimDailyBoost ? 'rgba(16, 185, 129, 0.1)' : 'transparent',
-                          color: canClaimDailyBoost ? '#10b981' : '#6b7280',
+                          border: canClaimDailyBoost ? '3px solid #10b981' : '3px solid #666',
+                          background: canClaimDailyBoost ? '#10b981' : '#ffffff',
+                          color: canClaimDailyBoost ? '#ffffff' : '#666',
                           cursor: canClaimDailyBoost ? 'pointer' : 'not-allowed',
-                          borderRadius: '8px',
-                          padding: '10px 12px',
+                          borderRadius: '50px',
+                          padding: '12px 16px',
                           fontSize: '12px',
-                          fontWeight: '600',
+                          fontWeight: '800',
                           outline: 'none',
-                          transition: 'all 0.2s',
+                          transition: 'all 0.25s cubic-bezier(0.68, -0.55, 0.265, 1.55)',
                           opacity: rewardsLoading ? 0.6 : 1,
                           whiteSpace: 'nowrap',
-                          // Always glow when claimable, extra intense glow when highlighted
+                          textTransform: 'lowercase',
                           boxShadow: canClaimDailyBoost 
                             ? (highlightDailyBoost 
-                              ? '0 0 0 4px rgba(16, 185, 129, 0.8), 0 0 30px rgba(16, 185, 129, 0.9)' 
-                              : '0 0 0 3px rgba(16, 185, 129, 0.6), 0 0 20px rgba(16, 185, 129, 0.7)')
+                              ? '4px 4px 0 #1a1a1a' 
+                              : '3px 3px 0 #1a1a1a')
                             : 'none',
-                          animation: canClaimDailyBoost ? 'dailyBoostGlow 1.2s ease-in-out infinite' : 'none'
+                          animation: 'none'
                         }}
                         onMouseOver={(e) => {
                           if (canClaimDailyBoost && !rewardsLoading) {
-                            e.currentTarget.style.background = 'rgba(16, 185, 129, 0.2)';
+                            e.currentTarget.style.background = '#0ea472';
+                            e.currentTarget.style.transform = 'translate(-1px, -1px)';
+                            e.currentTarget.style.boxShadow = '4px 4px 0 #1a1a1a';
                           }
                         }}
                         onMouseOut={(e) => {
                           if (canClaimDailyBoost && !rewardsLoading) {
-                            e.currentTarget.style.background = 'rgba(16, 185, 129, 0.1)';
+                            e.currentTarget.style.background = '#10b981';
+                            e.currentTarget.style.transform = 'translate(0, 0)';
+                            e.currentTarget.style.boxShadow = '3px 3px 0 #1a1a1a';
                           }
                         }}
                       >
@@ -842,14 +849,15 @@ export const AuthStatus: React.FC<AuthStatusProps> = ({ onPurchaseClick, onSignu
                           <path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"></path>
                           <path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"></path>
                         </svg>
-                        {hasClaimedToday ? 'Claimed' : rewardsLoading ? 'Loading...' : 'Daily Boost'}
+                        {hasClaimedToday ? 'claimed' : rewardsLoading ? 'loading...' : 'daily boost'}
                       </button>
                       
                       {/* Countdown text below Daily Boost button - left aligned */}
                       {hasClaimedToday && dailyBoostReward.nextClaim && (
                         <div style={{
                           fontSize: '11px',
-                          color: '#9ca3af',
+                          color: '#1a1a1a',
+                          opacity: 0.6,
                           textAlign: 'left',
                           paddingLeft: '4px',
                           whiteSpace: 'nowrap'
@@ -866,29 +874,35 @@ export const AuthStatus: React.FC<AuthStatusProps> = ({ onPurchaseClick, onSignu
                       onClick={handleBuyPremiumSpark}
                       style={{
                         flex: dailyBoostReward ? 1 : 'auto',
-                        border: '2px solid #00D5FF',
-                        background: 'transparent',
-                        color: '#00D5FF',
+                        border: '3px solid #14b8a6',
+                        background: '#ffffff',
+                        color: '#14b8a6',
                         cursor: 'pointer',
-                        borderRadius: '8px',
-                        padding: '10px 12px',
+                        borderRadius: '50px',
+                        padding: '12px 16px',
                         fontSize: '12px',
-                        fontWeight: '600',
+                        fontWeight: '800',
                         textAlign: 'center',
                         outline: 'none',
-                        transition: 'all 0.2s',
-                        whiteSpace: 'nowrap'
+                        transition: 'all 0.25s cubic-bezier(0.68, -0.55, 0.265, 1.55)',
+                        whiteSpace: 'nowrap',
+                        textTransform: 'lowercase',
+                        boxShadow: '3px 3px 0 #1a1a1a'
                       }}
                       onMouseOver={(e) => {
-                        e.currentTarget.style.background = '#00D5FF';
-                        e.currentTarget.style.color = '#1a202c';
+                        e.currentTarget.style.background = '#14b8a6';
+                        e.currentTarget.style.color = '#ffffff';
+                        e.currentTarget.style.transform = 'translate(-1px, -1px)';
+                        e.currentTarget.style.boxShadow = '4px 4px 0 #1a1a1a';
                       }}
                       onMouseOut={(e) => {
-                        e.currentTarget.style.background = 'transparent';
-                        e.currentTarget.style.color = '#00D5FF';
+                        e.currentTarget.style.background = '#ffffff';
+                        e.currentTarget.style.color = '#14b8a6';
+                        e.currentTarget.style.transform = 'translate(0, 0)';
+                        e.currentTarget.style.boxShadow = '3px 3px 0 #1a1a1a';
                       }}
                     >
-                      Buy Spark
+                      buy spark
                     </button>
                   )}
                 </div>
@@ -901,9 +915,9 @@ export const AuthStatus: React.FC<AuthStatusProps> = ({ onPurchaseClick, onSignu
             <div 
               ref={projectsButtonRef}
               style={{
-                marginTop: '8px',
-                paddingTop: '8px',
-                borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+                marginTop: '12px',
+                paddingTop: '12px',
+                borderTop: '2px dashed rgba(26, 26, 26, 0.15)',
                 position: 'relative'
               }}>
               <button
@@ -918,24 +932,30 @@ export const AuthStatus: React.FC<AuthStatusProps> = ({ onPurchaseClick, onSignu
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: '8px',
-                  border: '1px solid rgba(114, 227, 242, 0.3)',
-                  background: 'rgba(114, 227, 242, 0.1)',
-                  color: '#72e3f2',
+                  border: '3px solid #1a1a1a',
+                  background: '#ffffff',
+                  color: '#1a1a1a',
                   cursor: 'pointer',
-                  borderRadius: '8px',
-                  padding: '10px 12px',
+                  borderRadius: '50px',
+                  padding: '12px 16px',
                   fontSize: '13px',
-                  fontWeight: '500',
+                  fontWeight: '800',
                   outline: 'none',
-                  transition: 'all 0.2s'
+                  transition: 'all 0.25s cubic-bezier(0.68, -0.55, 0.265, 1.55)',
+                  textTransform: 'lowercase',
+                  boxShadow: '3px 3px 0 #1a1a1a'
                 }}
                 onMouseOver={(e) => {
-                  e.currentTarget.style.background = 'rgba(114, 227, 242, 0.2)';
-                  e.currentTarget.style.borderColor = 'rgba(114, 227, 242, 0.5)';
+                  e.currentTarget.style.background = '#00d5ff';
+                  e.currentTarget.style.color = '#1a1a1a';
+                  e.currentTarget.style.transform = 'translate(-1px, -1px)';
+                  e.currentTarget.style.boxShadow = '4px 4px 0 #1a1a1a';
                 }}
                 onMouseOut={(e) => {
-                  e.currentTarget.style.background = 'rgba(114, 227, 242, 0.1)';
-                  e.currentTarget.style.borderColor = 'rgba(114, 227, 242, 0.3)';
+                  e.currentTarget.style.background = '#ffffff';
+                  e.currentTarget.style.color = '#1a1a1a';
+                  e.currentTarget.style.transform = 'translate(0, 0)';
+                  e.currentTarget.style.boxShadow = '3px 3px 0 #1a1a1a';
                 }}
               >
                 {/* History Icon */}
@@ -960,9 +980,9 @@ export const AuthStatus: React.FC<AuthStatusProps> = ({ onPurchaseClick, onSignu
 
           {/* Logout Button - Discrete */}
           <div style={{
-            marginTop: '8px',
-            paddingTop: '8px',
-            borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+            marginTop: '12px',
+            paddingTop: '12px',
+            borderTop: '2px dashed rgba(26, 26, 26, 0.15)',
             textAlign: 'center'
           }}>
             <button
@@ -971,33 +991,34 @@ export const AuthStatus: React.FC<AuthStatusProps> = ({ onPurchaseClick, onSignu
               style={{
                 border: 'none',
                 background: 'transparent',
-                color: 'rgba(255, 255, 255, 0.4)',
+                color: '#1a1a1a',
                 cursor: isLoading ? 'not-allowed' : 'pointer',
                 borderRadius: '4px',
                 padding: '4px 8px',
                 fontSize: '11px',
-                fontWeight: '400',
+                fontWeight: '600',
                 textAlign: 'center',
-                opacity: isLoading ? 0.3 : 1,
+                opacity: isLoading ? 0.3 : 0.5,
                 outline: 'none',
                 transition: 'all 0.2s',
                 textDecoration: 'underline',
-                textDecorationColor: 'rgba(255, 255, 255, 0.2)'
+                textDecorationColor: 'rgba(26, 26, 26, 0.3)',
+                textTransform: 'lowercase'
               }}
               onMouseOver={(e) => {
                 if (!isLoading) {
-                  e.currentTarget.style.color = 'rgba(255, 255, 255, 0.6)';
-                  e.currentTarget.style.textDecorationColor = 'rgba(255, 255, 255, 0.4)';
+                  e.currentTarget.style.opacity = '0.8';
+                  e.currentTarget.style.textDecorationColor = 'rgba(26, 26, 26, 0.6)';
                 }
               }}
               onMouseOut={(e) => {
                 if (!isLoading) {
-                  e.currentTarget.style.color = 'rgba(255, 255, 255, 0.4)';
-                  e.currentTarget.style.textDecorationColor = 'rgba(255, 255, 255, 0.2)';
+                  e.currentTarget.style.opacity = '0.5';
+                  e.currentTarget.style.textDecorationColor = 'rgba(26, 26, 26, 0.3)';
                 }
               }}
             >
-              {isLoading ? 'Logging out...' : 'Logout'}
+              {isLoading ? 'logging out...' : 'logout'}
             </button>
           </div>
           </div>

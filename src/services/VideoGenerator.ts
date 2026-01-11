@@ -1254,6 +1254,103 @@ export function canCancelVideo(): { canCancel: boolean; cooldownRemaining: numbe
   };
 }
 
+/**
+ * Get all active video project IDs
+ * Optionally filter by a prefix pattern (e.g., 'infinite-loop-transition')
+ */
+export function getActiveVideoProjectIds(filterPrefix?: string): string[] {
+  const allIds = Array.from(activeVideoProjects.keys());
+  if (!filterPrefix) {
+    return allIds;
+  }
+  // For filtering, we need to check the associated photo IDs, not project IDs
+  // Since project IDs are from SDK and not controllable
+  return allIds;
+}
+
+/**
+ * Cancel all active video projects
+ * Returns the number of projects cancelled
+ */
+export async function cancelAllActiveVideoProjects(
+  setPhotos: (updater: (prev: Photo[]) => Photo[]) => void
+): Promise<{ cancelled: number; failed: number; projectIds: string[] }> {
+  const projectIds = Array.from(activeVideoProjects.keys());
+  
+  if (projectIds.length === 0) {
+    return { cancelled: 0, failed: 0, projectIds: [] };
+  }
+  
+  console.log(`[VideoGenerator] Cancelling all ${projectIds.length} active video projects`);
+  
+  let cancelled = 0;
+  let failed = 0;
+  const cancelledIds: string[] = [];
+  
+  // Cancel all projects - we skip rate limiting for bulk cancel since user explicitly requested
+  for (const projectId of projectIds) {
+    const activeProject = activeVideoProjects.get(projectId);
+    if (!activeProject) continue;
+    
+    try {
+      // Cleanup timers and handlers first
+      if (activeProject.cleanup) {
+        activeProject.cleanup();
+      }
+      
+      // Call SDK cancel if available
+      if (activeProject.project?.cancel) {
+        await activeProject.project.cancel();
+      }
+      
+      // Remove from active projects
+      activeVideoProjects.delete(projectId);
+      cancelledIds.push(projectId);
+      cancelled++;
+      
+      console.log(`[VideoGenerator] Cancelled project ${projectId}`);
+    } catch (error) {
+      console.error(`[VideoGenerator] Failed to cancel project ${projectId}:`, error);
+      activeVideoProjects.delete(projectId);
+      failed++;
+    }
+  }
+  
+  // Record single cancel attempt for rate limiting (bulk cancel counts as one)
+  if (cancelled > 0) {
+    recordCancelAttempt();
+    notifyCancelStateChange();
+  }
+  
+  // Update photo states to clear video generation flags
+  setPhotos(prev => {
+    return prev.map(photo => {
+      if (photo.generatingVideo) {
+        return {
+          ...photo,
+          generatingVideo: false,
+          videoETA: undefined,
+          videoProjectId: undefined,
+          videoError: undefined,
+          videoStatus: undefined
+        };
+      }
+      return photo;
+    });
+  });
+  
+  console.log(`[VideoGenerator] Bulk cancel complete: ${cancelled} cancelled, ${failed} failed`);
+  
+  return { cancelled, failed, projectIds: cancelledIds };
+}
+
+/**
+ * Check if there are any active video projects
+ */
+export function hasActiveVideoProjects(): boolean {
+  return activeVideoProjects.size > 0;
+}
+
 export function isGeneratingVideo(photo: Photo): boolean {
   return photo.generatingVideo === true;
 }

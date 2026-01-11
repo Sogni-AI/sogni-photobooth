@@ -1445,7 +1445,6 @@ const App = () => {
     const viewParam = url.searchParams.get('view');
     
     if (viewParam === 'projects' && authState.isAuthenticated && authState.authMode === 'frontend') {
-      console.log('🎨 Recent Projects deep link detected');
       setShowRecentProjects(true);
     }
   }, [authState.isAuthenticated, authState.authMode]);
@@ -5170,26 +5169,15 @@ const App = () => {
 
       // Skip setting up photos state if this is a "more" operation
       if (!isMoreOperation) {
-        setRegularPhotos(previous => {
-          // Clean up blob URLs from previous photos to prevent memory leaks
-          previous.forEach(photo => {
-            if (photo.images) {
-              photo.images.forEach(imageUrl => {
-                if (imageUrl && imageUrl.startsWith('blob:')) {
-                  URL.revokeObjectURL(imageUrl);
-                }
-              });
-            }
-          });
-          
-          const existingProcessingPhotos = previous.filter(photo => 
-            photo.generating && photo.jobId && photo.progress
-          );
-          
+        // Capture timestamp once to ensure consistent IDs across both state updates
+        const baseTimestamp = Date.now();
+        
+        // Create the new photos array once (not as a function) to ensure identical state
+        const createNewPhotosArray = () => {
           const newPhotos = [];
           if (keepOriginalPhoto) { // Use context state
             newPhotos.push({
-              id: Date.now(),
+              id: baseTimestamp,
               generating: false,
               loading: false,
               images: [dataUrl],
@@ -5202,38 +5190,49 @@ const App = () => {
           
           // Use numImages from context state
           for (let index = 0; index < numImages; index++) { 
-            const existingPhoto = existingProcessingPhotos[index];
+            // Calculate the global photo index for frame assignment
+            const globalPhotoIndex = (keepOriginalPhoto ? 1 : 0) + index;
             
-            if (existingPhoto && existingPhoto.jobId) {
-              newPhotos.push({
-                ...existingPhoto,
-                originalDataUrl: existingPhoto.originalDataUrl || dataUrl
-              });
-            } else {
-              // Calculate the global photo index for frame assignment
-              const globalPhotoIndex = (keepOriginalPhoto ? 1 : 0) + index;
-              
-              newPhotos.push({
-                id: Date.now() + index + 1,
-                generating: true,
-                loading: true,
-                progress: 0,
-                images: [],
-                error: null,
-                originalDataUrl: dataUrl, // Use reference photo as placeholder
-                newlyArrived: false,
-                statusText: 'Calling Art Robot',
-                sourceType, // Include sourceType in generated photos
-                promptKey: (selectedStyle && selectedStyle !== 'custom' && selectedStyle !== 'random' && selectedStyle !== 'randomMix' && selectedStyle !== 'oneOfEach') ? selectedStyle : undefined, // Track which style is being used
-                customSceneName: selectedStyle === 'custom' && customSceneName ? customSceneName : undefined, // Store custom scene name at creation time
-                // Assign Taipei frame number based on photo index for equal distribution (1-6)
-                taipeiFrameNumber: (globalPhotoIndex % 6) + 1,
-                framePadding: 0 // Will be updated by migration effect in PhotoGallery
-              });
-            }
+            newPhotos.push({
+              id: baseTimestamp + index + 1,
+              generating: true,
+              loading: true,
+              progress: 0,
+              images: [],
+              error: null,
+              originalDataUrl: dataUrl, // Use reference photo as placeholder
+              newlyArrived: false,
+              statusText: 'Calling Art Robot',
+              sourceType, // Include sourceType in generated photos
+              promptKey: (selectedStyle && selectedStyle !== 'custom' && selectedStyle !== 'random' && selectedStyle !== 'randomMix' && selectedStyle !== 'oneOfEach') ? selectedStyle : undefined, // Track which style is being used
+              customSceneName: selectedStyle === 'custom' && customSceneName ? customSceneName : undefined, // Store custom scene name at creation time
+              // Assign Taipei frame number based on photo index for equal distribution (1-6)
+              taipeiFrameNumber: (globalPhotoIndex % 6) + 1,
+              framePadding: 0 // Will be updated by migration effect in PhotoGallery
+            });
           }
           return newPhotos;
+        };
+        
+        const newPhotos = createNewPhotosArray();
+        
+        // Clean up blob URLs from previous photos to prevent memory leaks
+        // Do this in a separate effect to avoid blocking the state update
+        setRegularPhotos(previous => {
+          previous.forEach(photo => {
+            if (photo.images) {
+              photo.images.forEach(imageUrl => {
+                if (imageUrl && imageUrl.startsWith('blob:')) {
+                  URL.revokeObjectURL(imageUrl);
+                }
+              });
+            }
+          });
+          return newPhotos;
         });
+        
+        // Set photos to the same array reference
+        setPhotos(newPhotos);
       }
 
       if (!isMoreOperation) {
@@ -8560,11 +8559,6 @@ const App = () => {
       setShowStartMenu(false);
       stopCamera();
 
-      showToast({
-        title: 'Project Loaded',
-        message: `Loaded ${validPhotos.length} image${validPhotos.length > 1 ? 's' : ''} from project`,
-        type: 'success'
-      });
     } catch (error) {
       console.error('[Reuse Project] Failed to load project:', error);
       showToast({
@@ -8675,34 +8669,38 @@ const App = () => {
     
     console.log(`Using sourceType '${sourceType}' for generating more photos`);
     
-    setRegularPhotos(() => {
-      const newPhotos = existingOriginalPhoto ? [existingOriginalPhoto] : [];
+    // Capture timestamp once to ensure consistent IDs across both state updates
+    const baseTimestamp = Date.now();
+    
+    // Create the new photos array once to ensure identical state
+    const newPhotos = existingOriginalPhoto ? [existingOriginalPhoto] : [];
+    
+    for (let i = 0; i < numToGenerate; i++) {
+      // Calculate the global photo index for frame assignment based on existing photos
+      const globalPhotoIndex = (existingOriginalPhoto ? 1 : 0) + i;
       
-      for (let i = 0; i < numToGenerate; i++) {
-        // Calculate the global photo index for frame assignment based on existing photos
-        const globalPhotoIndex = (existingOriginalPhoto ? 1 : 0) + i;
-        
-        newPhotos.push({
-          id: Date.now() + i,
-          generating: true,
-          loading: true,
-          progress: 0,
-          images: [],
-          error: null,
-          originalDataUrl: lastPhotoData.dataUrl,
-          newlyArrived: false,
-          statusText: 'Calling Art Robot',
-          stylePrompt: '', // Use context stylePrompt here? Or keep empty?
-          customSceneName: selectedStyle === 'custom' && customSceneName ? customSceneName : undefined, // Store custom scene name for "More" photos
-          sourceType: sourceType, // Store sourceType in photo object for reference
-          // Assign Taipei frame number based on photo index for equal distribution (1-6)
-          taipeiFrameNumber: (globalPhotoIndex % 6) + 1,
-          framePadding: 0 // Will be updated by migration effect in PhotoGallery
-        });
-      }
-      
-      return newPhotos;
-    });
+      newPhotos.push({
+        id: baseTimestamp + i,
+        generating: true,
+        loading: true,
+        progress: 0,
+        images: [],
+        error: null,
+        originalDataUrl: lastPhotoData.dataUrl,
+        newlyArrived: false,
+        statusText: 'Calling Art Robot',
+        stylePrompt: '', // Use context stylePrompt here? Or keep empty?
+        customSceneName: selectedStyle === 'custom' && customSceneName ? customSceneName : undefined, // Store custom scene name for "More" photos
+        sourceType: sourceType, // Store sourceType in photo object for reference
+        // Assign Taipei frame number based on photo index for equal distribution (1-6)
+        taipeiFrameNumber: (globalPhotoIndex % 6) + 1,
+        framePadding: 0 // Will be updated by migration effect in PhotoGallery
+      });
+    }
+    
+    // Update BOTH state arrays immediately so cancel button appears right away
+    setRegularPhotos(newPhotos);
+    setPhotos(newPhotos);
     
     try {
       const { blob, dataUrl } = lastPhotoData;

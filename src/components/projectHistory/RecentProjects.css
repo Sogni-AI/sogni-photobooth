@@ -1,11 +1,14 @@
 /* ============================================
-   Recent Projects - Photobooth Style
+   Recent Projects - Starface-Inspired Photobooth
    ============================================ */
 
-@keyframes psychedelic-shift {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
+@keyframes gentle-bob {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
 }
 
 @keyframes spin {
@@ -13,19 +16,35 @@
   to { transform: rotate(360deg); }
 }
 
-@keyframes pulse-attention {
+@keyframes pop-up {
   0% {
-    transform: scale(1);
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+    opacity: 0;
+    transform: scale(0.85) translateY(20px);
   }
-  50% {
-    transform: scale(1.02);
-    box-shadow: 0 6px 20px rgba(255, 152, 0, 0.4);
+  70% {
+    transform: scale(1.03) translateY(-5px);
   }
   100% {
-    transform: scale(1);
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+    opacity: 1;
+    transform: scale(1) translateY(0);
   }
+}
+
+@keyframes star-twinkle {
+  0%, 100% { 
+    opacity: 0.6;
+    transform: scale(1);
+  }
+  50% { 
+    opacity: 1;
+    transform: scale(1.2);
+  }
+}
+
+@keyframes wiggle {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(2deg); }
+  75% { transform: rotate(-2deg); }
 }
 
 .recent-projects-page {
@@ -34,188 +53,270 @@
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: 2000;
+  z-index: 100002;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  /* Photobooth psychedelic gradient background */
-  background: rgba(248, 248, 248, 0.95);
-  background-image: 
-    linear-gradient(125deg, rgba(255, 138, 0, 0.8), rgba(229, 46, 113, 0.8), rgba(185, 54, 238, 0.8), rgba(58, 134, 255, 0.8)),
-    repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.15) 0px, rgba(255, 255, 255, 0.15) 2px, transparent 2px, transparent 4px),
-    repeating-linear-gradient(-45deg, rgba(255, 255, 255, 0.15) 0px, rgba(255, 255, 255, 0.15) 2px, transparent 2px, transparent 4px);
-  background-size: 400% 400%, 20px 20px, 20px 20px;
-  animation: psychedelic-shift 15s ease infinite;
+  /* Bright, clean yellow like Starface */
+  background: #FFED4E;
+}
+
+/* Fun star pattern overlay */
+.recent-projects-page::before {
+  content: '⭐';
+  position: absolute;
+  top: 20px;
+  right: 80px;
+  font-size: 24px;
+  opacity: 0.3;
+  animation: star-twinkle 3s ease-in-out infinite;
+  z-index: 0;
+}
+
+.recent-projects-page::after {
+  content: '⭐';
+  position: absolute;
+  bottom: 100px;
+  left: 60px;
+  font-size: 32px;
+  opacity: 0.25;
+  animation: star-twinkle 4s ease-in-out infinite 1s;
+  z-index: 0;
 }
 
 .recent-projects-header {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px 24px;
-  background: rgba(255, 255, 255, 0.15);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  gap: 20px;
+  padding: 24px 32px;
+  background: #ffffff;
+  border-bottom: 4px solid #1a1a1a;
   flex-shrink: 0;
 }
 
+.recent-projects-header-left {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex: 1;
+  min-width: 0;
+}
+
 .recent-projects-header h2 {
-  font-family: "Permanent Marker", cursive;
+  font-family: 'Permanent Marker', 'Comic Sans MS', cursive;
   font-size: 1.75rem;
   font-weight: 400;
-  color: #ffffff;
   margin: 0;
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+  letter-spacing: 0.02em;
+  flex-shrink: 0;
+  color: #1a1a1a;
+  position: relative;
+}
+
+/* Add a cute star decoration next to title */
+.recent-projects-header h2::after {
+  content: '⭐';
+  margin-left: 12px;
+  font-size: 1.5rem;
+  display: inline-block;
+  animation: gentle-bob 2s ease-in-out infinite;
 }
 
 .recent-projects-close-btn {
-  background: rgba(0, 0, 0, 0.5);
-  border: none;
-  color: #ffffff;
-  font-size: 1.25rem;
-  width: 44px;
-  height: 44px;
+  background: #ffffff;
+  border: 3px solid #1a1a1a;
+  color: #1a1a1a;
+  font-size: 1.5rem;
+  width: 50px;
+  height: 50px;
   border-radius: 50%;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s ease;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  transition: all 0.25s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  flex-shrink: 0;
+  box-shadow: 4px 4px 0 #1a1a1a;
+  font-weight: 700;
+  line-height: 1;
 }
 
 .recent-projects-close-btn:hover {
-  background: rgba(0, 0, 0, 0.7);
-  transform: scale(1.1);
+  background: #ff3366;
+  color: #ffffff;
+  border-color: #1a1a1a;
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0 #1a1a1a;
+}
+
+.recent-projects-close-btn:active {
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0 #1a1a1a;
 }
 
 .recent-projects-scroll-container {
+  position: relative;
+  z-index: 1;
   flex: 1;
   overflow-y: auto;
-  padding: 20px 24px;
+  padding: 32px;
   -webkit-overflow-scrolling: touch;
+}
+
+.recent-projects-scroll-container::-webkit-scrollbar {
+  width: 16px;
+}
+
+.recent-projects-scroll-container::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 8px;
+  margin: 4px 0;
+  border: 2px solid #1a1a1a;
+}
+
+.recent-projects-scroll-container::-webkit-scrollbar-thumb {
+  background: #ff3366;
+  border-radius: 8px;
+  border: 3px solid #1a1a1a;
+}
+
+.recent-projects-scroll-container::-webkit-scrollbar-thumb:hover {
+  background: #ff1a4d;
 }
 
 .recent-projects-desc-wrapper {
   position: relative;
-  margin-bottom: 24px;
+  margin-bottom: 28px;
+  animation: pop-up 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
 }
 
 .recent-projects-desc {
-  font-size: 0.875rem;
-  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.9rem;
+  color: #1a1a1a;
   margin: 0;
-  line-height: 1.5;
-  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
-  background: rgba(0, 0, 0, 0.2);
-  padding: 12px 40px 12px 16px;
-  border-radius: 8px;
+  line-height: 1.6;
+  background: #ffffff;
+  padding: 20px 54px 20px 24px;
+  border-radius: 24px;
+  border: 3px solid #1a1a1a;
+  font-weight: 500;
+  box-shadow: 4px 4px 0 #1a1a1a;
 }
 
 .recent-projects-desc-close {
   position: absolute;
-  top: 8px;
-  right: 8px;
-  background: rgba(0, 0, 0, 0.3);
-  border: none;
-  color: rgba(255, 255, 255, 0.9);
-  font-size: 1.25rem;
-  width: 28px;
-  height: 28px;
+  top: 16px;
+  right: 16px;
+  background: #ffffff;
+  border: 3px solid #1a1a1a;
+  color: #1a1a1a;
+  font-size: 1.2rem;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s ease;
+  transition: all 0.2s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  font-weight: 700;
+  box-shadow: 2px 2px 0 #1a1a1a;
 }
 
 .recent-projects-desc-close:hover {
-  background: rgba(0, 0, 0, 0.5);
+  background: #ff3366;
   color: #ffffff;
   transform: scale(1.1);
 }
 
-/* Media Type Filter */
+/* Media Type Filter - Bold Starface style */
 .recent-projects-filter {
   display: flex;
-  gap: 8px;
-  margin-bottom: 20px;
-  padding: 4px;
-  background: rgba(0, 0, 0, 0.15);
-  border-radius: 12px;
-  width: fit-content;
+  gap: 6px;
+  padding: 6px;
+  background: #ffffff;
+  border: 3px solid #1a1a1a;
+  border-radius: 50px;
+  flex-shrink: 0;
+  box-shadow: 3px 3px 0 #1a1a1a;
 }
 
 .recent-projects-filter-btn {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 16px;
-  border: none;
-  border-radius: 8px;
+  padding: 10px 16px;
+  border: 2px solid transparent;
+  border-radius: 50px;
   background: transparent;
-  color: rgba(255, 255, 255, 0.8);
-  font-size: 0.875rem;
-  font-weight: 600;
+  color: #666;
+  font-size: 0.75rem;
+  font-weight: 800;
   cursor: pointer;
-  transition: all 0.2s ease;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  transition: all 0.2s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  text-transform: lowercase;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
 .recent-projects-filter-btn:hover {
-  background: rgba(255, 255, 255, 0.15);
-  color: #ffffff;
+  background: rgba(255, 237, 78, 0.3);
+  color: #1a1a1a;
 }
 
 .recent-projects-filter-btn.active {
-  background: rgba(255, 255, 255, 0.95);
-  color: #333;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-}
-
-.recent-projects-filter-btn.active:hover {
-  background: #ffffff;
+  background: #ff3366;
+  color: #ffffff;
+  border-color: #1a1a1a;
+  transform: scale(1.05);
+  box-shadow: 0 2px 8px rgba(255, 51, 102, 0.3);
 }
 
 .recent-projects-filter-count {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 20px;
-  height: 20px;
-  padding: 0 6px;
-  border-radius: 10px;
-  background: rgba(0, 0, 0, 0.2);
-  font-size: 0.75rem;
-  font-weight: 700;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 8px;
+  border-radius: 50px;
+  background: rgba(0, 0, 0, 0.1);
+  font-size: 0.7rem;
+  font-weight: 900;
+  transition: all 0.2s ease;
 }
 
 .recent-projects-filter-btn.active .recent-projects-filter-count {
-  background: rgba(0, 0, 0, 0.1);
+  background: rgba(255, 255, 255, 0.3);
+  color: #ffffff;
 }
 
 /* Loading State */
 .recent-projects-loading {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 12px;
-  padding: 48px;
-  color: #ffffff;
+  gap: 20px;
+  padding: 64px 24px;
+  color: #1a1a1a;
   font-size: 1rem;
-  font-weight: 500;
-  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+  font-weight: 700;
 }
 
 .recent-projects-spinner {
-  width: 28px;
-  height: 28px;
-  border: 3px solid rgba(255, 255, 255, 0.3);
-  border-top-color: #ffffff;
+  width: 56px;
+  height: 56px;
+  border: 6px solid #ffffff;
+  border-top-color: #ff3366;
+  border-right-color: #ff3366;
   border-radius: 50%;
-  animation: spin 1s linear infinite;
+  animation: spin 0.8s linear infinite;
+  box-shadow: 0 4px 0 #1a1a1a;
 }
 
 /* Empty State */
@@ -224,27 +325,48 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 64px 24px;
+  padding: 80px 32px;
   text-align: center;
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 16px;
-  backdrop-filter: blur(5px);
-  -webkit-backdrop-filter: blur(5px);
+  background: #ffffff;
+  border-radius: 32px;
+  border: 4px solid #1a1a1a;
+  box-shadow: 6px 6px 0 #1a1a1a;
+  animation: pop-up 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  position: relative;
+}
+
+/* Add star decorations to empty state */
+.recent-projects-empty::before {
+  content: '⭐';
+  position: absolute;
+  top: 24px;
+  left: 24px;
+  font-size: 32px;
+  opacity: 0.2;
+}
+
+.recent-projects-empty::after {
+  content: '⭐';
+  position: absolute;
+  bottom: 24px;
+  right: 24px;
+  font-size: 28px;
+  opacity: 0.2;
 }
 
 .recent-projects-empty p {
   margin: 0;
-  color: rgba(255, 255, 255, 0.9);
-  font-size: 0.875rem;
-  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+  color: #666;
+  font-size: 1rem;
+  line-height: 1.6;
+  font-weight: 500;
 }
 
 .recent-projects-empty p:first-child {
-  font-family: "Permanent Marker", cursive;
-  font-size: 1.25rem;
-  font-weight: 400;
-  color: #ffffff;
-  margin-bottom: 8px;
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #1a1a1a;
+  margin-bottom: 12px;
 }
 
 /* Error State */
@@ -252,220 +374,276 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16px;
-  padding: 48px 24px;
+  gap: 24px;
+  padding: 56px 32px;
   text-align: center;
-  background: rgba(255, 100, 100, 0.2);
-  border-radius: 16px;
+  background: #FFF5F5;
+  border: 4px solid #ff3366;
+  border-radius: 32px;
+  box-shadow: 6px 6px 0 #1a1a1a;
+  animation: pop-up 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
 }
 
 .recent-projects-error p {
   margin: 0;
-  color: #ffffff;
-  font-size: 0.875rem;
-  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+  color: #1a1a1a;
+  font-size: 1rem;
+  line-height: 1.6;
+  font-weight: 600;
 }
 
 .recent-projects-error button {
-  background: linear-gradient(135deg, #FF9800 0%, #F57C00 100%);
-  border: none;
-  color: #fff;
-  padding: 12px 28px;
-  border-radius: 0; /* Square corners like Photobooth */
-  font-size: 0.875rem;
-  font-weight: bold;
+  background: #ff3366;
+  border: 3px solid #1a1a1a;
+  color: #ffffff;
+  padding: 16px 36px;
+  border-radius: 50px;
+  font-size: 0.9rem;
+  font-weight: 800;
   cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  transition: all 0.25s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  box-shadow: 4px 4px 0 #1a1a1a;
+  text-transform: lowercase;
+  letter-spacing: 0.02em;
 }
 
 .recent-projects-error button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0 #1a1a1a;
+}
+
+.recent-projects-error button:active {
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0 #1a1a1a;
 }
 
 /* Project List */
 .recent-projects-list {
   display: flex;
   flex-direction: column;
-  gap: 32px;
+  gap: 24px;
 }
 
 .recent-project {
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 16px;
-  padding: 20px;
-  backdrop-filter: blur(5px);
-  -webkit-backdrop-filter: blur(5px);
+  background: #ffffff;
+  border: 4px solid #1a1a1a;
+  border-radius: 28px;
+  padding: 24px;
+  transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  box-shadow: 6px 6px 0 #1a1a1a;
+  animation: pop-up 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  animation-fill-mode: both;
+  position: relative;
+}
+
+.recent-project:nth-child(1) { animation-delay: 0s; }
+.recent-project:nth-child(2) { animation-delay: 0.05s; }
+.recent-project:nth-child(3) { animation-delay: 0.1s; }
+.recent-project:nth-child(4) { animation-delay: 0.15s; }
+.recent-project:nth-child(5) { animation-delay: 0.2s; }
+
+.recent-project:hover {
+  transform: translate(-3px, -3px);
+  box-shadow: 9px 9px 0 #1a1a1a;
 }
 
 .recent-project-heading {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 16px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  margin-bottom: 20px;
+  padding-bottom: 18px;
+  border-bottom: 3px solid #FFED4E;
 }
 
 .recent-project-title-wrapper {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
 }
 
 .recent-project-title {
-  font-family: "Permanent Marker", cursive;
   font-size: 1.125rem;
-  font-weight: 400;
-  color: #ffffff;
-  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+  font-weight: 800;
+  color: #1a1a1a;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  letter-spacing: -0.01em;
 }
 
 .recent-project-title span {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  font-size: 0.875rem;
-  font-weight: 400;
-  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #666;
 }
 
 .recent-project-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   flex-shrink: 0;
 }
 
 .recent-project-date {
-  font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.8rem;
+  color: #999;
+  font-weight: 600;
 }
 
-/* Pin Button */
+/* Pin Button - Fun star style */
 .recent-project-pin-btn {
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 193, 7, 0.5);
-  color: rgba(255, 255, 255, 0.8);
-  font-size: 1rem;
-  width: 32px;
-  height: 32px;
+  background: #FFED4E;
+  border: 3px solid #1a1a1a;
+  color: #1a1a1a;
+  font-size: 1.1rem;
+  width: 42px;
+  height: 42px;
   border-radius: 50%;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s ease;
+  transition: all 0.25s cubic-bezier(0.68, -0.55, 0.265, 1.55);
   padding: 0;
+  box-shadow: 3px 3px 0 #1a1a1a;
 }
 
 .recent-project-pin-btn:hover {
-  background: rgba(255, 193, 7, 0.3);
-  border-color: rgba(255, 193, 7, 0.8);
-  transform: scale(1.1);
+  background: #FFD700;
+  transform: translate(-2px, -2px) rotate(-12deg);
+  box-shadow: 5px 5px 0 #1a1a1a;
+}
+
+.recent-project-pin-btn:active {
+  transform: translate(1px, 1px);
+  box-shadow: 2px 2px 0 #1a1a1a;
 }
 
 .recent-project-pin-btn-active {
-  background: rgba(255, 193, 7, 0.4);
-  border-color: rgba(255, 193, 7, 0.9);
-}
-
-.recent-project-pin-btn-active:hover {
-  background: rgba(255, 193, 7, 0.5);
+  background: #FFD700;
+  animation: wiggle 0.5s ease-in-out;
 }
 
 /* Pinned Project Badge */
 .recent-project-pin-badge {
-  margin-right: 6px;
-  font-size: 0.875rem;
+  margin-right: 4px;
+  font-size: 1rem;
+  filter: drop-shadow(0 2px 4px rgba(255, 215, 0, 0.3));
 }
 
-/* Pinned Project Card Style */
+/* Pinned Project Card Style - Special star treatment */
 .recent-project-pinned {
-  border: 2px solid rgba(255, 193, 7, 0.6);
-  box-shadow: 0 4px 16px rgba(255, 193, 7, 0.2);
+  border-color: #FFD700;
+  background: linear-gradient(
+    135deg,
+    #FFFEF7 0%,
+    #ffffff 100%
+  );
+  position: relative;
+}
+
+/* Add star decoration to pinned cards */
+.recent-project-pinned::before {
+  content: '⭐';
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  font-size: 24px;
+  opacity: 0.15;
+  animation: star-twinkle 2s ease-in-out infinite;
 }
 
 .recent-project-delete-btn {
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 100, 100, 0.5);
-  color: #ff6b6b;
+  background: #ffffff;
+  border: 3px solid #1a1a1a;
+  color: #ff3366;
   font-size: 1rem;
-  width: 32px;
-  height: 32px;
+  width: 42px;
+  height: 42px;
   border-radius: 50%;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s ease;
+  transition: all 0.25s cubic-bezier(0.68, -0.55, 0.265, 1.55);
   padding: 0;
+  box-shadow: 3px 3px 0 #1a1a1a;
 }
 
 .recent-project-delete-btn:hover {
-  background: rgba(255, 100, 100, 0.3);
-  border-color: rgba(255, 100, 100, 0.8);
-  color: #ff4444;
-  transform: scale(1.1);
+  background: #ff3366;
+  color: #ffffff;
+  transform: translate(-2px, -2px);
+  box-shadow: 5px 5px 0 #1a1a1a;
+}
+
+.recent-project-delete-btn:active {
+  transform: translate(1px, 1px);
+  box-shadow: 2px 2px 0 #1a1a1a;
 }
 
 .recent-project-reuse-btn {
-  background: linear-gradient(135deg, #ff5252, #e53935);
-  border: none;
+  background: #ff3366;
+  border: 3px solid #1a1a1a;
   color: #ffffff;
   font-size: 0.75rem;
-  font-weight: 600;
-  padding: 6px 12px;
-  border-radius: 6px;
+  font-weight: 800;
+  padding: 12px 22px;
+  border-radius: 50px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s ease;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  transition: all 0.25s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  box-shadow: 3px 3px 0 #1a1a1a;
+  text-transform: lowercase;
+  letter-spacing: 0.02em;
 }
 
 .recent-project-reuse-btn:hover {
-  background: linear-gradient(135deg, #ff6b6b, #f44336);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+  transform: translate(-2px, -2px);
+  box-shadow: 5px 5px 0 #1a1a1a;
 }
 
 .recent-project-reuse-btn:active {
-  transform: translateY(0);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  transform: translate(1px, 1px);
+  box-shadow: 2px 2px 0 #1a1a1a;
 }
 
 .recent-project-jobs,
 .recent-project-jobs-carousel {
   display: flex;
-  gap: 16px;
+  gap: 14px;
   align-items: flex-start;
   overflow-x: auto;
   overflow-y: hidden;
-  padding: 4px 0;
+  padding: 10px 4px;
   scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
   scroll-snap-type: x mandatory;
 }
 
 .recent-project-jobs-carousel::-webkit-scrollbar {
-  height: 8px;
+  height: 12px;
 }
 
 .recent-project-jobs-carousel::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 4px;
+  background: rgba(255, 237, 78, 0.2);
+  border-radius: 6px;
+  border: 2px solid #1a1a1a;
 }
 
 .recent-project-jobs-carousel::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.3);
-  border-radius: 4px;
+  background: #ff3366;
+  border-radius: 6px;
+  border: 2px solid #1a1a1a;
 }
 
 .recent-project-jobs-carousel::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.5);
+  background: #ff1a4d;
 }
 
 /* Sentinel */
@@ -477,77 +655,98 @@
 /* End message */
 .recent-projects-end-message {
   text-align: center;
-  padding: 24px;
-  color: rgba(255, 255, 255, 0.7);
-  font-size: 0.875rem;
-  font-style: italic;
-  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+  padding: 36px;
+  color: #666;
+  font-size: 0.95rem;
+  font-weight: 600;
 }
 
-/* Delete Confirmation Modal */
+/* Delete Confirmation Modal - Bold Starface style */
 .recent-projects-modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.7);
+  background: rgba(26, 26, 26, 0.7);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 3000;
+  z-index: 100003;
   padding: 20px;
+  animation: pop-up 0.2s ease-out;
 }
 
 .recent-projects-modal {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 248, 248, 0.95) 100%);
-  border-radius: 16px;
-  padding: 28px;
-  max-width: 400px;
+  background: #ffffff;
+  border: 4px solid #1a1a1a;
+  border-radius: 32px;
+  padding: 36px;
+  max-width: 440px;
   width: 100%;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 8px 8px 0 #1a1a1a;
+  animation: pop-up 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  position: relative;
+}
+
+/* Add warning stars to modal */
+.recent-projects-modal::before {
+  content: '⚠️';
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  font-size: 32px;
+  opacity: 0.15;
 }
 
 .recent-projects-modal h3 {
-  margin: 0 0 12px;
-  font-family: "Permanent Marker", cursive;
-  font-size: 1.5rem;
-  font-weight: 400;
-  color: #ff5252;
-  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+  margin: 0 0 16px;
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #1a1a1a;
 }
 
 .recent-projects-modal p {
-  margin: 0 0 20px;
-  font-size: 0.9375rem;
+  margin: 0 0 28px;
+  font-size: 1rem;
   color: #333;
-  line-height: 1.5;
+  line-height: 1.6;
+  font-weight: 500;
 }
 
 .recent-projects-modal-checkbox {
-  margin-bottom: 24px;
+  margin-bottom: 32px;
 }
 
 .recent-projects-modal-checkbox label {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
   cursor: pointer;
   user-select: none;
+  padding: 14px 16px;
+  border-radius: 16px;
+  transition: background 0.2s ease;
+  border: 2px solid transparent;
+}
+
+.recent-projects-modal-checkbox label:hover {
+  background: rgba(255, 237, 78, 0.2);
+  border-color: #FFED4E;
 }
 
 .recent-projects-modal-checkbox input[type="checkbox"] {
-  width: 18px;
-  height: 18px;
+  width: 24px;
+  height: 24px;
   cursor: pointer;
   margin: 0;
+  accent-color: #ff3366;
 }
 
 .recent-projects-modal-checkbox span {
-  font-size: 0.875rem;
-  color: #555;
+  font-size: 0.95rem;
+  color: #666;
+  font-weight: 600;
 }
 
 .recent-projects-modal-actions {
@@ -557,108 +756,134 @@
 }
 
 .recent-projects-modal-btn {
-  padding: 10px 24px;
-  border: none;
-  border-radius: 8px;
+  padding: 16px 32px;
+  border: 3px solid #1a1a1a;
+  border-radius: 50px;
   font-size: 0.875rem;
-  font-weight: 600;
+  font-weight: 800;
   cursor: pointer;
-  transition: all 0.2s ease;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  transition: all 0.25s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  text-transform: lowercase;
+  letter-spacing: 0.02em;
+  box-shadow: 3px 3px 0 #1a1a1a;
 }
 
 .recent-projects-modal-btn-cancel {
-  background: rgba(0, 0, 0, 0.08);
-  color: #555;
+  background: #ffffff;
+  color: #666;
 }
 
 .recent-projects-modal-btn-cancel:hover {
-  background: rgba(0, 0, 0, 0.15);
+  background: #FFED4E;
+  color: #1a1a1a;
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0 #1a1a1a;
 }
 
 .recent-projects-modal-btn-confirm {
-  background: linear-gradient(135deg, #ff5252, #e53935);
+  background: #ff3366;
   color: #ffffff;
-  box-shadow: 0 4px 12px rgba(229, 57, 53, 0.3);
 }
 
 .recent-projects-modal-btn-confirm:hover {
-  background: linear-gradient(135deg, #ff6b6b, #f44336);
-  transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(229, 57, 53, 0.4);
+  background: #ff1a4d;
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0 #1a1a1a;
 }
 
-.recent-projects-modal-btn-confirm:active {
-  transform: translateY(0);
-  box-shadow: 0 2px 8px rgba(229, 57, 53, 0.3);
+.recent-projects-modal-btn:active {
+  transform: translate(1px, 1px);
+  box-shadow: 2px 2px 0 #1a1a1a;
 }
 
 /* Mobile Optimizations */
 @media (max-width: 600px) {
   .recent-projects-header {
-    padding: 16px;
+    padding: 20px;
+    gap: 14px;
+  }
+
+  .recent-projects-header-left {
+    gap: 14px;
+    flex-wrap: wrap;
   }
 
   .recent-projects-header h2 {
     font-size: 1.5rem;
   }
 
+  .recent-projects-header h2::after {
+    font-size: 1.25rem;
+    margin-left: 8px;
+  }
+
+  .recent-projects-close-btn {
+    width: 46px;
+    height: 46px;
+    font-size: 1.25rem;
+  }
+
   .recent-projects-scroll-container {
-    padding: 16px;
+    padding: 20px;
   }
 
   .recent-projects-filter {
-    gap: 4px;
-    padding: 3px;
-    margin-bottom: 16px;
+    padding: 5px;
+    border-width: 3px;
   }
 
   .recent-projects-filter-btn {
-    padding: 6px 10px;
-    font-size: 0.75rem;
-    gap: 4px;
+    padding: 8px 14px;
+    font-size: 0.7rem;
+    gap: 5px;
   }
 
   .recent-projects-filter-count {
-    min-width: 18px;
-    height: 18px;
-    padding: 0 4px;
-    font-size: 0.6875rem;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    font-size: 0.65rem;
   }
 
   .recent-projects-desc-wrapper {
-    margin-bottom: 16px;
+    margin-bottom: 22px;
   }
 
   .recent-projects-desc {
-    font-size: 0.75rem;
-    padding: 10px 36px 10px 12px;
+    font-size: 0.85rem;
+    padding: 18px 50px 18px 20px;
+    border-width: 3px;
+    border-radius: 20px;
   }
 
   .recent-projects-desc-close {
-    width: 24px;
-    height: 24px;
+    width: 28px;
+    height: 28px;
     font-size: 1rem;
-    top: 6px;
-    right: 6px;
   }
 
   .recent-projects-list {
-    gap: 24px;
+    gap: 18px;
   }
 
   .recent-project {
-    padding: 14px;
-    border-radius: 12px;
+    padding: 20px;
+    border-radius: 24px;
+    border-width: 3px;
+    box-shadow: 4px 4px 0 #1a1a1a;
+  }
+
+  .recent-project:hover {
+    transform: translate(-2px, -2px);
+    box-shadow: 6px 6px 0 #1a1a1a;
   }
 
   .recent-project-heading {
     flex-direction: column;
     align-items: flex-start;
-    gap: 8px;
-    padding-bottom: 8px;
-    margin-bottom: 12px;
+    gap: 12px;
+    padding-bottom: 14px;
+    margin-bottom: 16px;
   }
 
   .recent-project-title-wrapper {
@@ -675,45 +900,101 @@
   }
 
   .recent-project-date {
-    font-size: 0.6875rem;
+    font-size: 0.75rem;
+  }
+
+  .recent-project-pin-btn,
+  .recent-project-delete-btn {
+    width: 38px;
+    height: 38px;
+    border-width: 3px;
+  }
+
+  .recent-project-reuse-btn {
+    padding: 10px 18px;
+    font-size: 0.7rem;
+    border-width: 3px;
   }
 
   .recent-project-jobs-carousel {
-    gap: 10px;
+    gap: 12px;
+    padding: 8px 2px;
   }
 
   .recent-projects-loading {
-    padding: 32px;
-    font-size: 0.875rem;
+    padding: 48px 20px;
+    font-size: 0.95rem;
+  }
+
+  .recent-projects-spinner {
+    width: 48px;
+    height: 48px;
+    border-width: 5px;
   }
 
   .recent-projects-empty {
-    padding: 48px 16px;
-    border-radius: 12px;
+    padding: 60px 24px;
+    border-radius: 28px;
+    border-width: 3px;
+    box-shadow: 4px 4px 0 #1a1a1a;
   }
 
   .recent-projects-empty p:first-child {
-    font-size: 1rem;
+    font-size: 1.3rem;
   }
 
   .recent-projects-modal {
-    padding: 24px;
+    padding: 32px;
     margin: 0 16px;
+    border-radius: 28px;
+    border-width: 3px;
+    box-shadow: 6px 6px 0 #1a1a1a;
   }
 
   .recent-projects-modal h3 {
-    font-size: 1.25rem;
+    font-size: 1.4rem;
   }
 
   .recent-projects-modal p {
-    font-size: 0.875rem;
+    font-size: 0.95rem;
   }
 
   .recent-projects-modal-actions {
-    flex-direction: column;
+    flex-direction: column-reverse;
   }
 
   .recent-projects-modal-btn {
     width: 100%;
+    padding: 16px 32px;
+  }
+}
+
+/* Tablet adjustments */
+@media (min-width: 601px) and (max-width: 900px) {
+  .recent-projects-scroll-container {
+    padding: 28px;
+  }
+
+  .recent-projects-list {
+    gap: 20px;
+  }
+}
+
+/* Large screen polish */
+@media (min-width: 1200px) {
+  .recent-projects-scroll-container {
+    padding: 40px 56px;
+  }
+
+  .recent-projects-header {
+    padding: 28px 56px;
+  }
+
+  .recent-projects-list {
+    gap: 28px;
+  }
+
+  .recent-project {
+    padding: 28px;
   }
 }

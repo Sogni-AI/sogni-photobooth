@@ -72,6 +72,16 @@ export function shouldSkipConfirmation(): boolean {
 }
 
 /**
+ * Clear the "don't remind me again" preference (reset to show popup)
+ */
+export function clearSkipConfirmation(): void {
+  if (typeof document === 'undefined') return;
+  
+  // Delete the cookie by setting it to expire in the past
+  document.cookie = `${CANCEL_CONFIRMATION_COOKIE}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/`;
+}
+
+/**
  * Set the "don't remind me again" preference
  */
 export function setSkipConfirmation(skip: boolean): void {

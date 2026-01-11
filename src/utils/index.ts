@@ -103,8 +103,8 @@ export async function fetchWithRetry(
 ): Promise<Response> {
   const {
     maxRetries = 2,
-    initialDelay = 1000,
-    backoffMultiplier = 1.5,
+    initialDelay = 2000, // Start with 2 seconds
+    backoffMultiplier = 2, // Double the delay each retry (2s, 4s, 8s)
     context = 'fetch'
   } = retryOptions;
 

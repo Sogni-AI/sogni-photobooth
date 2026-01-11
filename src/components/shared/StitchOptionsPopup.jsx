@@ -57,13 +57,14 @@ const StitchOptionsPopup = ({
         left: 0,
         right: 0,
         bottom: 0,
-        backgroundColor: 'rgba(0, 0, 0, 0.85)',
+        backgroundColor: isGenerating ? 'rgba(0, 0, 0, 0.6)' : 'rgba(0, 0, 0, 0.85)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        zIndex: 10000000,
+        zIndex: 99999, // Below toast (100000) so toasts are visible during generation
         padding: '20px',
-        backdropFilter: 'blur(8px)'
+        backdropFilter: isGenerating ? 'blur(4px)' : 'blur(8px)',
+        transition: 'background-color 0.3s ease, backdrop-filter 0.3s ease'
       }}
     >
       <div
@@ -108,27 +109,27 @@ const StitchOptionsPopup = ({
               Choose how to combine your {videoCount} video{videoCount !== 1 ? 's' : ''}
             </p>
           </div>
-          {!isGenerating && (
-            <button
-              onClick={onClose}
-              style={{
-                background: 'rgba(0, 0, 0, 0.6)',
-                border: 'none',
-                borderRadius: '50%',
-                width: '28px',
-                height: '28px',
-                cursor: 'pointer',
-                color: '#fff',
-                fontSize: '16px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0
-              }}
-            >
-              ×
-            </button>
-          )}
+          <button
+            onClick={isGenerating ? onCancel : onClose}
+            style={{
+              background: isGenerating ? 'rgba(255, 100, 100, 0.7)' : 'rgba(0, 0, 0, 0.6)',
+              border: 'none',
+              borderRadius: '50%',
+              width: '28px',
+              height: '28px',
+              cursor: 'pointer',
+              color: '#fff',
+              fontSize: '16px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+              transition: 'background 0.2s ease'
+            }}
+            title={isGenerating ? 'Cancel generation' : 'Close'}
+          >
+            ×
+          </button>
         </div>
 
         {/* Content */}
@@ -155,15 +156,15 @@ const StitchOptionsPopup = ({
               }} />
 
               <div style={{
-                fontSize: '16px',
-                fontWeight: '600',
+                fontSize: '18px',
+                fontWeight: '700',
                 marginBottom: '8px',
                 fontFamily: '"Permanent Marker", cursive'
               }}>
-                {generationProgress.phase === 'extracting' && '🎬 Extracting Frames...'}
-                {generationProgress.phase === 'generating' && '♾️ Generating Transitions...'}
-                {generationProgress.phase === 'stitching' && '🎞️ Stitching Videos...'}
-                {generationProgress.phase === 'complete' && '✅ Complete!'}
+                {generationProgress.phase === 'extracting' && '🎬 Preparing Video Frames...'}
+                {generationProgress.phase === 'generating' && '♾️ Creating Infinite Loop'}
+                {generationProgress.phase === 'stitching' && '🎞️ Stitching Final Video...'}
+                {generationProgress.phase === 'complete' && '✅ Your Infinite Loop is Ready!'}
               </div>
 
               <div style={{
@@ -174,103 +175,201 @@ const StitchOptionsPopup = ({
                 {generationProgress.message}
               </div>
 
-              {/* Individual transition status indicators with countdown timers */}
+              {/* Transition Generation Grid - VideoReviewPopup style */}
               {generationProgress.phase === 'generating' && generationProgress.transitionStatus && (
                 <div style={{
-                  display: 'flex',
-                  justifyContent: 'center',
-                  gap: '8px',
-                  marginBottom: '16px',
-                  flexWrap: 'wrap'
+                  marginBottom: '16px'
                 }}>
-                  {generationProgress.transitionStatus.map((status, i) => {
-                    const eta = generationProgress.transitionETAs?.[i];
-                    const hasETA = eta != null && eta > 0;
-                    
-                    // Cache ETA while generating - use memoization to avoid render mutations
-                    let displayETA = null;
-                    if (status === 'generating') {
-                      if (hasETA) {
-                        lastKnownETAsRef.current[i] = eta;
-                        displayETA = eta;
-                      } else {
-                        // Use cached value if no fresh ETA
-                        displayETA = lastKnownETAsRef.current[i];
+                  {/* Header with count */}
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    marginBottom: '12px',
+                    padding: '0 4px'
+                  }}>
+                    <span style={{
+                      fontSize: '12px',
+                      color: 'rgba(255, 255, 255, 0.7)'
+                    }}>
+                      Creating {videoCount} seamless transitions...
+                    </span>
+                    <span style={{
+                      fontSize: '12px',
+                      color: '#4ade80',
+                      fontWeight: '600'
+                    }}>
+                      {generationProgress.transitionStatus.filter(s => s === 'complete').length}/{generationProgress.total} complete
+                    </span>
+                  </div>
+
+                  {/* Transition cards grid */}
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))',
+                    gap: '10px'
+                  }}>
+                    {generationProgress.transitionStatus.map((status, i) => {
+                      const eta = generationProgress.transitionETAs?.[i];
+                      const hasETA = eta != null && eta > 0;
+
+                      // Cache ETA while generating
+                      let displayETA = null;
+                      if (status === 'generating') {
+                        if (hasETA) {
+                          lastKnownETAsRef.current[i] = eta;
+                          displayETA = eta;
+                        } else {
+                          displayETA = lastKnownETAsRef.current[i];
+                        }
+                      } else if (status === 'complete' || status === 'failed') {
+                        if (lastKnownETAsRef.current[i] !== undefined) {
+                          delete lastKnownETAsRef.current[i];
+                        }
                       }
-                    } else if (status === 'complete' || status === 'failed') {
-                      // Clear cache for completed/failed transitions
-                      if (lastKnownETAsRef.current[i] !== undefined) {
-                        delete lastKnownETAsRef.current[i];
-                      }
-                    }
-                    
-                    // Determine what to show inside the box
-                    let content;
-                    if (status === 'complete') {
-                      content = <span style={{ fontSize: '18px' }}>✓</span>;
-                    } else if (status === 'failed') {
-                      content = <span style={{ fontSize: '18px' }}>✕</span>;
-                    } else if (status === 'generating') {
-                      if (displayETA != null && displayETA > 0) {
-                        content = (
-                          <span style={{ 
-                            fontSize: '16px', 
-                            fontWeight: '700',
-                            fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", sans-serif'
-                          }}>
-                            {Math.ceil(displayETA)}s
-                          </span>
-                        );
-                      } else {
-                        content = (
+
+                      // Format duration
+                      const formatTime = (seconds) => {
+                        if (!seconds || seconds <= 0) return '0:00';
+                        const mins = Math.floor(seconds / 60);
+                        const secs = Math.floor(seconds % 60);
+                        return `${mins}:${secs.toString().padStart(2, '0')}`;
+                      };
+
+                      return (
+                        <div
+                          key={i}
+                          style={{
+                            backgroundColor: status === 'complete'
+                              ? 'rgba(74, 222, 128, 0.15)'
+                              : status === 'generating'
+                              ? 'rgba(147, 51, 234, 0.15)'
+                              : status === 'failed'
+                              ? 'rgba(239, 68, 68, 0.15)'
+                              : 'rgba(255, 255, 255, 0.05)',
+                            borderRadius: '10px',
+                            padding: '10px',
+                            border: '1px solid',
+                            borderColor: status === 'complete'
+                              ? 'rgba(74, 222, 128, 0.4)'
+                              : status === 'generating'
+                              ? 'rgba(147, 51, 234, 0.5)'
+                              : status === 'failed'
+                              ? 'rgba(239, 68, 68, 0.4)'
+                              : 'rgba(255, 255, 255, 0.1)',
+                            transition: 'all 0.3s ease',
+                            boxShadow: status === 'generating'
+                              ? '0 0 15px rgba(147, 51, 234, 0.3)'
+                              : 'none'
+                          }}
+                        >
+                          {/* Header row */}
                           <div style={{
-                            width: '16px',
-                            height: '16px',
-                            border: '2px solid rgba(255, 255, 255, 0.3)',
-                            borderTopColor: '#fff',
-                            borderRadius: '50%',
-                            animation: 'spin 0.8s linear infinite'
-                          }} />
-                        );
-                      }
-                    } else {
-                      // pending
-                      content = <span style={{ fontSize: '14px', opacity: 0.7 }}>{i + 1}</span>;
-                    }
-                    
-                    return (
-                      <div
-                        key={i}
-                        style={{
-                          minWidth: '48px',
-                          height: '48px',
-                          borderRadius: '8px',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontSize: '12px',
-                          fontWeight: '600',
-                          background: status === 'complete'
-                            ? 'linear-gradient(135deg, #4CAF50, #45a049)'
-                            : status === 'generating'
-                            ? 'linear-gradient(135deg, #9333ea, #7c3aed)'
-                            : status === 'failed'
-                            ? 'linear-gradient(135deg, #f44336, #d32f2f)'
-                            : 'rgba(255, 255, 255, 0.15)',
-                          color: '#fff',
-                          transition: 'all 0.3s ease',
-                          boxShadow: status === 'generating'
-                            ? '0 0 12px rgba(147, 51, 234, 0.6)'
-                            : 'none',
-                          padding: '4px'
-                        }}
-                        title={`Transition ${i + 1}: ${status}${displayETA ? ` (${Math.ceil(displayETA)}s remaining)` : ''}`}
-                      >
-                        {content}
-                      </div>
-                    );
-                  })}
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            marginBottom: '6px'
+                          }}>
+                            <span style={{
+                              fontSize: '11px',
+                              fontWeight: '600',
+                              color: status === 'complete'
+                                ? '#4ade80'
+                                : status === 'generating'
+                                ? '#9333ea'
+                                : status === 'failed'
+                                ? '#ef4444'
+                                : 'rgba(255, 255, 255, 0.5)'
+                            }}>
+                              Transition {i + 1}
+                            </span>
+                            {status === 'complete' && (
+                              <span style={{ fontSize: '14px' }}>✓</span>
+                            )}
+                            {status === 'failed' && (
+                              <span style={{ fontSize: '14px' }}>✕</span>
+                            )}
+                          </div>
+
+                          {/* Status content */}
+                          <div style={{
+                            textAlign: 'center',
+                            minHeight: '36px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                          }}>
+                            {status === 'generating' ? (
+                              <>
+                                {/* ETA countdown */}
+                                <div style={{
+                                  fontSize: '18px',
+                                  fontWeight: '700',
+                                  color: '#fff',
+                                  marginBottom: '2px'
+                                }}>
+                                  {displayETA != null && displayETA > 0 ? (
+                                    <>⏱️ {formatTime(displayETA)}</>
+                                  ) : (
+                                    <div style={{
+                                      width: '20px',
+                                      height: '20px',
+                                      border: '2px solid rgba(147, 51, 234, 0.3)',
+                                      borderTopColor: '#9333ea',
+                                      borderRadius: '50%',
+                                      animation: 'spin 1s linear infinite',
+                                      margin: '0 auto'
+                                    }} />
+                                  )}
+                                </div>
+                                {/* Status text */}
+                                <span style={{
+                                  fontSize: '9px',
+                                  color: 'rgba(255, 255, 255, 0.6)'
+                                }}>
+                                  Generating...
+                                </span>
+                              </>
+                            ) : status === 'complete' ? (
+                              <span style={{
+                                fontSize: '12px',
+                                color: '#4ade80',
+                                fontWeight: '500'
+                              }}>
+                                Complete
+                              </span>
+                            ) : status === 'failed' ? (
+                              <span style={{
+                                fontSize: '12px',
+                                color: '#ef4444',
+                                fontWeight: '500'
+                              }}>
+                                Failed
+                              </span>
+                            ) : (
+                              <span style={{
+                                fontSize: '12px',
+                                color: 'rgba(255, 255, 255, 0.4)'
+                              }}>
+                                Queued
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Video flow indicator */}
+                          <div style={{
+                            marginTop: '6px',
+                            fontSize: '9px',
+                            color: 'rgba(255, 255, 255, 0.5)',
+                            textAlign: 'center'
+                          }}>
+                            {i + 1} → {i === videoCount - 1 ? 1 : i + 2}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
 
