@@ -35,6 +35,8 @@ import { getTokenLabel } from '../../services/walletService';
 import { useToastContext } from '../../context/ToastContext';
 import { generateGalleryFilename, getPortraitFolderWithFallback } from '../../utils/galleryLoader';
 import { generateVideo, cancelVideoGeneration, downloadVideo } from '../../services/VideoGenerator.ts';
+import CancelConfirmationPopup, { useCancelConfirmation } from './CancelConfirmationPopup.tsx';
+import { shouldSkipConfirmation } from '../../services/cancellationService.ts';
 import { 
   hasSeenVideoIntro, 
   hasGeneratedVideo, 
@@ -930,6 +932,21 @@ const PhotoGallery = ({
   const [showInfiniteLoopPreview, setShowInfiniteLoopPreview] = useState(false);
   const infiniteLoopVideoRef = useRef(null);
 
+  // Cancel confirmation popup state
+  const {
+    showPopup: showCancelConfirmation,
+    pendingCancel,
+    requestCancel,
+    handleClose: handleCancelConfirmationClose,
+    handleConfirm: handleCancelConfirmationConfirm
+  } = useCancelConfirmation();
+  const [cancelRateLimited, setCancelRateLimited] = useState(false);
+  const [cancelCooldownSeconds, setCancelCooldownSeconds] = useState(0);
+
+  // Track retry attempts for montage mode video generation
+  // Key: photo.id, Value: number of retry attempts
+  const videoRetryAttempts = useRef(new Map());
+
   // Video cost estimation - include selectedPhotoIndex to bust cache when switching photos
   const { loading: videoLoading, cost: videoCostRaw, costInUSD: videoUSD, refetch: refetchVideoCost } = useVideoCostEstimation({
     imageWidth: desiredWidth || 768,
@@ -1772,6 +1789,94 @@ const PhotoGallery = ({
       }
     }
   }, [isGenerating, activeProjectReference, sogniClient, handleOpenImageAdjusterForNextBatch, framedImageUrls, onClearQrCode, onClearMobileShareCache, appliedMusic]);
+
+  // Handle cancellation of image generation with confirmation popup
+  const handleCancelImageGeneration = useCallback(() => {
+    if (!isGenerating || !activeProjectReference.current) {
+      console.log('No active generation to cancel');
+      return;
+    }
+
+    const projectId = activeProjectReference.current;
+
+    // Calculate approximate progress from photos
+    const completedCount = photos.filter(p => !p.hidden && !p.loading && !p.generating && !p.error && p.images && p.images.length > 0 && !p.isOriginal).length;
+    const generatingCount = photos.filter(p => !p.hidden && (p.loading || p.generating)).length;
+    const totalCount = completedCount + generatingCount;
+    const progress = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
+
+    const performCancel = async () => {
+      try {
+        if (sogniClient && sogniClient.cancelProject) {
+          const result = await sogniClient.cancelProject(projectId);
+
+          // Check for rate limiting
+          if (result?.rateLimited) {
+            setCancelRateLimited(true);
+            setCancelCooldownSeconds(result.cooldownRemaining || 20);
+            showToast({
+              title: 'Please wait',
+              message: `You can cancel again in ${result.cooldownRemaining || 20} seconds`,
+              type: 'warning',
+              timeout: 4000
+            });
+            return;
+          }
+
+          activeProjectReference.current = null;
+          setShowMoreButtonDuringGeneration(false);
+
+          // Update photo states - mark incomplete jobs
+          setPhotos(prev => prev.map(photo => {
+            if (photo.loading || photo.generating) {
+              return {
+                ...photo,
+                loading: false,
+                generating: false,
+                error: 'Cancelled'
+              };
+            }
+            return photo;
+          }));
+
+          const completedMsg = completedCount > 0
+            ? `${completedCount} image${completedCount !== 1 ? 's' : ''} completed, remaining cancelled`
+            : 'Generation cancelled';
+
+          showToast({
+            title: 'Generation Cancelled',
+            message: completedMsg,
+            type: 'info',
+            timeout: 3000
+          });
+        }
+      } catch (error) {
+        console.error('Error cancelling generation:', error);
+        showToast({
+          title: 'Cancel Failed',
+          message: 'Could not cancel generation. Please try again.',
+          type: 'error',
+          timeout: 4000
+        });
+      }
+    };
+
+    // Check if user has opted out of confirmations
+    if (shouldSkipConfirmation()) {
+      performCancel();
+      return;
+    }
+
+    // Show confirmation popup
+    requestCancel({
+      projectId,
+      projectType: 'image',
+      progress,
+      itemsCompleted: completedCount,
+      totalItems: totalCount,
+      onConfirm: performCancel
+    });
+  }, [isGenerating, activeProjectReference, sogniClient, photos, showToast, setPhotos, requestCancel]);
 
   // Generate QR code when qrCodeData changes
   useEffect(() => {
@@ -3227,32 +3332,73 @@ const PhotoGallery = ({
 
       const img = new Image();
       img.onload = () => {
-        generateVideo({
-          photo,
-          photoIndex,
-          subIndex: 0,
-          imageWidth: img.naturalWidth,
-          imageHeight: img.naturalHeight,
-          sogniClient,
-          setPhotos,
-          resolution: settings.videoResolution || '480p',
-          quality: settings.videoQuality || 'fast',
-          fps: settings.videoFramerate || 16,
-          duration: imageDuration,
-          positivePrompt,
-          negativePrompt,
-          tokenType,
-          workflowType: 'animate-move',
-          referenceVideo: videoBuffer,
-          videoStart: imageStartOffset, // Per-image start offset in split mode
-          modelVariant, // Pass model variant from popup
-          onComplete: () => {
-            playSonicLogo(settings.soundEnabled);
-            setPlayingGeneratedVideoIds(prev => new Set([...prev, photo.id]));
-          },
-          onError: (error) => console.error('[BATCH ANIMATE MOVE] Error:', error),
-          onOutOfCredits: () => { if (onOutOfCredits) onOutOfCredits(); }
-        });
+        // Helper function to generate video with retry capability
+        const attemptGeneration = (retryCount = 0) => {
+          generateVideo({
+            photo,
+            photoIndex,
+            subIndex: 0,
+            imageWidth: img.naturalWidth,
+            imageHeight: img.naturalHeight,
+            sogniClient,
+            setPhotos,
+            resolution: settings.videoResolution || '480p',
+            quality: settings.videoQuality || 'fast',
+            fps: settings.videoFramerate || 16,
+            duration: imageDuration,
+            positivePrompt,
+            negativePrompt,
+            tokenType,
+            workflowType: 'animate-move',
+            referenceVideo: videoBuffer,
+            videoStart: imageStartOffset, // Per-image start offset in split mode
+            modelVariant, // Pass model variant from popup
+            onComplete: () => {
+              // Clear retry count on success
+              videoRetryAttempts.current.delete(photo.id);
+              playSonicLogo(settings.soundEnabled);
+              setPlayingGeneratedVideoIds(prev => new Set([...prev, photo.id]));
+            },
+            onError: (error) => {
+              console.error('[BATCH ANIMATE MOVE] Error:', error);
+              
+              // Check if this is a montage mode video and we haven't exhausted retries
+              if (splitMode && retryCount < 1) {
+                const nextRetryCount = retryCount + 1;
+                videoRetryAttempts.current.set(photo.id, nextRetryCount);
+                
+                console.log(`[BATCH ANIMATE MOVE] Retrying segment ${batchIndex + 1} (attempt ${nextRetryCount + 1}/2)...`);
+                
+                // Show retry toast only for montage segments
+                showToast({
+                  title: 'Retrying Segment',
+                  message: `Segment ${batchIndex + 1} failed, retrying automatically (${nextRetryCount + 1}/2)...`,
+                  type: 'warning',
+                  timeout: 3000
+                });
+                
+                // Retry after a brief delay
+                setTimeout(() => attemptGeneration(nextRetryCount), 1000);
+              } else {
+                // Exhausted retries or not montage mode
+                videoRetryAttempts.current.delete(photo.id);
+                
+                if (splitMode && retryCount >= 1) {
+                  showToast({
+                    title: 'Segment Failed',
+                    message: `Segment ${batchIndex + 1} failed after 2 attempts. This may affect the full montage.`,
+                    type: 'error',
+                    timeout: 5000
+                  });
+                }
+              }
+            },
+            onOutOfCredits: () => { if (onOutOfCredits) onOutOfCredits(); }
+          });
+        };
+        
+        // Start generation
+        attemptGeneration();
       };
       img.src = imageUrl;
     });
@@ -3392,33 +3538,74 @@ const PhotoGallery = ({
 
       const img = new Image();
       img.onload = () => {
-        generateVideo({
-          photo,
-          photoIndex,
-          subIndex: 0,
-          imageWidth: img.naturalWidth,
-          imageHeight: img.naturalHeight,
-          sogniClient,
-          setPhotos,
-          resolution: settings.videoResolution || '480p',
-          quality: settings.videoQuality || 'fast',
-          fps: settings.videoFramerate || 16,
-          duration: imageDuration,
-          positivePrompt,
-          negativePrompt,
-          tokenType,
-          workflowType: 'animate-replace',
-          referenceVideo: videoBuffer,
-          sam2Coordinates,
-          videoStart: imageStartOffset, // Per-image start offset in split mode
-          modelVariant, // Pass model variant from popup
-          onComplete: () => {
-            playSonicLogo(settings.soundEnabled);
-            setPlayingGeneratedVideoIds(prev => new Set([...prev, photo.id]));
-          },
-          onError: (error) => console.error('[BATCH ANIMATE REPLACE] Error:', error),
-          onOutOfCredits: () => { if (onOutOfCredits) onOutOfCredits(); }
-        });
+        // Helper function to generate video with retry capability
+        const attemptGeneration = (retryCount = 0) => {
+          generateVideo({
+            photo,
+            photoIndex,
+            subIndex: 0,
+            imageWidth: img.naturalWidth,
+            imageHeight: img.naturalHeight,
+            sogniClient,
+            setPhotos,
+            resolution: settings.videoResolution || '480p',
+            quality: settings.videoQuality || 'fast',
+            fps: settings.videoFramerate || 16,
+            duration: imageDuration,
+            positivePrompt,
+            negativePrompt,
+            tokenType,
+            workflowType: 'animate-replace',
+            referenceVideo: videoBuffer,
+            sam2Coordinates,
+            videoStart: imageStartOffset, // Per-image start offset in split mode
+            modelVariant, // Pass model variant from popup
+            onComplete: () => {
+              // Clear retry count on success
+              videoRetryAttempts.current.delete(photo.id);
+              playSonicLogo(settings.soundEnabled);
+              setPlayingGeneratedVideoIds(prev => new Set([...prev, photo.id]));
+            },
+            onError: (error) => {
+              console.error('[BATCH ANIMATE REPLACE] Error:', error);
+              
+              // Check if this is a montage mode video and we haven't exhausted retries
+              if (splitMode && retryCount < 1) {
+                const nextRetryCount = retryCount + 1;
+                videoRetryAttempts.current.set(photo.id, nextRetryCount);
+                
+                console.log(`[BATCH ANIMATE REPLACE] Retrying segment ${batchIndex + 1} (attempt ${nextRetryCount + 1}/2)...`);
+                
+                // Show retry toast only for montage segments
+                showToast({
+                  title: 'Retrying Segment',
+                  message: `Segment ${batchIndex + 1} failed, retrying automatically (${nextRetryCount + 1}/2)...`,
+                  type: 'warning',
+                  timeout: 3000
+                });
+                
+                // Retry after a brief delay
+                setTimeout(() => attemptGeneration(nextRetryCount), 1000);
+              } else {
+                // Exhausted retries or not montage mode
+                videoRetryAttempts.current.delete(photo.id);
+                
+                if (splitMode && retryCount >= 1) {
+                  showToast({
+                    title: 'Segment Failed',
+                    message: `Segment ${batchIndex + 1} failed after 2 attempts. This may affect the full montage.`,
+                    type: 'error',
+                    timeout: 5000
+                  });
+                }
+              }
+            },
+            onOutOfCredits: () => { if (onOutOfCredits) onOutOfCredits(); }
+          });
+        };
+        
+        // Start generation
+        attemptGeneration();
       };
       img.src = imageUrl;
     });
@@ -3558,33 +3745,74 @@ const PhotoGallery = ({
 
       const img = new Image();
       img.onload = () => {
-        generateVideo({
-          photo,
-          photoIndex,
-          subIndex: 0,
-          imageWidth: img.naturalWidth,
-          imageHeight: img.naturalHeight,
-          sogniClient,
-          setPhotos,
-          resolution: settings.videoResolution || '480p',
-          quality: settings.videoQuality || 'fast',
-          fps: settings.videoFramerate || 16,
-          duration: imageDuration,
-          positivePrompt,
-          negativePrompt,
-          tokenType,
-          workflowType: 's2v',
-          referenceAudio: audioBuffer,
-          audioStart: imageAudioStartOffset || 0,
-          audioDuration: imageDuration,
-          modelVariant, // Pass model variant from popup
-          onComplete: () => {
-            playSonicLogo(settings.soundEnabled);
-            setPlayingGeneratedVideoIds(prev => new Set([...prev, photo.id]));
-          },
-          onError: (error) => console.error('[BATCH S2V] Error:', error),
-          onOutOfCredits: () => { if (onOutOfCredits) onOutOfCredits(); }
-        });
+        // Helper function to generate video with retry capability
+        const attemptGeneration = (retryCount = 0) => {
+          generateVideo({
+            photo,
+            photoIndex,
+            subIndex: 0,
+            imageWidth: img.naturalWidth,
+            imageHeight: img.naturalHeight,
+            sogniClient,
+            setPhotos,
+            resolution: settings.videoResolution || '480p',
+            quality: settings.videoQuality || 'fast',
+            fps: settings.videoFramerate || 16,
+            duration: imageDuration,
+            positivePrompt,
+            negativePrompt,
+            tokenType,
+            workflowType: 's2v',
+            referenceAudio: audioBuffer,
+            audioStart: imageAudioStartOffset || 0,
+            audioDuration: imageDuration,
+            modelVariant, // Pass model variant from popup
+            onComplete: () => {
+              // Clear retry count on success
+              videoRetryAttempts.current.delete(photo.id);
+              playSonicLogo(settings.soundEnabled);
+              setPlayingGeneratedVideoIds(prev => new Set([...prev, photo.id]));
+            },
+            onError: (error) => {
+              console.error('[BATCH S2V] Error:', error);
+              
+              // Check if this is a montage mode video and we haven't exhausted retries
+              if (splitMode && retryCount < 1) {
+                const nextRetryCount = retryCount + 1;
+                videoRetryAttempts.current.set(photo.id, nextRetryCount);
+                
+                console.log(`[BATCH S2V] Retrying segment ${batchIndex + 1} (attempt ${nextRetryCount + 1}/2)...`);
+                
+                // Show retry toast only for montage segments
+                showToast({
+                  title: 'Retrying Segment',
+                  message: `Segment ${batchIndex + 1} failed, retrying automatically (${nextRetryCount + 1}/2)...`,
+                  type: 'warning',
+                  timeout: 3000
+                });
+                
+                // Retry after a brief delay
+                setTimeout(() => attemptGeneration(nextRetryCount), 1000);
+              } else {
+                // Exhausted retries or not montage mode
+                videoRetryAttempts.current.delete(photo.id);
+                
+                if (splitMode && retryCount >= 1) {
+                  showToast({
+                    title: 'Segment Failed',
+                    message: `Segment ${batchIndex + 1} failed after 2 attempts. This may affect the full montage.`,
+                    type: 'error',
+                    timeout: 5000
+                  });
+                }
+              }
+            },
+            onOutOfCredits: () => { if (onOutOfCredits) onOutOfCredits(); }
+          });
+        };
+        
+        // Start generation
+        attemptGeneration();
       };
       img.src = imageUrl;
     });
@@ -8791,12 +9019,44 @@ const PhotoGallery = ({
             </div>
           )}
 
-          {/* New Batch button - inside the same container */}
-          {((!isGenerating && selectedPhotoIndex === null) || (isGenerating && showMoreButtonDuringGeneration && selectedPhotoIndex === null)) && (
+          {/* Cancel button - shown during generation */}
+          {isGenerating && selectedPhotoIndex === null && (
+            <button
+              className="cancel-generation-btn"
+              onClick={handleCancelImageGeneration}
+              style={{
+                background: 'linear-gradient(135deg, #ff6b6b, #ee5a24)',
+                color: 'white',
+                border: 'none',
+                padding: '6px 14px',
+                paddingBottom: '8px',
+                borderRadius: '8px',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                cursor: 'pointer',
+                minHeight: '40px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
+                fontWeight: '600',
+                transition: 'all 0.2s ease',
+                whiteSpace: 'nowrap',
+                fontSize: '15px',
+                fontFamily: '"Permanent Marker", cursive',
+              }}
+              title="Cancel current generation"
+            >
+              <span style={{ fontSize: '16px' }}>✕</span>
+              CANCEL
+            </button>
+          )}
+
+          {/* New Batch button - shown when NOT generating */}
+          {!isGenerating && selectedPhotoIndex === null && (
             <button
               className="more-photos-btn"
               onClick={handleMoreButtonClick}
-              disabled={!isGenerating && (!isSogniReady || (!lastPhotoData.blob && photos.filter(p => !p.hidden && !p.error && p.images && p.images.length > 0).length === 0))}
+              disabled={!isSogniReady || (!lastPhotoData.blob && photos.filter(p => !p.hidden && !p.error && p.images && p.images.length > 0).length === 0)}
               style={{
                 background: 'linear-gradient(135deg, #ff5252, #e53935)',
                 color: 'white',
@@ -8805,7 +9065,7 @@ const PhotoGallery = ({
                 paddingBottom: '8px',
                 borderRadius: '8px',
                 boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-                cursor: (!isGenerating && (!isSogniReady || (!lastPhotoData.blob && photos.filter(p => !p.hidden && !p.error && p.images && p.images.length > 0).length === 0))) ? 'not-allowed' : 'pointer',
+                cursor: (!isSogniReady || (!lastPhotoData.blob && photos.filter(p => !p.hidden && !p.error && p.images && p.images.length > 0).length === 0)) ? 'not-allowed' : 'pointer',
                 minHeight: '40px',
                 display: 'flex',
                 alignItems: 'center',
@@ -8815,9 +9075,9 @@ const PhotoGallery = ({
                 whiteSpace: 'nowrap',
                 fontSize: '15px',
                 fontFamily: '"Permanent Marker", cursive',
-                opacity: (!isGenerating && (!isSogniReady || (!lastPhotoData.blob && photos.filter(p => !p.hidden && !p.error && p.images && p.images.length > 0).length === 0))) ? 0.6 : 1,
+                opacity: (!isSogniReady || (!lastPhotoData.blob && photos.filter(p => !p.hidden && !p.error && p.images && p.images.length > 0).length === 0)) ? 0.6 : 1,
               }}
-              title={isGenerating ? 'Cancel current generation and start new batch' : 'Adjust and generate next batch'}
+              title="Adjust and generate next batch"
             >
               NEW BATCH
             </button>
@@ -15000,6 +15260,19 @@ const PhotoGallery = ({
         onDismiss={() => {
           setShowTransitionVideoNotification(false);
         }}
+      />
+
+      {/* Cancel Confirmation Popup */}
+      <CancelConfirmationPopup
+        isOpen={showCancelConfirmation}
+        onClose={handleCancelConfirmationClose}
+        onConfirm={handleCancelConfirmationConfirm}
+        projectType={pendingCancel?.projectType || 'image'}
+        progress={pendingCancel?.progress || 0}
+        itemsCompleted={pendingCancel?.itemsCompleted || 0}
+        totalItems={pendingCancel?.totalItems || 1}
+        isRateLimited={cancelRateLimited}
+        cooldownSeconds={cancelCooldownSeconds}
       />
 
       {/* Loading overlay for stitched video generation */}
