@@ -347,8 +347,11 @@ async function concatenateMP4s_Base(buffers, options = {}) {
               }
               
               // Skip encoder priming samples at the start
+              // media_time is in audio track's media timescale units
               if (mediaTime > 0) {
-                samplesToSkip = Math.floor(mediaTime / audioSampleDelta);
+                // Convert media_time from timescale units to sample count
+                samplesToSkip = Math.round(mediaTime / audioSampleDelta);
+                console.log(`[CO] File ${fileIdx + 1} media_time=${mediaTime} (audioTimescale=${audioTimescale}, sampleDelta=${audioSampleDelta}) -> skip ${samplesToSkip} samples`);
               }
               
               // Calculate max samples to include based on segment duration
@@ -357,9 +360,8 @@ async function concatenateMP4s_Base(buffers, options = {}) {
               if (segmentDuration > 0) {
                 const segmentDurationInAudioTimescale = (segmentDuration * audioTimescale) / fileMovieTimescale;
                 maxSamplesToInclude = Math.ceil(segmentDurationInAudioTimescale / audioSampleDelta);
+                console.log(`[CO] File ${fileIdx + 1} segment_duration=${segmentDuration} (movieTimescale=${fileMovieTimescale}) -> max ${maxSamplesToInclude} samples`);
               }
-              
-              console.log(`[CO] File ${fileIdx + 1} edit list: media_time=${mediaTime} (skip ${samplesToSkip}), segment_duration=${segmentDuration} (max ${maxSamplesToInclude} samples)`);
             }
           }
         }
@@ -1272,19 +1274,21 @@ function extractAudioTrackWithSamples(buffer) {
         }
         
         // Skip encoder priming samples at the start
+        // media_time is in audio track's media timescale units
         if (mediaTime > 0) {
-          samplesToSkip = Math.floor(mediaTime / sampleDelta);
+          // Convert media_time from timescale units to sample count
+          samplesToSkip = Math.round(mediaTime / sampleDelta);
+          console.log(`[Audio Extract] media_time=${mediaTime} (timescale=${timescale}, sampleDelta=${sampleDelta}) -> skip ${samplesToSkip} samples`);
         }
         
         // Calculate max samples to include based on segment duration
-        // Use Math.floor + 0.5 to round to nearest sample
+        // segment_duration is in movie timescale, convert to audio samples
         // Use Math.ceil to ensure we include all audio - better to have slight overlap than gaps
         if (segmentDuration > 0) {
           const segmentDurationInTimescale = (segmentDuration * timescale) / movieTimescale;
           maxSamplesToInclude = Math.ceil(segmentDurationInTimescale / sampleDelta);
+          console.log(`[Audio Extract] segment_duration=${segmentDuration} (movieTimescale=${movieTimescale}) -> max ${maxSamplesToInclude} samples`);
         }
-
-        console.log(`[Audio Extract] Edit list: media_time=${mediaTime} (skip ${samplesToSkip}), segment_duration=${segmentDuration} (max ${maxSamplesToInclude} samples)`);
       }
     }
   }
