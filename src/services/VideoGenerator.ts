@@ -25,6 +25,12 @@ import {
   ANIMATE_MOVE_MODELS,
   ANIMATE_REPLACE_MODELS
 } from '../constants/videoSettings';
+import {
+  getCancellationState,
+  recordCancelAttempt,
+  notifyCancelStateChange,
+  estimateRefund
+} from './cancellationService';
 
 // Workflow types for different video generation modes
 export type VideoWorkflowType = 'i2v' | 's2v' | 'animate-move' | 'animate-replace';
@@ -81,6 +87,12 @@ interface GenerateVideoOptions {
   onError?: (error: Error) => void;
   onCancel?: () => void;
   onOutOfCredits?: () => void;
+
+  // Regeneration metadata - URLs to reference files for later regeneration
+  referenceAudioUrl?: string; // URL to audio file (for S2V regeneration)
+  referenceVideoUrl?: string; // URL to video file (for animate-move/replace regeneration)
+  isMontageSegment?: boolean; // Whether this is part of a montage batch
+  segmentIndex?: number; // Index within the montage batch (0-based)
 }
 
 interface ActiveVideoProject {
@@ -171,7 +183,12 @@ export async function generateVideo(options: GenerateVideoOptions): Promise<void
     modelVariant, // Model variant for new workflows (speed/quality)
     onComplete,
     onError,
-    onOutOfCredits
+    onOutOfCredits,
+    // Regeneration metadata
+    referenceAudioUrl,
+    referenceVideoUrl,
+    isMontageSegment,
+    segmentIndex
   } = options;
 
   if (typeof photoIndex !== 'number' || photoIndex < 0 || !photo) {
@@ -962,6 +979,25 @@ export async function generateVideo(options: GenerateVideoOptions): Promise<void
       setPhotos(prev => {
         const updated = [...prev];
         if (!updated[photoIndex]) return prev;
+
+        // Build regeneration params object for workflows that need it
+        const regenerateParams: Photo['videoRegenerateParams'] = {};
+        if (workflowType === 's2v') {
+          regenerateParams.referenceAudioUrl = referenceAudioUrl;
+          regenerateParams.audioStart = audioStart;
+          regenerateParams.audioDuration = audioDuration;
+        } else if (workflowType === 'animate-move' || workflowType === 'animate-replace') {
+          regenerateParams.referenceVideoUrl = referenceVideoUrl;
+          regenerateParams.videoStart = videoStart;
+          if (workflowType === 'animate-replace') {
+            regenerateParams.sam2Coordinates = sam2Coordinates;
+          }
+        }
+        if (isMontageSegment) {
+          regenerateParams.isMontageSegment = true;
+          regenerateParams.segmentIndex = segmentIndex;
+        }
+
         updated[photoIndex] = {
           ...updated[photoIndex],
           generatingVideo: false,
@@ -973,8 +1009,12 @@ export async function generateVideo(options: GenerateVideoOptions): Promise<void
           videoFramerate: fps,
           videoDuration: duration,
           videoMotionPrompt: positivePrompt || '', // Store the motion prompt used
+          videoNegativePrompt: negativePrompt || '', // Store the negative prompt used
           videoMotionEmoji: motionEmoji || '', // Store the emoji used for video generation
-          videoWorkflowType: workflowType || 'default' // Store workflow type (s2v, animate-move, etc.)
+          videoWorkflowType: workflowType || 'default', // Store workflow type (s2v, animate-move, etc.)
+          videoModelVariant: modelVariant, // Store model variant for regeneration
+          // Store regeneration params for re-running failed/bad videos
+          videoRegenerateParams: Object.keys(regenerateParams).length > 0 ? regenerateParams : undefined
         };
         return updated;
       });
@@ -1081,25 +1121,85 @@ export async function generateVideo(options: GenerateVideoOptions): Promise<void
 }
 
 /**
- * Cancel video generation
+ * Result of video cancellation attempt
+ */
+export interface VideoCancelResult {
+  success: boolean;
+  didCancel: boolean;
+  projectId: string;
+  rateLimited?: boolean;
+  cooldownRemaining?: number;
+  errorMessage?: string;
+  refundEstimate?: {
+    estimatedRefundPercent: number;
+    message: string;
+  };
+}
+
+/**
+ * Cancel video generation with rate limiting
  */
 export async function cancelVideoGeneration(
   projectId: string,
   _sogniClient: SogniClient,
   setPhotos: (updater: (prev: Photo[]) => Photo[]) => void,
-  onCancel?: () => void
-): Promise<void> {
+  onCancel?: () => void,
+  onRateLimited?: (cooldownSeconds: number) => void
+): Promise<VideoCancelResult> {
   const activeProject = activeVideoProjects.get(projectId);
-  if (!activeProject) return;
+
+  if (!activeProject) {
+    return {
+      success: false,
+      didCancel: false,
+      projectId,
+      errorMessage: 'Project not found'
+    };
+  }
+
+  // Check rate limit before attempting cancel
+  const cancelState = getCancellationState();
+  if (!cancelState.canCancel) {
+    console.log(`Rate limited: cannot cancel video for ${cancelState.cooldownRemaining} more seconds`);
+    onRateLimited?.(cancelState.cooldownRemaining);
+    return {
+      success: false,
+      didCancel: false,
+      projectId,
+      rateLimited: true,
+      cooldownRemaining: cancelState.cooldownRemaining,
+      errorMessage: `Please wait ${cancelState.cooldownRemaining} seconds before cancelling again`
+    };
+  }
 
   try {
+    // Calculate refund estimate based on current progress
+    const photos = await new Promise<Photo[]>((resolve) => {
+      setPhotos(prev => {
+        resolve(prev);
+        return prev;
+      });
+    });
+
+    const photo = photos[activeProject.photoIndex];
+    const progress = photo?.videoProgress || 0;
+    const refund = estimateRefund(progress);
+
+    // Cleanup timers and handlers first
     if (activeProject.cleanup) {
       activeProject.cleanup();
     }
+
+    // Call SDK cancel if available
     if (activeProject.project?.cancel) {
       await activeProject.project.cancel();
     }
 
+    // Record the cancel attempt for rate limiting
+    recordCancelAttempt();
+    notifyCancelStateChange();
+
+    // Update photo state
     setPhotos(prev => {
       const updated = [...prev];
       const idx = activeProject.photoIndex;
@@ -1109,15 +1209,49 @@ export async function cancelVideoGeneration(
         generatingVideo: false,
         videoETA: undefined,
         videoProjectId: undefined,
-        videoError: undefined
+        videoError: undefined, // Clear error - user cancelled intentionally
+        videoStatus: undefined
       };
       return updated;
     });
 
-    onCancel?.();
-  } catch {
+    // Remove from active projects
     activeVideoProjects.delete(projectId);
+
+    onCancel?.();
+
+    return {
+      success: true,
+      didCancel: true,
+      projectId,
+      refundEstimate: {
+        estimatedRefundPercent: refund.estimatedRefundPercent,
+        message: refund.message
+      }
+    };
+  } catch (error) {
+    console.error(`Error cancelling video ${projectId}:`, error);
+    activeVideoProjects.delete(projectId);
+
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    return {
+      success: false,
+      didCancel: false,
+      projectId,
+      errorMessage: errorMsg
+    };
   }
+}
+
+/**
+ * Check if video cancellation is rate limited
+ */
+export function canCancelVideo(): { canCancel: boolean; cooldownRemaining: number } {
+  const state = getCancellationState();
+  return {
+    canCancel: state.canCancel,
+    cooldownRemaining: state.cooldownRemaining
+  };
 }
 
 export function isGeneratingVideo(photo: Photo): boolean {
@@ -1192,6 +1326,7 @@ export { formatVideoDuration };
 export default {
   generateVideo,
   cancelVideoGeneration,
+  canCancelVideo,
   isGeneratingVideo,
   getActiveVideoProjectId,
   downloadVideo,

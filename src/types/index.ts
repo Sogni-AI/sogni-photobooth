@@ -47,8 +47,27 @@ export interface Photo {
   videoFramerate?: 16 | 32;
   videoDuration?: number; // Duration in seconds (1-8 in 0.5 increments)
   videoMotionPrompt?: string; // The motion prompt used for video generation
+  videoNegativePrompt?: string; // The negative prompt used for video generation
   videoMotionEmoji?: string; // The emoji used for video generation (e.g., '🔥', '😂')
   videoWorkflowType?: string; // The workflow type used (e.g., 's2v', 'animate-move', 'animate-replace', 'default')
+  videoModelVariant?: 'speed' | 'quality'; // Model variant used for generation
+
+  // Regeneration parameters - stored to allow re-running failed/bad videos
+  videoRegenerateParams?: {
+    // S2V specific
+    referenceAudioUrl?: string; // URL to reference audio file
+    audioStart?: number; // Audio start offset in seconds
+    audioDuration?: number; // Audio duration in seconds
+
+    // Animate Move/Replace specific
+    referenceVideoUrl?: string; // URL to reference video file
+    videoStart?: number; // Video start offset in seconds
+    sam2Coordinates?: string; // JSON string of [{x, y}] for animate-replace
+
+    // Montage mode info
+    isMontageSegment?: boolean; // Whether this is part of a montage batch
+    segmentIndex?: number; // Index within the montage batch (0-based)
+  };
 }
 
 export interface ProjectState {

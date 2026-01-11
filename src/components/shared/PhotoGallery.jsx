@@ -3258,6 +3258,8 @@ const PhotoGallery = ({
         referenceVideo: videoBuffer,
         videoStart: videoStartOffset, // Pass video trim start offset
         modelVariant, // Pass model variant from popup
+        // Regeneration metadata
+        referenceVideoUrl: videoUrl,
         onComplete: (resultVideoUrl) => {
           playSonicLogo(settings.soundEnabled);
           showToast({ title: '🎬 Animate Move Complete!', message: 'Your video is ready!', type: 'success' });
@@ -3353,6 +3355,10 @@ const PhotoGallery = ({
             referenceVideo: videoBuffer,
             videoStart: imageStartOffset, // Per-image start offset in split mode
             modelVariant, // Pass model variant from popup
+            // Regeneration metadata
+            referenceVideoUrl: videoUrl,
+            isMontageSegment: splitMode,
+            segmentIndex: splitMode ? batchIndex : undefined,
             onComplete: () => {
               // Clear retry count on success
               videoRetryAttempts.current.delete(photo.id);
@@ -3465,6 +3471,8 @@ const PhotoGallery = ({
         sam2Coordinates,
         videoStart: videoStartOffset, // Pass video trim start offset
         modelVariant, // Pass model variant from popup
+        // Regeneration metadata
+        referenceVideoUrl: videoUrl,
         onComplete: () => {
           playSonicLogo(settings.soundEnabled);
           showToast({ title: '🔄 Animate Replace Complete!', message: 'Your video is ready!', type: 'success' });
@@ -3560,6 +3568,10 @@ const PhotoGallery = ({
             sam2Coordinates,
             videoStart: imageStartOffset, // Per-image start offset in split mode
             modelVariant, // Pass model variant from popup
+            // Regeneration metadata
+            referenceVideoUrl: videoUrl,
+            isMontageSegment: splitMode,
+            segmentIndex: splitMode ? batchIndex : undefined,
             onComplete: () => {
               // Clear retry count on success
               videoRetryAttempts.current.delete(photo.id);
@@ -3672,6 +3684,8 @@ const PhotoGallery = ({
         audioStart: audioStartOffset || 0,
         audioDuration: duration,
         modelVariant, // Pass model variant from popup
+        // Regeneration metadata
+        referenceAudioUrl: audioUrl,
         onComplete: () => {
           playSonicLogo(settings.soundEnabled);
           showToast({ title: '🎤 Sound to Video Complete!', message: 'Your video is ready!', type: 'success' });
@@ -3767,6 +3781,10 @@ const PhotoGallery = ({
             audioStart: imageAudioStartOffset || 0,
             audioDuration: imageDuration,
             modelVariant, // Pass model variant from popup
+            // Regeneration metadata
+            referenceAudioUrl: audioUrl,
+            isMontageSegment: splitMode,
+            segmentIndex: splitMode ? batchIndex : undefined,
             onComplete: () => {
               // Clear retry count on success
               videoRetryAttempts.current.delete(photo.id);
@@ -3817,6 +3835,163 @@ const PhotoGallery = ({
       img.src = imageUrl;
     });
   }, [photos, sogniClient, setPhotos, settings, tokenType, showToast, onOutOfCredits]);
+
+  // Handle video regeneration for a single photo using stored parameters
+  const handleRegenerateVideo = useCallback(async (photo, photoIndex) => {
+    if (!photo || photo.generatingVideo) return;
+
+    const workflowType = photo.videoWorkflowType;
+    const regenerateParams = photo.videoRegenerateParams;
+
+    // Check if this video can be regenerated
+    if (!workflowType || workflowType === 'default' || workflowType === 'i2v') {
+      // For basic I2V videos, just show a message - they don't have stored params
+      showToast({
+        title: 'Use Video Menu',
+        message: 'To regenerate this video, use the Video button to create a new one.',
+        type: 'info',
+        timeout: 4000
+      });
+      return;
+    }
+
+    // For S2V, Animate Move, Animate Replace - check if we have regeneration params
+    if (!regenerateParams) {
+      showToast({
+        title: 'Cannot Regenerate',
+        message: 'Regeneration parameters not available. Please create a new video.',
+        type: 'warning',
+        timeout: 4000
+      });
+      return;
+    }
+
+    const imageUrl = photo.enhancedImageUrl || photo.images?.[0] || photo.originalDataUrl;
+    if (!imageUrl) {
+      showToast({ title: 'Regenerate Failed', message: 'No image available.', type: 'error' });
+      return;
+    }
+
+    warmUpAudio();
+
+    // Show toast
+    const workflowNames = {
+      's2v': 'Sound to Video',
+      'animate-move': 'Animate Move',
+      'animate-replace': 'Animate Replace'
+    };
+    const segmentInfo = regenerateParams.isMontageSegment
+      ? ` (Segment ${(regenerateParams.segmentIndex || 0) + 1})`
+      : '';
+    
+    showToast({
+      title: '🔄 Regenerating Video',
+      message: `Regenerating ${workflowNames[workflowType] || workflowType}${segmentInfo}...`,
+      type: 'info',
+      timeout: 3000
+    });
+
+    // Load image dimensions
+    const img = new Image();
+    img.onload = async () => {
+      try {
+        // Fetch reference media if needed
+        let referenceBuffer = null;
+        
+        if (workflowType === 's2v' && regenerateParams.referenceAudioUrl) {
+          const response = await fetch(regenerateParams.referenceAudioUrl);
+          const arrayBuffer = await response.arrayBuffer();
+          referenceBuffer = new Uint8Array(arrayBuffer);
+        } else if ((workflowType === 'animate-move' || workflowType === 'animate-replace') && regenerateParams.referenceVideoUrl) {
+          const response = await fetch(regenerateParams.referenceVideoUrl);
+          const arrayBuffer = await response.arrayBuffer();
+          referenceBuffer = new Uint8Array(arrayBuffer);
+        }
+
+        // Build generation options based on workflow type
+        const baseOptions = {
+          photo,
+          photoIndex,
+          subIndex: 0,
+          imageWidth: img.naturalWidth,
+          imageHeight: img.naturalHeight,
+          sogniClient,
+          setPhotos,
+          resolution: photo.videoResolution || settings.videoResolution || '480p',
+          quality: settings.videoQuality || 'fast',
+          fps: photo.videoFramerate || settings.videoFramerate || 16,
+          duration: photo.videoDuration || settings.videoDuration || 5,
+          positivePrompt: photo.videoMotionPrompt || '',
+          negativePrompt: photo.videoNegativePrompt || '',
+          tokenType,
+          workflowType,
+          modelVariant: photo.videoModelVariant,
+          // Regeneration metadata (preserve for next regeneration)
+          isMontageSegment: regenerateParams.isMontageSegment,
+          segmentIndex: regenerateParams.segmentIndex,
+          onComplete: () => {
+            playSonicLogo(settings.soundEnabled);
+            showToast({
+              title: '✅ Video Regenerated',
+              message: `${workflowNames[workflowType] || workflowType}${segmentInfo} complete!`,
+              type: 'success',
+              timeout: 3000
+            });
+            setPlayingGeneratedVideoIds(prev => new Set([...prev, photo.id]));
+          },
+          onError: (error) => {
+            showToast({
+              title: 'Regeneration Failed',
+              message: error.message || 'Video regeneration failed',
+              type: 'error',
+              timeout: 5000
+            });
+          },
+          onOutOfCredits: () => { if (onOutOfCredits) onOutOfCredits(); }
+        };
+
+        // Add workflow-specific options
+        if (workflowType === 's2v') {
+          generateVideo({
+            ...baseOptions,
+            referenceAudio: referenceBuffer,
+            audioStart: regenerateParams.audioStart || 0,
+            audioDuration: regenerateParams.audioDuration || photo.videoDuration || 5,
+            referenceAudioUrl: regenerateParams.referenceAudioUrl
+          });
+        } else if (workflowType === 'animate-move') {
+          generateVideo({
+            ...baseOptions,
+            referenceVideo: referenceBuffer,
+            videoStart: regenerateParams.videoStart || 0,
+            referenceVideoUrl: regenerateParams.referenceVideoUrl
+          });
+        } else if (workflowType === 'animate-replace') {
+          generateVideo({
+            ...baseOptions,
+            referenceVideo: referenceBuffer,
+            videoStart: regenerateParams.videoStart || 0,
+            sam2Coordinates: regenerateParams.sam2Coordinates,
+            referenceVideoUrl: regenerateParams.referenceVideoUrl
+          });
+        }
+      } catch (error) {
+        console.error('[Regenerate] Error:', error);
+        showToast({
+          title: 'Regeneration Failed',
+          message: 'Failed to load reference media. Please try creating a new video.',
+          type: 'error',
+          timeout: 5000
+        });
+      }
+    };
+    
+    img.onerror = () => {
+      showToast({ title: 'Regenerate Failed', message: 'Failed to load image.', type: 'error' });
+    };
+    
+    img.src = imageUrl;
+  }, [sogniClient, setPhotos, settings, tokenType, showToast, onOutOfCredits]);
 
   // Handle batch video generation for all images
   const handleBatchGenerateVideo = useCallback(async (customMotionPrompt = null, customNegativePrompt = null, motionEmoji = null) => {
@@ -12045,6 +12220,51 @@ const PhotoGallery = ({
                       ) : (
                         <path d="M8 5v14l11-7z"/>
                       )}
+                    </svg>
+                  </button>
+                )}
+
+                {/* Regenerate Video Button - Shows for S2V, Animate Move, Animate Replace videos with regeneration params */}
+                {photo.videoUrl && !photo.generatingVideo && 
+                 ['s2v', 'animate-move', 'animate-replace'].includes(photo.videoWorkflowType) && 
+                 photo.videoRegenerateParams && (
+                  <button
+                    className="photo-regenerate-btn"
+                    onMouseDown={(e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
+                      const photoIndex = photos.findIndex(p => p.id === photo.id);
+                      if (photoIndex !== -1) {
+                        handleRegenerateVideo(photo, photoIndex);
+                      }
+                    }}
+                    style={{
+                      position: 'absolute',
+                      bottom: '8px',
+                      right: '48px', // Position to the left of play button
+                      width: '32px',
+                      height: '32px',
+                      borderRadius: '50%',
+                      background: 'rgba(0, 0, 0, 0.6)',
+                      border: 'none',
+                      padding: 0,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      zIndex: 999,
+                      transition: 'all 0.2s ease',
+                      color: 'white',
+                      pointerEvents: 'auto'
+                    }}
+                    title={`Regenerate ${photo.videoWorkflowType === 's2v' ? 'S2V' : 
+                                        photo.videoWorkflowType === 'animate-move' ? 'Animate Move' : 
+                                        'Animate Replace'} video${photo.videoRegenerateParams?.isMontageSegment ? 
+                                        ` (Segment ${(photo.videoRegenerateParams.segmentIndex || 0) + 1})` : ''}`}
+                  >
+                    {/* Refresh/Regenerate icon */}
+                    <svg fill="currentColor" width="16" height="16" viewBox="0 0 24 24" style={{ pointerEvents: 'none' }}>
+                      <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
                     </svg>
                   </button>
                 )}
