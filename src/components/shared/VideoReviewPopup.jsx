@@ -86,6 +86,8 @@ const VideoReviewPopup = ({
   onStitchAll,
   onRegenerateItem,
   onCancelGeneration,
+  onCancelItem, // Cancel a single item (segment/transition)
+  onPlayItem, // Play a finished item in fullscreen
   items = [],
   workflowType = 's2v',
   regeneratingIndex = null,
@@ -100,6 +102,7 @@ const VideoReviewPopup = ({
   const [selectedIndex, setSelectedIndex] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [showCancelConfirmation, setShowCancelConfirmation] = useState(false);
+  const [isMuted, setIsMuted] = useState(true); // Start muted for mobile autoplay
   const previewVideoRef = useRef(null);
   
   // Cache last known ETAs to prevent flickering between ETA and "Starting..."
@@ -121,6 +124,7 @@ const VideoReviewPopup = ({
       setSelectedIndex(null);
       setIsPlaying(false);
       setShowCancelConfirmation(false);
+      setIsMuted(true); // Reset to muted when opening
     }
   }, [visible]);
 
@@ -136,14 +140,28 @@ const VideoReviewPopup = ({
     // Don't allow clicking on generating or regenerating items
     if (items[index]?.status === 'regenerating' || items[index]?.status === 'generating') return;
     if (!items[index]?.url) return; // Don't allow clicking if no video URL
-    setSelectedIndex(index);
-  }, [items]);
+    
+    // If onPlayItem is provided, use fullscreen playback instead of inline preview
+    if (onPlayItem) {
+      onPlayItem(index);
+    } else {
+      setSelectedIndex(index);
+    }
+  }, [items, onPlayItem]);
 
   const handleRegenerateClick = useCallback((index, e) => {
     e.stopPropagation();
     if (items[index]?.status === 'regenerating') return;
     onRegenerateItem?.(index);
   }, [items, onRegenerateItem]);
+
+  // Handle per-item cancel (for stuck/slow items)
+  const handleCancelItemClick = useCallback((index, e) => {
+    e.stopPropagation();
+    const item = items[index];
+    if (item?.status !== 'generating' && item?.status !== 'regenerating') return;
+    onCancelItem?.(index);
+  }, [items, onCancelItem]);
 
   const handleClosePreview = useCallback(() => {
     setSelectedIndex(null);
@@ -179,9 +197,14 @@ const VideoReviewPopup = ({
   const allItemsReady = items?.every(t => t.status === 'ready') ?? false;
   const anyRegenerating = items?.some(t => t.status === 'regenerating') ?? false;
   const anyGenerating = items?.some(t => t.status === 'generating') ?? false;
+  const anyFailed = items?.some(t => t.status === 'failed') ?? false;
   const isInitialGeneration = anyGenerating && !anyRegenerating;
   const readyCount = items?.filter(t => t.status === 'ready').length || 0;
   const generatingCount = items?.filter(t => t.status === 'generating').length || 0;
+  const failedCount = items?.filter(t => t.status === 'failed').length || 0;
+  // Allow stitching if all items are done processing (ready or failed) and at least one is ready
+  const allItemsDone = items?.every(t => t.status === 'ready' || t.status === 'failed') ?? false;
+  const canStitch = allItemsDone && readyCount > 0 && !anyRegenerating && !anyGenerating;
 
   // Get item label (e.g., "Transition 1" or "Segment 1")
   const getItemLabel = (index) => {
@@ -567,21 +590,68 @@ const VideoReviewPopup = ({
                     </div>
                   </div>
                 ) : (
-                  <video
-                    ref={previewVideoRef}
-                    src={items[selectedIndex]?.url}
-                    style={{ 
-                      maxWidth: '100%',
-                      maxHeight: '100%',
-                      width: 'auto',
-                      height: 'auto',
-                      objectFit: 'contain'
-                    }}
-                    controls
-                    loop
-                    autoPlay
-                    muted
-                  />
+                  <div style={{ position: 'relative', width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <video
+                      ref={previewVideoRef}
+                      src={items[selectedIndex]?.url}
+                      style={{ 
+                        maxWidth: '100%',
+                        maxHeight: '100%',
+                        width: 'auto',
+                        height: 'auto',
+                        objectFit: 'contain'
+                      }}
+                      controls
+                      loop
+                      autoPlay
+                      muted={isMuted}
+                      playsInline
+                    />
+                    {/* Unmute button for mobile */}
+                    {isMuted && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setIsMuted(false);
+                          if (previewVideoRef.current) {
+                            previewVideoRef.current.muted = false;
+                          }
+                        }}
+                        style={{
+                          position: 'absolute',
+                          bottom: '70px',
+                          right: '12px',
+                          width: '40px',
+                          height: '40px',
+                          borderRadius: '50%',
+                          background: 'rgba(0, 0, 0, 0.7)',
+                          border: '2px solid #fff',
+                          color: '#fff',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '16px',
+                          zIndex: 10,
+                          boxShadow: '0 2px 10px rgba(0,0,0,0.3)',
+                          transition: 'all 0.2s ease'
+                        }}
+                        onMouseOver={(e) => {
+                          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.9)';
+                          e.currentTarget.style.color = '#000';
+                          e.currentTarget.style.transform = 'scale(1.1)';
+                        }}
+                        onMouseOut={(e) => {
+                          e.currentTarget.style.background = 'rgba(0, 0, 0, 0.7)';
+                          e.currentTarget.style.color = '#fff';
+                          e.currentTarget.style.transform = 'scale(1)';
+                        }}
+                        title="Unmute"
+                      >
+                        🔊
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
 
@@ -709,6 +779,67 @@ const VideoReviewPopup = ({
                         ✓
                       </div>
                     )}
+                    {/* Failed X badge */}
+                    {item.status === 'failed' && (
+                      <div style={{
+                        position: 'absolute',
+                        top: '10px',
+                        right: '10px',
+                        background: '#ff3366',
+                        border: '2px solid #1a1a1a',
+                        borderRadius: '50%',
+                        width: '36px',
+                        height: '36px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '18px',
+                        zIndex: 2,
+                        boxShadow: '2px 2px 0 #1a1a1a',
+                        animation: 'videoReviewPop 0.3s ease-out',
+                        color: '#fff',
+                        fontWeight: 'bold'
+                      }}>
+                        ✕
+                      </div>
+                    )}
+                    {/* Cancel button for generating/regenerating items */}
+                    {isInProgress && onCancelItem && (
+                      <button
+                        onClick={(e) => handleCancelItemClick(index, e)}
+                        style={{
+                          position: 'absolute',
+                          top: '10px',
+                          left: '10px',
+                          background: '#ff3366',
+                          border: '2px solid #1a1a1a',
+                          borderRadius: '50%',
+                          width: '32px',
+                          height: '32px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '14px',
+                          zIndex: 3,
+                          boxShadow: '2px 2px 0 #1a1a1a',
+                          color: '#fff',
+                          fontWeight: 'bold',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease'
+                        }}
+                        onMouseOver={(e) => {
+                          e.currentTarget.style.transform = 'scale(1.1)';
+                          e.currentTarget.style.background = '#ff1744';
+                        }}
+                        onMouseOut={(e) => {
+                          e.currentTarget.style.transform = 'scale(1)';
+                          e.currentTarget.style.background = '#ff3366';
+                        }}
+                        title={`Cancel this ${config.itemLabel.toLowerCase()}`}
+                      >
+                        ✕
+                      </button>
+                    )}
                     {/* Video Thumbnail */}
                     <div style={{
                       minHeight: '120px',
@@ -780,56 +911,18 @@ const VideoReviewPopup = ({
                               </div>
                             </>
                           ) : item.thumbnail ? (
-                            /* Single thumbnail with overlay */
-                            <>
-                              <img 
-                                src={item.thumbnail}
-                                alt="Source"
-                                style={{
-                                  position: 'absolute',
-                                  inset: 0,
-                                  width: '100%',
-                                  height: '100%',
-                                  objectFit: 'contain',
-                                  opacity: 0.4
-                                }}
-                              />
-                              <div style={{
-                                position: 'relative',
-                                zIndex: 1,
-                                background: '#ffffff',
-                                border: `3px solid ${config.accentColor}`,
-                                borderRadius: '12px',
-                                padding: '10px 14px',
-                                textAlign: 'center',
-                                boxShadow: `3px 3px 0 #1a1a1a`,
-                                minWidth: '110px'
-                              }}>
-                                <div style={{
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  gap: '6px',
-                                  marginBottom: '6px'
-                                }}>
-                                  <span style={{ fontSize: '14px' }}>🎥</span>
-                                  <span style={{
-                                    fontSize: '0.7rem',
-                                    fontWeight: '800',
-                                    color: '#1a1a1a'
-                                  }}>{item.status === 'generating' ? 'creating' : 'regenerating'}</span>
-                                </div>
-                                <div style={{
-                                  width: '24px',
-                                  height: '24px',
-                                  margin: '0 auto',
-                                  border: `3px solid ${config.accentColor}40`,
-                                  borderTopColor: config.accentColor,
-                                  borderRadius: '50%',
-                                  animation: 'videoReviewSpin 1s linear infinite'
-                                }} />
-                              </div>
-                            </>
+                            /* Single thumbnail - show it without dimming */
+                            <img 
+                              src={item.thumbnail}
+                              alt="Source"
+                              style={{
+                                position: 'absolute',
+                                inset: 0,
+                                width: '100%',
+                                height: '100%',
+                                objectFit: 'contain'
+                              }}
+                            />
                           ) : (
                             /* Fallback: Compact generation card when no thumbnails available */
                             <div style={{
@@ -903,8 +996,10 @@ const VideoReviewPopup = ({
                         <video
                           src={item.url}
                           style={{ width: '100%', height: 'auto', display: 'block', objectFit: 'contain' }}
-                          muted
                           loop
+                          muted
+                          playsInline
+                          autoPlay
                           onMouseOver={(e) => e.target.play().catch(() => {})}
                           onMouseOut={(e) => { e.target.pause(); e.target.currentTime = 0; }}
                         />
@@ -1039,7 +1134,33 @@ const VideoReviewPopup = ({
                             ✓
                           </span>
                         )}
+                        {item.status === 'failed' && (
+                          <span style={{
+                            fontSize: '14px',
+                            color: '#ff3366'
+                          }}>
+                            ✕
+                          </span>
+                        )}
                       </div>
+
+                      {/* Error message for failed items */}
+                      {item.status === 'failed' && item.error && (
+                        <div style={{
+                          fontSize: '0.65rem',
+                          color: '#ff3366',
+                          padding: '6px 0 0 0',
+                          borderTop: '2px solid rgba(255, 51, 102, 0.2)',
+                          fontWeight: '600',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap'
+                        }}
+                        title={item.error}
+                        >
+                          ⚠️ {item.error.length > 30 ? item.error.slice(0, 30) + '...' : item.error}
+                        </div>
+                      )}
 
                       {/* Generation metadata */}
                       {isInProgress && (
@@ -1066,7 +1187,23 @@ const VideoReviewPopup = ({
                                 return displayETA > 0 ? (
                                   <div style={{ display: 'flex', gap: '5px', alignItems: 'center' }}>
                                     <span style={{ fontSize: '0.875rem' }}>⏱️</span>
-                                    <span style={{ fontWeight: '700', color: config.accentColor, fontFamily: '"Permanent Marker", cursive', fontSize: '0.75rem' }}>{formatDuration(displayETA)}</span>
+                                    <span style={{ 
+                                      fontWeight: '700', 
+                                      color: config.accentColor, 
+                                      fontFamily: '"Permanent Marker", cursive', 
+                                      fontSize: '0.75rem',
+                                      // Add blink animation when ETA is at 1 second or less
+                                      ...(displayETA <= 1 ? {
+                                        animationName: 'blink',
+                                        animationDuration: '2s',
+                                        animationTimingFunction: 'ease-in-out',
+                                        animationIterationCount: 'infinite',
+                                        WebkitAnimationName: 'blink',
+                                        WebkitAnimationDuration: '2s',
+                                        WebkitAnimationTimingFunction: 'ease-in-out',
+                                        WebkitAnimationIterationCount: 'infinite'
+                                      } : {})
+                                    }}>{formatDuration(displayETA)}</span>
                                   </div>
                                 ) : regenerationProgress.status?.startsWith('Queue') ? (
                                   <div style={{ color: config.accentColor }}>⏳ queued...</div>
@@ -1123,7 +1260,23 @@ const VideoReviewPopup = ({
                                 return displayETA > 0 ? (
                                   <div style={{ display: 'flex', gap: '5px', alignItems: 'center' }}>
                                     <span style={{ fontSize: '0.875rem' }}>⏱️</span>
-                                    <span style={{ fontWeight: '700', color: config.accentColor, fontFamily: '"Permanent Marker", cursive', fontSize: '0.75rem' }}>{formatDuration(displayETA)}</span>
+                                    <span style={{ 
+                                      fontWeight: '700', 
+                                      color: config.accentColor, 
+                                      fontFamily: '"Permanent Marker", cursive', 
+                                      fontSize: '0.75rem',
+                                      // Add blink animation when ETA is at 1 second or less
+                                      ...(displayETA <= 1 ? {
+                                        animationName: 'blink',
+                                        animationDuration: '2s',
+                                        animationTimingFunction: 'ease-in-out',
+                                        animationIterationCount: 'infinite',
+                                        WebkitAnimationName: 'blink',
+                                        WebkitAnimationDuration: '2s',
+                                        WebkitAnimationTimingFunction: 'ease-in-out',
+                                        WebkitAnimationIterationCount: 'infinite'
+                                      } : {})
+                                    }}>{formatDuration(displayETA)}</span>
                                   </div>
                                 ) : itemStatuses[index]?.startsWith('Queue') ? (
                                   <div style={{ color: config.accentColor }}>⏳ queued...</div>
@@ -1133,7 +1286,7 @@ const VideoReviewPopup = ({
                               })()}
                               
                               {/* Worker name */}
-                              {itemWorkers[index] && (
+                              {item.status === 'generating' && itemWorkers[index] && (
                                 <div style={{ 
                                   display: 'flex', 
                                   gap: '5px', 
@@ -1148,7 +1301,7 @@ const VideoReviewPopup = ({
                               )}
                               
                               {/* Progress percentage */}
-                              {itemProgress[index] > 0 && (
+                              {item.status === 'generating' && itemProgress[index] > 0 && (
                                 <div style={{ display: 'flex', gap: '5px', alignItems: 'center' }}>
                                   <span style={{ fontSize: '0.75rem' }}>📊</span>
                                   <span>{Math.round(itemProgress[index])}%</span>
@@ -1156,7 +1309,7 @@ const VideoReviewPopup = ({
                               )}
                               
                               {/* Elapsed time */}
-                              {itemElapsed[index] > 0 && (
+                              {item.status === 'generating' && itemElapsed[index] > 0 && (
                                 <div style={{ display: 'flex', gap: '5px', alignItems: 'center' }}>
                                   <span style={{ fontSize: '0.75rem' }}>⏲️</span>
                                   <span>{formatDuration(itemElapsed[index])}</span>
@@ -1164,7 +1317,7 @@ const VideoReviewPopup = ({
                               )}
                               
                               {/* Status message */}
-                              {itemStatuses[index] && !itemStatuses[index].startsWith('Queue') && (
+                              {item.status === 'generating' && itemStatuses[index] && !itemStatuses[index].startsWith('Queue') && (
                                 <div style={{ 
                                   color: '#999',
                                   fontStyle: 'italic',
@@ -1212,6 +1365,10 @@ const VideoReviewPopup = ({
               <span style={{ color: config.accentColor }}>⏳ Regenerating...</span>
             ) : allItemsReady ? (
               <span style={{ color: '#4ade80' }}>✓ All {items?.length} ready</span>
+            ) : allItemsDone && readyCount > 0 ? (
+              <span style={{ color: '#4ade80' }}>✓ {readyCount} ready, {failedCount} failed - can stitch</span>
+            ) : anyFailed ? (
+              <span style={{ color: '#ff3366' }}>⚠️ {failedCount} failed - click 🔄 redo to retry</span>
             ) : (
               <span style={{ color: '#f59e0b' }}>⚠️ Needs attention</span>
             )}
@@ -1258,10 +1415,10 @@ const VideoReviewPopup = ({
             
             <button
               onClick={onStitchAll}
-              disabled={!allItemsReady || anyRegenerating || anyGenerating}
+              disabled={!canStitch}
               style={{
                 padding: '16px 36px',
-                background: allItemsReady && !anyRegenerating && !anyGenerating
+                background: canStitch
                   ? '#ff3366'
                   : '#e5e5e5',
                 border: '3px solid #1a1a1a',
@@ -1270,30 +1427,30 @@ const VideoReviewPopup = ({
                 fontSize: '1rem',
                 fontWeight: '800',
                 fontFamily: '"Permanent Marker", cursive',
-                cursor: allItemsReady && !anyRegenerating && !anyGenerating ? 'pointer' : 'not-allowed',
+                cursor: canStitch ? 'pointer' : 'not-allowed',
                 transition: 'all 0.25s cubic-bezier(0.68, -0.55, 0.265, 1.55)',
                 minHeight: '52px',
-                boxShadow: allItemsReady && !anyRegenerating && !anyGenerating
+                boxShadow: canStitch
                   ? `4px 4px 0 #1a1a1a`
                   : 'none',
-                opacity: allItemsReady && !anyRegenerating ? 1 : 0.6,
+                opacity: canStitch ? 1 : 0.6,
                 textTransform: 'lowercase',
                 letterSpacing: '0.02em'
               }}
               onMouseOver={(e) => {
-                if (allItemsReady && !anyRegenerating) {
+                if (canStitch) {
                   e.currentTarget.style.transform = 'translate(-2px, -2px)';
                   e.currentTarget.style.boxShadow = `6px 6px 0 #1a1a1a`;
                 }
               }}
               onMouseOut={(e) => {
-                if (allItemsReady && !anyRegenerating) {
+                if (canStitch) {
                   e.currentTarget.style.transform = 'translate(0, 0)';
                   e.currentTarget.style.boxShadow = `4px 4px 0 #1a1a1a`;
                 }
               }}
               onMouseDown={(e) => {
-                if (allItemsReady && !anyRegenerating) {
+                if (canStitch) {
                   e.currentTarget.style.transform = 'translate(2px, 2px)';
                   e.currentTarget.style.boxShadow = `2px 2px 0 #1a1a1a`;
                 }
@@ -1485,6 +1642,22 @@ const VideoReviewPopup = ({
           }
           100% {
             transform: scale(1);
+          }
+        }
+        @keyframes blink {
+          0%, 100% {
+            opacity: 1;
+          }
+          50% {
+            opacity: 0.2;
+          }
+        }
+        @-webkit-keyframes blink {
+          0%, 100% {
+            opacity: 1;
+          }
+          50% {
+            opacity: 0.2;
           }
         }
         

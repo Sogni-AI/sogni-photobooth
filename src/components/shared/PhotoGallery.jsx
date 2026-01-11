@@ -34,7 +34,7 @@ import { useVideoCostEstimation } from '../../hooks/useVideoCostEstimation.ts';
 import { getTokenLabel } from '../../services/walletService';
 import { useToastContext } from '../../context/ToastContext';
 import { generateGalleryFilename, getPortraitFolderWithFallback } from '../../utils/galleryLoader';
-import { generateVideo, cancelVideoGeneration, cancelAllActiveVideoProjects, downloadVideo } from '../../services/VideoGenerator.ts';
+import { generateVideo, cancelVideoGeneration, cancelAllActiveVideoProjects, getActiveVideoProjectIds, downloadVideo } from '../../services/VideoGenerator.ts';
 import CancelConfirmationPopup, { useCancelConfirmation } from './CancelConfirmationPopup.tsx';
 import { shouldSkipConfirmation, clearSkipConfirmation } from '../../services/cancellationService.ts';
 import { 
@@ -1371,6 +1371,7 @@ const PhotoGallery = ({
   const [showDownloadTip, setShowDownloadTip] = useState(false);
   const [hasShownInfiniteLoopTipThisBatch, setHasShownInfiniteLoopTipThisBatch] = useState(false);
   const [stitchedVideoMuted, setStitchedVideoMuted] = useState(false);
+  const [stitchedVideoReturnToSegmentReview, setStitchedVideoReturnToSegmentReview] = useState(false); // Track if we should return to segment review on close
   const stitchedVideoRef = useRef(null);
 
   // State for caching stitched video blob (works with any workflow, not just transition mode)
@@ -3872,7 +3873,7 @@ const PhotoGallery = ({
               console.error('[BATCH ANIMATE MOVE] Error:', error);
               
               // Update pendingSegments to mark this segment as failed (after retries exhausted)
-              if (splitMode && retryCount >= 1) {
+              if (splitMode && retryCount >= 2) {
                 setPendingSegments(prev => {
                   const updated = [...prev];
                   const segmentIndex = updated.findIndex(s => s.photoId === photo.id);
@@ -3883,17 +3884,17 @@ const PhotoGallery = ({
                 });
               }
               
-              // Check if this is a montage mode video and we haven't exhausted retries
-              if (splitMode && retryCount < 1) {
+              // Check if this is a montage mode video and we haven't exhausted retries (2 automatic retries = 3 total attempts)
+              if (splitMode && retryCount < 2) {
                 const nextRetryCount = retryCount + 1;
                 videoRetryAttempts.current.set(photo.id, nextRetryCount);
                 
-                console.log(`[BATCH ANIMATE MOVE] Retrying segment ${batchIndex + 1} (attempt ${nextRetryCount + 1}/2)...`);
+                console.log(`[BATCH ANIMATE MOVE] Retrying segment ${batchIndex + 1} (attempt ${nextRetryCount + 1}/3)...`);
                 
                 // Show retry toast only for montage segments
                 showToast({
                   title: 'Retrying Segment',
-                  message: `Segment ${batchIndex + 1} failed, retrying automatically (${nextRetryCount + 1}/2)...`,
+                  message: `Segment ${batchIndex + 1} failed, retrying automatically (${nextRetryCount + 1}/3)...`,
                   type: 'warning',
                   timeout: 3000
                 });
@@ -3904,10 +3905,10 @@ const PhotoGallery = ({
                 // Exhausted retries or not montage mode
                 videoRetryAttempts.current.delete(photo.id);
                 
-                if (splitMode && retryCount >= 1) {
+                if (splitMode && retryCount >= 2) {
                   showToast({
                     title: 'Segment Failed',
-                    message: `Segment ${batchIndex + 1} failed after 2 attempts. This may affect the full montage.`,
+                    message: `Segment ${batchIndex + 1} failed after 3 attempts. This may affect the full montage.`,
                     type: 'error',
                     timeout: 5000
                   });
@@ -4162,9 +4163,9 @@ const PhotoGallery = ({
             },
             onError: (error) => {
               console.error('[BATCH ANIMATE REPLACE] Error:', error);
-              
+
               // Update pendingSegments to mark this segment as failed (after retries exhausted)
-              if (splitMode && retryCount >= 1) {
+              if (splitMode && retryCount >= 2) {
                 setPendingSegments(prev => {
                   const updated = [...prev];
                   const segmentIndex = updated.findIndex(s => s.photoId === photo.id);
@@ -4174,32 +4175,32 @@ const PhotoGallery = ({
                   return updated;
                 });
               }
-              
-              // Check if this is a montage mode video and we haven't exhausted retries
-              if (splitMode && retryCount < 1) {
+
+              // Check if this is a montage mode video and we haven't exhausted retries (2 automatic retries = 3 total attempts)
+              if (splitMode && retryCount < 2) {
                 const nextRetryCount = retryCount + 1;
                 videoRetryAttempts.current.set(photo.id, nextRetryCount);
-                
-                console.log(`[BATCH ANIMATE REPLACE] Retrying segment ${batchIndex + 1} (attempt ${nextRetryCount + 1}/2)...`);
-                
+
+                console.log(`[BATCH ANIMATE REPLACE] Retrying segment ${batchIndex + 1} (attempt ${nextRetryCount + 1}/3)...`);
+
                 // Show retry toast only for montage segments
                 showToast({
                   title: 'Retrying Segment',
-                  message: `Segment ${batchIndex + 1} failed, retrying automatically (${nextRetryCount + 1}/2)...`,
+                  message: `Segment ${batchIndex + 1} failed, retrying automatically (${nextRetryCount + 1}/3)...`,
                   type: 'warning',
                   timeout: 3000
                 });
-                
+
                 // Retry after a brief delay
                 setTimeout(() => attemptGeneration(nextRetryCount), 1000);
               } else {
                 // Exhausted retries or not montage mode
                 videoRetryAttempts.current.delete(photo.id);
-                
-                if (splitMode && retryCount >= 1) {
+
+                if (splitMode && retryCount >= 2) {
                   showToast({
                     title: 'Segment Failed',
-                    message: `Segment ${batchIndex + 1} failed after 2 attempts. This may affect the full montage.`,
+                    message: `Segment ${batchIndex + 1} failed after 3 attempts. This may affect the full montage.`,
                     type: 'error',
                     timeout: 5000
                   });
@@ -4455,45 +4456,45 @@ const PhotoGallery = ({
             },
             onError: (error) => {
               console.error('[BATCH S2V] Error:', error);
-              
+
               // Update pendingSegments to mark this segment as failed (before retry)
               if (splitMode) {
                 setPendingSegments(prev => {
                   const updated = [...prev];
                   const segmentIndex = updated.findIndex(s => s.photoId === photo.id);
-                  if (segmentIndex !== -1 && retryCount >= 1) {
+                  if (segmentIndex !== -1 && retryCount >= 2) {
                     // Only mark as failed after retries exhausted
                     updated[segmentIndex] = { ...updated[segmentIndex], status: 'failed' };
                   }
                   return updated;
                 });
               }
-              
-              // Check if this is a montage mode video and we haven't exhausted retries
-              if (splitMode && retryCount < 1) {
+
+              // Check if this is a montage mode video and we haven't exhausted retries (2 automatic retries = 3 total attempts)
+              if (splitMode && retryCount < 2) {
                 const nextRetryCount = retryCount + 1;
                 videoRetryAttempts.current.set(photo.id, nextRetryCount);
-                
-                console.log(`[BATCH S2V] Retrying segment ${batchIndex + 1} (attempt ${nextRetryCount + 1}/2)...`);
-                
+
+                console.log(`[BATCH S2V] Retrying segment ${batchIndex + 1} (attempt ${nextRetryCount + 1}/3)...`);
+
                 // Show retry toast only for montage segments
                 showToast({
                   title: 'Retrying Segment',
-                  message: `Segment ${batchIndex + 1} failed, retrying automatically (${nextRetryCount + 1}/2)...`,
+                  message: `Segment ${batchIndex + 1} failed, retrying automatically (${nextRetryCount + 1}/3)...`,
                   type: 'warning',
                   timeout: 3000
                 });
-                
+
                 // Retry after a brief delay
                 setTimeout(() => attemptGeneration(nextRetryCount), 1000);
               } else {
                 // Exhausted retries or not montage mode
                 videoRetryAttempts.current.delete(photo.id);
-                
-                if (splitMode && retryCount >= 1) {
+
+                if (splitMode && retryCount >= 2) {
                   showToast({
                     title: 'Segment Failed',
-                    message: `Segment ${batchIndex + 1} failed after 2 attempts. This may affect the full montage.`,
+                    message: `Segment ${batchIndex + 1} failed after 3 attempts. This may affect the full montage.`,
                     type: 'error',
                     timeout: 5000
                   });
@@ -5662,6 +5663,17 @@ const PhotoGallery = ({
       return;
     }
 
+    // Don't show for Batch Transition, Infinite Loop, or montage mode workflows
+    // (S2V, Animate Move, Animate Replace when done in batch/montage mode)
+    if (segmentReviewData) {
+      const workflowType = segmentReviewData.workflowType;
+      // Skip if: batch-transition, or any montage mode workflow (s2v, animate-move, animate-replace)
+      if (workflowType === 'batch-transition' || 
+          ['s2v', 'animate-move', 'animate-replace'].includes(workflowType)) {
+        return;
+      }
+    }
+
     // Check if we have at least 2 completed videos (ready to stitch)
     const currentPhotosArray = isPromptSelectorMode ? filteredPhotos : photos;
     const completedVideos = currentPhotosArray.filter(
@@ -5686,7 +5698,7 @@ const PhotoGallery = ({
 
       return () => clearTimeout(showTimer);
     }
-  }, [photos, filteredPhotos, isPromptSelectorMode, isTransitionMode, transitionVideoQueue, showDownloadTip, showInfiniteLoopPreview, hasShownInfiniteLoopTipThisBatch]);
+  }, [photos, filteredPhotos, isPromptSelectorMode, isTransitionMode, transitionVideoQueue, showDownloadTip, showInfiniteLoopPreview, hasShownInfiniteLoopTipThisBatch, segmentReviewData]);
 
   // Get readable style display text for photo labels (no hashtags)
   const getStyleDisplayText = useCallback((photo) => {
@@ -6843,6 +6855,60 @@ const PhotoGallery = ({
     }
   }, [setPhotos, regeneratingTransitionIndex, cachedInfiniteLoopUrl]);
 
+  // Handle cancelling a single transition (for stuck/slow jobs)
+  const handleCancelTransitionItem = useCallback(async (transitionIndex) => {
+    const transition = pendingTransitions[transitionIndex];
+    if (!transition) {
+      console.error('[Transition Cancel Item] Transition not found:', transitionIndex);
+      return;
+    }
+
+    console.log(`[Transition Cancel Item] Cancelling transition ${transitionIndex + 1} (status: ${transition.status})`);
+
+    // Transitions don't have a direct photo reference, but they have a projectId if generating
+    // We need to find and cancel the active project for this transition
+    // The projectId format is typically 'infinite-loop-transition-{index}' or similar
+
+    // Try to get the active project ID for this transition
+    const projectIds = getActiveVideoProjectIds('infinite-loop');
+    console.log('[Transition Cancel Item] Active infinite loop projects:', projectIds);
+
+    // Cancel the first matching project (transitions generate sequentially usually)
+    for (const projectId of projectIds) {
+      try {
+        const result = await cancelVideoGeneration(projectId, sogniClient, setPhotos);
+        console.log(`[Transition Cancel Item] Cancel result for ${projectId}:`, result);
+        if (result.success) break;
+      } catch (error) {
+        console.error('[Transition Cancel Item] Error cancelling project:', error);
+      }
+    }
+
+    // If this was the regenerating transition, clear regeneration state
+    if (regeneratingTransitionIndex === transitionIndex) {
+      setRegeneratingTransitionIndex(null);
+      setRegenerationProgress(null);
+    }
+
+    // Mark transition as failed so user can retry
+    setPendingTransitions(prev => {
+      const updated = [...prev];
+      updated[transitionIndex] = {
+        ...updated[transitionIndex],
+        status: 'failed',
+        error: 'Cancelled - click retry to generate again'
+      };
+      return updated;
+    });
+
+    showToast({
+      title: '🛑 Transition Cancelled',
+      message: `Transition ${transitionIndex + 1} was cancelled. Click "🔄 redo" to retry.`,
+      type: 'info',
+      timeout: 4000
+    });
+  }, [pendingTransitions, sogniClient, setPhotos, regeneratingTransitionIndex, showToast]);
+
   // Handle cancelling infinite loop generation during initial creation
   // This shows the CancelConfirmationPopup with refund estimate
   const handleCancelInfiniteLoopGeneration = useCallback(() => {
@@ -6965,26 +7031,52 @@ const PhotoGallery = ({
 
     console.log(`[Segment Review] Regenerating segment ${segmentIndex + 1} (photo: ${photo.id}, workflow: ${photo.videoWorkflowType || 'default'})`);
 
+    // Clear any error states from the photo before regenerating
+    setPhotos(prev => {
+      const updated = [...prev];
+      if (updated[photoIndex]) {
+        updated[photoIndex] = {
+          ...updated[photoIndex],
+          videoError: undefined,
+          timedOut: false
+        };
+      }
+      return updated;
+    });
+
     // Update segment status to regenerating
     setPendingSegments(prev => {
       const updated = [...prev];
-      updated[segmentIndex] = { ...updated[segmentIndex], status: 'regenerating' };
+      updated[segmentIndex] = { ...updated[segmentIndex], status: 'regenerating', error: undefined };
       return updated;
     });
     setRegeneratingSegmentIndex(segmentIndex);
-
-    // Use the existing regenerate handler - it will trigger onComplete which updates the photo
-    // We need to watch for the video URL change to update the segment
-    const originalVideoUrl = photo.videoUrl;
 
     // Call the regeneration handler
     await handleRegenerateVideo(photo, photoIndex);
 
     // The regeneration happens asynchronously via generateVideo callbacks
     // We'll detect completion via the useEffect that watches photos changes
-  }, [segmentReviewData, pendingSegments, photos, handleRegenerateVideo, showToast]);
+  }, [segmentReviewData, pendingSegments, photos, handleRegenerateVideo, showToast, setPhotos]);
 
-  // Watch for segment regeneration completion
+  // Handle playing a single segment in fullscreen
+  const handlePlaySegment = useCallback((segmentIndex) => {
+    const segment = pendingSegments[segmentIndex];
+    if (!segment || !segment.url) {
+      console.error('[Segment Review] No video URL for segment:', segmentIndex);
+      return;
+    }
+
+    console.log(`[Segment Review] Playing segment ${segmentIndex + 1} in fullscreen`);
+
+    // Create a temporary blob URL if needed and show in stitched video overlay
+    setStitchedVideoUrl(segment.url);
+    setShowStitchedVideoOverlay(true);
+    setShowSegmentReview(false); // Hide segment review while playing
+    setStitchedVideoReturnToSegmentReview(true); // Mark that we should return to segment review on close
+  }, [pendingSegments]);
+
+  // Watch for segment regeneration completion (success, failure, or timeout)
   useEffect(() => {
     if (regeneratingSegmentIndex === null || !pendingSegments[regeneratingSegmentIndex]) {
       return;
@@ -6995,7 +7087,7 @@ const PhotoGallery = ({
 
     if (!photo) return;
 
-    // Check if video regeneration completed (has new URL and not generating)
+    // Check if video regeneration completed successfully (has new URL and not generating)
     if (photo.videoUrl && !photo.generatingVideo && photo.videoUrl !== segment.url) {
       console.log(`[Segment Review] Segment ${regeneratingSegmentIndex + 1} regeneration complete`);
 
@@ -7021,6 +7113,31 @@ const PhotoGallery = ({
         timeout: 3000
       });
     }
+    // Check if video regeneration failed (error or timeout, not generating anymore)
+    else if (!photo.generatingVideo && (photo.videoError || photo.timedOut)) {
+      console.log(`[Segment Review] Segment ${regeneratingSegmentIndex + 1} regeneration failed:`, photo.videoError || 'Timeout');
+
+      // Update segment status to failed
+      setPendingSegments(prev => {
+        const updated = [...prev];
+        updated[regeneratingSegmentIndex] = {
+          ...updated[regeneratingSegmentIndex],
+          status: 'failed',
+          error: photo.videoError || 'Generation timed out'
+        };
+        return updated;
+      });
+
+      setRegeneratingSegmentIndex(null);
+      setSegmentRegenerationProgress(null);
+
+      showToast({
+        title: '❌ Segment Failed',
+        message: `Segment ${regeneratingSegmentIndex + 1} failed: ${photo.videoError || 'Timeout'}. You can retry it.`,
+        type: 'error',
+        timeout: 5000
+      });
+    }
   }, [photos, regeneratingSegmentIndex, pendingSegments, showToast]);
 
   // Handle final stitching after segment review
@@ -7044,13 +7161,39 @@ const PhotoGallery = ({
     });
 
     try {
-      // Build the video sequence in order
-      const videosToStitch = pendingSegments.map((segment, index) => ({
-        url: segment.url,
-        filename: `segment-${index + 1}.mp4`
-      }));
+      // Build the video sequence in order, filtering out failed segments
+      const videosToStitch = pendingSegments
+        .filter(segment => segment.status === 'ready' && segment.url)
+        .map((segment, index) => ({
+          url: segment.url,
+          filename: `segment-${index + 1}.mp4`
+        }));
 
-      console.log(`[Segment Review] Stitching ${videosToStitch.length} videos`);
+      if (videosToStitch.length === 0) {
+        throw new Error('No ready segments to stitch');
+      }
+
+      const readySegmentCount = videosToStitch.length;
+      const failedSegmentCount = segmentCount - readySegmentCount;
+
+      if (failedSegmentCount > 0) {
+        console.log(`[Segment Review] Stitching ${readySegmentCount} ready segments, skipping ${failedSegmentCount} failed`);
+        showToast({
+          title: '⚠️ Skipping Failed Segments',
+          message: `Stitching ${readySegmentCount} successful segments, skipping ${failedSegmentCount} failed.`,
+          type: 'warning',
+          timeout: 4000
+        });
+      } else {
+        console.log(`[Segment Review] Stitching all ${readySegmentCount} segments`);
+      }
+
+      // Update progress total to reflect only segments being stitched
+      setBulkDownloadProgress({
+        current: 0,
+        total: readySegmentCount,
+        message: 'Stitching all segments together...'
+      });
 
       // Prepare audio options from the stored audio source (for parent audio overlay)
       let audioOptions = null;
@@ -7058,7 +7201,7 @@ const PhotoGallery = ({
         try {
           if (audioSource.type === 's2v') {
             // For S2V: Use the audio file directly
-            setBulkDownloadProgress({ current: 0, total: segmentCount, message: 'Preparing audio track...' });
+            setBulkDownloadProgress({ current: 0, total: readySegmentCount, message: 'Preparing audio track...' });
             
             // Convert Uint8Array to ArrayBuffer properly
             let audioBuffer = audioSource.audioBuffer;
@@ -7079,7 +7222,7 @@ const PhotoGallery = ({
             }
           } else if (audioSource.type === 'animate-move' || audioSource.type === 'animate-replace') {
             // For Animate Move/Replace: Extract audio from the source video
-            setBulkDownloadProgress({ current: 0, total: segmentCount, message: 'Extracting audio from source video...' });
+            setBulkDownloadProgress({ current: 0, total: readySegmentCount, message: 'Extracting audio from source video...' });
             
             // Convert Uint8Array to ArrayBuffer properly
             let videoBuffer = audioSource.videoBuffer;
@@ -7174,6 +7317,75 @@ const PhotoGallery = ({
       setShowStitchedVideoOverlay(true);
     }
   }, [setPhotos, regeneratingSegmentIndex, stitchedVideoUrl]);
+
+  // Handle cancelling a single segment (for stuck/slow jobs)
+  const handleCancelSegmentItem = useCallback(async (segmentIndex) => {
+    const segment = pendingSegments[segmentIndex];
+    if (!segment) {
+      console.error('[Segment Cancel Item] Segment not found:', segmentIndex);
+      return;
+    }
+
+    console.log(`[Segment Cancel Item] Cancelling segment ${segmentIndex + 1} (status: ${segment.status})`);
+
+    // Find the photo for this segment
+    const photo = photos.find(p => p.id === segment.photoId);
+    if (!photo) {
+      console.error('[Segment Cancel Item] Photo not found for segment:', segment.photoId);
+      return;
+    }
+
+    // Try to cancel the video project if it exists
+    if (photo.videoProjectId) {
+      try {
+        const result = await cancelVideoGeneration(photo.videoProjectId, sogniClient, setPhotos);
+        console.log(`[Segment Cancel Item] Cancel result for project ${photo.videoProjectId}:`, result);
+      } catch (error) {
+        console.error('[Segment Cancel Item] Error cancelling project:', error);
+      }
+    }
+
+    // Clear photo's generating state
+    setPhotos(prev => {
+      const updated = [...prev];
+      const photoIndex = updated.findIndex(p => p.id === segment.photoId);
+      if (photoIndex !== -1) {
+        updated[photoIndex] = {
+          ...updated[photoIndex],
+          generatingVideo: false,
+          videoETA: undefined,
+          videoProjectId: undefined,
+          videoError: 'Cancelled by user',
+          videoStatus: undefined
+        };
+      }
+      return updated;
+    });
+
+    // If this was the regenerating segment, clear regeneration state
+    if (regeneratingSegmentIndex === segmentIndex) {
+      setRegeneratingSegmentIndex(null);
+      setSegmentRegenerationProgress(null);
+    }
+
+    // Mark segment as failed/cancelled so user can retry
+    setPendingSegments(prev => {
+      const updated = [...prev];
+      updated[segmentIndex] = {
+        ...updated[segmentIndex],
+        status: 'failed',
+        error: 'Cancelled - click retry to generate again'
+      };
+      return updated;
+    });
+
+    showToast({
+      title: '🛑 Segment Cancelled',
+      message: `Segment ${segmentIndex + 1} was cancelled. Click "🔄 redo" to retry.`,
+      type: 'info',
+      timeout: 4000
+    });
+  }, [pendingSegments, photos, sogniClient, setPhotos, regeneratingSegmentIndex, showToast]);
 
   // Handle cancelling segment generation during initial creation
   // This shows the CancelConfirmationPopup with refund estimate
@@ -13901,66 +14113,23 @@ const PhotoGallery = ({
                   </button>
                 )}
 
-                {/* Regenerate Video Button - Shows for S2V, Animate Move, Animate Replace videos (success OR failure) with regeneration params */}
-                {(photo.videoUrl || photo.videoError) && !photo.generatingVideo && 
-                 ['s2v', 'animate-move', 'animate-replace'].includes(photo.videoWorkflowType) && 
-                 photo.videoRegenerateParams && (
-                  <button
-                    className="photo-regenerate-btn"
-                    onMouseDown={(e) => {
-                      e.stopPropagation();
-                      e.preventDefault();
-                      const photoIndex = photos.findIndex(p => p.id === photo.id);
-                      if (photoIndex !== -1) {
-                        handleRegenerateVideo(photo, photoIndex);
-                      }
-                    }}
-                    style={{
-                      position: 'absolute',
-                      bottom: '8px',
-                      right: '48px', // Position to the left of play button
-                      width: '32px',
-                      height: '32px',
-                      borderRadius: '50%',
-                      background: 'rgba(0, 0, 0, 0.6)',
-                      border: 'none',
-                      padding: 0,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      cursor: 'pointer',
-                      zIndex: 999,
-                      transition: 'all 0.2s ease',
-                      color: 'white',
-                      pointerEvents: 'auto'
-                    }}
-                    title={`Regenerate ${photo.videoWorkflowType === 's2v' ? 'S2V' : 
-                                        photo.videoWorkflowType === 'animate-move' ? 'Animate Move' : 
-                                        'Animate Replace'} video${photo.videoRegenerateParams?.isMontageSegment ? 
-                                        ` (Segment ${(photo.videoRegenerateParams.segmentIndex || 0) + 1})` : ''}`}
-                  >
-                    {/* Refresh/Regenerate icon */}
-                    <svg fill="currentColor" width="16" height="16" viewBox="0 0 24 24" style={{ pointerEvents: 'none' }}>
-                      <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
-                    </svg>
-                  </button>
-                )}
-
                 {/* AI-Generated Video Overlay - Show when generated video is playing */}
                 {photo.videoUrl && !photo.generatingVideo && playingGeneratedVideoIds.has(photo.id) && (
                   // All photos play their own video in a simple loop
                   // S2V/Animate videos can have audio - only one unmuted at a time, mutes after first play
+                  // BUT: Mute audio if Segment Review popup is open (for montage modes)
                   <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 4 }}>
                     <video
                       key={`video-${photo.id}-${photo.videoWorkflowType}`}
                       src={photo.videoUrl}
                       autoPlay
                       loop={true}
-                      muted={!['s2v', 'animate-move', 'animate-replace'].includes(photo.videoWorkflowType) || unmutedVideoId !== photo.id || s2vVideosPlayedOnce.has(photo.id)}
+                      muted={showSegmentReview || !['s2v', 'animate-move', 'animate-replace'].includes(photo.videoWorkflowType) || unmutedVideoId !== photo.id || s2vVideosPlayedOnce.has(photo.id)}
                       playsInline
                       onLoadedMetadata={(e) => {
                         // For S2V/Animate videos, try to unmute and play with audio (muting any previous)
-                        if (['s2v', 'animate-move', 'animate-replace'].includes(photo.videoWorkflowType)) {
+                        // UNLESS the Segment Review popup is open
+                        if (['s2v', 'animate-move', 'animate-replace'].includes(photo.videoWorkflowType) && !showSegmentReview) {
                           const videoEl = e.currentTarget;
                           // Only unmute if this video hasn't played audio yet
                           if (!s2vVideosPlayedOnce.has(photo.id)) {
@@ -13983,12 +14152,17 @@ const PhotoGallery = ({
                         }
                       }}
                       onTimeUpdate={(e) => {
-                        // For S2V/Animate videos, auto-mute when video completes first play
+                        // For S2V/Animate videos, auto-mute when video completes first play                        
                         // We use onTimeUpdate + duration check since loop=true prevents onEnded
                         if (['s2v', 'animate-move', 'animate-replace'].includes(photo.videoWorkflowType)) {
                           const videoEl = e.currentTarget;
                           const duration = videoEl.duration;
                           const currentTime = videoEl.currentTime;
+                          
+                          // If segment review is open, ensure video stays muted
+                          if (showSegmentReview && !videoEl.muted) {
+                            videoEl.muted = true;
+                          }
                           
                           // If we're near the end of the video (within 0.2s) and haven't marked as played once
                           if (duration > 0 && currentTime >= duration - 0.2 && !s2vVideosPlayedOnce.has(photo.id) && unmutedVideoId === photo.id) {
@@ -15577,6 +15751,7 @@ const PhotoGallery = ({
         onStitchAll={handleStitchAfterReview}
         onRegenerateItem={handleRegenerateTransition}
         onCancelGeneration={handleCancelInfiniteLoopGeneration}
+        onCancelItem={handleCancelTransitionItem}
         items={pendingTransitions?.map(t => ({
           ...t,
           fromIndex: t.fromVideoIndex,
@@ -15599,6 +15774,8 @@ const PhotoGallery = ({
         onStitchAll={handleStitchAfterSegmentReview}
         onRegenerateItem={handleRegenerateSegment}
         onCancelGeneration={handleCancelSegmentGeneration}
+        onCancelItem={handleCancelSegmentItem}
+        onPlayItem={handlePlaySegment}
         items={pendingSegments}
         workflowType={segmentReviewData?.workflowType || 's2v'}
         regeneratingIndex={regeneratingSegmentIndex}
@@ -17061,24 +17238,38 @@ const PhotoGallery = ({
           }}
           onClick={() => {
             setShowStitchedVideoOverlay(false);
-            if (stitchedVideoUrl) {
+            // Don't revoke URL for individual segments, as they might be reused
+            if (stitchedVideoUrl && stitchedVideoUrl.startsWith('blob:')) {
               URL.revokeObjectURL(stitchedVideoUrl);
-              setStitchedVideoUrl(null);
             }
-            setShowDownloadTip(true);
-            setTimeout(() => setShowDownloadTip(false), 8000);
+            setStitchedVideoUrl(null);
+            // Return to segment review if this was opened from there
+            if (stitchedVideoReturnToSegmentReview) {
+              setShowSegmentReview(true);
+              setStitchedVideoReturnToSegmentReview(false);
+            } else {
+              setShowDownloadTip(true);
+              setTimeout(() => setShowDownloadTip(false), 8000);
+            }
           }}
         >
           {/* Close Button */}
           <button
             onClick={() => {
               setShowStitchedVideoOverlay(false);
-              if (stitchedVideoUrl) {
+              // Don't revoke URL for individual segments, as they might be reused
+              if (stitchedVideoUrl && stitchedVideoUrl.startsWith('blob:')) {
                 URL.revokeObjectURL(stitchedVideoUrl);
-                setStitchedVideoUrl(null);
               }
-              setShowDownloadTip(true);
-              setTimeout(() => setShowDownloadTip(false), 8000);
+              setStitchedVideoUrl(null);
+              // Return to segment review if this was opened from there
+              if (stitchedVideoReturnToSegmentReview) {
+                setShowSegmentReview(true);
+                setStitchedVideoReturnToSegmentReview(false);
+              } else {
+                setShowDownloadTip(true);
+                setTimeout(() => setShowDownloadTip(false), 8000);
+              }
             }}
             style={{
               position: 'absolute',
@@ -17240,6 +17431,7 @@ const PhotoGallery = ({
                     e.stopPropagation();
                     setShowStitchedVideoOverlay(false);
                     setShowSegmentReview(true);
+                    setStitchedVideoReturnToSegmentReview(false); // Clear return flag
                   }}
                   title="Remix - Regenerate segments"
                   style={{
