@@ -682,9 +682,72 @@ export class FrontendSogniClientAdapter {
   // Forward other client properties and methods
   get account() { return this.realClient.account; }
   get apiClient() { return this.realClient.apiClient; }
-  async disconnect() { 
+  async disconnect() {
     if ((this.realClient as any).disconnect) {
       return (this.realClient as any).disconnect();
+    }
+  }
+
+  /**
+   * Cancel a project by ID
+   * Returns a result compatible with BackendSogniClient's cancelProject
+   */
+  async cancelProject(projectId: string): Promise<{
+    success: boolean;
+    didCancel: boolean;
+    projectId: string;
+    rateLimited?: boolean;
+    cooldownRemaining?: number;
+    errorMessage?: string;
+    completedJobs?: number;
+    totalJobs?: number;
+  }> {
+    console.log(`[FrontendAdapter] Cancelling project: ${projectId}`);
+
+    try {
+      // Try to find the project in the SDK's tracked projects
+      const projectsApi = this.realClient.projects as any;
+
+      // The SDK tracks projects internally - try to cancel via the API
+      if (projectsApi && typeof projectsApi.cancel === 'function') {
+        await projectsApi.cancel(projectId);
+        console.log(`[FrontendAdapter] Project ${projectId} cancelled via SDK`);
+        return {
+          success: true,
+          didCancel: true,
+          projectId
+        };
+      }
+
+      // Fallback: Try to get the project and cancel it directly
+      if (projectsApi && typeof projectsApi.get === 'function') {
+        const project = await projectsApi.get(projectId);
+        if (project && typeof project.cancel === 'function') {
+          await project.cancel();
+          console.log(`[FrontendAdapter] Project ${projectId} cancelled directly`);
+          return {
+            success: true,
+            didCancel: true,
+            projectId
+          };
+        }
+      }
+
+      console.warn(`[FrontendAdapter] Could not find cancel method for project ${projectId}`);
+      return {
+        success: false,
+        didCancel: false,
+        projectId,
+        errorMessage: 'Cancel method not available'
+      };
+    } catch (error) {
+      console.error(`[FrontendAdapter] Error cancelling project ${projectId}:`, error);
+      return {
+        success: false,
+        didCancel: false,
+        projectId,
+        errorMessage: error instanceof Error ? error.message : String(error)
+      };
     }
   }
 }

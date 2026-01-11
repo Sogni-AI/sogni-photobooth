@@ -19,9 +19,9 @@ const SAMPLE_REPLACEMENT_VIDEOS = [
   },
   {
     id: 'ra-ra',
-    title: '💃 Ra Ra Dance',
+    title: '💃 Rasputin Dance',
     description: '',
-    url: 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/video-samples/ra-ra.mp4'
+    url: 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/video-samples/rasputin.mp4'
   },
   {
     id: 'techno-viking',

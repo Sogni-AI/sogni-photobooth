@@ -72,6 +72,15 @@ interface ProjectByIdResponse {
         endTime: number;
         triggeredNSFWFilter: boolean;
       }>;
+      completedWorkerJobs?: Array<{
+        id: string;
+        imgID: string;
+        status: string;
+        reason: string;
+        createTime: number;
+        endTime: number;
+        triggeredNSFWFilter: boolean;
+      }>;
     };
   };
 }
@@ -103,7 +112,13 @@ async function fetchProjectById(projectId: string): Promise<ArchiveProject | nul
     }
 
     // Map to ArchiveProject format
-    const jobs = (project.workerJobs || [])
+    // Combine workerJobs and completedWorkerJobs (old/completed projects have jobs in completedWorkerJobs)
+    const allWorkerJobs = [
+      ...(project.workerJobs || []),
+      ...(project.completedWorkerJobs || [])
+    ];
+    
+    const jobs = allWorkerJobs
       .filter(j => !j.triggeredNSFWFilter)
       .map(j => ({
         id: j.imgID,

@@ -8425,11 +8425,20 @@ const App = () => {
   const handleReuseProject = useCallback(async (projectId) => {
     if (!sogniClient) return;
 
+    console.log(`[Reuse Project] Starting to load project: ${projectId}`);
+
     try {
       // Fetch the project details directly using the projects endpoint
       const response = await sogniClient.apiClient.rest.get(`/v1/projects/${projectId}`);
 
       const project = response.data?.project;
+
+      console.log('[Reuse Project] Fetched project data:', {
+        hasProject: !!project,
+        projectId: project?.id,
+        workerJobsCount: project?.workerJobs?.length || 0,
+        completedWorkerJobsCount: project?.completedWorkerJobs?.length || 0
+      });
 
       if (!project) {
         showToast({
@@ -8442,6 +8451,8 @@ const App = () => {
 
       // Get all jobs from both workerJobs and completedWorkerJobs arrays
       const allJobs = [...(project.workerJobs || []), ...(project.completedWorkerJobs || [])];
+
+      console.log('[Reuse Project] All jobs:', allJobs.length);
 
       if (allJobs.length === 0) {
         showToast({
@@ -8456,6 +8467,11 @@ const App = () => {
       const completedJobs = allJobs.filter(job =>
         job.status === 'jobCompleted' && !job.triggeredNSFWFilter
       );
+
+      console.log('[Reuse Project] Completed jobs:', {
+        total: completedJobs.length,
+        jobIds: completedJobs.map(j => j.imgID)
+      });
 
       if (completedJobs.length === 0) {
         showToast({
@@ -8477,8 +8493,22 @@ const App = () => {
               type: 'complete'
             });
 
+            console.log(`[Reuse Project] Got S3 URL for job ${job.imgID}:`, s3Url ? 'success' : 'null');
+
+            if (!s3Url) {
+              console.error(`[Reuse Project] No S3 URL returned for job ${job.imgID}`);
+              return null;
+            }
+
             // Download image as blob and create blob URL
             const blobUrl = await downloadImageAsBlob(s3Url);
+
+            console.log(`[Reuse Project] Downloaded blob for job ${job.imgID}:`, blobUrl ? 'success' : 'failed');
+
+            if (!blobUrl) {
+              console.error(`[Reuse Project] Failed to download blob for job ${job.imgID}`);
+              return null;
+            }
 
             return {
               id: job.imgID,
@@ -8495,7 +8525,7 @@ const App = () => {
               framePadding: 0
             };
           } catch (error) {
-            console.error('Failed to load job:', job.imgID, error);
+            console.error(`[Reuse Project] Failed to load job ${job.imgID}:`, error);
             return null;
           }
         })
@@ -8503,6 +8533,12 @@ const App = () => {
 
       // Filter out any failed loads
       const validPhotos = loadedPhotos.filter(photo => photo !== null);
+
+      console.log('[Reuse Project] Loaded photos:', {
+        attempted: completedJobs.length,
+        successful: validPhotos.length,
+        failed: completedJobs.length - validPhotos.length
+      });
 
       if (validPhotos.length === 0) {
         showToast({
@@ -8513,6 +8549,8 @@ const App = () => {
         return;
       }
 
+      console.log('[Reuse Project] Setting photos and showing gallery');
+
       // Load photos into the gallery
       setPhotos(validPhotos);
       setRegularPhotos(validPhotos);
@@ -8521,8 +8559,14 @@ const App = () => {
       setShowPhotoGrid(true);
       setShowStartMenu(false);
       stopCamera();
+
+      showToast({
+        title: 'Project Loaded',
+        message: `Loaded ${validPhotos.length} image${validPhotos.length > 1 ? 's' : ''} from project`,
+        type: 'success'
+      });
     } catch (error) {
-      console.error('Failed to load project:', error);
+      console.error('[Reuse Project] Failed to load project:', error);
       showToast({
         title: 'Error',
         message: 'Failed to load project. Please try again.',

@@ -1792,8 +1792,14 @@ const PhotoGallery = ({
 
   // Handle cancellation of image generation with confirmation popup
   const handleCancelImageGeneration = useCallback(() => {
+    console.log('[Cancel] handleCancelImageGeneration called');
+    console.log('[Cancel] isGenerating:', isGenerating);
+    console.log('[Cancel] activeProjectReference.current:', activeProjectReference.current);
+    console.log('[Cancel] sogniClient:', sogniClient);
+    console.log('[Cancel] sogniClient.cancelProject:', sogniClient?.cancelProject);
+
     if (!isGenerating || !activeProjectReference.current) {
-      console.log('No active generation to cancel');
+      console.log('[Cancel] No active generation to cancel - exiting early');
       return;
     }
 
@@ -1806,9 +1812,12 @@ const PhotoGallery = ({
     const progress = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
 
     const performCancel = async () => {
+      console.log('[Cancel] performCancel called for project:', projectId);
       try {
         if (sogniClient && sogniClient.cancelProject) {
+          console.log('[Cancel] Calling sogniClient.cancelProject...');
           const result = await sogniClient.cancelProject(projectId);
+          console.log('[Cancel] cancelProject result:', result);
 
           // Check for rate limiting
           if (result?.rateLimited) {
@@ -1862,12 +1871,15 @@ const PhotoGallery = ({
     };
 
     // Check if user has opted out of confirmations
+    console.log('[Cancel] shouldSkipConfirmation:', shouldSkipConfirmation());
     if (shouldSkipConfirmation()) {
+      console.log('[Cancel] Skipping confirmation, calling performCancel directly');
       performCancel();
       return;
     }
 
     // Show confirmation popup
+    console.log('[Cancel] Showing confirmation popup');
     requestCancel({
       projectId,
       projectType: 'image',
@@ -5234,7 +5246,7 @@ const PhotoGallery = ({
         filename: `video-${index + 1}.mp4`
       }));
 
-      // Use the working concatenation (CO strategy - extract + ctts)
+      // Use the working concatenation (CO strategy - extract + ctts) with audio fix
       const blob = await concatenateVideos(
         videosToStitch,
         (current, total, message) => {
@@ -9198,7 +9210,12 @@ const PhotoGallery = ({
           {isGenerating && selectedPhotoIndex === null && (
             <button
               className="cancel-generation-btn"
-              onClick={handleCancelImageGeneration}
+              onMouseDown={(e) => {
+                console.log('[Cancel Button] MOUSE DOWN - Click intercepted!');
+                alert('Cancel button clicked! Check console for logs.');
+                e.stopPropagation();
+                handleCancelImageGeneration();
+              }}
               style={{
                 background: 'linear-gradient(135deg, #ff6b6b, #ee5a24)',
                 color: 'white',
@@ -12224,8 +12241,8 @@ const PhotoGallery = ({
                   </button>
                 )}
 
-                {/* Regenerate Video Button - Shows for S2V, Animate Move, Animate Replace videos with regeneration params */}
-                {photo.videoUrl && !photo.generatingVideo && 
+                {/* Regenerate Video Button - Shows for S2V, Animate Move, Animate Replace videos (success OR failure) with regeneration params */}
+                {(photo.videoUrl || photo.videoError) && !photo.generatingVideo && 
                  ['s2v', 'animate-move', 'animate-replace'].includes(photo.videoWorkflowType) && 
                  photo.videoRegenerateParams && (
                   <button
@@ -15483,6 +15500,7 @@ const PhotoGallery = ({
       />
 
       {/* Cancel Confirmation Popup */}
+      {console.log('[Render] CancelConfirmationPopup isOpen:', showCancelConfirmation, 'pendingCancel:', pendingCancel)}
       <CancelConfirmationPopup
         isOpen={showCancelConfirmation}
         onClose={handleCancelConfirmationClose}

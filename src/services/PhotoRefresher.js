@@ -4,6 +4,7 @@
 
 import { styleIdToDisplay, normalizeSampler, normalizeScheduler } from '../utils';
 import { EDIT_MODEL_NEGATIVE_PROMPT_PREFIX } from '../constants/editPrompts';
+import { isQwenImageEditLightningModel } from '../constants/settings';
 
 /**
  * Refreshes a photo using Sogni API
@@ -238,8 +239,11 @@ export const refreshPhoto = async (options) => {
       steps: inferenceSteps,
       guidance: usesContextImages ? guidance : promptGuidance,
       numberOfMedia: 1, // Single image refresh
-      sampler: normalizeSampler(sampler), // Normalize sampler to backend format
-      scheduler: normalizeScheduler(scheduler), // Normalize scheduler to backend format
+      // Only skip sampler and scheduler for Qwen Image Edit Lightning (server provides defaults)
+      ...(isQwenImageEditLightningModel(selectedModel) ? {} : {
+        sampler: normalizeSampler(sampler),
+        scheduler: normalizeScheduler(scheduler)
+      }),
       outputFormat: outputFormat || 'png',
       sensitiveContentFilter, // Adapters will convert to disableNSFWFilter for SDK
       sourceType: 'refresh', // Track refresh operations

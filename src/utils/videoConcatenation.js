@@ -84,7 +84,7 @@ export async function concatenateVideos(videos, onProgress = null, audioOptions 
 
   if (onProgress) onProgress(videos.length, videos.length, 'Concatenating...');
 
-  // Use the working strategy: Extract + combine ctts for B-frame support
+  // Use the working concatenation (CO strategy - extract + ctts) with audio fix
   let result = await concatenateMP4s_WithEditList(videoBuffers, 'CO');
   
   // If preserveSourceAudio is requested, try to extract and concatenate audio from source videos
@@ -105,8 +105,6 @@ export async function concatenateVideos(videos, onProgress = null, audioOptions 
       const concatenatedAudio = concatenateSourceAudioTracks(audioBuffers);
       if (concatenatedAudio) {
         console.log('[Concatenate] Extracted audio from source videos, muxing into result...');
-        // If we're looping audio (infinite loop stitch), pass null to let muxConcatenatedAudio
-        // determine the video duration and loop audio to fill it
         result = muxConcatenatedAudio(result, concatenatedAudio, loopAudioToFullDuration ? null : null);
         console.log('[Concatenate] Audio successfully preserved' + (loopAudioToFullDuration ? ' (looped to fill full duration)' : ''));
       } else {
@@ -135,6 +133,8 @@ export async function concatenateVideos(videos, onProgress = null, audioOptions 
 /**
  * Concatenate MP4 files with Edit List for QuickTime/iOS compatibility
  * Uses normal file order (ftyp + mdat + moov) with edit list to map timeline
+ * 
+ * TESTING MODE: Generates 3 variants with different audio trimming strategies
  */
 async function concatenateMP4s_WithEditList(buffers, strategy = 'CO') {
   const options = {
@@ -147,7 +147,7 @@ async function concatenateMP4s_WithEditList(buffers, strategy = 'CO') {
     console.warn(`[Concatenate] Strategy ${strategy} is deprecated, using CO`);
   }
   
-  console.log('[Concatenate] Using CO strategy (extract + ctts)');
+  console.log('[Concatenate] Using CO strategy (extract + ctts) with audio fix');
   const result = await concatenateMP4s_Base(buffers, options);
   return result;
 }
@@ -312,63 +312,25 @@ async function concatenateMP4s_Base(buffers, options = {}) {
           if (v.getUint32(12) > 0) audioSampleDelta = v.getUint32(20);
         }
         
-        // Check for edit list to determine:
-        // 1. media_time: encoder priming samples to skip at the START
-        // 2. segment_duration: total playable duration (to trim trailing samples at END)
-        // This is critical for seamless audio concatenation between clips
-        let samplesToSkip = 0;
-        let maxSamplesToInclude = Infinity; // By default, include all samples after skipping
-        
-        // Get movie timescale (not used for concatenation, but keeping for consistency)
-        const mvhd = findBox(moovBuf, 8, moovBuf.byteLength, 'mvhd');
-        if (mvhd) {
-          const mvhdView = new DataView(moovBuf, mvhd.start, mvhd.size);
-          const mvhdVersion = mvhdView.getUint8(8);
-          const fileMovieTimescale = mvhdVersion === 0 ? mvhdView.getUint32(20) : mvhdView.getUint32(28);
-          console.log(`[CO] File ${fileIdx + 1} movie timescale: ${fileMovieTimescale}`);
-        }
-        
-        const edts = findBox(moovBuf, aTrak.contentStart, aTrak.end, 'edts');
-        if (edts) {
-          const elst = findBox(moovBuf, edts.contentStart, edts.end, 'elst');
-          if (elst) {
-            const elstView = new DataView(moovBuf, elst.start, elst.size);
-            const elstVersion = elstView.getUint8(8);
-            const entryCount = elstView.getUint32(12);
-            
-            if (entryCount > 0) {
-              let segmentDuration, mediaTime;
-              if (elstVersion === 0) {
-                segmentDuration = elstView.getUint32(16);
-                mediaTime = elstView.getInt32(20);
-              } else {
-                segmentDuration = Number(elstView.getBigUint64(16));
-                mediaTime = Number(elstView.getBigInt64(24));
-              }
-              
-              // Skip encoder priming samples at the start
-              // media_time is in audio track's media timescale units
-              if (mediaTime > 0) {
-                // Convert media_time from timescale units to sample count
-                samplesToSkip = Math.round(mediaTime / audioSampleDelta);
-                console.log(`[CO] File ${fileIdx + 1} media_time=${mediaTime} (audioTimescale=${audioTimescale}, sampleDelta=${audioSampleDelta}) -> skip ${samplesToSkip} samples`);
-              }
-              
-              // For concatenation, don't trim based on segment_duration
-              // The segment_duration is meant for playback in a single file, but when concatenating
-              // we want the full audio content (after skipping priming) to blend seamlessly
-              // Trimming at the end can create gaps between clips
-              if (segmentDuration > 0) {
-                console.log(`[CO] File ${fileIdx + 1} segment_duration=${segmentDuration} - NOT trimming for concatenation`);
-              }
-            }
-          }
-        }
-        
+        // Get sample count early for logging
         const stszView = new DataView(moovBuf, stsz.start, stsz.size);
         const stcoView = new DataView(moovBuf, stco.start, stco.size);
         const sampleCount = stszView.getUint32(16);
         const chunkCount = stcoView.getUint32(12);
+        
+        // Audio trimming for seamless concatenation
+        let samplesToSkip = 0;
+        let maxSamplesToInclude = Infinity;
+        
+        // TEMPORARY FIX: Skip 1 priming sample at start, trim 1 padding sample at end
+        // This compensates for audio/video sync issues in the ComfyUI workflow where:
+        // - S2V skips 3 video frames (ImageFromBatch batch_index=3) but audio starts at 0
+        // - Animate Move/Replace skips 1 video frame (batch_index=1) but audio starts at 0
+        // TODO: Remove this fix once ComfyUI worker properly offsets audio start to match skipped frames
+        // See: ComfyUI/workflows/wan2.2/ - TrimAudioDuration should use audioStart + (skippedFrames/fps)
+        samplesToSkip = 1;
+        maxSamplesToInclude = sampleCount - samplesToSkip - 1;
+        console.log(`[CO] File ${fileIdx + 1}: Audio fix - skip 1 start, trim 1 end -> ${maxSamplesToInclude} samples`);
         
         const sampleSizes = [];
         for (let i = 0; i < sampleCount; i++) sampleSizes.push(stszView.getUint32(20 + i * 4));
@@ -392,6 +354,7 @@ async function concatenateMP4s_Base(buffers, options = {}) {
         let includedCount = 0;
         const samplesBeforeThisFile = allAudioSamples.length;
         
+        // Multi-strategy: Skip at start and/or trim at end
         for (let chunkIdx = 0; chunkIdx < chunkCount && sampleIdx < sampleCount; chunkIdx++) {
           let samplesInChunk = 1;
           for (const entry of stscEntries) {
@@ -401,7 +364,7 @@ async function concatenateMP4s_Base(buffers, options = {}) {
           for (let s = 0; s < samplesInChunk && sampleIdx < sampleCount; s++) {
             const sampleSize = sampleSizes[sampleIdx];
             
-            // Skip encoder priming samples (as indicated by edit list media_time)
+            // Skip encoder priming samples at start
             if (skippedCount < samplesToSkip) {
               skippedCount++;
               byteOffset += sampleSize;
@@ -409,7 +372,7 @@ async function concatenateMP4s_Base(buffers, options = {}) {
               continue;
             }
             
-            // Stop if we've included enough samples (as indicated by edit list segment_duration)
+            // Stop if we've reached maxSamplesToInclude (trim end)
             if (includedCount >= maxSamplesToInclude) {
               sampleIdx++;
               byteOffset += sampleSize;
@@ -427,9 +390,8 @@ async function concatenateMP4s_Base(buffers, options = {}) {
         }
         
         const extractedFromFile = allAudioSamples.length - samplesBeforeThisFile;
-        if (samplesToSkip > 0 || maxSamplesToInclude < Infinity) {
-          console.log(`[CO] File ${fileIdx + 1}: Extracted ${extractedFromFile} samples (skipped ${skippedCount} start, limit ${maxSamplesToInclude})`);
-        }
+        const trimmedFromEnd = sampleCount - skippedCount - extractedFromFile;
+        console.log(`[CO] File ${fileIdx + 1}: Extracted ${extractedFromFile} audio samples (skipped ${skippedCount} start, trimmed ${trimmedFromEnd} end)`);
       }
     }
     
@@ -1239,20 +1201,8 @@ function extractAudioTrackWithSamples(buffer) {
     timescale = version === 0 ? v.getUint32(20) : v.getUint32(28);
   }
   
-  // Check for edit list (elst) to determine:
-  // 1. media_time: encoder priming samples to skip at START
-  // 2. segment_duration: max playable duration (to trim at END)
+  // v8: Skip encoder priming on ALL files (each was encoded independently)
   let samplesToSkip = 0;
-  let maxSamplesToInclude = sampleSizes.length; // Default: all samples
-  
-  // Get movie timescale (not used for concatenation, but keeping for consistency)
-  const mvhd = findBox(moovBuffer, 8, moovBuffer.byteLength, 'mvhd');
-  if (mvhd) {
-    const mvhdView = new DataView(moovBuffer, mvhd.start, mvhd.size);
-    const mvhdVersion = mvhdView.getUint8(8);
-    const movieTimescale = mvhdVersion === 0 ? mvhdView.getUint32(20) : mvhdView.getUint32(28);
-    console.log(`[Audio Extract] Movie timescale: ${movieTimescale}`);
-  }
   
   const edts = findBox(moovBuffer, audioTrak.contentStart, audioTrak.end, 'edts');
   if (edts) {
@@ -1263,42 +1213,28 @@ function extractAudioTrackWithSamples(buffer) {
       const entryCount = elstView.getUint32(12);
       
       if (entryCount > 0) {
-        let segmentDuration, mediaTime;
+        let mediaTime;
         if (elstVersion === 0) {
-          segmentDuration = elstView.getUint32(16);
           mediaTime = elstView.getInt32(20);
         } else {
-          segmentDuration = Number(elstView.getBigUint64(16));
           mediaTime = Number(elstView.getBigInt64(24));
         }
         
-        // Skip encoder priming samples at the start
-        // media_time is in audio track's media timescale units
         if (mediaTime > 0) {
-          // Convert media_time from timescale units to sample count
-          samplesToSkip = Math.round(mediaTime / sampleDelta);
-          console.log(`[Audio Extract] media_time=${mediaTime} (timescale=${timescale}, sampleDelta=${sampleDelta}) -> skip ${samplesToSkip} samples`);
-        }
-        
-        // For concatenation, don't trim based on segment_duration
-        // The segment_duration is meant for playback in a single file, but when concatenating
-        // we want the full audio content (after skipping priming) to blend seamlessly
-        if (segmentDuration > 0) {
-          console.log(`[Audio Extract] segment_duration=${segmentDuration} - NOT trimming for concatenation`);
+          samplesToSkip = Math.floor(mediaTime / sampleDelta);
+          console.log(`[Audio Extract] Skip ${samplesToSkip} priming samples (mediaTime=${mediaTime})`);
         }
       }
     }
   }
   
-  // Now extract the actual audio sample bytes from the file
-  // We need to use chunk offsets and sample sizes to find audio data
   const audioBytes = extractAudioSamplesFromMdat(
     buffer,
     chunkOffsets,
     stscEntries,
     sampleSizes,
-    samplesToSkip, // Samples to skip at start for encoder priming
-    maxSamplesToInclude // Max samples to include (for segment duration limit)
+    samplesToSkip,
+    Infinity
   );
   
   if (!audioBytes || audioBytes.byteLength === 0) {
@@ -1306,13 +1242,8 @@ function extractAudioTrackWithSamples(buffer) {
     return null;
   }
   
-  // Calculate actual samples extracted
-  const actualSamplesExtracted = Math.min(sampleSizes.length - samplesToSkip, maxSamplesToInclude);
-  
-  // Adjust sample sizes array to match extracted samples
-  const adjustedSampleSizes = sampleSizes.slice(samplesToSkip, samplesToSkip + actualSamplesExtracted);
-  
-  // Adjust duration to account for actual samples
+  const actualSamplesExtracted = sampleSizes.length - samplesToSkip;
+  const adjustedSampleSizes = sampleSizes.slice(samplesToSkip);
   const adjustedDuration = actualSamplesExtracted * sampleDelta;
   
   return {
@@ -1322,7 +1253,7 @@ function extractAudioTrackWithSamples(buffer) {
     sampleDelta,
     duration: adjustedDuration,
     stsdBox,
-    skippedSamples: samplesToSkip // Track for debugging
+    skippedSamples: samplesToSkip
   };
 }
 
@@ -1561,6 +1492,7 @@ function muxConcatenatedAudio(videoData, audioInfo, targetDurationSeconds = null
  * @param {number} startOffset - Audio start offset in seconds
  * @returns {Uint8Array} - Combined video+audio MP4
  */
+// eslint-disable-next-line no-unused-vars
 async function muxAudioTrack(videoData, audioBuffer, startOffset = 0) {
   // Parse the video MP4
   const videoArrayBuffer = videoData.buffer.slice(

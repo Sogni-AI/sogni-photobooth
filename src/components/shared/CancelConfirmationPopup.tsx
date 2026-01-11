@@ -246,8 +246,13 @@ export function useCancelConfirmation() {
   };
 
   const handleConfirm = () => {
+    console.log('[CancelHook] handleConfirm called');
+    console.log('[CancelHook] pendingCancel:', pendingCancel);
     if (pendingCancel?.onConfirm) {
+      console.log('[CancelHook] Calling onConfirm callback');
       pendingCancel.onConfirm();
+    } else {
+      console.log('[CancelHook] No onConfirm callback available');
     }
     handleClose();
   };
