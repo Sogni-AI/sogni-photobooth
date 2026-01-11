@@ -5205,6 +5205,7 @@ const App = () => {
               statusText: 'Calling Art Robot',
               sourceType, // Include sourceType in generated photos
               promptKey: (selectedStyle && selectedStyle !== 'custom' && selectedStyle !== 'random' && selectedStyle !== 'randomMix' && selectedStyle !== 'oneOfEach') ? selectedStyle : undefined, // Track which style is being used
+              originalStyleMode: selectedStyle, // Store the original style mode (including randomMix) for proper refresh behavior
               customSceneName: selectedStyle === 'custom' && customSceneName ? customSceneName : undefined, // Store custom scene name at creation time
               // Assign Taipei frame number based on photo index for equal distribution (1-6)
               taipeiFrameNumber: (globalPhotoIndex % 6) + 1,
@@ -8690,6 +8691,7 @@ const App = () => {
         newlyArrived: false,
         statusText: 'Calling Art Robot',
         stylePrompt: '', // Use context stylePrompt here? Or keep empty?
+        originalStyleMode: selectedStyle, // Store the original style mode (including randomMix) for proper refresh behavior
         customSceneName: selectedStyle === 'custom' && customSceneName ? customSceneName : undefined, // Store custom scene name for "More" photos
         sourceType: sourceType, // Store sourceType in photo object for reference
         // Assign Taipei frame number based on photo index for equal distribution (1-6)

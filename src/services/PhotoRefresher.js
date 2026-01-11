@@ -50,15 +50,41 @@ export const refreshPhoto = async (options) => {
     return;
   }
 
-  // Check if photo has a prompt
-  const promptToUse = photo.positivePrompt || photo.stylePrompt;
+  // Check if the photo was originally generated with Random: All (randomMix)
+  // If so, we should pick a NEW random style instead of reusing the same prompt
+  const originalStyleMode = photo.originalStyleMode;
+  let promptToUse = photo.positivePrompt || photo.stylePrompt;
+  let finalPromptKey = photo.promptKey;
+  
+  if (originalStyleMode === 'randomMix') {
+    console.log(`[REFRESH] Photo was generated with Random: All - picking a new random style`);
+    
+    // Import the getRandomStyle function to pick a new random style
+    const { getRandomStyle } = await import('./prompts');
+    
+    // Filter out special styles to get available prompts for random selection
+    const availablePrompts = {};
+    Object.entries(stylePrompts || {}).forEach(([key, value]) => {
+      if (key !== 'custom' && key !== 'random' && key !== 'randomMix' && key !== 'oneOfEach' && key !== 'browseGallery' && key !== 'copyImageStyle') {
+        availablePrompts[key] = value;
+      }
+    });
+    
+    // Pick a new random style
+    const newRandomStyleKey = getRandomStyle(availablePrompts);
+    promptToUse = availablePrompts[newRandomStyleKey];
+    finalPromptKey = newRandomStyleKey;
+    
+    console.log(`[REFRESH] Selected new random style: ${newRandomStyleKey}`);
+  }
+  
   if (!promptToUse) {
     console.error(`[REFRESH] No prompt found for photo at index ${photoIndex}`);
     return;
   }
 
-  // Preserve the original promptKey from the photo being refreshed
-  const originalPromptKey = photo.promptKey;
+  // Preserve the original promptKey from the photo being refreshed (or use the new random one)
+  const originalPromptKey = finalPromptKey;
   console.log(`[REFRESH] Original promptKey from photo: ${originalPromptKey}`);
 
   // Get the original data URL for the reference image
@@ -495,7 +521,8 @@ export const refreshPhoto = async (options) => {
               currentRefreshJobId: null,
               positivePrompt: promptToUse, // Keep the prompt for future refreshes
               stylePrompt: promptToUse, // Also set stylePrompt for label display via getStyleDisplayText
-              promptKey: finalPromptKey // Preserve promptKey for proper label display
+              promptKey: finalPromptKey, // Preserve promptKey for proper label display
+              originalStyleMode: current.originalStyleMode // Preserve originalStyleMode for future refreshes
             };
             return updated;
           });
@@ -535,7 +562,8 @@ export const refreshPhoto = async (options) => {
               currentRefreshJobId: null,
               positivePrompt: promptToUse,
               stylePrompt: promptToUse, // Also set stylePrompt for label display via getStyleDisplayText
-              promptKey: finalPromptKey // Preserve promptKey for proper label display
+              promptKey: finalPromptKey, // Preserve promptKey for proper label display
+              originalStyleMode: current.originalStyleMode // Preserve originalStyleMode for future refreshes
             };
             return updated;
           });
