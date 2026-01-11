@@ -1,0 +1,282 @@
+/* Cancel Confirmation Popup Styles */
+
+.cancel-confirmation-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100001; /* Higher than other popups */
+  padding: 20px;
+  backdrop-filter: blur(8px);
+}
+
+.cancel-confirmation-modal {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  border-radius: 24px;
+  max-width: 420px;
+  width: 100%;
+  padding: 32px 28px 28px;
+  box-shadow: 0 25px 70px rgba(0, 0, 0, 0.4);
+  position: relative;
+  animation: cancelSlideIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes cancelSlideIn {
+  0% {
+    opacity: 0;
+    transform: translateY(-30px) scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.cancel-confirmation-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: rgba(255, 255, 255, 0.25);
+  border: none;
+  color: white;
+  font-size: 22px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  line-height: 1;
+  padding: 0;
+  font-weight: 300;
+  backdrop-filter: blur(10px);
+}
+
+.cancel-confirmation-close:hover {
+  background: rgba(255, 255, 255, 0.35);
+  transform: scale(1.1) rotate(90deg);
+}
+
+.cancel-confirmation-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.cancel-icon {
+  font-size: 48px;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
+  animation: warningPulse 2s ease-in-out infinite;
+}
+
+@keyframes warningPulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+.cancel-confirmation-header h2 {
+  color: white;
+  font-size: 24px;
+  font-weight: 700;
+  margin: 0;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  text-align: center;
+}
+
+.cancel-confirmation-content {
+  background: white;
+  padding: 24px 20px;
+  border-radius: 16px;
+  margin-bottom: 24px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+.progress-info {
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.progress-status {
+  color: #374151;
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0 0 8px 0;
+}
+
+.refund-estimate {
+  color: #059669;
+  font-size: 14px;
+  font-weight: 500;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.refund-icon {
+  font-size: 16px;
+}
+
+.cancel-warning {
+  background: #fef3c7;
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+  border: 1px solid #fcd34d;
+}
+
+.cancel-warning p {
+  color: #92400e;
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 0;
+  text-align: center;
+}
+
+.dont-remind-checkbox {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  cursor: pointer;
+  padding: 8px;
+  margin: 0 auto;
+  border-radius: 8px;
+  transition: background 0.2s ease;
+}
+
+.dont-remind-checkbox:hover {
+  background: #f3f4f6;
+}
+
+.dont-remind-checkbox input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: #f59e0b;
+  cursor: pointer;
+}
+
+.checkbox-label {
+  color: #6b7280;
+  font-size: 14px;
+  user-select: none;
+}
+
+/* Rate limit warning styles */
+.rate-limit-warning {
+  text-align: center;
+}
+
+.rate-limit-message {
+  color: #374151;
+  font-size: 16px;
+  font-weight: 500;
+  margin: 0 0 12px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.warning-icon {
+  font-size: 20px;
+}
+
+.rate-limit-hint {
+  color: #6b7280;
+  font-size: 13px;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.cancel-confirmation-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cancel-confirmation-btn {
+  border: none;
+  padding: 14px 24px;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  width: 100%;
+}
+
+.cancel-confirmation-btn.primary {
+  background: white;
+  color: #dc2626;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.cancel-confirmation-btn.primary:hover {
+  background: #fef2f2;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+}
+
+.cancel-confirmation-btn.secondary {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(10px);
+}
+
+.cancel-confirmation-btn.secondary:hover {
+  background: rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.6);
+}
+
+/* Mobile responsiveness */
+@media (max-width: 480px) {
+  .cancel-confirmation-modal {
+    padding: 28px 20px 24px;
+    max-width: 95%;
+    border-radius: 20px;
+  }
+
+  .cancel-icon {
+    font-size: 40px;
+  }
+
+  .cancel-confirmation-header h2 {
+    font-size: 20px;
+  }
+
+  .cancel-confirmation-content {
+    padding: 20px 16px;
+  }
+
+  .cancel-confirmation-btn {
+    padding: 12px 20px;
+    font-size: 15px;
+  }
+}
+
+/* Reduced motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .cancel-confirmation-modal {
+    animation: none;
+  }
+
+  .cancel-icon {
+    animation: none;
+  }
+}

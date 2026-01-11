@@ -14,6 +14,7 @@ const StitchOptionsPopup = ({
   onInfiniteLoop,
   onDownloadCached,
   onEditTransitionPrompt, // NEW: callback to edit transition prompt
+  onCancel, // NEW: callback to cancel generation
   videoCount = 0,
   isGenerating = false,
   generationProgress = null, // { phase, current, total, message, transitionStatus }
@@ -298,6 +299,37 @@ const StitchOptionsPopup = ({
               }}>
                 {generationProgress.current}/{generationProgress.total}
               </div>
+
+              {/* Cancel button */}
+              {onCancel && generationProgress.phase !== 'complete' && (
+                <button
+                  onClick={onCancel}
+                  style={{
+                    marginTop: '16px',
+                    padding: '10px 24px',
+                    backgroundColor: 'transparent',
+                    border: '2px solid rgba(255, 255, 255, 0.4)',
+                    borderRadius: '8px',
+                    color: 'rgba(255, 255, 255, 0.8)',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease'
+                  }}
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.backgroundColor = 'rgba(255, 100, 100, 0.3)';
+                    e.currentTarget.style.borderColor = 'rgba(255, 100, 100, 0.6)';
+                    e.currentTarget.style.color = '#fff';
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                    e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.4)';
+                    e.currentTarget.style.color = 'rgba(255, 255, 255, 0.8)';
+                  }}
+                >
+                  Cancel Generation
+                </button>
+              )}
             </div>
           )}
 
@@ -645,6 +677,7 @@ StitchOptionsPopup.propTypes = {
   onInfiniteLoop: PropTypes.func.isRequired,
   onDownloadCached: PropTypes.func,
   onEditTransitionPrompt: PropTypes.func, // Optional callback to edit transition prompt
+  onCancel: PropTypes.func, // Optional callback to cancel generation
   videoCount: PropTypes.number,
   isGenerating: PropTypes.bool,
   generationProgress: PropTypes.shape({

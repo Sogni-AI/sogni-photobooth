@@ -420,33 +420,91 @@ export async function createProject(params: Record<string, unknown>, progressCal
 }
 
 /**
- * Cancel an ongoing project
- * 
- * @param projectId The ID of the project to cancel
- * @returns Promise that resolves to the cancellation status
+ * Cancellation result with rate limit info
  */
-export async function cancelProject(projectId: string): Promise<unknown> {
+export interface CancelProjectResult {
+  success: boolean;
+  didCancel: boolean;
+  projectId: string;
+  rateLimited?: boolean;
+  cooldownRemaining?: number;
+  errorMessage?: string;
+  completedJobs?: number;
+  totalJobs?: number;
+}
+
+/**
+ * Cancel an ongoing project
+ *
+ * @param projectId The ID of the project to cancel
+ * @returns Promise that resolves to the cancellation result with rate limit info
+ */
+export async function cancelProject(projectId: string): Promise<CancelProjectResult> {
   try {
     const response = await fetch(`${API_BASE_URL}/sogni/cancel/${projectId}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
+        'X-Client-App-ID': clientAppId,
       },
       credentials: 'include', // Include credentials for cross-origin requests
     });
-    
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    
+
     const resultRaw: unknown = await response.json();
     const result: Record<string, unknown> = isObjectRecord(resultRaw) ? resultRaw : {};
     console.log('Project cancellation result:', result);
-    return result;
+
+    // Handle rate limiting response
+    if (response.status === 429 || result.rateLimited === true) {
+      const cooldownRemaining = typeof result.cooldownRemaining === 'number'
+        ? result.cooldownRemaining
+        : 20; // Default 20 seconds
+
+      return {
+        success: false,
+        didCancel: false,
+        projectId,
+        rateLimited: true,
+        cooldownRemaining,
+        errorMessage: typeof result.message === 'string'
+          ? result.message
+          : 'Cancelled too recently. Please wait before trying again.'
+      };
+    }
+
+    if (!response.ok) {
+      return {
+        success: false,
+        didCancel: false,
+        projectId,
+        errorMessage: typeof result.message === 'string'
+          ? result.message
+          : `Cancellation failed: ${response.status}`
+      };
+    }
+
+    // Success case
+    return {
+      success: true,
+      didCancel: result.didCancel !== false, // Default to true if not specified
+      projectId,
+      completedJobs: typeof result.completedJobs === 'number' ? result.completedJobs : undefined,
+      totalJobs: typeof result.totalJobs === 'number' ? result.totalJobs : undefined,
+      errorMessage: typeof result.message === 'string' ? result.message : undefined
+    };
   } catch (error: unknown) {
     console.error('Error cancelling project:', error);
-    throw error;
+    const errorMsg = error && typeof error === 'object' && 'message' in error && typeof (error as { message: unknown }).message === 'string'
+      ? (error as { message: string }).message
+      : String(error);
+
+    return {
+      success: false,
+      didCancel: false,
+      projectId,
+      errorMessage: errorMsg
+    };
   }
 }
 

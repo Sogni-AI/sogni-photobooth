@@ -353,10 +353,10 @@ async function concatenateMP4s_Base(buffers, options = {}) {
               
               // Calculate max samples to include based on segment duration
               // segment_duration is in movie timescale, convert to audio samples
-              // Use Math.floor instead of Math.ceil to avoid rounding up and including too few samples
+              // Use Math.ceil to ensure we include all audio - better to have slight overlap than gaps
               if (segmentDuration > 0) {
                 const segmentDurationInAudioTimescale = (segmentDuration * audioTimescale) / fileMovieTimescale;
-                maxSamplesToInclude = Math.floor(segmentDurationInAudioTimescale / audioSampleDelta + 0.5); // Round to nearest
+                maxSamplesToInclude = Math.ceil(segmentDurationInAudioTimescale / audioSampleDelta);
               }
               
               console.log(`[CO] File ${fileIdx + 1} edit list: media_time=${mediaTime} (skip ${samplesToSkip}), segment_duration=${segmentDuration} (max ${maxSamplesToInclude} samples)`);
@@ -1278,9 +1278,10 @@ function extractAudioTrackWithSamples(buffer) {
         
         // Calculate max samples to include based on segment duration
         // Use Math.floor + 0.5 to round to nearest sample
+        // Use Math.ceil to ensure we include all audio - better to have slight overlap than gaps
         if (segmentDuration > 0) {
           const segmentDurationInTimescale = (segmentDuration * timescale) / movieTimescale;
-          maxSamplesToInclude = Math.floor(segmentDurationInTimescale / sampleDelta + 0.5);
+          maxSamplesToInclude = Math.ceil(segmentDurationInTimescale / sampleDelta);
         }
 
         console.log(`[Audio Extract] Edit list: media_time=${mediaTime} (skip ${samplesToSkip}), segment_duration=${segmentDuration} (max ${maxSamplesToInclude} samples)`);

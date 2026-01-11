@@ -5,7 +5,12 @@
  * instead of directly using the Sogni SDK in the frontend.
  */
 
-import { createProject as apiCreateProject, checkSogniStatus, cancelProject, clientAppId, disconnectSession } from './api';
+import { createProject as apiCreateProject, checkSogniStatus, cancelProject, clientAppId, disconnectSession, type CancelProjectResult } from './api';
+import {
+  getCancellationState,
+  recordCancelAttempt,
+  notifyCancelStateChange
+} from './cancellationService';
 import urls from '../config/urls';
 
 // Get API base URL from config
@@ -382,39 +387,109 @@ export class BackendSogniClient {
   /**
    * Cancel a running project
    * This will emit a 'cancelled' event to the project
+   * Returns cancellation result with rate limit info
    */
-  async cancelProject(projectId: string): Promise<void> {
+  async cancelProject(projectId: string): Promise<CancelProjectResult> {
     console.log(`Cancelling project: ${projectId}`);
     const project = this.activeProjects.get(projectId);
-    
-    if (project) {
-      try {
-        // Call the backend cancellation API
-        await cancelProject(projectId);
-        
+
+    // Check rate limit before attempting cancel
+    const cancelState = getCancellationState();
+    if (!cancelState.canCancel) {
+      console.log(`Rate limited: cannot cancel for ${cancelState.cooldownRemaining} more seconds`);
+      return {
+        success: false,
+        didCancel: false,
+        projectId,
+        rateLimited: true,
+        cooldownRemaining: cancelState.cooldownRemaining,
+        errorMessage: `Please wait ${cancelState.cooldownRemaining} seconds before cancelling again`
+      };
+    }
+
+    if (!project) {
+      console.warn(`Project ${projectId} not found in active projects`);
+      return {
+        success: false,
+        didCancel: false,
+        projectId,
+        errorMessage: 'Project not found'
+      };
+    }
+
+    try {
+      // Call the backend cancellation API
+      const result = await cancelProject(projectId);
+
+      // Handle rate limiting from server
+      if (result.rateLimited) {
+        console.log(`Server rate limited: ${result.errorMessage}`);
+        return result;
+      }
+
+      // Record the cancel attempt for local rate limiting
+      recordCancelAttempt();
+      notifyCancelStateChange();
+
+      if (result.didCancel) {
+        // Count completed jobs before cleanup
+        const completedJobs = project.jobs.filter(job => job.resultUrl).length;
+        const totalJobs = project.jobs.length;
+
         // Emit cancelled event
-        project.emit('cancelled');
-        // Emit failed event to ensure client handles cleanup
-        project.emit('failed', new Error('Project cancelled by user'));
-        
-        // Fail all jobs that haven't completed
+        project.emit('cancelled', {
+          completedJobs,
+          totalJobs,
+          projectId
+        });
+
+        // If some jobs completed, mark as partial completion
+        if (completedJobs > 0) {
+          console.log(`Project ${projectId} cancelled with ${completedJobs}/${totalJobs} jobs completed`);
+          // Emit completed event with partial results
+          project.emit('completed', {
+            type: 'completed',
+            partial: true,
+            completedJobs,
+            totalJobs
+          });
+        } else {
+          // No jobs completed, emit failed event for cleanup
+          project.emit('failed', new Error('Project cancelled by user'));
+        }
+
+        // Mark uncompleted jobs as cancelled (not failed)
         project.jobs.forEach(job => {
-          if (!job.resultUrl) {
-            project.failJob(job.id, 'Project cancelled by user');
+          if (!job.resultUrl && !job.error) {
+            job.error = 'Cancelled';
           }
         });
-        
+
         // Remove from active projects
         this.activeProjects.delete(projectId);
-      } catch (error: unknown) {
-        console.error(`Error cancelling project ${projectId}:`, error);
-        // Still attempt cleanup even if the API call fails
-        const errorMsg = error && typeof error === 'object' && 'message' in error && typeof (error as { message: unknown }).message === 'string'
-          ? (error as { message: string }).message
-          : String(error);
-        project.emit('failed', new Error(`Project cancellation failed: ${errorMsg}`));
-        this.activeProjects.delete(projectId);
+
+        return {
+          ...result,
+          completedJobs,
+          totalJobs
+        };
+      } else {
+        // Cancellation was rejected
+        console.warn(`Cancellation rejected for project ${projectId}: ${result.errorMessage}`);
+        return result;
       }
+    } catch (error: unknown) {
+      console.error(`Error cancelling project ${projectId}:`, error);
+      const errorMsg = error && typeof error === 'object' && 'message' in error && typeof (error as { message: unknown }).message === 'string'
+        ? (error as { message: string }).message
+        : String(error);
+
+      return {
+        success: false,
+        didCancel: false,
+        projectId,
+        errorMessage: `Project cancellation failed: ${errorMsg}`
+      };
     }
   }
   
