@@ -319,13 +319,13 @@ async function concatenateMP4s_Base(buffers, options = {}) {
         let samplesToSkip = 0;
         let maxSamplesToInclude = Infinity; // By default, include all samples after skipping
         
-        // Get movie timescale for segment_duration conversion
+        // Get movie timescale (not used for concatenation, but keeping for consistency)
         const mvhd = findBox(moovBuf, 8, moovBuf.byteLength, 'mvhd');
-        let fileMovieTimescale = 1000;
         if (mvhd) {
           const mvhdView = new DataView(moovBuf, mvhd.start, mvhd.size);
           const mvhdVersion = mvhdView.getUint8(8);
-          fileMovieTimescale = mvhdVersion === 0 ? mvhdView.getUint32(20) : mvhdView.getUint32(28);
+          const fileMovieTimescale = mvhdVersion === 0 ? mvhdView.getUint32(20) : mvhdView.getUint32(28);
+          console.log(`[CO] File ${fileIdx + 1} movie timescale: ${fileMovieTimescale}`);
         }
         
         const edts = findBox(moovBuf, aTrak.contentStart, aTrak.end, 'edts');
@@ -354,13 +354,12 @@ async function concatenateMP4s_Base(buffers, options = {}) {
                 console.log(`[CO] File ${fileIdx + 1} media_time=${mediaTime} (audioTimescale=${audioTimescale}, sampleDelta=${audioSampleDelta}) -> skip ${samplesToSkip} samples`);
               }
               
-              // Calculate max samples to include based on segment duration
-              // segment_duration is in movie timescale, convert to audio samples
-              // Use Math.ceil to ensure we include all audio - better to have slight overlap than gaps
+              // For concatenation, don't trim based on segment_duration
+              // The segment_duration is meant for playback in a single file, but when concatenating
+              // we want the full audio content (after skipping priming) to blend seamlessly
+              // Trimming at the end can create gaps between clips
               if (segmentDuration > 0) {
-                const segmentDurationInAudioTimescale = (segmentDuration * audioTimescale) / fileMovieTimescale;
-                maxSamplesToInclude = Math.ceil(segmentDurationInAudioTimescale / audioSampleDelta);
-                console.log(`[CO] File ${fileIdx + 1} segment_duration=${segmentDuration} (movieTimescale=${fileMovieTimescale}) -> max ${maxSamplesToInclude} samples`);
+                console.log(`[CO] File ${fileIdx + 1} segment_duration=${segmentDuration} - NOT trimming for concatenation`);
               }
             }
           }
@@ -1246,13 +1245,13 @@ function extractAudioTrackWithSamples(buffer) {
   let samplesToSkip = 0;
   let maxSamplesToInclude = sampleSizes.length; // Default: all samples
   
-  // Get movie timescale for segment_duration conversion
+  // Get movie timescale (not used for concatenation, but keeping for consistency)
   const mvhd = findBox(moovBuffer, 8, moovBuffer.byteLength, 'mvhd');
-  let movieTimescale = 1000;
   if (mvhd) {
     const mvhdView = new DataView(moovBuffer, mvhd.start, mvhd.size);
     const mvhdVersion = mvhdView.getUint8(8);
-    movieTimescale = mvhdVersion === 0 ? mvhdView.getUint32(20) : mvhdView.getUint32(28);
+    const movieTimescale = mvhdVersion === 0 ? mvhdView.getUint32(20) : mvhdView.getUint32(28);
+    console.log(`[Audio Extract] Movie timescale: ${movieTimescale}`);
   }
   
   const edts = findBox(moovBuffer, audioTrak.contentStart, audioTrak.end, 'edts');
@@ -1281,13 +1280,11 @@ function extractAudioTrackWithSamples(buffer) {
           console.log(`[Audio Extract] media_time=${mediaTime} (timescale=${timescale}, sampleDelta=${sampleDelta}) -> skip ${samplesToSkip} samples`);
         }
         
-        // Calculate max samples to include based on segment duration
-        // segment_duration is in movie timescale, convert to audio samples
-        // Use Math.ceil to ensure we include all audio - better to have slight overlap than gaps
+        // For concatenation, don't trim based on segment_duration
+        // The segment_duration is meant for playback in a single file, but when concatenating
+        // we want the full audio content (after skipping priming) to blend seamlessly
         if (segmentDuration > 0) {
-          const segmentDurationInTimescale = (segmentDuration * timescale) / movieTimescale;
-          maxSamplesToInclude = Math.ceil(segmentDurationInTimescale / sampleDelta);
-          console.log(`[Audio Extract] segment_duration=${segmentDuration} (movieTimescale=${movieTimescale}) -> max ${maxSamplesToInclude} samples`);
+          console.log(`[Audio Extract] segment_duration=${segmentDuration} - NOT trimming for concatenation`);
         }
       }
     }
