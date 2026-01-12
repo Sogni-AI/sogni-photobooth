@@ -35,13 +35,23 @@ export async function concatenateVideos(videos, onProgress = null, audioOptions 
   if (onProgress) onProgress(0, videos.length, 'Downloading videos...');
 
   const videoBuffers = [];
+  // Stagger video downloads to avoid S3 rate limiting
+  // A 150ms delay between requests helps prevent "Failed to fetch" errors
+  const DOWNLOAD_DELAY_MS = 150;
+
   for (let i = 0; i < videos.length; i++) {
     if (onProgress) onProgress(i, videos.length, `Downloading ${i + 1}/${videos.length}...`);
+
+    // Add a small delay between downloads to avoid rate limiting (skip first request)
+    if (i > 0) {
+      await new Promise(resolve => setTimeout(resolve, DOWNLOAD_DELAY_MS));
+    }
+
     try {
       const response = await fetchWithRetry(videos[i].url, undefined, {
         context: `Video ${i + 1} Download`,
-        maxRetries: 2,
-        initialDelay: 1000
+        maxRetries: 3, // Increased from 2 to 3 retries for better resilience
+        initialDelay: 1500 // Increased from 1000ms for better recovery from rate limits
       });
       if (!response.ok) {
         throw new Error(`Failed to download video ${i + 1}: ${response.status} ${response.statusText}`);
@@ -1520,18 +1530,18 @@ async function muxAudioTrack(videoData, audioBuffer, startOffset = 0) {
     throw new Error('Invalid video MP4 structure');
   }
   
-  // Parse the M4A audio file
+  // Parse the M4A/video audio file
   const audio = parseMP4(audioBuffer);
   
   if (!audio.moov || !audio.mdatData) {
     throw new Error('Invalid M4A file - missing moov or mdat');
   }
   
-  // Extract audio track from M4A
+  // Extract audio track from M4A/video
   const audioTrack = extractAudioTrack(audioBuffer);
   
   if (!audioTrack) {
-    throw new Error('Could not extract audio track from M4A file');
+    throw new Error('Could not extract audio track from source file');
   }
   
   // Get video duration from moov
@@ -1551,6 +1561,11 @@ async function muxAudioTrack(videoData, audioBuffer, startOffset = 0) {
     videoDurationSeconds,
     audioTimescale
   );
+  
+  // Verify we actually have audio data
+  if (trimmedAudio.sampleSizes.length === 0 || trimmedAudio.mdatData.byteLength === 0) {
+    throw new Error('Audio trimming resulted in no audio data');
+  }
   
   // Build new mdat with video + audio data
   const combinedMdatData = concatArrays([video.mdatData, trimmedAudio.mdatData]);
@@ -1573,11 +1588,13 @@ async function muxAudioTrack(videoData, audioBuffer, startOffset = 0) {
 }
 
 /**
- * Extract audio track information from an M4A file
+ * Extract audio track information from an M4A file or video file with audio
  */
 function extractAudioTrack(buffer) {
   const parsed = parseMP4(buffer);
-  if (!parsed.moov) return null;
+  if (!parsed.moov) {
+    return null;
+  }
   
   const moovBuffer = parsed.moov.buffer.slice(
     parsed.moov.byteOffset,
@@ -1586,11 +1603,15 @@ function extractAudioTrack(buffer) {
   
   // Find audio track (trak with mdia/hdlr type 'soun')
   const trak = findAudioTrak(moovBuffer);
-  if (!trak) return null;
+  if (!trak) {
+    return null;
+  }
   
-  // Extract stbl (sample table)
-  const stbl = findNestedBox(moovBuffer, ['moov', 'trak', 'mdia', 'minf', 'stbl']);
-  if (!stbl) return null;
+  // Extract stbl from within the audio trak (not from first trak in file)
+  const stbl = findNestedBoxInRange(moovBuffer, trak.contentStart, trak.end, ['mdia', 'minf', 'stbl']);
+  if (!stbl) {
+    return null;
+  }
   
   // Parse sample tables
   const stsz = findBox(moovBuffer, stbl.contentStart, stbl.end, 'stsz');
@@ -1661,8 +1682,8 @@ function extractAudioTrack(buffer) {
     stsdBox = new Uint8Array(moovBuffer, stsd.start, stsd.size);
   }
   
-  // Get mdhd for timescale
-  const mdhd = findNestedBox(moovBuffer, ['moov', 'trak', 'mdia', 'mdhd']);
+  // Get mdhd from AUDIO track (not first track)
+  const mdhd = findNestedBoxInRange(moovBuffer, trak.contentStart, trak.end, ['mdia', 'mdhd']);
   let timescale = 44100;
   let duration = 0;
   if (mdhd) {
@@ -1677,11 +1698,28 @@ function extractAudioTrack(buffer) {
     }
   }
   
+  // Validate extraction
+  if (sampleSizes.length === 0 || chunkOffsets.length === 0) {
+    return null;
+  }
+  
   // Extract the audio trak box for later use
   const trakBox = new Uint8Array(moovBuffer, trak.start, trak.size);
   
-  // Get raw audio data from mdat
-  const mdatData = parsed.mdatData;
+  // Extract ONLY audio sample data from the file using chunk offsets
+  // (mdat contains interleaved video+audio, so we must extract audio samples specifically)
+  const audioMdatData = extractAudioSamplesFromMdat(
+    buffer,
+    chunkOffsets,
+    stscEntries,
+    sampleSizes,
+    0,
+    Infinity
+  );
+  
+  if (!audioMdatData || audioMdatData.byteLength === 0) {
+    return null;
+  }
   
   return {
     trakBox,
@@ -1693,7 +1731,7 @@ function extractAudioTrack(buffer) {
     sampleDelta,
     timescale,
     duration,
-    mdatData
+    mdatData: audioMdatData // Now contains ONLY extracted audio sample bytes
   };
 }
 
@@ -1787,13 +1825,13 @@ function trimAudioSamples(audioTrack, startOffsetUnits, videoDurationSeconds, au
   // Calculate which samples to include
   const totalSamples = audioTrack.sampleSizes.length;
   const endSample = Math.min(startSample + samplesNeeded, totalSamples);
-  const actualStartSample = Math.min(startSample, totalSamples - 1);
+  const actualStartSample = Math.min(startSample, Math.max(0, totalSamples - 1));
   
   // Get the sample sizes for the range we need
   const trimmedSampleSizes = audioTrack.sampleSizes.slice(actualStartSample, endSample);
   
   // Calculate byte offsets for the samples we need
-  // This is simplified - assumes contiguous samples in mdat
+  // (audioTrack.mdatData contains ONLY audio samples, contiguous)
   let byteStart = 0;
   for (let i = 0; i < actualStartSample; i++) {
     byteStart += audioTrack.sampleSizes[i];
@@ -1805,11 +1843,15 @@ function trimAudioSamples(audioTrack, startOffsetUnits, videoDurationSeconds, au
   }
   
   // Extract the audio data for these samples
-  const trimmedMdatData = new Uint8Array(
-    audioTrack.mdatData.buffer,
-    audioTrack.mdatData.byteOffset + byteStart,
-    Math.min(byteLength, audioTrack.mdatData.byteLength - byteStart)
-  );
+  const availableBytes = audioTrack.mdatData.byteLength - byteStart;
+  const actualByteLength = Math.min(byteLength, Math.max(0, availableBytes));
+  const trimmedMdatData = actualByteLength > 0
+    ? new Uint8Array(
+        audioTrack.mdatData.buffer,
+        audioTrack.mdatData.byteOffset + byteStart,
+        actualByteLength
+      )
+    : new Uint8Array(0);
   
   // Calculate new duration
   const newDuration = trimmedSampleSizes.length * audioTrack.sampleDelta;

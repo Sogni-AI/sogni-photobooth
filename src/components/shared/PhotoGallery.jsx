@@ -1741,6 +1741,40 @@ const PhotoGallery = ({
     }
   }, [photos, activeMontagePhotoIds, activeMontageWorkflowType, showStitchedVideoOverlay, showSegmentReview, showToast, pendingSegments]);
 
+  // FIX 2: Ensure segmentReviewData.audioSource is populated from the ref when all segments complete
+  // This is a backup in case FIX 1 didn't work (e.g., data was set in wrong order)
+  useEffect(() => {
+    // Only run if we have segmentReviewData but no audioSource
+    if (!segmentReviewData || segmentReviewData.audioSource) {
+      return;
+    }
+
+    // Only run if we have a ref with audio source data
+    if (!activeMontageAudioSourceRef.current) {
+      return;
+    }
+
+    // Only run for montage workflow types that need audio replacement
+    const workflowType = segmentReviewData.workflowType;
+    if (!['animate-move', 'animate-replace', 's2v'].includes(workflowType)) {
+      return;
+    }
+
+    // Check if all segments are ready (complete)
+    const allSegmentsReady = pendingSegments &&
+      pendingSegments.length > 0 &&
+      pendingSegments.every(s => s.status === 'ready' || s.url);
+
+    if (allSegmentsReady || pendingSegments?.length > 0) {
+      // Copy audioSource from ref to segmentReviewData
+      const audioSource = activeMontageAudioSourceRef.current;
+      setSegmentReviewData(prev => ({
+        ...prev,
+        audioSource: audioSource
+      }));
+    }
+  }, [segmentReviewData, pendingSegments]);
+
   // Sync photo progress to segmentProgress for the VideoReviewPopup
   // This extracts ETA, worker name, progress, status, elapsed time from each photo
   useEffect(() => {
@@ -3774,24 +3808,28 @@ const PhotoGallery = ({
         };
       });
       setPendingSegments(initialSegments);
+
+      // FIX 1: Build audioSource BEFORE setSegmentReviewData so it's included
+      const audioSourceForStitch = {
+        type: 'animate-move',
+        videoBuffer: videoBuffer,
+        videoUrl: videoUrl,
+        startOffset: videoStartOffset || 0,
+        duration: baseDuration
+      };
+
       setSegmentReviewData({
         workflowType: 'animate-move',
         photoIds: [...photoIds],
-        photos: loadedPhotos
+        photos: loadedPhotos,
+        audioSource: audioSourceForStitch
       });
       
       // Show VideoReviewPopup immediately for segment review
       setShowSegmentReview(true);
 
-      // Store video source info for montage stitching (mutes individual clips, uses audio from source video)
-      activeMontageAudioSourceRef.current = {
-        type: 'animate-move',
-        videoBuffer: videoBuffer,
-        videoUrl: videoUrl,
-        startOffset: videoStartOffset || 0,
-        duration: baseDuration // Total duration of the video selection
-      };
-      console.log(`[Animate Move Montage] Stored video source: offset=${videoStartOffset}s, duration=${baseDuration}s`);
+      // Also store in ref for backward compatibility / other code paths
+      activeMontageAudioSourceRef.current = audioSourceForStitch;
     }
 
     // In split mode, each image gets perImageDuration at sequential offsets
@@ -4065,24 +4103,28 @@ const PhotoGallery = ({
         };
       });
       setPendingSegments(initialSegments);
+
+      // FIX 1: Build audioSource BEFORE setSegmentReviewData so it's included
+      const audioSourceForStitch = {
+        type: 'animate-replace',
+        videoBuffer: videoBuffer,
+        videoUrl: videoUrl,
+        startOffset: videoStartOffset || 0,
+        duration: baseDuration
+      };
+
       setSegmentReviewData({
         workflowType: 'animate-replace',
         photoIds: [...photoIds],
-        photos: loadedPhotos
+        photos: loadedPhotos,
+        audioSource: audioSourceForStitch
       });
       
       // Show VideoReviewPopup immediately for segment review
       setShowSegmentReview(true);
 
-      // Store video source info for montage stitching (mutes individual clips, uses audio from source video)
-      activeMontageAudioSourceRef.current = {
-        type: 'animate-replace',
-        videoBuffer: videoBuffer,
-        videoUrl: videoUrl,
-        startOffset: videoStartOffset || 0,
-        duration: baseDuration // Total duration of the video selection
-      };
-      console.log(`[Animate Replace Montage] Stored video source: offset=${videoStartOffset}s, duration=${baseDuration}s`);
+      // Also store in ref for backward compatibility / other code paths
+      activeMontageAudioSourceRef.current = audioSourceForStitch;
     }
 
     // In split mode, each image gets perImageDuration at sequential offsets
@@ -4357,25 +4399,28 @@ const PhotoGallery = ({
         };
       });
       setPendingSegments(initialSegments);
-      setSegmentReviewData({
-        workflowType: 's2v',
-        photoIds: [...photoIds],
-        photos: loadedPhotos
-      });
-      
-      // Show VideoReviewPopup immediately for segment review
-      setShowSegmentReview(true);
-      
-      // Store audio source info for montage stitching (mutes individual clips, uses single parent audio)
-      console.log('[S2V Batch] Storing audio source in ref - audioBuffer size:', audioBuffer?.byteLength || audioBuffer?.length);
-      activeMontageAudioSourceRef.current = {
+
+      // Build audioSource for S2V montage stitching (mutes individual clips, uses single parent audio)
+      const audioSourceForStitch = {
         type: 's2v',
         audioBuffer: audioBuffer,
         audioUrl: audioUrl,
         startOffset: audioStartOffset || 0,
-        duration: baseDuration // Total duration of the audio selection
+        duration: baseDuration
       };
-      console.log(`[S2V Montage] Stored audio source: offset=${audioStartOffset}s, duration=${baseDuration}s`);
+
+      setSegmentReviewData({
+        workflowType: 's2v',
+        photoIds: [...photoIds],
+        photos: loadedPhotos,
+        audioSource: audioSourceForStitch
+      });
+      
+      // Show VideoReviewPopup immediately for segment review
+      setShowSegmentReview(true);
+
+      // Also store in ref for backward compatibility / other code paths
+      activeMontageAudioSourceRef.current = audioSourceForStitch;
     }
 
     // In split mode, each image gets perImageDuration at sequential offsets
@@ -5937,15 +5982,13 @@ const PhotoGallery = ({
       // Generate hash of photo IDs to check cache validity
       const photosHash = photosWithVideos.map(p => p.id).sort().join('-');
 
-      // TESTING MODE: Clear cache to force regeneration
-      console.log('[Stitch Test] Clearing cache to test all strategies');
-      setCachedStitchedVideoBlob(null);
-      setCachedStitchedVideoPhotosHash(null);
-
-      // Skip cache check for testing
-      // if (cachedStitchedVideoBlob && cachedStitchedVideoPhotosHash === photosHash) {
-      //   ... cached version logic ...
-      // }
+      // Check for cached version
+      if (cachedStitchedVideoBlob && cachedStitchedVideoPhotosHash === photosHash) {
+        // Use cached version
+        downloadBlob(cachedStitchedVideoBlob, 'stitched-video.mp4');
+        setIsBulkDownloading(false);
+        return;
+      }
 
       // No cached version - generate stitched video
       setIsBulkDownloading(true);
@@ -5953,7 +5996,6 @@ const PhotoGallery = ({
       setBulkDownloadProgress({ current: 0, total: photosWithVideos.length, message: 'Stitching videos...' });
 
       const startTime = performance.now();
-      console.log(`[Stitch All] Processing ${photosWithVideos.length} videos`);
 
       // Prepare videos array in order
       const videosToStitch = photosWithVideos.map((photo, index) => ({
@@ -5962,12 +6004,17 @@ const PhotoGallery = ({
       }));
 
       // Check if this is from a montage mode (S2V, Animate Move, Animate Replace) with stored audio source
-      // If so, use the parent audio technique (mute individual clips, use single parent audio)
+      // If so, use the parent audio technique (strip individual clip audio, use single parent audio)
       let audioOptions = null;
-      const audioSource = segmentReviewData?.audioSource;
-      console.log('[Stitch All] segmentReviewData:', segmentReviewData);
-      console.log('[Stitch All] audioSource:', audioSource);
-      console.log('[Stitch All] workflowType:', segmentReviewData?.workflowType);
+
+      // Try segmentReviewData first, then fall back to ref
+      let audioSource = segmentReviewData?.audioSource;
+
+      // Fallback to ref if audioSource is missing from segmentReviewData
+      if (!audioSource && activeMontageAudioSourceRef.current) {
+        audioSource = activeMontageAudioSourceRef.current;
+      }
+
       if (audioSource && ['s2v', 'animate-move', 'animate-replace'].includes(segmentReviewData?.workflowType)) {
         try {
           if (audioSource.type === 's2v') {
@@ -5988,7 +6035,6 @@ const PhotoGallery = ({
                 buffer: audioBuffer,
                 startOffset: audioSource.startOffset || 0
               };
-              console.log(`[Stitch All] Using S2V parent audio: offset=${audioSource.startOffset}s, duration=${audioSource.duration}s`);
             }
           } else if (audioSource.type === 'animate-move' || audioSource.type === 'animate-replace') {
             // For Animate Move/Replace: Extract audio from the source video
@@ -6009,11 +6055,10 @@ const PhotoGallery = ({
                 startOffset: audioSource.startOffset || 0,
                 isVideoSource: true
               };
-              console.log(`[Stitch All] Using ${audioSource.type} parent audio: offset=${audioSource.startOffset}s, duration=${audioSource.duration}s`);
             }
           }
         } catch (audioError) {
-          console.warn('[Stitch All] Failed to prepare parent audio, using individual clip audio:', audioError);
+          console.warn('[Stitch] Failed to prepare parent audio, using individual clip audio:', audioError);
         }
       }
 
@@ -6033,7 +6078,6 @@ const PhotoGallery = ({
 
       const elapsedMs = performance.now() - startTime;
       const elapsedSec = (elapsedMs / 1000).toFixed(2);
-      console.log(`[Stitch All] Complete in ${elapsedSec}s, size: ${(blob.size / 1024 / 1024).toFixed(2)}MB`);
 
       // Download the stitched video
       const timestamp = new Date().toISOString().split('T')[0];
@@ -6063,7 +6107,7 @@ const PhotoGallery = ({
       }, 3000);
 
     } catch (error) {
-      console.error('[Stitch All] Error:', error);
+      console.error('[Stitch] Error:', error);
       setIsGeneratingStitchedVideo(false);
       setBulkDownloadProgress({
         current: 0,
@@ -7087,8 +7131,10 @@ const PhotoGallery = ({
 
     if (!photo) return;
 
-    // Check if video regeneration completed successfully (has new URL and not generating)
-    if (photo.videoUrl && !photo.generatingVideo && photo.videoUrl !== segment.url) {
+    // Check if video regeneration completed successfully (not generating anymore and has a video URL)
+    // Note: We check segment.status === 'regenerating' instead of comparing URLs to avoid race conditions
+    // where the segment URL might have been updated by another code path
+    if (photo.videoUrl && !photo.generatingVideo && segment.status === 'regenerating') {
       console.log(`[Segment Review] Segment ${regeneratingSegmentIndex + 1} regeneration complete`);
 
       // Update segment with new URL
@@ -7159,9 +7205,12 @@ const PhotoGallery = ({
     }
 
     const segmentCount = pendingSegments.length;
-    const audioSource = segmentReviewData.audioSource;
 
-    console.log(`[Segment Review] Starting final stitch with ${segmentCount} segments`);
+    // Try segmentReviewData first, then fall back to ref
+    let audioSource = segmentReviewData.audioSource;
+    if (!audioSource && activeMontageAudioSourceRef.current) {
+      audioSource = activeMontageAudioSourceRef.current;
+    }
 
     setShowSegmentReview(false);
     setIsGeneratingStitchedVideo(true);
@@ -7229,7 +7278,6 @@ const PhotoGallery = ({
                 buffer: audioBuffer,
                 startOffset: audioSource.startOffset || 0
               };
-              console.log(`[Segment Review] Using S2V audio: offset=${audioSource.startOffset}s, duration=${audioSource.duration}s, bufferSize=${audioBuffer.byteLength}`);
             }
           } else if (audioSource.type === 'animate-move' || audioSource.type === 'animate-replace') {
             // For Animate Move/Replace: Extract audio from the source video
@@ -7251,11 +7299,10 @@ const PhotoGallery = ({
                 startOffset: audioSource.startOffset || 0,
                 isVideoSource: true // Flag to indicate this is a video file to extract audio from
               };
-              console.log(`[Segment Review] Using ${audioSource.type} video audio: offset=${audioSource.startOffset}s, duration=${audioSource.duration}s, bufferSize=${videoBuffer.byteLength}`);
             }
           }
         } catch (audioError) {
-          console.warn('[Segment Review] Failed to prepare audio options, continuing without parent audio:', audioError);
+          console.warn('[Stitch] Failed to prepare audio options, continuing without parent audio:', audioError);
           // Continue without audio rather than failing
         }
       }
@@ -7553,8 +7600,14 @@ const PhotoGallery = ({
 
         // Check if this is from a montage mode with stored audio source
         let audioOptions = null;
-        const audioSource = segmentReviewData?.audioSource;
-        if (audioSource && ['s2v', 'animate-move', 'animate-replace'].includes(segmentReviewData?.workflowType)) {
+
+        // Try segmentReviewData first, then fall back to ref
+        let audioSource = segmentReviewData?.audioSource;
+        if (!audioSource && activeMontageAudioSourceRef.current) {
+          audioSource = activeMontageAudioSourceRef.current;
+        }
+
+        if (audioSource && ['s2v', 'animate-move', 'animate-replace'].includes(segmentReviewData?.workflowType || audioSource.type)) {
           try {
             if (audioSource.type === 's2v') {
               let audioBuffer = audioSource.audioBuffer;
@@ -7737,8 +7790,14 @@ const PhotoGallery = ({
 
         // Check if this is from a montage mode with stored audio source
         let audioOptions = null;
-        const audioSource = segmentReviewData?.audioSource;
-        if (audioSource && ['s2v', 'animate-move', 'animate-replace'].includes(segmentReviewData?.workflowType)) {
+
+        // Try segmentReviewData first, then fall back to ref
+        let audioSource = segmentReviewData?.audioSource;
+        if (!audioSource && activeMontageAudioSourceRef.current) {
+          audioSource = activeMontageAudioSourceRef.current;
+        }
+
+        if (audioSource && ['s2v', 'animate-move', 'animate-replace'].includes(segmentReviewData?.workflowType || audioSource.type)) {
           try {
             if (audioSource.type === 's2v') {
               let audioBuffer = audioSource.audioBuffer;

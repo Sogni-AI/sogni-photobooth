@@ -271,24 +271,7 @@ const VideoReviewPopup = ({
     onClose();
   }, [onClose]);
 
-  // Handle stitch button click - check if items are in progress
-  const handleStitchClick = useCallback(() => {
-    if (hasItemsInProgress) {
-      // Show warning if items are still generating/regenerating
-      setShowStitchWarning(true);
-    } else {
-      // All items are done, proceed with stitching
-      onStitchAll();
-    }
-  }, [hasItemsInProgress, onStitchAll]);
-
-  // Confirm stitch despite items in progress
-  const handleConfirmStitch = useCallback(() => {
-    setShowStitchWarning(false);
-    onStitchAll();
-  }, [onStitchAll]);
-
-  // Computed states
+  // Computed states - MUST be declared before callbacks that use them
   const allItemsReady = items?.every(t => t.status === 'ready') ?? false;
   const anyRegenerating = items?.some(t => t.status === 'regenerating') ?? false;
   const anyGenerating = items?.some(t => t.status === 'generating') ?? false;
@@ -305,6 +288,23 @@ const VideoReviewPopup = ({
   const canStitch = readyCount >= 2;
   // Check if user is trying to stitch while items are still in progress
   const hasItemsInProgress = anyGenerating || anyRegenerating;
+
+  // Handle stitch button click - check if items are in progress
+  const handleStitchClick = useCallback(() => {
+    if (hasItemsInProgress) {
+      // Show warning if items are still generating/regenerating
+      setShowStitchWarning(true);
+    } else {
+      // All items are done, proceed with stitching
+      onStitchAll();
+    }
+  }, [hasItemsInProgress, onStitchAll]);
+
+  // Confirm stitch despite items in progress
+  const handleConfirmStitch = useCallback(() => {
+    setShowStitchWarning(false);
+    onStitchAll();
+  }, [onStitchAll]);
 
   // Get item label (e.g., "Transition 1" or "Segment 1")
   const getItemLabel = (index) => {
