@@ -910,6 +910,7 @@ const VideoReviewPopup = ({
                     key={item.photoId || index}
                     onClick={() => handleItemClick(index)}
                     style={{
+                      position: 'relative',
                       backgroundColor: isInProgress
                         ? 'rgba(255, 237, 78, 0.2)'
                         : item.status === 'ready'

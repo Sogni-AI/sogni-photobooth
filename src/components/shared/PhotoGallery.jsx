@@ -938,8 +938,11 @@ const PhotoGallery = ({
   const [showTransitionReview, setShowTransitionReview] = useState(false);
   const [pendingTransitions, setPendingTransitions] = useState([]); // Array of { url, index, fromVideoIndex, toVideoIndex, status }
   const [transitionReviewData, setTransitionReviewData] = useState(null); // { photosWithVideos, lastFrames, firstFrames, transitionFrames, etc. }
-  const [regeneratingTransitionIndex, setRegeneratingTransitionIndex] = useState(null);
-  const [regenerationProgress, setRegenerationProgress] = useState(null);
+  // Track multiple regenerating transitions and their progress (Set and Map for multi-regeneration support)
+  const [regeneratingTransitionIndices, setRegeneratingTransitionIndices] = useState(new Set());
+  const [transitionRegenerationProgresses, setTransitionRegenerationProgresses] = useState(new Map());
+  // Track the previous video URL when starting regeneration (to detect actual completion vs stale state)
+  const transitionPreviousVideoUrlsRef = useRef(new Map());
 
   // Segment review state (for montage modes: S2V, Animate Move, Animate Replace, Batch Transition)
   const [showSegmentReview, setShowSegmentReview] = useState(false);
@@ -6693,7 +6696,7 @@ const PhotoGallery = ({
     }
   }, [photos, filteredPhotos, isPromptSelectorMode, isBulkDownloading, isGeneratingInfiniteLoop, sogniClient, settings, tokenType, showToast, cachedInfiniteLoopBlob, cachedInfiniteLoopHash]);
 
-  // Handle regenerating a single transition
+  // Handle regenerating a single transition (supports multiple simultaneous regenerations)
   const handleRegenerateTransition = useCallback(async (transitionIndex) => {
     if (!transitionReviewData || !pendingTransitions[transitionIndex]) {
       console.error('[Transition Review] No data for regeneration');
@@ -6704,12 +6707,24 @@ const PhotoGallery = ({
     
     console.log(`[Transition Review] Regenerating transition ${transitionIndex + 1}`);
     
+    // Store the previous URL to detect actual completion
+    const previousUrl = pendingTransitions[transitionIndex]?.url || null;
+    transitionPreviousVideoUrlsRef.current.set(transitionIndex, previousUrl);
+    
     // Mark transition as regenerating
     setPendingTransitions(prev => prev.map((t, i) => 
       i === transitionIndex ? { ...t, status: 'regenerating' } : t
     ));
-    setRegeneratingTransitionIndex(transitionIndex);
-    setRegenerationProgress({ progress: 0, eta: null, message: 'Starting regeneration...' });
+    
+    // Add to regenerating set (supports multiple simultaneous regenerations)
+    setRegeneratingTransitionIndices(prev => new Set([...prev, transitionIndex]));
+    
+    // Initialize progress for this transition
+    setTransitionRegenerationProgresses(prev => {
+      const updated = new Map(prev);
+      updated.set(transitionIndex, { progress: 0, eta: null, message: 'Starting regeneration...' });
+      return updated;
+    });
 
     try {
       const startFrame = lastFrames[transitionIndex];
@@ -6737,15 +6752,19 @@ const PhotoGallery = ({
             // Persist the updated state for next update call
             currentTempPhoto = updated[0];
             const { videoETA, videoProgress, videoWorkerName, videoStatus, videoElapsed } = updated[0];
-            setRegenerationProgress(prev => ({
-              ...prev,
-              progress: videoProgress || 0,
-              eta: videoETA,
-              workerName: videoWorkerName,
-              status: videoStatus,
-              elapsed: videoElapsed,
-              message: videoETA ? `~${Math.ceil(videoETA)}s remaining` : (videoStatus || 'Generating...')
-            }));
+            // Update progress Map for this specific transition index
+            setTransitionRegenerationProgresses(prev => {
+              const newMap = new Map(prev);
+              newMap.set(transitionIndex, {
+                progress: videoProgress || 0,
+                eta: videoETA,
+                workerName: videoWorkerName,
+                status: videoStatus,
+                elapsed: videoElapsed,
+                message: videoETA ? `~${Math.ceil(videoETA)}s remaining` : (videoStatus || 'Generating...')
+              });
+              return newMap;
+            });
           }
         };
 
@@ -6804,8 +6823,18 @@ const PhotoGallery = ({
         timeout: 4000
       });
     } finally {
-      setRegeneratingTransitionIndex(null);
-      setRegenerationProgress(null);
+      // Clean up tracking state for this transition
+      setRegeneratingTransitionIndices(prev => {
+        const updated = new Set(prev);
+        updated.delete(transitionIndex);
+        return updated;
+      });
+      setTransitionRegenerationProgresses(prev => {
+        const updated = new Map(prev);
+        updated.delete(transitionIndex);
+        return updated;
+      });
+      transitionPreviousVideoUrlsRef.current.delete(transitionIndex);
     }
   }, [transitionReviewData, pendingTransitions, sogniClient, settings, tokenType, showToast]);
 
@@ -6924,14 +6953,15 @@ const PhotoGallery = ({
     console.log('[Transition Review] User closed review');
 
     // Cancel any active regeneration (in case regeneration is in progress)
-    if (regeneratingTransitionIndex !== null) {
+    if (regeneratingTransitionIndices.size > 0) {
       try {
         await cancelAllActiveVideoProjects(setPhotos);
       } catch (error) {
         console.error('[Transition Review] Error cancelling projects:', error);
       }
-      setRegeneratingTransitionIndex(null);
-      setRegenerationProgress(null);
+      setRegeneratingTransitionIndices(new Set());
+      setTransitionRegenerationProgresses(new Map());
+      transitionPreviousVideoUrlsRef.current.clear();
     }
 
     // Close the review popup
@@ -6941,7 +6971,7 @@ const PhotoGallery = ({
     if (cachedInfiniteLoopUrl) {
       setShowInfiniteLoopPreview(true);
     }
-  }, [setPhotos, regeneratingTransitionIndex, cachedInfiniteLoopUrl]);
+  }, [setPhotos, regeneratingTransitionIndices, cachedInfiniteLoopUrl]);
 
   // Handle cancelling a single transition (for stuck/slow jobs)
   const handleCancelTransitionItem = useCallback(async (transitionIndex) => {
@@ -6972,10 +7002,19 @@ const PhotoGallery = ({
       }
     }
 
-    // If this was the regenerating transition, clear regeneration state
-    if (regeneratingTransitionIndex === transitionIndex) {
-      setRegeneratingTransitionIndex(null);
-      setRegenerationProgress(null);
+    // If this was a regenerating transition, clear its regeneration state
+    if (regeneratingTransitionIndices.has(transitionIndex)) {
+      setRegeneratingTransitionIndices(prev => {
+        const updated = new Set(prev);
+        updated.delete(transitionIndex);
+        return updated;
+      });
+      setTransitionRegenerationProgresses(prev => {
+        const updated = new Map(prev);
+        updated.delete(transitionIndex);
+        return updated;
+      });
+      transitionPreviousVideoUrlsRef.current.delete(transitionIndex);
     }
 
     // Mark transition as failed so user can retry
@@ -6995,7 +7034,7 @@ const PhotoGallery = ({
       type: 'info',
       timeout: 4000
     });
-  }, [pendingTransitions, sogniClient, setPhotos, regeneratingTransitionIndex, showToast]);
+  }, [pendingTransitions, sogniClient, setPhotos, regeneratingTransitionIndices, showToast]);
 
   // Handle cancelling infinite loop generation during initial creation
   // This shows the CancelConfirmationPopup with refund estimate
@@ -10811,7 +10850,7 @@ const PhotoGallery = ({
                     onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255, 82, 82, 0.1)'}
                     onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
                   >
-                    <span>⬇️</span> Download All Raw
+                    <span>⬇️</span> Download Images Raw
                   </button>
                   <button
                     className="more-dropdown-option"
@@ -10837,7 +10876,7 @@ const PhotoGallery = ({
                     onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255, 82, 82, 0.1)'}
                     onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
                   >
-                    <span>🖼️</span> Download All Framed
+                    <span>🖼️</span> Download Images Framed
                   </button>
                   {(() => {
                     // Check if any photos have videos
@@ -11632,7 +11671,7 @@ const PhotoGallery = ({
                       onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255, 82, 82, 0.1)'}
                       onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
                     >
-                      <span>⬇️</span> Download Raw
+                      <span>⬇️</span> Download Raw Image
                     </button>
                     <button
                       className="more-dropdown-option"
@@ -11658,7 +11697,7 @@ const PhotoGallery = ({
                       onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255, 82, 82, 0.1)'}
                       onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
                     >
-                      <span>🖼️</span> Download Framed
+                      <span>🖼️</span> Download Framed Image
                     </button>
                     {selectedPhoto.videoUrl && (
                       <button
@@ -16010,8 +16049,8 @@ const PhotoGallery = ({
           toIndex: t.toVideoIndex
         })) || []}
         workflowType="infinite-loop"
-        regeneratingIndex={regeneratingTransitionIndex}
-        regenerationProgress={regenerationProgress}
+        regeneratingIndices={regeneratingTransitionIndices}
+        regenerationProgresses={transitionRegenerationProgresses}
         itemETAs={infiniteLoopProgress?.transitionETAs || []}
         itemProgress={infiniteLoopProgress?.transitionProgress || []}
         itemWorkers={infiniteLoopProgress?.transitionWorkers || []}
