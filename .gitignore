@@ -78,3 +78,6 @@ playwright-report/
 server/mobile-shares.json
 
 server/uploads/contest/gallery-submissions/
+
+# Local scripts (not for version control)
+local-scripts/

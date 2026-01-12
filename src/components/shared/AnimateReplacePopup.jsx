@@ -5,7 +5,7 @@ import { getTokenLabel } from '../../services/walletService';
 
 // Sample replacement videos for Animate Replace
 const SAMPLE_REPLACEMENT_VIDEOS = [
-  {
+{
     id: 'lil-yacty',
     title: '🚶 Yachty Walkout',
     description: '',
@@ -19,7 +19,7 @@ const SAMPLE_REPLACEMENT_VIDEOS = [
   },
   {
     id: 'ra-ra',
-    title: '💃 Rasputin Dance',
+    title: '💃 Rasputin',
     description: '',
     url: 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/video-samples/rasputin.mp4'
   },
@@ -30,10 +30,52 @@ const SAMPLE_REPLACEMENT_VIDEOS = [
     url: 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/video-samples/techno-viking.mp4'
   },
   {
-    id: 'viral-dance',
-    title: '🕺 Viral Dance',
-    description: 'Trending dance moves',
+    id: 'dance-dance-dance',
+    title: '🕺 Dance Dance Dance',
+    description: '',
     url: 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/video-samples/viral-dance.mp4'
+  },
+  {
+    id: 'dance-chanel',
+    title: '💃 Chanel',
+    description: '',
+    url: 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/video-samples/chanel.mp4'
+  },
+  {
+    id: 'dance-leave-the-party',
+    title: 'Leave the party',
+    description: '',
+    url: 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/video-samples/leave-the-party.mp4'
+  },
+  {
+    id: 'dance-spongebob',
+    title: '🕺 SpongeBob dance',
+    description: '',
+    url: 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/video-samples/spongebob-dance.mp4'
+  },
+  {
+    id: 'dance-barbies',
+    title: '💃 Barbies',
+    description: '',
+    url: 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/video-samples/barbies-dance.mp4'
+  },
+  {
+    id: 'dance-sailor-moon',
+    title: '💃 Sailor moon',
+    description: '',
+    url: 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/video-samples/sailor-moon.mp4'
+  },
+  {
+    id: 'dance-keep-it-gangsta',
+    title: '🕺 Keep it gangsta',
+    description: '',
+    url: 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/video-samples/dance-keep-it-gangsta.mp4'
+  },
+  {
+    id: 'dance-big-guy',
+    title: '💃 Big guy',
+    description: '',
+    url: 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/video-samples/big-guy-dance.mp4'
   }
 ];
 
