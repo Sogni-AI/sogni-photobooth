@@ -293,14 +293,6 @@ function RecentProjects({
   const [draggedImageId, setDraggedImageId] = useState<string | null>(null);
   const [dragOverImageId, setDragOverImageId] = useState<string | null>(null);
 
-  // Image delete confirmation
-  const [imageDeleteConfirm, setImageDeleteConfirm] = useState<{
-    show: boolean;
-    imageId: string;
-    projectId: string;
-    filename: string;
-  }>({ show: false, imageId: '', projectId: '', filename: '' });
-
   // Cloud project download state
   const [downloadingProject, setDownloadingProject] = useState<string | null>(null);
   const [downloadProgress, setDownloadProgress] = useState<{ current: number; total: number; message: string } | null>(null);
@@ -442,13 +434,7 @@ function RecentProjects({
       return;
     }
 
-    // If images are already loaded, just enter edit mode
-    if (expandedProjectImages[project.id]) {
-      setExpandedProjectId(project.id);
-      return;
-    }
-
-    // Images should already be loaded by auto-load, but load them if needed
+    // Always reload images from DB when entering edit mode to ensure correct order
     try {
       const images = await getLocalProjectImageUrls(project.id);
       setExpandedProjectImages(prev => ({
@@ -459,49 +445,33 @@ function RecentProjects({
     } catch (error) {
       console.error('Failed to load project images:', error);
     }
-  }, [expandedProjectId, expandedProjectImages, getLocalProjectImageUrls]);
+  }, [expandedProjectId, getLocalProjectImageUrls]);
 
   // Handle closing inline expanded view
-  const handleCollapseProject = useCallback((projectId: string) => {
-    // Revoke blob URLs to free memory
-    const images = expandedProjectImages[projectId];
-    if (images) {
-      images.forEach(img => {
-        try {
-          URL.revokeObjectURL(img.url);
-        } catch {
-          // Ignore errors
-        }
-      });
-    }
+  const handleCollapseProject = useCallback(() => {
+    // Just exit edit mode - keep images loaded for carousel view
     setExpandedProjectId(null);
-    setExpandedProjectImages(prev => {
-      const updated = { ...prev };
-      delete updated[projectId];
-      return updated;
-    });
     setDraggedImageId(null);
     setDragOverImageId(null);
-  }, [expandedProjectImages]);
+  }, []);
 
-  // Handle deleting an individual image
-  const handleDeleteImage = useCallback(async () => {
-    if (!imageDeleteConfirm.imageId || !imageDeleteConfirm.projectId) return;
+  // Handle deleting an individual image (no confirmation)
+  const handleDeleteImage = useCallback(async (imageId: string, projectId: string) => {
+    if (!imageId || !projectId) return;
 
-    const success = await deleteLocalImage(imageDeleteConfirm.imageId);
+    const success = await deleteLocalImage(imageId);
     if (success) {
       // Update expanded view
       setExpandedProjectImages(prev => {
-        const projectImages = prev[imageDeleteConfirm.projectId];
+        const projectImages = prev[projectId];
         if (!projectImages) return prev;
         return {
           ...prev,
-          [imageDeleteConfirm.projectId]: projectImages.filter(img => img.id !== imageDeleteConfirm.imageId)
+          [projectId]: projectImages.filter(img => img.id !== imageId)
         };
       });
     }
-    setImageDeleteConfirm({ show: false, imageId: '', projectId: '', filename: '' });
-  }, [imageDeleteConfirm.imageId, imageDeleteConfirm.projectId, deleteLocalImage]);
+  }, [deleteLocalImage]);
 
   // Drag and drop handlers
   const handleDragStart = useCallback((imageId: string) => {
@@ -1405,12 +1375,7 @@ function RecentProjects({
                               className="local-project-inline-delete"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                setImageDeleteConfirm({
-                                  show: true,
-                                  imageId: image.id,
-                                  projectId: project.id,
-                                  filename: image.filename
-                                });
+                                handleDeleteImage(image.id, project.id);
                               }}
                               title="Delete this image"
                             >
@@ -1431,7 +1396,7 @@ function RecentProjects({
                         </button>
                         <button
                           className="local-project-inline-btn local-project-inline-btn-done"
-                          onClick={() => handleCollapseProject(project.id)}
+                          onClick={() => handleCollapseProject()}
                         >
                           ✓ Done
                         </button>
@@ -1844,36 +1809,6 @@ function RecentProjects({
                 onClick={handleDeleteLocalProject}
               >
                 Delete Forever
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Delete Image Confirmation Modal */}
-      {imageDeleteConfirm.show && (
-        <div
-          className="recent-projects-modal-overlay"
-          style={{ zIndex: 100005 }}
-          onClick={() => setImageDeleteConfirm({ show: false, imageId: '', projectId: '', filename: '' })}
-        >
-          <div className="recent-projects-modal" onClick={(e) => e.stopPropagation()}>
-            <h3>🗑️ Delete Image</h3>
-            <p>
-              Delete <strong>"{imageDeleteConfirm.filename}"</strong>?
-            </p>
-            <div className="recent-projects-modal-actions">
-              <button
-                className="recent-projects-modal-btn recent-projects-modal-btn-cancel"
-                onClick={() => setImageDeleteConfirm({ show: false, imageId: '', projectId: '', filename: '' })}
-              >
-                Cancel
-              </button>
-              <button
-                className="recent-projects-modal-btn recent-projects-modal-btn-confirm recent-projects-modal-btn-danger"
-                onClick={handleDeleteImage}
-              >
-                Delete
               </button>
             </div>
           </div>

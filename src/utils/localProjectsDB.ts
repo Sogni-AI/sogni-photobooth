@@ -229,10 +229,16 @@ export async function deleteProject(projectId: string): Promise<void> {
 // ============================================================================
 
 /**
- * Get all images for a project
+ * Get all images for a project, ordered by the project's imageIds array
  */
 export async function getProjectImages(projectId: string): Promise<LocalProjectImage[]> {
   const db = await openDB();
+
+  // First get the project to get the correct image order
+  const project = await getProject(projectId);
+  if (!project) {
+    return [];
+  }
 
   return new Promise((resolve, reject) => {
     const transaction = db.transaction(IMAGES_STORE, 'readonly');
@@ -241,11 +247,24 @@ export async function getProjectImages(projectId: string): Promise<LocalProjectI
     const request = index.getAll(projectId);
 
     request.onsuccess = () => {
-      // Sort by addedAt (oldest first to maintain order)
-      const images = (request.result as LocalProjectImage[]).sort(
-        (a, b) => a.addedAt - b.addedAt
-      );
-      resolve(images);
+      const images = request.result as LocalProjectImage[];
+
+      // Create a map for O(1) lookup
+      const imageMap = new Map<string, LocalProjectImage>();
+      for (const img of images) {
+        imageMap.set(img.id, img);
+      }
+
+      // Sort images according to the project's imageIds order
+      const orderedImages: LocalProjectImage[] = [];
+      for (const id of project.imageIds) {
+        const img = imageMap.get(id);
+        if (img) {
+          orderedImages.push(img);
+        }
+      }
+
+      resolve(orderedImages);
     };
 
     request.onerror = () => {
