@@ -814,7 +814,8 @@ const PhotoGallery = ({
   updateStyle = null, // Function to update selected style
   switchToModel = null, // Function to switch AI model
   onNavigateToVibeExplorer = null, // Function to navigate to full vibe explorer
-  onRegisterVideoIntroTrigger = null // Callback to register function that triggers video intro popup
+  onRegisterVideoIntroTrigger = null, // Callback to register function that triggers video intro popup
+  onOpenLoginModal = null // Function to open the login modal
 }) => {
   // Get settings from context
   const { settings, updateSetting } = useApp();
@@ -944,8 +945,11 @@ const PhotoGallery = ({
   const [showSegmentReview, setShowSegmentReview] = useState(false);
   const [pendingSegments, setPendingSegments] = useState([]); // Array of { url, index, photoId, status, thumbnail }
   const [segmentReviewData, setSegmentReviewData] = useState(null); // { workflowType, photoIds, regenerateParams, etc. }
-  const [regeneratingSegmentIndex, setRegeneratingSegmentIndex] = useState(null);
-  const [segmentRegenerationProgress, setSegmentRegenerationProgress] = useState(null);
+  // Track multiple regenerating segments and their progress (Map: segmentIndex -> progress object)
+  const [regeneratingSegmentIndices, setRegeneratingSegmentIndices] = useState(new Set());
+  const [segmentRegenerationProgresses, setSegmentRegenerationProgresses] = useState(new Map());
+  // Track the previous video URL when starting regeneration (to detect actual completion vs stale state)
+  const segmentPreviousVideoUrlsRef = useRef(new Map());
   // Per-segment progress tracking arrays (mirrors infiniteLoopProgress structure)
   const [segmentProgress, setSegmentProgress] = useState(null); // { itemETAs, itemProgress, itemWorkers, itemStatuses, itemElapsed }
   // Track active montage batch for completion detection
@@ -7128,13 +7132,19 @@ const PhotoGallery = ({
       return updated;
     });
 
+    // Store the previous video URL to detect when regeneration actually completes
+    // (prevents instant success toast from stale videoUrl)
+    segmentPreviousVideoUrlsRef.current.set(segmentIndex, photo.videoUrl || null);
+
     // Update segment status to regenerating
     setPendingSegments(prev => {
       const updated = [...prev];
       updated[segmentIndex] = { ...updated[segmentIndex], status: 'regenerating', error: undefined };
       return updated;
     });
-    setRegeneratingSegmentIndex(segmentIndex);
+
+    // Add to regenerating set (supports multiple simultaneous regenerations)
+    setRegeneratingSegmentIndices(prev => new Set([...prev, segmentIndex]));
 
     // Call the regeneration handler
     await handleRegenerateVideo(photo, photoIndex);
@@ -7161,81 +7171,129 @@ const PhotoGallery = ({
   }, [pendingSegments]);
 
   // Watch for segment regeneration completion (success, failure, or timeout) AND track progress
+  // Now supports multiple simultaneous regenerating segments
   useEffect(() => {
-    if (regeneratingSegmentIndex === null || !pendingSegments[regeneratingSegmentIndex]) {
+    if (regeneratingSegmentIndices.size === 0) {
       return;
     }
 
-    const segment = pendingSegments[regeneratingSegmentIndex];
-    const photo = photos.find(p => p.id === segment.photoId);
+    const indicesToRemove = [];
+    let hasProgressChanges = false;
 
-    if (!photo) return;
+    // Process each regenerating segment
+    regeneratingSegmentIndices.forEach(segmentIndex => {
+      const segment = pendingSegments[segmentIndex];
+      if (!segment) {
+        indicesToRemove.push(segmentIndex);
+        return;
+      }
 
-    // Check if video regeneration completed successfully (not generating anymore and has a video URL)
-    // Note: We check segment.status === 'regenerating' instead of comparing URLs to avoid race conditions
-    // where the segment URL might have been updated by another code path
-    if (photo.videoUrl && !photo.generatingVideo && segment.status === 'regenerating') {
-      console.log(`[Segment Review] Segment ${regeneratingSegmentIndex + 1} regeneration complete`);
+      const photo = photos.find(p => p.id === segment.photoId);
+      if (!photo) return;
 
-      // Update segment with new URL
-      setPendingSegments(prev => {
-        const updated = [...prev];
-        updated[regeneratingSegmentIndex] = {
-          ...updated[regeneratingSegmentIndex],
-          url: photo.videoUrl,
-          status: 'ready',
-          thumbnail: photo.enhancedImageUrl || photo.images?.[0] || photo.originalDataUrl
-        };
+      // Get the previous video URL to detect actual completion (not stale state)
+      const previousVideoUrl = segmentPreviousVideoUrlsRef.current.get(segmentIndex);
+
+      // Check if video regeneration completed successfully:
+      // - Has a video URL that's DIFFERENT from the previous one (or previous was null)
+      // - Not generating anymore
+      // - Segment status is 'regenerating'
+      const hasNewUrl = photo.videoUrl && photo.videoUrl !== previousVideoUrl;
+      if (hasNewUrl && !photo.generatingVideo && segment.status === 'regenerating') {
+        console.log(`[Segment Review] Segment ${segmentIndex + 1} regeneration complete`);
+
+        // Update segment with new URL
+        setPendingSegments(prev => {
+          const updated = [...prev];
+          updated[segmentIndex] = {
+            ...updated[segmentIndex],
+            url: photo.videoUrl,
+            status: 'ready',
+            thumbnail: photo.enhancedImageUrl || photo.images?.[0] || photo.originalDataUrl
+          };
+          return updated;
+        });
+
+        // Cleanup tracking state for this segment
+        indicesToRemove.push(segmentIndex);
+        segmentPreviousVideoUrlsRef.current.delete(segmentIndex);
+
+        showToast({
+          title: '✨ Segment Regenerated!',
+          message: `Segment ${segmentIndex + 1} has been regenerated.`,
+          type: 'success',
+          timeout: 3000
+        });
+      }
+      // Check if video regeneration failed (error or timeout, not generating anymore)
+      else if (!photo.generatingVideo && (photo.videoError || photo.timedOut)) {
+        console.log(`[Segment Review] Segment ${segmentIndex + 1} regeneration failed:`, photo.videoError || 'Timeout');
+
+        // Update segment status to failed
+        setPendingSegments(prev => {
+          const updated = [...prev];
+          updated[segmentIndex] = {
+            ...updated[segmentIndex],
+            status: 'failed',
+            error: photo.videoError || 'Generation timed out'
+          };
+          return updated;
+        });
+
+        // Cleanup tracking state for this segment
+        indicesToRemove.push(segmentIndex);
+        segmentPreviousVideoUrlsRef.current.delete(segmentIndex);
+
+        showToast({
+          title: '❌ Segment Failed',
+          message: `Segment ${segmentIndex + 1} failed: ${photo.videoError || 'Timeout'}. You can retry it.`,
+          type: 'error',
+          timeout: 5000
+        });
+      }
+      // Still generating - check if progress changed
+      else if (photo.generatingVideo) {
+        hasProgressChanges = true;
+      }
+    });
+
+    // Remove completed/failed segments from tracking
+    if (indicesToRemove.length > 0) {
+      setRegeneratingSegmentIndices(prev => {
+        const updated = new Set(prev);
+        indicesToRemove.forEach(idx => updated.delete(idx));
         return updated;
       });
-
-      setRegeneratingSegmentIndex(null);
-      setSegmentRegenerationProgress(null);
-
-      showToast({
-        title: '✨ Segment Regenerated!',
-        message: `Segment ${regeneratingSegmentIndex + 1} has been regenerated.`,
-        type: 'success',
-        timeout: 3000
-      });
-    }
-    // Check if video regeneration failed (error or timeout, not generating anymore)
-    else if (!photo.generatingVideo && (photo.videoError || photo.timedOut)) {
-      console.log(`[Segment Review] Segment ${regeneratingSegmentIndex + 1} regeneration failed:`, photo.videoError || 'Timeout');
-
-      // Update segment status to failed
-      setPendingSegments(prev => {
-        const updated = [...prev];
-        updated[regeneratingSegmentIndex] = {
-          ...updated[regeneratingSegmentIndex],
-          status: 'failed',
-          error: photo.videoError || 'Generation timed out'
-        };
+      // Also clean up progress map for removed indices
+      setSegmentRegenerationProgresses(prev => {
+        const updated = new Map(prev);
+        indicesToRemove.forEach(idx => updated.delete(idx));
         return updated;
       });
+    }
 
-      setRegeneratingSegmentIndex(null);
-      setSegmentRegenerationProgress(null);
+    // Update progress map for segments still generating (only if there are changes)
+    if (hasProgressChanges) {
+      setSegmentRegenerationProgresses(prev => {
+        const updated = new Map(prev);
+        regeneratingSegmentIndices.forEach(segmentIndex => {
+          const segment = pendingSegments[segmentIndex];
+          if (!segment) return;
+          const photo = photos.find(p => p.id === segment.photoId);
+          if (!photo || !photo.generatingVideo) return;
 
-      showToast({
-        title: '❌ Segment Failed',
-        message: `Segment ${regeneratingSegmentIndex + 1} failed: ${photo.videoError || 'Timeout'}. You can retry it.`,
-        type: 'error',
-        timeout: 5000
+          updated.set(segmentIndex, {
+            progress: photo.videoProgress || 0,
+            eta: photo.videoETA || 0,
+            workerName: photo.videoWorkerName || null,
+            status: photo.videoStatus || null,
+            elapsed: photo.videoElapsed || 0
+          });
+        });
+        return updated;
       });
     }
-    // Still generating - update progress from photo properties
-    else if (photo.generatingVideo) {
-      // Sync photo's video progress to segmentRegenerationProgress for UI display
-      setSegmentRegenerationProgress({
-        progress: photo.videoProgress || 0,
-        eta: photo.videoETA || 0,
-        workerName: photo.videoWorkerName || null,
-        status: photo.videoStatus || null,
-        elapsed: photo.videoElapsed || 0
-      });
-    }
-  }, [photos, regeneratingSegmentIndex, pendingSegments, showToast]);
+  }, [photos, regeneratingSegmentIndices, pendingSegments, showToast]);
 
   // Handle final stitching after segment review
   const handleStitchAfterSegmentReview = useCallback(async () => {
@@ -7397,14 +7455,15 @@ const PhotoGallery = ({
     console.log('[Segment Review] User closed review');
 
     // Cancel any active regeneration (in case regeneration is in progress)
-    if (regeneratingSegmentIndex !== null) {
+    if (regeneratingSegmentIndices.size > 0) {
       try {
         await cancelAllActiveVideoProjects(setPhotos);
       } catch (error) {
         console.error('[Segment Review] Error cancelling projects:', error);
       }
-      setRegeneratingSegmentIndex(null);
-      setSegmentRegenerationProgress(null);
+      setRegeneratingSegmentIndices(new Set());
+      setSegmentRegenerationProgresses(new Map());
+      segmentPreviousVideoUrlsRef.current.clear();
     }
 
     // Close the review popup
@@ -7414,7 +7473,7 @@ const PhotoGallery = ({
     if (stitchedVideoUrl) {
       setShowStitchedVideoOverlay(true);
     }
-  }, [setPhotos, regeneratingSegmentIndex, stitchedVideoUrl]);
+  }, [setPhotos, regeneratingSegmentIndices, stitchedVideoUrl]);
 
   // Handle cancelling a single segment (for stuck/slow jobs)
   const handleCancelSegmentItem = useCallback(async (segmentIndex) => {
@@ -7460,10 +7519,19 @@ const PhotoGallery = ({
       return updated;
     });
 
-    // If this was the regenerating segment, clear regeneration state
-    if (regeneratingSegmentIndex === segmentIndex) {
-      setRegeneratingSegmentIndex(null);
-      setSegmentRegenerationProgress(null);
+    // If this was a regenerating segment, clear its regeneration state
+    if (regeneratingSegmentIndices.has(segmentIndex)) {
+      setRegeneratingSegmentIndices(prev => {
+        const updated = new Set(prev);
+        updated.delete(segmentIndex);
+        return updated;
+      });
+      setSegmentRegenerationProgresses(prev => {
+        const updated = new Map(prev);
+        updated.delete(segmentIndex);
+        return updated;
+      });
+      segmentPreviousVideoUrlsRef.current.delete(segmentIndex);
     }
 
     // Mark segment as failed/cancelled so user can retry
@@ -7483,7 +7551,7 @@ const PhotoGallery = ({
       type: 'info',
       timeout: 4000
     });
-  }, [pendingSegments, photos, sogniClient, setPhotos, regeneratingSegmentIndex, showToast]);
+  }, [pendingSegments, photos, sogniClient, setPhotos, regeneratingSegmentIndices, showToast]);
 
   // Handle cancelling segment generation during initial creation
   // This shows the CancelConfirmationPopup with refund estimate
@@ -13578,17 +13646,49 @@ const PhotoGallery = ({
                         className="photo-hide-btn"
                         onMouseDown={(e) => {
                           e.stopPropagation();
-                          // If video is playing, stop it instead of hiding the photo
-                          if (playingGeneratedVideoIds.has(photo.id)) {
-                            setPlayingGeneratedVideoIds(prev => {
-                              const newSet = new Set(prev);
-                              newSet.delete(photo.id);
-                              return newSet;
+                          
+                          // If photo has a video, remove the video only
+                          if (photo.videoUrl) {
+                            // Stop video if playing
+                            if (playingGeneratedVideoIds.has(photo.id)) {
+                              setPlayingGeneratedVideoIds(prev => {
+                                const newSet = new Set(prev);
+                                newSet.delete(photo.id);
+                                return newSet;
+                              });
+                              // Also clear unmuted state if this was the unmuted video
+                              setUnmutedVideoId(prev => prev === photo.id ? null : prev);
+                            }
+                            // Remove the video from the photo
+                            setPhotos(prev => {
+                              const updated = [...prev];
+                              if (updated[index]) {
+                                updated[index] = {
+                                  ...updated[index],
+                                  videoUrl: undefined,
+                                  generatingVideo: false,
+                                  videoProgress: undefined,
+                                  videoETA: undefined,
+                                  videoProjectId: undefined,
+                                  videoError: undefined,
+                                  videoWorkflowType: undefined,
+                                  videoRegenerateParams: undefined,
+                                  videoResolution: undefined,
+                                  videoFramerate: undefined,
+                                  videoDuration: undefined,
+                                  videoMotionPrompt: undefined,
+                                  videoNegativePrompt: undefined,
+                                  videoMotionEmoji: undefined,
+                                  videoModelVariant: undefined,
+                                  videoWorkerName: undefined,
+                                  videoStatus: undefined,
+                                  videoElapsed: undefined
+                                };
+                              }
+                              return updated;
                             });
-                            // Also clear unmuted state if this was the unmuted video
-                            setUnmutedVideoId(prev => prev === photo.id ? null : prev);
                           } else {
-                            // No video playing, hide the photo
+                            // No video, hide the photo
                             setPhotos(prev => {
                               const updated = [...prev];
                               if (updated[index]) {
@@ -13631,7 +13731,7 @@ const PhotoGallery = ({
                           e.currentTarget.style.background = 'rgba(0, 0, 0, 0.7)';
                           e.currentTarget.style.transform = 'scale(0.8)';
                         }}
-                        title={playingGeneratedVideoIds.has(photo.id) ? "Stop video" : "Hide this image"}
+                        title={photo.videoUrl ? "Remove video" : "Hide this image"}
                       >
                         ×
                       </button>
@@ -14230,7 +14330,9 @@ const PhotoGallery = ({
                 {/* AI-Generated Video Overlay - Show when generated video is playing */}
                 {photo.videoUrl && !photo.generatingVideo && playingGeneratedVideoIds.has(photo.id) && (
                   // All photos play their own video in a simple loop
-                  // S2V/Animate videos can have audio - only one unmuted at a time, mutes after first play
+                  // S2V/Animate videos can have audio - only one unmuted at a time
+                  // Grid mode: mutes after first play to prevent multiple videos playing audio
+                  // Slideshow mode: keeps audio playing through all loops
                   // BUT: Mute audio if Segment Review popup is open (for montage modes)
                   <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 4 }}>
                     <video
@@ -14238,15 +14340,16 @@ const PhotoGallery = ({
                       src={photo.videoUrl}
                       autoPlay
                       loop={true}
-                      muted={showSegmentReview || !['s2v', 'animate-move', 'animate-replace'].includes(photo.videoWorkflowType) || unmutedVideoId !== photo.id || s2vVideosPlayedOnce.has(photo.id)}
+                      muted={showSegmentReview || !['s2v', 'animate-move', 'animate-replace'].includes(photo.videoWorkflowType) || unmutedVideoId !== photo.id || (!isSelected && s2vVideosPlayedOnce.has(photo.id))}
                       playsInline
                       onLoadedMetadata={(e) => {
                         // For S2V/Animate videos, try to unmute and play with audio (muting any previous)
                         // UNLESS the Segment Review popup is open
                         if (['s2v', 'animate-move', 'animate-replace'].includes(photo.videoWorkflowType) && !showSegmentReview) {
                           const videoEl = e.currentTarget;
-                          // Only unmute if this video hasn't played audio yet
-                          if (!s2vVideosPlayedOnce.has(photo.id)) {
+                          // In slideshow mode (isSelected), always try to play with audio
+                          // In grid mode, only unmute if this video hasn't played audio yet
+                          if (isSelected || !s2vVideosPlayedOnce.has(photo.id)) {
                             // Set this as the unmuted video (will mute others)
                             setUnmutedVideoId(photo.id);
                             videoEl.muted = false;
@@ -14260,7 +14363,7 @@ const PhotoGallery = ({
                               });
                             }
                           } else {
-                            // Already played once, start muted
+                            // Already played once in grid mode, start muted
                             videoEl.muted = true;
                           }
                         }
@@ -14268,6 +14371,7 @@ const PhotoGallery = ({
                       onTimeUpdate={(e) => {
                         // For S2V/Animate videos, auto-mute when video completes first play                        
                         // We use onTimeUpdate + duration check since loop=true prevents onEnded
+                        // BUT: In slideshow mode (isSelected), let audio continue looping
                         if (['s2v', 'animate-move', 'animate-replace'].includes(photo.videoWorkflowType)) {
                           const videoEl = e.currentTarget;
                           const duration = videoEl.duration;
@@ -14279,8 +14383,9 @@ const PhotoGallery = ({
                           }
                           
                           // If we're near the end of the video (within 0.2s) and haven't marked as played once
-                          if (duration > 0 && currentTime >= duration - 0.2 && !s2vVideosPlayedOnce.has(photo.id) && unmutedVideoId === photo.id) {
-                            // Mark as played once and mute
+                          // Skip auto-mute in slideshow mode (isSelected) - let audio continue looping
+                          if (!isSelected && duration > 0 && currentTime >= duration - 0.2 && !s2vVideosPlayedOnce.has(photo.id) && unmutedVideoId === photo.id) {
+                            // Mark as played once and mute (grid mode only)
                             setS2vVideosPlayedOnce(prev => new Set([...prev, photo.id]));
                             setUnmutedVideoId(null);
                             videoEl.muted = true;
@@ -15137,17 +15242,49 @@ const PhotoGallery = ({
                       className="photo-hide-btn"
                       onMouseDown={(e) => {
                         e.stopPropagation();
-                        // If video is playing, stop it instead of hiding the photo
-                        if (playingGeneratedVideoIds.has(photo.id)) {
-                          setPlayingGeneratedVideoIds(prev => {
-                            const newSet = new Set(prev);
-                            newSet.delete(photo.id);
-                            return newSet;
+                        
+                        // If photo has a video, remove the video only
+                        if (photo.videoUrl) {
+                          // Stop video if playing
+                          if (playingGeneratedVideoIds.has(photo.id)) {
+                            setPlayingGeneratedVideoIds(prev => {
+                              const newSet = new Set(prev);
+                              newSet.delete(photo.id);
+                              return newSet;
+                            });
+                            // Also clear unmuted state if this was the unmuted video
+                            setUnmutedVideoId(prev => prev === photo.id ? null : prev);
+                          }
+                          // Remove the video from the photo
+                          setPhotos(prev => {
+                            const updated = [...prev];
+                            if (updated[index]) {
+                              updated[index] = {
+                                ...updated[index],
+                                videoUrl: undefined,
+                                generatingVideo: false,
+                                videoProgress: undefined,
+                                videoETA: undefined,
+                                videoProjectId: undefined,
+                                videoError: undefined,
+                                videoWorkflowType: undefined,
+                                videoRegenerateParams: undefined,
+                                videoResolution: undefined,
+                                videoFramerate: undefined,
+                                videoDuration: undefined,
+                                videoMotionPrompt: undefined,
+                                videoNegativePrompt: undefined,
+                                videoMotionEmoji: undefined,
+                                videoModelVariant: undefined,
+                                videoWorkerName: undefined,
+                                videoStatus: undefined,
+                                videoElapsed: undefined
+                              };
+                            }
+                            return updated;
                           });
-                          // Also clear unmuted state if this was the unmuted video
-                          setUnmutedVideoId(prev => prev === photo.id ? null : prev);
                         } else {
-                          // No video playing, hide the photo
+                          // No video, hide the photo
                           setPhotos(prev => {
                             const updated = [...prev];
                             if (updated[index]) {
@@ -15893,8 +16030,8 @@ const PhotoGallery = ({
         onPlayItem={handlePlaySegment}
         items={pendingSegments}
         workflowType={segmentReviewData?.workflowType || 's2v'}
-        regeneratingIndex={regeneratingSegmentIndex}
-        regenerationProgress={segmentRegenerationProgress}
+        regeneratingIndices={regeneratingSegmentIndices}
+        regenerationProgresses={segmentRegenerationProgresses}
         itemETAs={segmentProgress?.itemETAs || []}
         itemProgress={segmentProgress?.itemProgress || []}
         itemWorkers={segmentProgress?.itemWorkers || []}
