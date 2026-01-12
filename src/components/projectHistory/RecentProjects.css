@@ -90,19 +90,20 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 20px;
-  padding: 24px 32px;
+  gap: 12px;
+  padding: 16px 24px;
   background: #ffffff;
   border-bottom: 4px solid #1a1a1a;
   flex-shrink: 0;
+  flex-wrap: wrap;
 }
 
 .recent-projects-header-left {
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: 12px;
   flex: 1;
-  min-width: 0;
+  min-width: 200px;
 }
 
 .recent-projects-header h2 {
@@ -800,28 +801,60 @@
 /* Mobile Optimizations */
 @media (max-width: 600px) {
   .recent-projects-header {
-    padding: 20px;
-    gap: 14px;
+    padding: 12px 16px;
+    gap: 10px;
   }
 
   .recent-projects-header-left {
-    gap: 14px;
+    gap: 8px;
     flex-wrap: wrap;
+    order: 2;
+    width: 100%;
+    min-width: 100%;
+  }
+
+  .recent-projects-header-right {
+    order: 1;
+    width: 100%;
+    justify-content: space-between;
   }
 
   .recent-projects-header h2 {
-    font-size: 1.5rem;
+    font-size: 1.25rem;
   }
 
   .recent-projects-header h2::after {
-    font-size: 1.25rem;
-    margin-left: 8px;
+    font-size: 1rem;
+    margin-left: 6px;
   }
 
   .recent-projects-close-btn {
-    width: 46px;
-    height: 46px;
-    font-size: 1.25rem;
+    width: 40px;
+    height: 40px;
+    font-size: 1.1rem;
+  }
+
+  .recent-projects-new-btn {
+    font-size: 0.65rem;
+    padding: 6px 10px;
+  }
+
+  .recent-projects-new-local-btn {
+    padding-right: 24px;
+  }
+
+  .recent-projects-info-hint {
+    width: 14px;
+    height: 14px;
+    font-size: 0.5rem;
+    right: 5px;
+  }
+
+  .recent-projects-info-dropdown {
+    width: 220px;
+    font-size: 0.7rem;
+    padding: 10px 12px;
+    right: -40px;
   }
 
   .recent-projects-scroll-container {
@@ -1007,129 +1040,133 @@
 .recent-projects-header-right {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   flex-shrink: 0;
 }
 
 /* New Project Buttons */
 .recent-projects-new-btn {
   background: #ffffff;
-  border: 3px solid #1a1a1a;
+  border: 2px solid #1a1a1a;
   color: #1a1a1a;
-  font-size: 0.75rem;
-  font-weight: 800;
-  padding: 12px 20px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 8px 14px;
   border-radius: 50px;
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 8px;
-  transition: all 0.25s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-  box-shadow: 3px 3px 0 #1a1a1a;
+  gap: 4px;
+  transition: all 0.2s ease;
+  box-shadow: 2px 2px 0 #1a1a1a;
   text-transform: lowercase;
   letter-spacing: 0.02em;
   white-space: nowrap;
-  position: relative;
 }
 
 .recent-projects-new-btn:hover {
   background: #FFED4E;
-  transform: translate(-2px, -2px);
-  box-shadow: 5px 5px 0 #1a1a1a;
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0 #1a1a1a;
 }
 
 .recent-projects-new-btn:active {
   transform: translate(1px, 1px);
-  box-shadow: 2px 2px 0 #1a1a1a;
+  box-shadow: 1px 1px 0 #1a1a1a;
+}
+
+/* Local Project Button Wrapper with inline ? */
+.recent-projects-local-btn-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
 }
 
 .recent-projects-new-local-btn {
   background: linear-gradient(135deg, #e8f4fd 0%, #ffffff 100%);
   border-color: #06b6d4;
+  padding-right: 28px;
 }
 
 .recent-projects-new-local-btn:hover {
   background: linear-gradient(135deg, #cceeff 0%, #e8f4fd 100%);
 }
 
-/* Info Button with Dropdown */
-.recent-projects-info-btn-wrapper {
-  position: relative;
-  display: inline-flex;
-}
-
-.recent-projects-info-btn {
-  width: 36px;
-  height: 36px;
+/* Tiny inline ? hint button */
+.recent-projects-info-hint {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
-  background: #ffffff;
-  border: 3px solid #1a1a1a;
-  color: #1a1a1a;
-  font-size: 1rem;
+  background: #06b6d4;
+  border: none;
+  color: #fff;
+  font-size: 0.55rem;
   font-weight: 800;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.25s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-  box-shadow: 3px 3px 0 #1a1a1a;
+  transition: all 0.2s ease;
+  padding: 0;
+  line-height: 1;
 }
 
-.recent-projects-info-btn:hover {
-  background: #06b6d4;
-  color: #fff;
-  transform: translate(-2px, -2px);
-  box-shadow: 5px 5px 0 #1a1a1a;
+.recent-projects-info-hint:hover {
+  background: #0891b2;
+  transform: translateY(-50%) scale(1.1);
 }
 
+/* Info Dropdown */
 .recent-projects-info-dropdown {
   position: absolute;
-  top: calc(100% + 12px);
+  top: calc(100% + 8px);
   right: 0;
-  width: 280px;
-  padding: 16px;
-  background: #ffffff;
-  border: 3px solid #1a1a1a;
-  border-radius: 16px;
-  box-shadow: 4px 4px 0 #1a1a1a;
-  font-size: 0.85rem;
+  width: 260px;
+  padding: 12px 14px;
+  background: #1a1a1a;
+  border-radius: 12px;
+  font-size: 0.75rem;
   font-weight: 500;
   line-height: 1.5;
-  color: #333;
+  color: #fff;
   opacity: 0;
   visibility: hidden;
-  transform: translateY(-8px);
+  transform: translateY(-4px);
   transition: all 0.2s ease;
-  z-index: 1000;
+  z-index: 100010;
   pointer-events: none;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
 }
 
 .recent-projects-info-dropdown::before {
   content: '';
   position: absolute;
-  top: -10px;
-  right: 12px;
-  width: 0;
-  height: 0;
-  border-left: 10px solid transparent;
-  border-right: 10px solid transparent;
-  border-bottom: 10px solid #1a1a1a;
+  top: -6px;
+  right: 16px;
+  width: 12px;
+  height: 12px;
+  background: #1a1a1a;
+  transform: rotate(45deg);
 }
 
 .recent-projects-info-dropdown strong {
   display: block;
   color: #06b6d4;
-  font-weight: 800;
-  font-size: 1rem;
-  margin-bottom: 8px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  margin-bottom: 6px;
 }
 
 .recent-projects-info-dropdown p {
   margin: 0;
-  color: #555;
+  color: rgba(255, 255, 255, 0.85);
 }
 
-.recent-projects-info-btn-wrapper:hover .recent-projects-info-dropdown {
+.recent-projects-local-btn-wrapper:hover .recent-projects-info-dropdown {
   opacity: 1;
   visibility: visible;
   transform: translateY(0);
@@ -1207,6 +1244,31 @@
 .recent-project-local-icon {
   margin-right: 4px;
   font-size: 1rem;
+}
+
+/* Inline rename button - small and discreet next to title */
+.recent-project-rename-inline {
+  background: transparent;
+  border: none;
+  color: #999;
+  font-size: 0.75rem;
+  cursor: pointer;
+  padding: 2px 4px;
+  margin-left: 4px;
+  opacity: 0.5;
+  transition: all 0.2s ease;
+  vertical-align: middle;
+}
+
+.recent-project-rename-inline:hover {
+  color: #06b6d4;
+  opacity: 1;
+}
+
+.recent-project-count {
+  color: #888;
+  font-weight: 500;
+  margin-left: 4px;
 }
 
 /* Local Project Action Button */
@@ -1379,30 +1441,29 @@
   box-shadow: 2px 2px 0 rgba(26, 26, 26, 0.3);
 }
 
-/* Mobile Optimizations for Local Projects */
-@media (max-width: 600px) {
-  .recent-projects-header-right {
-    gap: 8px;
-    flex-wrap: wrap;
-    justify-content: flex-end;
+/* Tablet Optimizations */
+@media (max-width: 900px) {
+  .recent-projects-header {
+    padding: 14px 20px;
+    gap: 10px;
+  }
+
+  .recent-projects-header-left {
+    gap: 10px;
+  }
+
+  .recent-projects-header h2 {
+    font-size: 1.4rem;
   }
 
   .recent-projects-new-btn {
-    padding: 10px 14px;
-    font-size: 0.7rem;
+    font-size: 0.65rem;
+    padding: 7px 12px;
   }
+}
 
-  .recent-projects-info-content {
-    width: 240px;
-    right: -20px;
-    font-size: 0.75rem;
-    padding: 12px;
-  }
-
-  .recent-projects-info-content::before {
-    right: 30px;
-  }
-
+/* Mobile Optimizations for Local Projects */
+@media (max-width: 600px) {
   .recent-projects-section-header h3 {
     font-size: 1.1rem;
     flex-wrap: wrap;

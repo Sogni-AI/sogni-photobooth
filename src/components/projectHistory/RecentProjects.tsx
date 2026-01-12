@@ -935,31 +935,29 @@ function RecentProjects({
               onClick={handleStartNewProject}
               title="Start a new project with camera or uploads"
             >
-              ➕ New Project
+              + new project
             </button>
           )}
           {localProjectsSupported && (
-            <>
+            <div className="recent-projects-local-btn-wrapper">
               <button
                 className="recent-projects-new-btn recent-projects-new-local-btn"
                 onClick={() => setShowCreateLocalProject(true)}
                 title="Create a local project with your own images"
               >
-                💾 New Local Project
+                💾 new local project
               </button>
-              <div className="recent-projects-info-btn-wrapper">
-                <button
-                  className="recent-projects-info-btn"
-                  title="What are Local Projects?"
-                >
-                  ?
-                </button>
-                <div className="recent-projects-info-dropdown">
-                  <strong>💾 Local Projects</strong>
-                  <p>Stored in your browser and never expire. Upload your own images to use with video workflows like Batch Transition, Sound to Video, Animate Replace, and more!</p>
-                </div>
+              <button
+                className="recent-projects-info-hint"
+                title="Local projects are stored in your browser and never expire"
+              >
+                ?
+              </button>
+              <div className="recent-projects-info-dropdown">
+                <strong>💾 Local Projects</strong>
+                <p>Stored in your browser and never expire. Upload your own images to use with video workflows like Batch Transition, Sound to Video, Animate Replace, and more!</p>
               </div>
-            </>
+            </div>
           )}
           <button
             className="recent-projects-close-btn"
@@ -1031,7 +1029,19 @@ function RecentProjects({
                       <div className="recent-project-title">
                         <span className="recent-project-local-icon">💾</span>
                         {project.name}
-                        <span>
+                        <button
+                          className="recent-project-rename-inline"
+                          onClick={() => setRenameDialog({
+                            show: true,
+                            projectId: project.id,
+                            currentName: project.name,
+                            newName: project.name
+                          })}
+                          title="Rename project"
+                        >
+                          ✎
+                        </button>
+                        <span className="recent-project-count">
                           ({project.imageIds.length} {pluralize(project.imageIds.length, 'image')})
                         </span>
                       </div>
@@ -1043,18 +1053,6 @@ function RecentProjects({
                       </div>
                     </div>
                     <div className="recent-project-actions">
-                      <button
-                        className="recent-project-action-btn"
-                        onClick={() => setRenameDialog({
-                          show: true,
-                          projectId: project.id,
-                          currentName: project.name,
-                          newName: project.name
-                        })}
-                        title="Rename project"
-                      >
-                        ✏️
-                      </button>
                       {project.imageIds.length > 0 && (
                         <button
                           className="recent-project-action-btn"
@@ -1070,7 +1068,7 @@ function RecentProjects({
                         title={`Add images (${project.imageIds.length}/${LOCAL_PROJECT_MAX_IMAGES})`}
                         disabled={project.imageIds.length >= LOCAL_PROJECT_MAX_IMAGES}
                       >
-                        📤
+                        ↑
                       </button>
                       {project.imageIds.length > 0 && onReuseLocalProject && (
                         <button
