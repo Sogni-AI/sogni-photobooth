@@ -253,7 +253,6 @@ function RecentProjects({
     addImages: addLocalImages,
     deleteImage: deleteLocalImage,
     getProjectImageUrls: getLocalProjectImageUrls,
-    getThumbnailUrl: getLocalThumbnailUrl,
     reorderImages: reorderLocalImages,
     isSupported: localProjectsSupported
   } = useLocalProjects();
@@ -282,15 +281,12 @@ function RecentProjects({
   const [uploadingToProject, setUploadingToProject] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState<{ added: number; total: number } | null>(null);
 
-  // Thumbnail URL cache for local projects
-  const [localThumbnails, setLocalThumbnails] = useState<Record<string, string | null>>({});
 
   // Inline expanded local project state (shows all images with delete/reorder)
   const [expandedProjectId, setExpandedProjectId] = useState<string | null>(null);
   const [expandedProjectImages, setExpandedProjectImages] = useState<
     Record<string, Array<{ id: string; url: string; width: number; height: number; filename: string }>>
   >({});
-  const [loadingExpandedImages, setLoadingExpandedImages] = useState<string | null>(null);
 
   // Drag-and-drop reordering state
   const [draggedImageId, setDraggedImageId] = useState<string | null>(null);
@@ -304,24 +300,31 @@ function RecentProjects({
     filename: string;
   }>({ show: false, imageId: '', projectId: '', filename: '' });
 
-  // Load thumbnails for local projects
+  // Auto-load all images for local projects when initialized
   useEffect(() => {
     if (!localProjectsInitialized) return;
 
-    const loadThumbnails = async () => {
-      const thumbnails: Record<string, string | null> = {};
+    const loadAllProjectImages = async () => {
       for (const project of localProjects) {
-        if (project.thumbnailId && !localThumbnails[project.id]) {
-          thumbnails[project.id] = await getLocalThumbnailUrl(project);
+        // Skip if already loaded
+        if (expandedProjectImages[project.id]) continue;
+        // Skip empty projects
+        if (project.imageIds.length === 0) continue;
+
+        try {
+          const images = await getLocalProjectImageUrls(project.id);
+          setExpandedProjectImages(prev => ({
+            ...prev,
+            [project.id]: images
+          }));
+        } catch (error) {
+          console.error(`Failed to load images for project ${project.id}:`, error);
         }
-      }
-      if (Object.keys(thumbnails).length > 0) {
-        setLocalThumbnails(prev => ({ ...prev, ...thumbnails }));
       }
     };
 
-    loadThumbnails();
-  }, [localProjects, localProjectsInitialized, getLocalThumbnailUrl, localThumbnails]);
+    loadAllProjectImages();
+  }, [localProjects, localProjectsInitialized, getLocalProjectImageUrls]); // Note: removed expandedProjectImages from deps to avoid re-running
 
   // Handle creating a new local project
   const handleCreateLocalProject = useCallback(async () => {
@@ -440,44 +443,18 @@ function RecentProjects({
       return;
     }
 
-    // Load images
-    setLoadingExpandedImages(project.id);
+    // Images should already be loaded by auto-load, but load them if needed
     try {
       const images = await getLocalProjectImageUrls(project.id);
       setExpandedProjectImages(prev => ({
         ...prev,
         [project.id]: images
       }));
-      // If called from thumbnail click, don't enter edit mode - just load for carousel
-      // If called from edit button, enter edit mode
       setExpandedProjectId(project.id);
     } catch (error) {
       console.error('Failed to load project images:', error);
-    } finally {
-      setLoadingExpandedImages(null);
     }
   }, [expandedProjectId, expandedProjectImages, getLocalProjectImageUrls]);
-
-  // Handle loading images for carousel display only (not edit mode)
-  const handleLoadProjectImages = useCallback(async (project: LocalProject) => {
-    // If images already loaded, do nothing
-    if (expandedProjectImages[project.id]) {
-      return;
-    }
-
-    setLoadingExpandedImages(project.id);
-    try {
-      const images = await getLocalProjectImageUrls(project.id);
-      setExpandedProjectImages(prev => ({
-        ...prev,
-        [project.id]: images
-      }));
-    } catch (error) {
-      console.error('Failed to load project images:', error);
-    } finally {
-      setLoadingExpandedImages(null);
-    }
-  }, [expandedProjectImages, getLocalProjectImageUrls]);
 
   // Handle closing inline expanded view
   const handleCollapseProject = useCallback((projectId: string) => {
@@ -911,9 +888,18 @@ function RecentProjects({
     const success = await deleteProject(projectId);
     if (!success) {
       alert('Failed to delete project. Please try again.');
+    } else {
+      // If this was a pinned project, unpin it
+      if (pinnedProjectIds.includes(projectId)) {
+        const newPinnedIds = pinnedProjectIds.filter(id => id !== projectId);
+        setPinnedProjectIds(newPinnedIds);
+        setPinnedProjectsCookie(newPinnedIds);
+        // Also remove from fetched pinned projects
+        setFetchedPinnedProjects(prev => prev.filter(p => p.id !== projectId));
+      }
     }
     setDeleteConfirm({ projectId: '', show: false, skipConfirm: true });
-  }, [deleteProject]);
+  }, [deleteProject, pinnedProjectIds]);
 
   const handleDeleteCancel = useCallback(() => {
     setDeleteConfirm({ projectId: '', show: false, skipConfirm: true });
@@ -1248,31 +1234,11 @@ function RecentProjects({
                             )}
                           </div>
                         ))
-                      ) : localThumbnails[project.id] ? (
-                        /* Show thumbnail with count badge - click loads all images */
-                        <div
-                          className="job-item local-project-image-item"
-                          onClick={() => handleLoadProjectImages(project)}
-                          style={{ cursor: 'pointer' }}
-                          title="Click to load all images"
-                        >
-                          <img
-                            className="job-item-media"
-                            src={localThumbnails[project.id]!}
-                            alt={project.name}
-                            loading="lazy"
-                          />
-                          {project.imageIds.length > 1 && (
-                            <div className="local-project-image-count">
-                              Click to load {project.imageIds.length} images
-                            </div>
-                          )}
-                        </div>
-                      ) : null}
-                      {loadingExpandedImages === project.id && (
+                      ) : (
+                        /* Show loading spinner while images are being loaded */
                         <div className="local-project-upload-status">
                           <div className="recent-projects-spinner" />
-                          <span>Loading images...</span>
+                          <span>Loading {project.imageIds.length} images...</span>
                         </div>
                       )}
                       {uploadingToProject === project.id && uploadProgress && (
