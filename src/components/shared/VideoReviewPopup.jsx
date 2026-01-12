@@ -116,8 +116,12 @@ const VideoReviewPopup = ({
   onPlayItem, // Play a finished item in fullscreen
   items = [],
   workflowType = 's2v',
+  // Legacy single-segment props (for backward compatibility with transitions)
   regeneratingIndex = null,
   regenerationProgress = null,
+  // New multi-segment props (for segments that support multiple simultaneous regenerations)
+  regeneratingIndices = null, // Set of segment indices being regenerated
+  regenerationProgresses = null, // Map of segment index -> progress object
   // Per-item progress arrays (for initial generation)
   itemETAs = [],
   itemProgress = [],
@@ -125,6 +129,29 @@ const VideoReviewPopup = ({
   itemStatuses = [],
   itemElapsed = []
 }) => {
+  // Helper to get regeneration progress for a specific index
+  // Supports both legacy single-segment and new multi-segment props
+  const getRegenerationProgress = (index) => {
+    // First try new multi-segment props
+    if (regenerationProgresses instanceof Map && regenerationProgresses.has(index)) {
+      return regenerationProgresses.get(index);
+    }
+    // Fall back to legacy single-segment prop
+    if (regeneratingIndex === index && regenerationProgress) {
+      return regenerationProgress;
+    }
+    return null;
+  };
+
+  // Helper to check if a segment is being regenerated
+  const isRegeneratingIndex = (index) => {
+    // First try new multi-segment props
+    if (regeneratingIndices instanceof Set && regeneratingIndices.has(index)) {
+      return true;
+    }
+    // Fall back to legacy single-segment prop
+    return regeneratingIndex === index;
+  };
   const [selectedIndex, setSelectedIndex] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [showCancelConfirmation, setShowCancelConfirmation] = useState(false);
@@ -629,7 +656,10 @@ const VideoReviewPopup = ({
                 alignItems: 'center',
                 justifyContent: 'center'
               }}>
-                {items[selectedIndex]?.status === 'regenerating' ? (
+                {items[selectedIndex]?.status === 'regenerating' ? (() => {
+                  // Get progress for the selected segment
+                  const selectedProgress = getRegenerationProgress(selectedIndex);
+                  return (
                   <div style={{
                     position: 'absolute',
                     inset: 0,
@@ -678,12 +708,12 @@ const VideoReviewPopup = ({
                                         fontFamily: '"Permanent Marker", cursive',
                                         position: 'relative'
                                       }}>
-                                        {regenerationProgress?.eta !== undefined && regenerationProgress?.eta > 0 ? (
+                                        {selectedProgress?.eta !== undefined && selectedProgress?.eta > 0 ? (
                                           <>
                                             <span style={{ fontSize: '1.25rem', marginRight: '6px' }}>⏱️</span>
-                                            {formatDuration(regenerationProgress.eta)}
+                                            {formatDuration(selectedProgress.eta)}
                                           </>
-                                        ) : regenerationProgress?.status?.startsWith('Queue') || regenerationProgress?.status?.startsWith('In line') ? (
+                                        ) : selectedProgress?.status?.startsWith('Queue') || selectedProgress?.status?.startsWith('In line') ? (
                                           <span style={{ fontSize: '1.125rem' }}>in line...</span>
                                         ) : (
                                           <>
@@ -709,26 +739,26 @@ const VideoReviewPopup = ({
                                         position: 'relative',
                                         fontWeight: '600'
                                       }}>
-                                        {regenerationProgress?.status === 'Initializing Model' ? (
+                                        {selectedProgress?.status === 'Initializing Model' ? (
                                           'initializing...'
-                                        ) : regenerationProgress?.workerName ? (
+                                        ) : selectedProgress?.workerName ? (
                                           <>
-                                            <span style={{ color: config.accentColor, fontWeight: '700' }}>{regenerationProgress.workerName}</span>
-                                            {regenerationProgress?.elapsed !== undefined && (
-                                              <span> • {formatDuration(regenerationProgress.elapsed)} elapsed</span>
+                                            <span style={{ color: config.accentColor, fontWeight: '700' }}>{selectedProgress.workerName}</span>
+                                            {selectedProgress?.elapsed !== undefined && (
+                                              <span> • {formatDuration(selectedProgress.elapsed)} elapsed</span>
                                             )}
                                           </>
-                                        ) : regenerationProgress?.status?.startsWith('Queue') || regenerationProgress?.status?.startsWith('In line') ? (
-                                          regenerationProgress.status
-                                        ) : regenerationProgress?.elapsed > 0 ? (
-                                          `${formatDuration(regenerationProgress.elapsed)} elapsed`
+                                        ) : selectedProgress?.status?.startsWith('Queue') || selectedProgress?.status?.startsWith('In line') ? (
+                                          selectedProgress.status
+                                        ) : selectedProgress?.elapsed > 0 ? (
+                                          `${formatDuration(selectedProgress.elapsed)} elapsed`
                                         ) : (
                                           'preparing regeneration...'
                                         )}
                                       </div>
 
                                       {/* Progress bar */}
-                                      {regenerationProgress?.progress > 0 && (
+                                      {selectedProgress?.progress > 0 && (
                                         <div style={{
                                           width: '100%',
                                           height: '6px',
@@ -739,7 +769,7 @@ const VideoReviewPopup = ({
                                           position: 'relative'
                                         }}>
                                           <div style={{
-                                            width: `${regenerationProgress.progress}%`,
+                                            width: `${selectedProgress.progress}%`,
                                             height: '100%',
                                             background: `linear-gradient(90deg, ${config.accentColor}, ${config.accentColor}dd)`,
                                             borderRadius: '2px',
@@ -749,7 +779,8 @@ const VideoReviewPopup = ({
                                       )}
                     </div>
                   </div>
-                ) : (
+                  );
+                })() : (
                   <div style={{ position: 'relative', width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <video
                       ref={previewVideoRef}
@@ -868,7 +899,8 @@ const VideoReviewPopup = ({
             }}>
               {items?.map((item, index) => {
                 const isInProgress = item.status === 'regenerating' || item.status === 'generating';
-                const isThisRegenerating = item.status === 'regenerating' && regeneratingIndex === index;
+                const isThisRegenerating = item.status === 'regenerating' && isRegeneratingIndex(index);
+                const thisRegenerationProgress = getRegenerationProgress(index);
 
                 // Portrait cards use horizontal layout (thumbnail beside info)
                 const isPortraitLayout = contentOrientation === 'portrait';
@@ -1142,9 +1174,9 @@ const VideoReviewPopup = ({
                                                 marginBottom: '4px',
                                                 fontFamily: '"Permanent Marker", cursive'
                                               }}>
-                                                {isThisRegenerating && regenerationProgress?.eta > 0 ? (
-                                                  <>⏱️ {formatDuration(regenerationProgress.eta)}</>
-                                                ) : isThisRegenerating && regenerationProgress?.status?.startsWith('Queue') ? (
+                                                {isThisRegenerating && thisRegenerationProgress?.eta > 0 ? (
+                                                  <>⏱️ {formatDuration(thisRegenerationProgress.eta)}</>
+                                                ) : isThisRegenerating && thisRegenerationProgress?.status?.startsWith('Queue') ? (
                                                   <span style={{ fontSize: '0.7rem' }}>in line...</span>
                                                 ) : item.status === 'generating' ? (
                                                   <div style={{
@@ -1171,7 +1203,7 @@ const VideoReviewPopup = ({
                                               </div>
 
                                               {/* Worker info or starting message */}
-                                              {isThisRegenerating && regenerationProgress?.workerName ? (
+                                              {isThisRegenerating && thisRegenerationProgress?.workerName ? (
                                                 <div style={{
                                                   fontSize: '0.65rem',
                                                   color: '#666',
@@ -1180,9 +1212,9 @@ const VideoReviewPopup = ({
                                                   textOverflow: 'ellipsis',
                                                   whiteSpace: 'nowrap'
                                                 }}>
-                                                  {regenerationProgress.workerName}
+                                                  {thisRegenerationProgress.workerName}
                                                 </div>
-                                              ) : isThisRegenerating && !regenerationProgress?.eta && (
+                                              ) : isThisRegenerating && !thisRegenerationProgress?.eta && (
                                                 <div style={{
                                                   fontSize: '0.65rem',
                                                   color: '#666',
@@ -1392,24 +1424,24 @@ const VideoReviewPopup = ({
                           fontWeight: '600'
                         }}>
                           {isThisRegenerating ? (
-                            /* Regenerating a segment - show progress from regenerationProgress OR fallback UI */
-                            regenerationProgress && (regenerationProgress.eta > 0 || regenerationProgress.workerName || regenerationProgress.status) ? (
+                            /* Regenerating a segment - show progress from thisRegenerationProgress OR fallback UI */
+                            thisRegenerationProgress && (thisRegenerationProgress.eta > 0 || thisRegenerationProgress.workerName || thisRegenerationProgress.status) ? (
                             <>
                               {/* ETA with caching */}
                               {(() => {
-                                const eta = regenerationProgress.eta;
+                                const eta = thisRegenerationProgress.eta;
                                 if (eta > 0) {
                                   lastKnownETAsRef.current[index] = eta;
                                 }
                                 const displayETA = lastKnownETAsRef.current[index] || eta;
-                                
+
                                 return displayETA > 0 ? (
                                   <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                                     <span style={{ fontSize: '1rem' }}>⏱️</span>
-                                    <span style={{ 
-                                      fontWeight: '700', 
-                                      color: config.accentColor, 
-                                      fontFamily: '"Permanent Marker", cursive', 
+                                    <span style={{
+                                      fontWeight: '700',
+                                      color: config.accentColor,
+                                      fontFamily: '"Permanent Marker", cursive',
                                       fontSize: '0.9rem',
                                       // Add blink animation when ETA is at 1 second or less
                                       ...(displayETA <= 1 ? {
@@ -1424,37 +1456,37 @@ const VideoReviewPopup = ({
                                       } : {})
                                     }}>{formatDuration(displayETA)}</span>
                                   </div>
-                                ) : regenerationProgress.status?.startsWith('Queue') ? (
+                                ) : thisRegenerationProgress.status?.startsWith('Queue') ? (
                                   <div style={{ color: config.accentColor, fontSize: '0.8rem' }}>⏳ queued...</div>
                                 ) : null;
                               })()}
-                              
+
                               {/* Worker name */}
-                              {regenerationProgress.workerName && (
-                                <div style={{ 
-                                  display: 'flex', 
-                                  gap: '6px', 
+                              {thisRegenerationProgress.workerName && (
+                                <div style={{
+                                  display: 'flex',
+                                  gap: '6px',
                                   alignItems: 'center',
                                   overflow: 'hidden',
                                   textOverflow: 'ellipsis',
                                   whiteSpace: 'nowrap'
                                 }}>
                                   <span style={{ fontSize: '0.85rem' }}>🖥️</span>
-                                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', color: config.accentColor, fontWeight: '700', fontSize: '0.8rem' }}>{regenerationProgress.workerName}</span>
+                                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', color: config.accentColor, fontWeight: '700', fontSize: '0.8rem' }}>{thisRegenerationProgress.workerName}</span>
                                 </div>
                               )}
-                              
+
                               {/* Elapsed time */}
-                              {regenerationProgress.elapsed > 0 && (
+                              {thisRegenerationProgress.elapsed > 0 && (
                                 <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                                   <span style={{ fontSize: '0.85rem' }}>⏲️</span>
-                                  <span style={{ fontSize: '0.8rem', color: '#333' }}>{formatDuration(regenerationProgress.elapsed)}</span>
+                                  <span style={{ fontSize: '0.8rem', color: '#333' }}>{formatDuration(thisRegenerationProgress.elapsed)}</span>
                                 </div>
                               )}
-                              
+
                               {/* Status message */}
-                              {regenerationProgress.status && !regenerationProgress.status.startsWith('Queue') && (
-                                <div style={{ 
+                              {thisRegenerationProgress.status && !thisRegenerationProgress.status.startsWith('Queue') && (
+                                <div style={{
                                   color: '#666',
                                   fontStyle: 'italic',
                                   overflow: 'hidden',
@@ -1462,7 +1494,7 @@ const VideoReviewPopup = ({
                                   whiteSpace: 'nowrap',
                                   fontSize: '0.75rem'
                                 }}>
-                                  {regenerationProgress.status}
+                                  {thisRegenerationProgress.status}
                                 </div>
                               )}
                             </>
@@ -2270,6 +2302,7 @@ VideoReviewPopup.propTypes = {
     photoId: PropTypes.string
   })),
   workflowType: PropTypes.oneOf(['infinite-loop', 'batch-transition', 's2v', 'animate-move', 'animate-replace']),
+  // Legacy single-segment props (for backward compatibility)
   regeneratingIndex: PropTypes.number,
   regenerationProgress: PropTypes.shape({
     progress: PropTypes.number,
@@ -2279,6 +2312,9 @@ VideoReviewPopup.propTypes = {
     status: PropTypes.string,
     elapsed: PropTypes.number
   }),
+  // New multi-segment props (Set and Map)
+  regeneratingIndices: PropTypes.instanceOf(Set),
+  regenerationProgresses: PropTypes.instanceOf(Map),
   itemETAs: PropTypes.arrayOf(PropTypes.number),
   itemProgress: PropTypes.arrayOf(PropTypes.number),
   itemWorkers: PropTypes.arrayOf(PropTypes.string),

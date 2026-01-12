@@ -1840,6 +1840,7 @@ const AnimateMovePopup = ({
               outline: 'none',
               boxSizing: 'border-box'
             }}
+            className="motion-description-textarea"
           />
         </div>
 
@@ -2006,6 +2007,22 @@ const AnimateMovePopup = ({
           cursor: pointer;
           border: none;
           box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        }
+        .motion-description-textarea::placeholder {
+          color: rgba(255, 255, 255, 0.6);
+          opacity: 1;
+        }
+        .motion-description-textarea::-webkit-input-placeholder {
+          color: rgba(255, 255, 255, 0.6);
+          opacity: 1;
+        }
+        .motion-description-textarea::-moz-placeholder {
+          color: rgba(255, 255, 255, 0.6);
+          opacity: 1;
+        }
+        .motion-description-textarea:-ms-input-placeholder {
+          color: rgba(255, 255, 255, 0.6);
+          opacity: 1;
         }
       `}</style>
     </div>,
