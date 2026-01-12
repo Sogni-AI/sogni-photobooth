@@ -8590,6 +8590,40 @@ const App = () => {
         return;
       }
 
+      // Auto-detect the best aspect ratio from the first image
+      const firstImage = images[0];
+      if (firstImage && firstImage.width && firstImage.height) {
+        const imageRatio = firstImage.width / firstImage.height;
+
+        // Aspect ratio options with their ratios
+        const aspectRatios = [
+          { key: 'ultranarrow', ratio: 768 / 1344 },  // ~0.571
+          { key: 'narrow', ratio: 832 / 1216 },       // ~0.684
+          { key: 'portrait', ratio: 896 / 1152 },    // ~0.778
+          { key: 'square', ratio: 1 },                // 1.0
+          { key: 'landscape', ratio: 1152 / 896 },   // ~1.286
+          { key: 'wide', ratio: 1216 / 832 },        // ~1.462
+          { key: 'ultrawide', ratio: 1344 / 768 }    // ~1.75
+        ];
+
+        // Find the closest aspect ratio
+        let closestRatio = aspectRatios[0];
+        let minDiff = Math.abs(imageRatio - closestRatio.ratio);
+
+        for (const ar of aspectRatios) {
+          const diff = Math.abs(imageRatio - ar.ratio);
+          if (diff < minDiff) {
+            minDiff = diff;
+            closestRatio = ar;
+          }
+        }
+
+        console.log(`[Reuse Local Project] Detected aspect ratio: ${closestRatio.key} (image: ${imageRatio.toFixed(3)}, preset: ${closestRatio.ratio.toFixed(3)})`);
+
+        // Update aspect ratio setting
+        updateSetting('aspectRatio', closestRatio.key);
+      }
+
       // Convert images to photo objects with blob URLs
       const loadedPhotos = images.map((image, index) => {
         const blobUrl = createImageBlobUrl(image);
@@ -8640,7 +8674,7 @@ const App = () => {
         type: 'error'
       });
     }
-  }, [showToast, stopCamera]);
+  }, [showToast, stopCamera, updateSetting]);
 
   // Handle starting a new project (redirect to main screen)
   const handleStartNewProject = useCallback(() => {

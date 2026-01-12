@@ -556,3 +556,47 @@ export function isIndexedDBSupported(): boolean {
     return false;
   }
 }
+
+/**
+ * Reorder images within a project
+ * @param projectId - Project ID
+ * @param newImageOrder - Array of image IDs in the new desired order
+ */
+export async function reorderProjectImages(
+  projectId: string,
+  newImageOrder: string[]
+): Promise<void> {
+  const db = await openDB();
+
+  // Get existing project
+  const project = await getProject(projectId);
+  if (!project) {
+    throw new Error('Project not found');
+  }
+
+  // Validate that all image IDs exist in the project
+  const existingSet = new Set(project.imageIds);
+  const validOrder = newImageOrder.filter(id => existingSet.has(id));
+
+  // Make sure we didn't lose any images
+  if (validOrder.length !== project.imageIds.length) {
+    throw new Error('Invalid image order - missing or invalid image IDs');
+  }
+
+  // Update project with new order
+  const updatedProject: LocalProject = {
+    ...project,
+    imageIds: validOrder,
+    thumbnailId: validOrder[0] || null, // Update thumbnail to first image
+    updatedAt: Date.now()
+  };
+
+  await new Promise<void>((resolve, reject) => {
+    const transaction = db.transaction(PROJECTS_STORE, 'readwrite');
+    const store = transaction.objectStore(PROJECTS_STORE);
+    const request = store.put(updatedProject);
+
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error);
+  });
+}

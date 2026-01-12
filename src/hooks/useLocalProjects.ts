@@ -18,7 +18,8 @@ import {
   deleteImage as dbDeleteImage,
   getImage,
   isIndexedDBSupported,
-  createImageBlobUrl
+  createImageBlobUrl,
+  reorderProjectImages as dbReorderImages
 } from '../utils/localProjectsDB';
 
 interface UseLocalProjectsReturn extends LocalProjectsState {
@@ -48,6 +49,8 @@ interface UseLocalProjectsReturn extends LocalProjectsState {
   getProject: (projectId: string) => Promise<LocalProject | null>;
   /** Get thumbnail URL for a project */
   getThumbnailUrl: (project: LocalProject) => Promise<string | null>;
+  /** Reorder images within a project */
+  reorderImages: (projectId: string, newOrder: string[]) => Promise<boolean>;
   /** Refresh the projects list from IndexedDB */
   refresh: () => Promise<void>;
   /** Whether IndexedDB is supported in this browser */
@@ -297,6 +300,37 @@ export function useLocalProjects(): UseLocalProjectsReturn {
     }
   }, [isSupported]);
 
+  // Reorder images within a project
+  const reorderImages = useCallback(async (
+    projectId: string,
+    newOrder: string[]
+  ): Promise<boolean> => {
+    if (!isSupported) return false;
+
+    try {
+      await dbReorderImages(projectId, newOrder);
+
+      // Invalidate thumbnail cache
+      thumbnailUrlCache.delete(projectId);
+
+      // Refresh project in state
+      const updatedProject = await getProject(projectId);
+      if (updatedProject) {
+        setState(prev => ({
+          ...prev,
+          projects: prev.projects.map(p =>
+            p.id === projectId ? updatedProject : p
+          )
+        }));
+      }
+
+      return true;
+    } catch (error) {
+      console.error('[useLocalProjects] Failed to reorder images:', error);
+      return false;
+    }
+  }, [isSupported]);
+
   // Refresh projects list
   const refresh = useCallback(async () => {
     await loadProjects();
@@ -312,6 +346,7 @@ export function useLocalProjects(): UseLocalProjectsReturn {
     getProjectImageUrls,
     getProject: getProjectHandler,
     getThumbnailUrl,
+    reorderImages,
     refresh,
     isSupported
   };

@@ -242,7 +242,10 @@ function RecentProjects({
     renameProject: renameLocalProject,
     deleteProject: deleteLocalProject,
     addImages: addLocalImages,
+    deleteImage: deleteLocalImage,
+    getProjectImageUrls: getLocalProjectImageUrls,
     getThumbnailUrl: getLocalThumbnailUrl,
+    reorderImages: reorderLocalImages,
     isSupported: localProjectsSupported
   } = useLocalProjects();
 
@@ -272,6 +275,25 @@ function RecentProjects({
 
   // Thumbnail URL cache for local projects
   const [localThumbnails, setLocalThumbnails] = useState<Record<string, string | null>>({});
+
+  // Expanded local project view state (shows all images with delete/reorder)
+  const [expandedProject, setExpandedProject] = useState<{
+    id: string;
+    name: string;
+    images: Array<{ id: string; url: string; width: number; height: number; filename: string }>;
+  } | null>(null);
+  const [loadingExpandedImages, setLoadingExpandedImages] = useState(false);
+
+  // Drag-and-drop reordering state
+  const [draggedImageId, setDraggedImageId] = useState<string | null>(null);
+  const [dragOverImageId, setDragOverImageId] = useState<string | null>(null);
+
+  // Image delete confirmation
+  const [imageDeleteConfirm, setImageDeleteConfirm] = useState<{
+    show: boolean;
+    imageId: string;
+    filename: string;
+  }>({ show: false, imageId: '', filename: '' });
 
   // Load thumbnails for local projects
   useEffect(() => {
@@ -382,6 +404,118 @@ function RecentProjects({
       onClose();
     }
   }, [onStartNewProject, onClose]);
+
+  // Handle expanding a local project to show all images
+  const handleExpandProject = useCallback(async (project: LocalProject) => {
+    setLoadingExpandedImages(true);
+    try {
+      const images = await getLocalProjectImageUrls(project.id);
+      setExpandedProject({
+        id: project.id,
+        name: project.name,
+        images
+      });
+    } catch (error) {
+      console.error('Failed to load project images:', error);
+    } finally {
+      setLoadingExpandedImages(false);
+    }
+  }, [getLocalProjectImageUrls]);
+
+  // Handle closing expanded view
+  const handleCloseExpandedView = useCallback(() => {
+    // Revoke blob URLs to free memory
+    if (expandedProject) {
+      expandedProject.images.forEach(img => {
+        try {
+          URL.revokeObjectURL(img.url);
+        } catch {
+          // Ignore errors
+        }
+      });
+    }
+    setExpandedProject(null);
+    setDraggedImageId(null);
+    setDragOverImageId(null);
+  }, [expandedProject]);
+
+  // Handle deleting an individual image
+  const handleDeleteImage = useCallback(async () => {
+    if (!imageDeleteConfirm.imageId || !expandedProject) return;
+
+    const success = await deleteLocalImage(imageDeleteConfirm.imageId);
+    if (success) {
+      // Update expanded view
+      setExpandedProject(prev => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          images: prev.images.filter(img => img.id !== imageDeleteConfirm.imageId)
+        };
+      });
+    }
+    setImageDeleteConfirm({ show: false, imageId: '', filename: '' });
+  }, [imageDeleteConfirm.imageId, expandedProject, deleteLocalImage]);
+
+  // Drag and drop handlers
+  const handleDragStart = useCallback((imageId: string) => {
+    setDraggedImageId(imageId);
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent, imageId: string) => {
+    e.preventDefault();
+    if (draggedImageId && draggedImageId !== imageId) {
+      setDragOverImageId(imageId);
+    }
+  }, [draggedImageId]);
+
+  const handleDragLeave = useCallback(() => {
+    setDragOverImageId(null);
+  }, []);
+
+  const handleDrop = useCallback(async (e: React.DragEvent, targetImageId: string) => {
+    e.preventDefault();
+    if (!draggedImageId || !expandedProject || draggedImageId === targetImageId) {
+      setDraggedImageId(null);
+      setDragOverImageId(null);
+      return;
+    }
+
+    // Reorder the images
+    const currentOrder = expandedProject.images.map(img => img.id);
+    const draggedIndex = currentOrder.indexOf(draggedImageId);
+    const targetIndex = currentOrder.indexOf(targetImageId);
+
+    if (draggedIndex === -1 || targetIndex === -1) {
+      setDraggedImageId(null);
+      setDragOverImageId(null);
+      return;
+    }
+
+    // Create new order
+    const newOrder = [...currentOrder];
+    newOrder.splice(draggedIndex, 1);
+    newOrder.splice(targetIndex, 0, draggedImageId);
+
+    // Update database
+    const success = await reorderLocalImages(expandedProject.id, newOrder);
+    if (success) {
+      // Update expanded view with new order
+      const reorderedImages = newOrder.map(id =>
+        expandedProject.images.find(img => img.id === id)!
+      ).filter(Boolean);
+
+      setExpandedProject(prev => prev ? { ...prev, images: reorderedImages } : null);
+    }
+
+    setDraggedImageId(null);
+    setDragOverImageId(null);
+  }, [draggedImageId, expandedProject, reorderLocalImages]);
+
+  const handleDragEnd = useCallback(() => {
+    setDraggedImageId(null);
+    setDragOverImageId(null);
+  }, []);
 
   const {
     visibleProjects,
@@ -772,7 +906,7 @@ function RecentProjects({
         </div>
       </div>
 
-      {/* Hidden file input for local project uploads */}
+      {/* Hidden file inputs for local project uploads */}
       <input
         ref={fileInputRef}
         type="file"
@@ -886,39 +1020,49 @@ function RecentProjects({
                       </button>
                     </div>
                   </div>
-                  {/* Local project thumbnail/content preview */}
-                  <div className="recent-project-local-content">
-                    {project.imageIds.length === 0 ? (
-                      <div
-                        className="recent-project-local-empty"
-                        onClick={() => handleUploadClick(project.id)}
-                      >
-                        <span className="recent-project-local-empty-icon">📤</span>
-                        <span>Click to upload images</span>
-                        <span className="recent-project-local-empty-hint">
-                          Supports JPG, PNG, WebP, GIF
-                        </span>
-                      </div>
-                    ) : (
-                      <div className="recent-project-local-preview">
-                        {localThumbnails[project.id] && (
+                  {/* Local project content - carousel or empty state */}
+                  {project.imageIds.length === 0 ? (
+                    <div
+                      className="recent-project-local-empty"
+                      onClick={() => handleUploadClick(project.id)}
+                    >
+                      <span className="recent-project-local-empty-icon">📤</span>
+                      <span>Click to upload images or a folder</span>
+                      <span className="recent-project-local-empty-hint">
+                        Supports JPG, PNG, WebP, GIF
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="recent-project-jobs-carousel">
+                      {/* Show thumbnail preview - click to expand */}
+                      {localThumbnails[project.id] && (
+                        <div
+                          className="job-item local-project-image-item"
+                          onClick={() => handleExpandProject(project)}
+                          style={{ cursor: 'pointer' }}
+                          title="Click to view all images, delete, or reorder"
+                        >
                           <img
+                            className="job-item-media"
                             src={localThumbnails[project.id]!}
                             alt={project.name}
-                            className="recent-project-local-thumb"
+                            loading="lazy"
                           />
-                        )}
-                        <div className="recent-project-local-stats">
-                          <span>{project.imageIds.length} images</span>
-                          {uploadingToProject === project.id && uploadProgress && (
-                            <span className="recent-project-upload-progress">
-                              Uploading... {uploadProgress.added}/{uploadProgress.total}
-                            </span>
+                          {project.imageIds.length > 1 && (
+                            <div className="local-project-image-count">
+                              +{project.imageIds.length - 1} more
+                            </div>
                           )}
                         </div>
-                      </div>
-                    )}
-                  </div>
+                      )}
+                      {uploadingToProject === project.id && uploadProgress && (
+                        <div className="local-project-upload-status">
+                          <div className="recent-projects-spinner" />
+                          <span>Uploading {uploadProgress.added}/{uploadProgress.total}...</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -1202,6 +1346,132 @@ function RecentProjects({
                 onClick={handleDeleteLocalProject}
               >
                 Delete Forever
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Expanded Local Project View - Shows all images with delete/reorder */}
+      {(expandedProject || loadingExpandedImages) && (
+        <div
+          className="recent-projects-modal-overlay local-project-expanded-overlay"
+          onClick={handleCloseExpandedView}
+        >
+          <div
+            className="recent-projects-modal local-project-expanded-modal"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {loadingExpandedImages ? (
+              <div className="local-project-expanded-loading">
+                <div className="recent-projects-spinner" />
+                <span>Loading images...</span>
+              </div>
+            ) : expandedProject && (
+              <>
+                <div className="local-project-expanded-header">
+                  <h3>💾 {expandedProject.name}</h3>
+                  <p className="local-project-expanded-hint">
+                    Drag images to reorder • Click 🗑️ to delete • {expandedProject.images.length} images
+                  </p>
+                  <button
+                    className="recent-projects-close-btn local-project-expanded-close"
+                    onClick={handleCloseExpandedView}
+                    title="Close"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <div className="local-project-expanded-grid">
+                  {expandedProject.images.map((image, index) => (
+                    <div
+                      key={image.id}
+                      className={`local-project-expanded-item ${
+                        draggedImageId === image.id ? 'dragging' : ''
+                      } ${dragOverImageId === image.id ? 'drag-over' : ''}`}
+                      draggable
+                      onDragStart={() => handleDragStart(image.id)}
+                      onDragOver={(e) => handleDragOver(e, image.id)}
+                      onDragLeave={handleDragLeave}
+                      onDrop={(e) => handleDrop(e, image.id)}
+                      onDragEnd={handleDragEnd}
+                    >
+                      <div className="local-project-expanded-item-number">{index + 1}</div>
+                      <img
+                        src={image.url}
+                        alt={image.filename}
+                        className="local-project-expanded-img"
+                        style={{
+                          aspectRatio: `${image.width}/${image.height}`
+                        }}
+                      />
+                      <button
+                        className="local-project-expanded-delete"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setImageDeleteConfirm({
+                            show: true,
+                            imageId: image.id,
+                            filename: image.filename
+                          });
+                        }}
+                        title="Delete this image"
+                      >
+                        🗑️
+                      </button>
+                      <div className="local-project-expanded-filename">
+                        {image.filename}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="local-project-expanded-actions">
+                  <button
+                    className="recent-projects-modal-btn recent-projects-modal-btn-cancel"
+                    onClick={() => {
+                      setUploadingToProject(expandedProject.id);
+                      fileInputRef.current?.click();
+                    }}
+                  >
+                    📤 Add More Images
+                  </button>
+                  <button
+                    className="recent-projects-modal-btn recent-projects-modal-btn-confirm"
+                    onClick={handleCloseExpandedView}
+                  >
+                    Done
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Delete Image Confirmation Modal */}
+      {imageDeleteConfirm.show && (
+        <div
+          className="recent-projects-modal-overlay"
+          style={{ zIndex: 100005 }}
+          onClick={() => setImageDeleteConfirm({ show: false, imageId: '', filename: '' })}
+        >
+          <div className="recent-projects-modal" onClick={(e) => e.stopPropagation()}>
+            <h3>🗑️ Delete Image</h3>
+            <p>
+              Delete <strong>"{imageDeleteConfirm.filename}"</strong>?
+            </p>
+            <div className="recent-projects-modal-actions">
+              <button
+                className="recent-projects-modal-btn recent-projects-modal-btn-cancel"
+                onClick={() => setImageDeleteConfirm({ show: false, imageId: '', filename: '' })}
+              >
+                Cancel
+              </button>
+              <button
+                className="recent-projects-modal-btn recent-projects-modal-btn-confirm recent-projects-modal-btn-danger"
+                onClick={handleDeleteImage}
+              >
+                Delete
               </button>
             </div>
           </div>
