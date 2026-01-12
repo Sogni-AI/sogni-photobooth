@@ -1052,68 +1052,88 @@
   background: linear-gradient(135deg, #cceeff 0%, #e8f4fd 100%);
 }
 
-/* Info Tooltip */
-.recent-projects-info-tooltip {
+/* Info Button with Dropdown */
+.recent-projects-info-btn-wrapper {
   position: relative;
   display: inline-flex;
+}
+
+.recent-projects-info-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 3px solid #1a1a1a;
+  color: #1a1a1a;
+  font-size: 1rem;
+  font-weight: 800;
+  cursor: pointer;
+  display: flex;
   align-items: center;
-  margin-left: 4px;
+  justify-content: center;
+  transition: all 0.25s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  box-shadow: 3px 3px 0 #1a1a1a;
 }
 
-.recent-projects-info-icon {
-  font-size: 0.9rem;
-  cursor: help;
-  opacity: 0.7;
-  transition: opacity 0.2s ease;
+.recent-projects-info-btn:hover {
+  background: #06b6d4;
+  color: #fff;
+  transform: translate(-2px, -2px);
+  box-shadow: 5px 5px 0 #1a1a1a;
 }
 
-.recent-projects-info-tooltip:hover .recent-projects-info-icon {
-  opacity: 1;
-}
-
-.recent-projects-info-content {
+.recent-projects-info-dropdown {
   position: absolute;
   top: calc(100% + 12px);
   right: 0;
   width: 280px;
   padding: 16px;
-  background: #1a1a1a;
-  color: #ffffff;
+  background: #ffffff;
+  border: 3px solid #1a1a1a;
   border-radius: 16px;
-  font-size: 0.8rem;
+  box-shadow: 4px 4px 0 #1a1a1a;
+  font-size: 0.85rem;
   font-weight: 500;
   line-height: 1.5;
-  text-transform: none;
-  letter-spacing: 0;
+  color: #333;
   opacity: 0;
   visibility: hidden;
   transform: translateY(-8px);
-  transition: all 0.25s ease;
+  transition: all 0.2s ease;
   z-index: 1000;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
   pointer-events: none;
 }
 
-.recent-projects-info-content::before {
+.recent-projects-info-dropdown::before {
   content: '';
   position: absolute;
-  top: -8px;
-  right: 20px;
-  width: 16px;
-  height: 16px;
-  background: #1a1a1a;
-  transform: rotate(45deg);
+  top: -10px;
+  right: 12px;
+  width: 0;
+  height: 0;
+  border-left: 10px solid transparent;
+  border-right: 10px solid transparent;
+  border-bottom: 10px solid #1a1a1a;
 }
 
-.recent-projects-info-content strong {
+.recent-projects-info-dropdown strong {
+  display: block;
   color: #06b6d4;
   font-weight: 800;
+  font-size: 1rem;
+  margin-bottom: 8px;
 }
 
-.recent-projects-info-tooltip:hover .recent-projects-info-content {
+.recent-projects-info-dropdown p {
+  margin: 0;
+  color: #555;
+}
+
+.recent-projects-info-btn-wrapper:hover .recent-projects-info-dropdown {
   opacity: 1;
   visibility: visible;
   transform: translateY(0);
+  pointer-events: auto;
 }
 
 /* Local Projects Section */
@@ -1507,9 +1527,10 @@
 }
 
 .local-project-inline-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: 10px;
+  align-items: flex-start;
 }
 
 .local-project-inline-item {
@@ -1520,7 +1541,8 @@
   overflow: hidden;
   cursor: grab;
   transition: all 0.2s ease;
-  aspect-ratio: 1;
+  height: 120px;
+  flex-shrink: 0;
 }
 
 .local-project-inline-item:hover {

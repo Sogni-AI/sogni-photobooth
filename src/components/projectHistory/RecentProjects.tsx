@@ -362,12 +362,22 @@ function RecentProjects({
       return;
     }
 
+    const projectId = uploadingToProject;
     const fileArray = Array.from(files);
     setUploadProgress({ added: 0, total: fileArray.length });
 
     try {
-      const result = await addLocalImages(uploadingToProject, fileArray);
+      const result = await addLocalImages(projectId, fileArray);
       setUploadProgress({ added: result.added, total: fileArray.length });
+
+      // Refresh images if this project has images loaded (in edit mode or carousel)
+      if (expandedProjectImages[projectId] || expandedProjectId === projectId) {
+        const refreshedImages = await getLocalProjectImageUrls(projectId);
+        setExpandedProjectImages(prev => ({
+          ...prev,
+          [projectId]: refreshedImages
+        }));
+      }
 
       // Show result briefly then clear
       setTimeout(() => {
@@ -381,7 +391,7 @@ function RecentProjects({
 
     // Reset file input
     event.target.value = '';
-  }, [uploadingToProject, addLocalImages]);
+  }, [uploadingToProject, addLocalImages, expandedProjectImages, expandedProjectId, getLocalProjectImageUrls]);
 
   // Handle clicking upload button on a local project
   const handleUploadClick = useCallback((projectId: string) => {
@@ -405,33 +415,23 @@ function RecentProjects({
     }
   }, [onStartNewProject, onClose]);
 
-  // Handle toggling inline expand for a local project
+  // Handle toggling inline edit mode for a local project
   const handleToggleExpandProject = useCallback(async (project: LocalProject) => {
-    // If already expanded, collapse it
+    // If already in edit mode, exit edit mode (but keep images loaded for carousel)
     if (expandedProjectId === project.id) {
-      // Revoke blob URLs to free memory
-      const images = expandedProjectImages[project.id];
-      if (images) {
-        images.forEach(img => {
-          try {
-            URL.revokeObjectURL(img.url);
-          } catch {
-            // Ignore errors
-          }
-        });
-      }
       setExpandedProjectId(null);
-      setExpandedProjectImages(prev => {
-        const updated = { ...prev };
-        delete updated[project.id];
-        return updated;
-      });
       setDraggedImageId(null);
       setDragOverImageId(null);
       return;
     }
 
-    // Load images and expand
+    // If images are already loaded, just enter edit mode
+    if (expandedProjectImages[project.id]) {
+      setExpandedProjectId(project.id);
+      return;
+    }
+
+    // Load images
     setLoadingExpandedImages(project.id);
     try {
       const images = await getLocalProjectImageUrls(project.id);
@@ -439,6 +439,8 @@ function RecentProjects({
         ...prev,
         [project.id]: images
       }));
+      // If called from thumbnail click, don't enter edit mode - just load for carousel
+      // If called from edit button, enter edit mode
       setExpandedProjectId(project.id);
     } catch (error) {
       console.error('Failed to load project images:', error);
@@ -446,6 +448,27 @@ function RecentProjects({
       setLoadingExpandedImages(null);
     }
   }, [expandedProjectId, expandedProjectImages, getLocalProjectImageUrls]);
+
+  // Handle loading images for carousel display only (not edit mode)
+  const handleLoadProjectImages = useCallback(async (project: LocalProject) => {
+    // If images already loaded, do nothing
+    if (expandedProjectImages[project.id]) {
+      return;
+    }
+
+    setLoadingExpandedImages(project.id);
+    try {
+      const images = await getLocalProjectImageUrls(project.id);
+      setExpandedProjectImages(prev => ({
+        ...prev,
+        [project.id]: images
+      }));
+    } catch (error) {
+      console.error('Failed to load project images:', error);
+    } finally {
+      setLoadingExpandedImages(null);
+    }
+  }, [expandedProjectImages, getLocalProjectImageUrls]);
 
   // Handle closing inline expanded view
   const handleCollapseProject = useCallback((projectId: string) => {
@@ -916,21 +939,27 @@ function RecentProjects({
             </button>
           )}
           {localProjectsSupported && (
-            <button
-              className="recent-projects-new-btn recent-projects-new-local-btn"
-              onClick={() => setShowCreateLocalProject(true)}
-              title="Create a local project with your own images"
-            >
-              💾 New Local Project
-              <span className="recent-projects-info-tooltip">
-                <span className="recent-projects-info-icon">ℹ️</span>
-                <span className="recent-projects-info-content">
-                  <strong>Local Projects</strong> are stored in your browser and never expire.
-                  Upload your own images to use with video workflows like Batch Transition,
-                  Sound to Video, Animate Replace, and more!
-                </span>
-              </span>
-            </button>
+            <>
+              <button
+                className="recent-projects-new-btn recent-projects-new-local-btn"
+                onClick={() => setShowCreateLocalProject(true)}
+                title="Create a local project with your own images"
+              >
+                💾 New Local Project
+              </button>
+              <div className="recent-projects-info-btn-wrapper">
+                <button
+                  className="recent-projects-info-btn"
+                  title="What are Local Projects?"
+                >
+                  ?
+                </button>
+                <div className="recent-projects-info-dropdown">
+                  <strong>💾 Local Projects</strong>
+                  <p>Stored in your browser and never expire. Upload your own images to use with video workflows like Batch Transition, Sound to Video, Animate Replace, and more!</p>
+                </div>
+              </div>
+            </>
           )}
           <button
             className="recent-projects-close-btn"
@@ -1026,6 +1055,15 @@ function RecentProjects({
                       >
                         ✏️
                       </button>
+                      {project.imageIds.length > 0 && (
+                        <button
+                          className="recent-project-action-btn"
+                          onClick={() => handleToggleExpandProject(project)}
+                          title={expandedProjectId === project.id ? "Close edit mode" : "Edit: reorder or delete images"}
+                        >
+                          {expandedProjectId === project.id ? '✕' : '⚙️'}
+                        </button>
+                      )}
                       <button
                         className="recent-project-action-btn"
                         onClick={() => handleUploadClick(project.id)}
@@ -1081,6 +1119,7 @@ function RecentProjects({
                             className={`local-project-inline-item ${
                               draggedImageId === image.id ? 'dragging' : ''
                             } ${dragOverImageId === image.id ? 'drag-over' : ''}`}
+                            style={{ aspectRatio: `${image.width}/${image.height}` }}
                             draggable
                             onDragStart={() => handleDragStart(image.id)}
                             onDragOver={(e) => handleDragOver(e, image.id)}
@@ -1131,19 +1170,33 @@ function RecentProjects({
                       </div>
                     </div>
                   ) : (
-                    /* Collapsed view - show carousel */
+                    /* Collapsed view - show carousel of images */
                     <div className="recent-project-jobs-carousel">
-                      {loadingExpandedImages === project.id ? (
-                        <div className="local-project-upload-status">
-                          <div className="recent-projects-spinner" />
-                          <span>Loading images...</span>
-                        </div>
+                      {expandedProjectImages[project.id] ? (
+                        /* Show all loaded images in carousel */
+                        expandedProjectImages[project.id].map((image) => (
+                          <div
+                            key={image.id}
+                            className="job-item local-project-image-item"
+                            style={{
+                              width: `${Math.round(320 * (image.width / image.height))}px`
+                            }}
+                          >
+                            <img
+                              className="job-item-media"
+                              src={image.url}
+                              alt={image.filename}
+                              loading="lazy"
+                            />
+                          </div>
+                        ))
                       ) : localThumbnails[project.id] ? (
+                        /* Show thumbnail with count badge - click loads all images */
                         <div
                           className="job-item local-project-image-item"
-                          onClick={() => handleToggleExpandProject(project)}
+                          onClick={() => handleLoadProjectImages(project)}
                           style={{ cursor: 'pointer' }}
-                          title="Click to view all images, delete, or reorder"
+                          title="Click to load all images"
                         >
                           <img
                             className="job-item-media"
@@ -1153,11 +1206,17 @@ function RecentProjects({
                           />
                           {project.imageIds.length > 1 && (
                             <div className="local-project-image-count">
-                              +{project.imageIds.length - 1} more
+                              Click to load {project.imageIds.length} images
                             </div>
                           )}
                         </div>
                       ) : null}
+                      {loadingExpandedImages === project.id && (
+                        <div className="local-project-upload-status">
+                          <div className="recent-projects-spinner" />
+                          <span>Loading images...</span>
+                        </div>
+                      )}
                       {uploadingToProject === project.id && uploadProgress && (
                         <div className="local-project-upload-status">
                           <div className="recent-projects-spinner" />
