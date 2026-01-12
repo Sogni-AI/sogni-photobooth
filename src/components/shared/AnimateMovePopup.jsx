@@ -33,7 +33,7 @@ const SAMPLE_MOTION_VIDEOS = [
     id: 'dance-dance-dance',
     title: '🕺 Dance Dance Dance',
     description: '',
-    url: 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/video-samples/dance-dance-dance.mp4'
+    url: 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/video-samples/viral-dance.mp4'
   },
   {
     id: 'dance-chanel',
