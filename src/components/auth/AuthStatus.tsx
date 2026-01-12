@@ -24,9 +24,10 @@ interface AuthStatusProps {
   onHistoryClick?: () => void;
   textColor?: string;
   playRandomFlashSound?: () => void;
+  showToast?: (options: { type: 'success' | 'error' | 'warning' | 'info'; title: string; message: string; timeout?: number }) => void;
 }
 
-export const AuthStatus: React.FC<AuthStatusProps> = ({ onPurchaseClick, onSignupComplete, onHistoryClick, textColor = '#ffffff', playRandomFlashSound }) => {
+export const AuthStatus: React.FC<AuthStatusProps> = ({ onPurchaseClick, onSignupComplete, onHistoryClick, textColor = '#ffffff', playRandomFlashSound, showToast }) => {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [loginModalMode, setLoginModalMode] = useState<LoginModalMode>('login');
@@ -103,12 +104,22 @@ export const AuthStatus: React.FC<AuthStatusProps> = ({ onPurchaseClick, onSignu
       setShowUserMenu(true);
       setHighlightDailyBoost(true);
       
-      // Remove highlight after 8 seconds to give user time to notice
+      // Show toast notification about Daily Boost
+      if (showToast) {
+        showToast({
+          type: 'success',
+          title: '🎁 Daily Boost Available!',
+          message: 'Claim your free daily credits now!',
+          timeout: 6000
+        });
+      }
+      
+      // Remove highlight after 10 seconds to give user time to notice
       setTimeout(() => {
         setHighlightDailyBoost(false);
-      }, 8000);
+      }, 10000);
     }, 800);
-  }, [isAuthenticated, canClaimDailyBoost, rewardsLoading, rewards.length, dailyBoostReward, hasClaimedToday]);
+  }, [isAuthenticated, canClaimDailyBoost, rewardsLoading, rewards.length, dailyBoostReward, hasClaimedToday, showToast]);
 
   // Track logged-in visits and show Recent Projects tooltip on second visit or later
   useEffect(() => {
@@ -811,10 +822,10 @@ export const AuthStatus: React.FC<AuthStatusProps> = ({ onPurchaseClick, onSignu
                           textTransform: 'lowercase',
                           boxShadow: canClaimDailyBoost 
                             ? (highlightDailyBoost 
-                              ? '4px 4px 0 #1a1a1a' 
+                              ? '0 0 20px 4px rgba(16, 185, 129, 0.7), 0 0 40px 8px rgba(16, 185, 129, 0.4), 4px 4px 0 #1a1a1a' 
                               : '3px 3px 0 #1a1a1a')
                             : 'none',
-                          animation: 'none'
+                          animation: highlightDailyBoost ? 'dailyBoostGlow 2s ease-in-out infinite, dailyBoostPulse 1.5s ease-in-out infinite' : 'none'
                         }}
                         onMouseOver={(e) => {
                           if (canClaimDailyBoost && !rewardsLoading) {

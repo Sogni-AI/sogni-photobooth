@@ -1398,6 +1398,8 @@
   outline: none;
   transition: all 0.2s ease;
   box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
+  background: #ffffff;
+  color: #1a1a1a;
 }
 
 .recent-projects-modal-input:focus {

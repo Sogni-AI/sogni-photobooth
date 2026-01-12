@@ -102,6 +102,9 @@ const VideoReviewPopup = ({
   const [selectedIndex, setSelectedIndex] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [showCancelConfirmation, setShowCancelConfirmation] = useState(false);
+  const [showStitchWarning, setShowStitchWarning] = useState(false);
+  const [showRedoConfirmation, setShowRedoConfirmation] = useState(false);
+  const [redoConfirmationIndex, setRedoConfirmationIndex] = useState(null);
   const [isMuted, setIsMuted] = useState(true); // Start muted for mobile autoplay
   const previewVideoRef = useRef(null);
 
@@ -174,6 +177,9 @@ const VideoReviewPopup = ({
       setSelectedIndex(null);
       setIsPlaying(false);
       setShowCancelConfirmation(false);
+      setShowStitchWarning(false);
+      setShowRedoConfirmation(false);
+      setRedoConfirmationIndex(null);
       setIsMuted(true); // Reset to muted when opening
       setContentOrientation('landscape'); // Reset orientation detection
     }
@@ -202,9 +208,30 @@ const VideoReviewPopup = ({
 
   const handleRegenerateClick = useCallback((index, e) => {
     e.stopPropagation();
-    if (items[index]?.status === 'regenerating') return;
+    const item = items[index];
+    // If item is currently generating/regenerating, show confirmation
+    if (item?.status === 'regenerating' || item?.status === 'generating') {
+      setRedoConfirmationIndex(index);
+      setShowRedoConfirmation(true);
+      return;
+    }
+    // Otherwise, proceed with regeneration
     onRegenerateItem?.(index);
   }, [items, onRegenerateItem]);
+
+  // Confirm redo (cancel current generation and start over)
+  const handleConfirmRedo = useCallback(() => {
+    if (redoConfirmationIndex !== null) {
+      // First cancel the current item
+      onCancelItem?.(redoConfirmationIndex);
+      // Then wait a bit and regenerate
+      setTimeout(() => {
+        onRegenerateItem?.(redoConfirmationIndex);
+      }, 500);
+    }
+    setShowRedoConfirmation(false);
+    setRedoConfirmationIndex(null);
+  }, [redoConfirmationIndex, onCancelItem, onRegenerateItem]);
 
   // Handle per-item cancel (for stuck/slow items)
   const handleCancelItemClick = useCallback((index, e) => {
@@ -244,6 +271,23 @@ const VideoReviewPopup = ({
     onClose();
   }, [onClose]);
 
+  // Handle stitch button click - check if items are in progress
+  const handleStitchClick = useCallback(() => {
+    if (hasItemsInProgress) {
+      // Show warning if items are still generating/regenerating
+      setShowStitchWarning(true);
+    } else {
+      // All items are done, proceed with stitching
+      onStitchAll();
+    }
+  }, [hasItemsInProgress, onStitchAll]);
+
+  // Confirm stitch despite items in progress
+  const handleConfirmStitch = useCallback(() => {
+    setShowStitchWarning(false);
+    onStitchAll();
+  }, [onStitchAll]);
+
   // Computed states
   const allItemsReady = items?.every(t => t.status === 'ready') ?? false;
   const anyRegenerating = items?.some(t => t.status === 'regenerating') ?? false;
@@ -252,10 +296,15 @@ const VideoReviewPopup = ({
   const isInitialGeneration = anyGenerating && !anyRegenerating;
   const readyCount = items?.filter(t => t.status === 'ready').length || 0;
   const generatingCount = items?.filter(t => t.status === 'generating').length || 0;
+  const regeneratingCount = items?.filter(t => t.status === 'regenerating').length || 0;
+  const inProgressCount = generatingCount + regeneratingCount;
   const failedCount = items?.filter(t => t.status === 'failed').length || 0;
   // Allow stitching if all items are done processing (ready or failed) and at least one is ready
   const allItemsDone = items?.every(t => t.status === 'ready' || t.status === 'failed') ?? false;
-  const canStitch = allItemsDone && readyCount > 0 && !anyRegenerating && !anyGenerating;
+  // New logic: can stitch if we have 2+ ready segments, regardless of whether others are still processing
+  const canStitch = readyCount >= 2;
+  // Check if user is trying to stitch while items are still in progress
+  const hasItemsInProgress = anyGenerating || anyRegenerating;
 
   // Get item label (e.g., "Transition 1" or "Segment 1")
   const getItemLabel = (index) => {
@@ -462,58 +511,45 @@ const VideoReviewPopup = ({
                 </span>
                 <button
                   onClick={(e) => handleRegenerateClick(selectedIndex, e)}
-                  disabled={items[selectedIndex]?.status === 'regenerating'}
                   style={{
-                    background: items[selectedIndex]?.status === 'regenerating'
-                      ? '#e5e5e5'
+                    background: (items[selectedIndex]?.status === 'regenerating' || items[selectedIndex]?.status === 'generating')
+                      ? '#f59e0b'
                       : config.accentColor,
                     border: '3px solid #1a1a1a',
                     borderRadius: '50px',
                     padding: '12px 24px',
                     color: '#fff',
-                    cursor: items[selectedIndex]?.status === 'regenerating' ? 'not-allowed' : 'pointer',
+                    cursor: 'pointer',
                     fontSize: '0.875rem',
                     fontWeight: '800',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '8px',
-                    opacity: items[selectedIndex]?.status === 'regenerating' ? 0.6 : 1,
                     minHeight: '48px',
-                    boxShadow: items[selectedIndex]?.status === 'regenerating' ? 'none' : `3px 3px 0 #1a1a1a`,
+                    boxShadow: `3px 3px 0 #1a1a1a`,
                     transition: 'all 0.25s cubic-bezier(0.68, -0.55, 0.265, 1.55)',
                     textTransform: 'lowercase'
                   }}
                   onMouseOver={(e) => {
-                    if (items[selectedIndex]?.status !== 'regenerating') {
-                      e.currentTarget.style.transform = 'translate(-2px, -2px)';
-                      e.currentTarget.style.boxShadow = `5px 5px 0 #1a1a1a`;
-                    }
+                    e.currentTarget.style.transform = 'translate(-2px, -2px)';
+                    e.currentTarget.style.boxShadow = `5px 5px 0 #1a1a1a`;
                   }}
                   onMouseOut={(e) => {
-                    if (items[selectedIndex]?.status !== 'regenerating') {
-                      e.currentTarget.style.transform = 'translate(0, 0)';
-                      e.currentTarget.style.boxShadow = `3px 3px 0 #1a1a1a`;
-                    }
+                    e.currentTarget.style.transform = 'translate(0, 0)';
+                    e.currentTarget.style.boxShadow = `3px 3px 0 #1a1a1a`;
                   }}
                   onMouseDown={(e) => {
-                    if (items[selectedIndex]?.status !== 'regenerating') {
-                      e.currentTarget.style.transform = 'translate(1px, 1px)';
-                      e.currentTarget.style.boxShadow = `2px 2px 0 #1a1a1a`;
-                    }
+                    e.currentTarget.style.transform = 'translate(1px, 1px)';
+                    e.currentTarget.style.boxShadow = `2px 2px 0 #1a1a1a`;
                   }}
+                  title={
+                    (items[selectedIndex]?.status === 'regenerating' || items[selectedIndex]?.status === 'generating')
+                      ? 'cancel and retry'
+                      : 'regenerate'
+                  }
                 >
-                  {items[selectedIndex]?.status === 'regenerating' ? (
-                    <>
-                      <span style={{
-                        width: '14px',
-                        height: '14px',
-                        border: '2px solid rgba(255,255,255,0.3)',
-                        borderTopColor: '#fff',
-                        borderRadius: '50%',
-                        animation: 'videoReviewSpin 1s linear infinite'
-                      }} />
-                      Regenerating...
-                    </>
+                  {(items[selectedIndex]?.status === 'regenerating' || items[selectedIndex]?.status === 'generating') ? (
+                    <>🔄 Cancel & Retry</>
                   ) : (
                     <>🔄 Regenerate</>
                   )}
@@ -574,70 +610,83 @@ const VideoReviewPopup = ({
                       </div>
 
                       {/* ETA countdown */}
-                      <div style={{
-                        fontSize: '1.75rem',
-                        fontWeight: '700',
-                        color: config.accentColor,
-                        marginBottom: '12px',
-                        fontFamily: '"Permanent Marker", cursive',
-                        position: 'relative'
-                      }}>
-                        {regenerationProgress?.eta !== undefined && regenerationProgress?.eta > 0 ? (
-                          <>
-                            <span style={{ fontSize: '1.25rem', marginRight: '6px' }}>⏱️</span>
-                            {formatDuration(regenerationProgress.eta)}
-                          </>
-                        ) : regenerationProgress?.status?.startsWith('Queue') || regenerationProgress?.status?.startsWith('In line') ? (
-                          <span style={{ fontSize: '1.125rem' }}>in line...</span>
-                        ) : (
-                          <span style={{ fontSize: '1.125rem' }}>starting...</span>
-                        )}
-                      </div>
+                                      <div style={{
+                                        fontSize: '1.75rem',
+                                        fontWeight: '700',
+                                        color: config.accentColor,
+                                        marginBottom: '12px',
+                                        fontFamily: '"Permanent Marker", cursive',
+                                        position: 'relative'
+                                      }}>
+                                        {regenerationProgress?.eta !== undefined && regenerationProgress?.eta > 0 ? (
+                                          <>
+                                            <span style={{ fontSize: '1.25rem', marginRight: '6px' }}>⏱️</span>
+                                            {formatDuration(regenerationProgress.eta)}
+                                          </>
+                                        ) : regenerationProgress?.status?.startsWith('Queue') || regenerationProgress?.status?.startsWith('In line') ? (
+                                          <span style={{ fontSize: '1.125rem' }}>in line...</span>
+                                        ) : (
+                                          <>
+                                            <div style={{
+                                              width: '32px',
+                                              height: '32px',
+                                              margin: '0 auto 8px',
+                                              border: `3px solid ${config.accentColor}40`,
+                                              borderTopColor: config.accentColor,
+                                              borderRadius: '50%',
+                                              animation: 'videoReviewSpin 1s linear infinite'
+                                            }} />
+                                            <span style={{ fontSize: '1.125rem' }}>starting...</span>
+                                          </>
+                                        )}
+                                      </div>
 
-                      {/* Worker info and elapsed time */}
-                      <div style={{
-                        fontSize: '0.8rem',
-                        color: '#666',
-                        marginBottom: '6px',
-                        position: 'relative',
-                        fontWeight: '600'
-                      }}>
-                        {regenerationProgress?.status === 'Initializing Model' ? (
-                          'initializing...'
-                        ) : regenerationProgress?.workerName ? (
-                          <>
-                            <span style={{ color: config.accentColor, fontWeight: '700' }}>{regenerationProgress.workerName}</span>
-                            {regenerationProgress?.elapsed !== undefined && (
-                              <span> • {formatDuration(regenerationProgress.elapsed)} elapsed</span>
-                            )}
-                          </>
-                        ) : regenerationProgress?.status?.startsWith('Queue') || regenerationProgress?.status?.startsWith('In line') ? (
-                          regenerationProgress.status
-                        ) : (
-                          `${formatDuration(regenerationProgress?.elapsed || 0)} elapsed`
-                        )}
-                      </div>
+                                      {/* Worker info and elapsed time */}
+                                      <div style={{
+                                        fontSize: '0.8rem',
+                                        color: '#666',
+                                        marginBottom: '6px',
+                                        position: 'relative',
+                                        fontWeight: '600'
+                                      }}>
+                                        {regenerationProgress?.status === 'Initializing Model' ? (
+                                          'initializing...'
+                                        ) : regenerationProgress?.workerName ? (
+                                          <>
+                                            <span style={{ color: config.accentColor, fontWeight: '700' }}>{regenerationProgress.workerName}</span>
+                                            {regenerationProgress?.elapsed !== undefined && (
+                                              <span> • {formatDuration(regenerationProgress.elapsed)} elapsed</span>
+                                            )}
+                                          </>
+                                        ) : regenerationProgress?.status?.startsWith('Queue') || regenerationProgress?.status?.startsWith('In line') ? (
+                                          regenerationProgress.status
+                                        ) : regenerationProgress?.elapsed > 0 ? (
+                                          `${formatDuration(regenerationProgress.elapsed)} elapsed`
+                                        ) : (
+                                          'preparing regeneration...'
+                                        )}
+                                      </div>
 
-                      {/* Progress bar */}
-                      {regenerationProgress?.progress > 0 && (
-                        <div style={{
-                          width: '100%',
-                          height: '6px',
-                          backgroundColor: 'rgba(255, 237, 78, 0.3)',
-                          borderRadius: '10px',
-                          overflow: 'hidden',
-                          marginTop: '12px',
-                          position: 'relative'
-                        }}>
-                          <div style={{
-                            width: `${regenerationProgress.progress}%`,
-                            height: '100%',
-                            background: `linear-gradient(90deg, ${config.accentColor}, ${config.accentColor}dd)`,
-                            borderRadius: '2px',
-                            transition: 'width 0.3s ease'
-                          }} />
-                        </div>
-                      )}
+                                      {/* Progress bar */}
+                                      {regenerationProgress?.progress > 0 && (
+                                        <div style={{
+                                          width: '100%',
+                                          height: '6px',
+                                          backgroundColor: 'rgba(255, 237, 78, 0.3)',
+                                          borderRadius: '10px',
+                                          overflow: 'hidden',
+                                          marginTop: '12px',
+                                          position: 'relative'
+                                        }}>
+                                          <div style={{
+                                            width: `${regenerationProgress.progress}%`,
+                                            height: '100%',
+                                            background: `linear-gradient(90deg, ${config.accentColor}, ${config.accentColor}dd)`,
+                                            borderRadius: '2px',
+                                            transition: 'width 0.3s ease'
+                                          }} />
+                                        </div>
+                                      )}
                     </div>
                   </div>
                 ) : (
@@ -1000,73 +1049,90 @@ const VideoReviewPopup = ({
                               }}
                             />
                           ) : (
-                            /* Fallback: Compact generation card when no thumbnails available */
-                            <div style={{
-                              background: '#ffffff',
-                              border: `3px solid ${config.accentColor}`,
-                              borderRadius: '12px',
-                              padding: '10px 14px',
-                              textAlign: 'center',
-                              boxShadow: `3px 3px 0 #1a1a1a`,
-                              minWidth: '110px'
-                            }}>
-                              <div style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: '6px',
-                                marginBottom: '6px'
-                              }}>
-                                <span style={{ fontSize: '14px' }}>🎥</span>
-                                <span style={{
-                                  fontSize: '0.7rem',
-                                  fontWeight: '800',
-                                  color: '#1a1a1a'
-                                }}>{item.status === 'generating' ? 'creating' : 'regenerating'}</span>
-                              </div>
+                                            /* Fallback: Compact generation card when no thumbnails available */
+                                            <div style={{
+                                              background: '#ffffff',
+                                              border: `3px solid ${config.accentColor}`,
+                                              borderRadius: '12px',
+                                              padding: '10px 14px',
+                                              textAlign: 'center',
+                                              boxShadow: `3px 3px 0 #1a1a1a`,
+                                              minWidth: '110px'
+                                            }}>
+                                              <div style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                gap: '6px',
+                                                marginBottom: '6px'
+                                              }}>
+                                                <span style={{ fontSize: '14px' }}>🎥</span>
+                                                <span style={{
+                                                  fontSize: '0.7rem',
+                                                  fontWeight: '800',
+                                                  color: '#1a1a1a'
+                                                }}>{item.status === 'generating' ? 'creating' : 'regenerating'}</span>
+                                              </div>
 
-                              {/* ETA display */}
-                              <div style={{
-                                fontSize: '0.875rem',
-                                fontWeight: '700',
-                                color: config.accentColor,
-                                marginBottom: '4px',
-                                fontFamily: '"Permanent Marker", cursive'
-                              }}>
-                                {isThisRegenerating && regenerationProgress?.eta > 0 ? (
-                                  <>⏱️ {formatDuration(regenerationProgress.eta)}</>
-                                ) : isThisRegenerating && regenerationProgress?.status?.startsWith('Queue') ? (
-                                  <span style={{ fontSize: '0.7rem' }}>in line...</span>
-                                ) : item.status === 'generating' ? (
-                                  <div style={{
-                                    width: '24px',
-                                    height: '24px',
-                                    margin: '0 auto',
-                                    border: `3px solid ${config.accentColor}40`,
-                                    borderTopColor: config.accentColor,
-                                    borderRadius: '50%',
-                                    animation: 'videoReviewSpin 1s linear infinite'
-                                  }} />
-                                ) : (
-                                  <span style={{ fontSize: '0.7rem' }}>starting...</span>
-                                )}
-                              </div>
+                                              {/* ETA display - always show something for regenerating items */}
+                                              <div style={{
+                                                fontSize: '0.875rem',
+                                                fontWeight: '700',
+                                                color: config.accentColor,
+                                                marginBottom: '4px',
+                                                fontFamily: '"Permanent Marker", cursive'
+                                              }}>
+                                                {isThisRegenerating && regenerationProgress?.eta > 0 ? (
+                                                  <>⏱️ {formatDuration(regenerationProgress.eta)}</>
+                                                ) : isThisRegenerating && regenerationProgress?.status?.startsWith('Queue') ? (
+                                                  <span style={{ fontSize: '0.7rem' }}>in line...</span>
+                                                ) : item.status === 'generating' ? (
+                                                  <div style={{
+                                                    width: '24px',
+                                                    height: '24px',
+                                                    margin: '0 auto',
+                                                    border: `3px solid ${config.accentColor}40`,
+                                                    borderTopColor: config.accentColor,
+                                                    borderRadius: '50%',
+                                                    animation: 'videoReviewSpin 1s linear infinite'
+                                                  }} />
+                                                ) : (
+                                                  /* Regenerating but no progress data yet - show spinner */
+                                                  <div style={{
+                                                    width: '24px',
+                                                    height: '24px',
+                                                    margin: '0 auto',
+                                                    border: `3px solid ${config.accentColor}40`,
+                                                    borderTopColor: config.accentColor,
+                                                    borderRadius: '50%',
+                                                    animation: 'videoReviewSpin 1s linear infinite'
+                                                  }} />
+                                                )}
+                                              </div>
 
-                              {/* Worker info */}
-                              {isThisRegenerating && regenerationProgress?.workerName && (
-                                <div style={{
-                                  fontSize: '0.65rem',
-                                  color: '#666',
-                                  fontWeight: '600',
-                                  overflow: 'hidden',
-                                  textOverflow: 'ellipsis',
-                                  whiteSpace: 'nowrap'
-                                }}>
-                                  {regenerationProgress.workerName}
-                                </div>
-                              )}
-                            </div>
-                          )}
+                                              {/* Worker info or starting message */}
+                                              {isThisRegenerating && regenerationProgress?.workerName ? (
+                                                <div style={{
+                                                  fontSize: '0.65rem',
+                                                  color: '#666',
+                                                  fontWeight: '600',
+                                                  overflow: 'hidden',
+                                                  textOverflow: 'ellipsis',
+                                                  whiteSpace: 'nowrap'
+                                                }}>
+                                                  {regenerationProgress.workerName}
+                                                </div>
+                                              ) : isThisRegenerating && !regenerationProgress?.eta && (
+                                                <div style={{
+                                                  fontSize: '0.65rem',
+                                                  color: '#666',
+                                                  fontWeight: '600'
+                                                }}>
+                                                  starting...
+                                                </div>
+                                              )}
+                                            </div>
+                                          )}
                         </div>
                       ) : item.url ? (
                         <video
@@ -1178,40 +1244,44 @@ const VideoReviewPopup = ({
                           </div>
                         </div>
                         
-                        {/* Status indicators */}
-                        {(item.status === 'ready' || item.status === 'failed') && (
-                          <button
-                            onClick={(e) => handleRegenerateClick(index, e)}
-                            style={{
-                              background: config.accentColor,
-                              border: '2px solid #1a1a1a',
-                              borderRadius: '50px',
-                              padding: '8px 14px',
-                              color: '#fff',
-                              cursor: 'pointer',
-                              fontSize: '0.75rem',
-                              fontWeight: '800',
-                              transition: 'all 0.25s cubic-bezier(0.68, -0.55, 0.265, 1.55)',
-                              boxShadow: `2px 2px 0 #1a1a1a`,
-                              textTransform: 'lowercase'
-                            }}
-                            onMouseOver={(e) => {
-                              e.currentTarget.style.transform = 'translate(-1px, -1px)';
-                              e.currentTarget.style.boxShadow = `3px 3px 0 #1a1a1a`;
-                            }}
-                            onMouseOut={(e) => {
-                              e.currentTarget.style.transform = 'translate(0, 0)';
-                              e.currentTarget.style.boxShadow = `2px 2px 0 #1a1a1a`;
-                            }}
-                            onMouseDown={(e) => {
-                              e.currentTarget.style.transform = 'translate(1px, 1px)';
-                              e.currentTarget.style.boxShadow = `1px 1px 0 #1a1a1a`;
-                            }}
-                            title={`regenerate this ${config.itemLabel.toLowerCase()}`}
-                          >
-                            🔄 redo
-                          </button>
-                        )}
+                        {/* Status indicators - Always show redo button */}
+                        <button
+                          onClick={(e) => handleRegenerateClick(index, e)}
+                          style={{
+                            background: (item.status === 'regenerating' || item.status === 'generating')
+                              ? '#f59e0b'
+                              : config.accentColor,
+                            border: '2px solid #1a1a1a',
+                            borderRadius: '50px',
+                            padding: '8px 14px',
+                            color: '#fff',
+                            cursor: 'pointer',
+                            fontSize: '0.75rem',
+                            fontWeight: '800',
+                            transition: 'all 0.25s cubic-bezier(0.68, -0.55, 0.265, 1.55)',
+                            boxShadow: `2px 2px 0 #1a1a1a`,
+                            textTransform: 'lowercase'
+                          }}
+                          onMouseOver={(e) => {
+                            e.currentTarget.style.transform = 'translate(-1px, -1px)';
+                            e.currentTarget.style.boxShadow = `3px 3px 0 #1a1a1a`;
+                          }}
+                          onMouseOut={(e) => {
+                            e.currentTarget.style.transform = 'translate(0, 0)';
+                            e.currentTarget.style.boxShadow = `2px 2px 0 #1a1a1a`;
+                          }}
+                          onMouseDown={(e) => {
+                            e.currentTarget.style.transform = 'translate(1px, 1px)';
+                            e.currentTarget.style.boxShadow = `1px 1px 0 #1a1a1a`;
+                          }}
+                          title={
+                            (item.status === 'regenerating' || item.status === 'generating')
+                              ? `cancel and retry this ${config.itemLabel.toLowerCase()}`
+                              : `regenerate this ${config.itemLabel.toLowerCase()}`
+                          }
+                        >
+                          🔄 redo
+                        </button>
                         {item.status === 'ready' && (
                           <span style={{
                             fontSize: '14px',
@@ -1260,7 +1330,9 @@ const VideoReviewPopup = ({
                           borderTop: '2px solid rgba(255, 237, 78, 0.4)',
                           fontWeight: '600'
                         }}>
-                          {isThisRegenerating && regenerationProgress ? (
+                          {isThisRegenerating ? (
+                            /* Regenerating a segment - show progress from regenerationProgress OR fallback UI */
+                            regenerationProgress && (regenerationProgress.eta > 0 || regenerationProgress.workerName || regenerationProgress.status) ? (
                             <>
                               {/* ETA with caching */}
                               {(() => {
@@ -1333,6 +1405,29 @@ const VideoReviewPopup = ({
                                 </div>
                               )}
                             </>
+                            ) : (
+                              /* Fallback: regeneration started but no progress yet - show starting state */
+                              <>
+                                <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                                  <div style={{
+                                    width: '16px',
+                                    height: '16px',
+                                    border: `2px solid ${config.accentColor}40`,
+                                    borderTopColor: config.accentColor,
+                                    borderRadius: '50%',
+                                    animation: 'videoReviewSpin 1s linear infinite'
+                                  }} />
+                                  <span style={{ color: config.accentColor, fontSize: '0.8rem', fontWeight: '700' }}>regenerating...</span>
+                                </div>
+                                <div style={{ 
+                                  color: '#666',
+                                  fontStyle: 'italic',
+                                  fontSize: '0.75rem'
+                                }}>
+                                  starting up...
+                                </div>
+                              </>
+                            )
                           ) : item.status === 'generating' ? (
                             /* For initial generation, show from arrays */
                             <>
@@ -1502,7 +1597,7 @@ const VideoReviewPopup = ({
             </button>
             
             <button
-              onClick={onStitchAll}
+              onClick={handleStitchClick}
               disabled={!canStitch}
               style={{
                 padding: '16px 36px',
@@ -1679,6 +1774,334 @@ const VideoReviewPopup = ({
                 }}
               >
                 Keep Generating
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Stitch Warning Modal - shown when user tries to stitch with items still in progress */}
+      {showStitchWarning && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 100001
+          }}
+          onClick={() => setShowStitchWarning(false)}
+        >
+          <div
+            style={{
+              backgroundColor: '#ffffff',
+              borderRadius: '24px',
+              padding: '32px',
+              maxWidth: '450px',
+              width: '90%',
+              boxShadow: '6px 6px 0 #1a1a1a',
+              border: '4px solid #1a1a1a',
+              animation: 'videoReviewPopupFadeIn 0.2s ease-out'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+              <span style={{ fontSize: '56px' }}>⚠️</span>
+            </div>
+
+            <h3 style={{
+              margin: '0 0 16px 0',
+              color: '#1a1a1a',
+              fontSize: '24px',
+              fontWeight: '700',
+              fontFamily: '"Permanent Marker", cursive',
+              textAlign: 'center'
+            }}>
+              Stitch Now?
+            </h3>
+
+            <p style={{
+              margin: '0 0 20px 0',
+              color: '#666',
+              fontSize: '15px',
+              textAlign: 'center',
+              lineHeight: '1.6',
+              fontWeight: '600'
+            }}>
+              You have <strong style={{ color: config.accentColor }}>{inProgressCount} {config.itemLabel.toLowerCase()}{inProgressCount > 1 ? 's' : ''}</strong> still finishing.
+              {' '}If you continue, {inProgressCount > 1 ? 'they' : 'it'} will be cancelled.
+            </p>
+
+            <div style={{
+              backgroundColor: 'rgba(255, 237, 78, 0.2)',
+              border: '2px solid #FFED4E',
+              borderRadius: '16px',
+              padding: '16px',
+              marginBottom: '24px',
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: '12px'
+            }}>
+              <span style={{ fontSize: '24px', flexShrink: 0 }}>💰</span>
+              <span style={{
+                color: '#1a1a1a',
+                fontSize: '14px',
+                fontWeight: '600',
+                lineHeight: '1.5'
+              }}>
+                Credits for in-progress work will be refunded
+              </span>
+            </div>
+
+            <div style={{
+              backgroundColor: 'rgba(34, 197, 94, 0.1)',
+              border: '2px solid #22c55e',
+              borderRadius: '16px',
+              padding: '16px',
+              marginBottom: '24px',
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: '12px'
+            }}>
+              <span style={{ fontSize: '24px', flexShrink: 0 }}>✓</span>
+              <span style={{
+                color: '#1a1a1a',
+                fontSize: '14px',
+                fontWeight: '600',
+                lineHeight: '1.5'
+              }}>
+                You have <strong style={{ color: '#22c55e' }}>{readyCount} {config.itemLabel.toLowerCase()}{readyCount > 1 ? 's' : ''}</strong> ready to stitch
+              </span>
+            </div>
+
+            <div style={{
+              display: 'flex',
+              gap: '12px',
+              justifyContent: 'center'
+            }}>
+              <button
+                onClick={() => setShowStitchWarning(false)}
+                style={{
+                  flex: 1,
+                  padding: '14px 24px',
+                  background: '#ffffff',
+                  border: '3px solid #1a1a1a',
+                  borderRadius: '50px',
+                  color: '#1a1a1a',
+                  fontSize: '14px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  boxShadow: '3px 3px 0 #1a1a1a',
+                  textTransform: 'lowercase'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.background = '#FFED4E';
+                  e.currentTarget.style.transform = 'translate(-2px, -2px)';
+                  e.currentTarget.style.boxShadow = '5px 5px 0 #1a1a1a';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.background = '#ffffff';
+                  e.currentTarget.style.transform = 'translate(0, 0)';
+                  e.currentTarget.style.boxShadow = '3px 3px 0 #1a1a1a';
+                }}
+                onMouseDown={(e) => {
+                  e.currentTarget.style.transform = 'translate(1px, 1px)';
+                  e.currentTarget.style.boxShadow = '2px 2px 0 #1a1a1a';
+                }}
+              >
+                wait for them
+              </button>
+              <button
+                onClick={handleConfirmStitch}
+                style={{
+                  flex: 1,
+                  padding: '14px 24px',
+                  background: '#ff3366',
+                  border: '3px solid #1a1a1a',
+                  borderRadius: '50px',
+                  color: '#fff',
+                  fontSize: '14px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  boxShadow: '4px 4px 0 #1a1a1a',
+                  textTransform: 'lowercase'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.transform = 'translate(-2px, -2px)';
+                  e.currentTarget.style.boxShadow = '6px 6px 0 #1a1a1a';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.transform = 'translate(0, 0)';
+                  e.currentTarget.style.boxShadow = '4px 4px 0 #1a1a1a';
+                }}
+                onMouseDown={(e) => {
+                  e.currentTarget.style.transform = 'translate(2px, 2px)';
+                  e.currentTarget.style.boxShadow = '2px 2px 0 #1a1a1a';
+                }}
+              >
+                🎬 stitch now
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Redo Confirmation Modal - shown when user tries to redo a segment that's still processing */}
+      {showRedoConfirmation && redoConfirmationIndex !== null && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 100001
+          }}
+          onClick={() => setShowRedoConfirmation(false)}
+        >
+          <div
+            style={{
+              backgroundColor: '#ffffff',
+              borderRadius: '24px',
+              padding: '32px',
+              maxWidth: '420px',
+              width: '90%',
+              boxShadow: '6px 6px 0 #1a1a1a',
+              border: '4px solid #1a1a1a',
+              animation: 'videoReviewPopupFadeIn 0.2s ease-out'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+              <span style={{ fontSize: '56px' }}>🔄</span>
+            </div>
+
+            <h3 style={{
+              margin: '0 0 16px 0',
+              color: '#1a1a1a',
+              fontSize: '24px',
+              fontWeight: '700',
+              fontFamily: '"Permanent Marker", cursive',
+              textAlign: 'center'
+            }}>
+              Cancel & Retry?
+            </h3>
+
+            <p style={{
+              margin: '0 0 20px 0',
+              color: '#666',
+              fontSize: '15px',
+              textAlign: 'center',
+              lineHeight: '1.6',
+              fontWeight: '600'
+            }}>
+              This {config.itemLabel.toLowerCase()} is still being generated.
+              {' '}Clicking "retry now" will cancel the current attempt and start over.
+            </p>
+
+            <div style={{
+              backgroundColor: 'rgba(255, 237, 78, 0.2)',
+              border: '2px solid #FFED4E',
+              borderRadius: '16px',
+              padding: '16px',
+              marginBottom: '24px',
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: '12px'
+            }}>
+              <span style={{ fontSize: '24px', flexShrink: 0 }}>💰</span>
+              <span style={{
+                color: '#1a1a1a',
+                fontSize: '14px',
+                fontWeight: '600',
+                lineHeight: '1.5'
+              }}>
+                Credits for the current attempt will be refunded
+              </span>
+            </div>
+
+            <div style={{
+              display: 'flex',
+              gap: '12px',
+              justifyContent: 'center'
+            }}>
+              <button
+                onClick={() => {
+                  setShowRedoConfirmation(false);
+                  setRedoConfirmationIndex(null);
+                }}
+                style={{
+                  flex: 1,
+                  padding: '14px 24px',
+                  background: '#ffffff',
+                  border: '3px solid #1a1a1a',
+                  borderRadius: '50px',
+                  color: '#1a1a1a',
+                  fontSize: '14px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  boxShadow: '3px 3px 0 #1a1a1a',
+                  textTransform: 'lowercase'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.background = '#FFED4E';
+                  e.currentTarget.style.transform = 'translate(-2px, -2px)';
+                  e.currentTarget.style.boxShadow = '5px 5px 0 #1a1a1a';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.background = '#ffffff';
+                  e.currentTarget.style.transform = 'translate(0, 0)';
+                  e.currentTarget.style.boxShadow = '3px 3px 0 #1a1a1a';
+                }}
+                onMouseDown={(e) => {
+                  e.currentTarget.style.transform = 'translate(1px, 1px)';
+                  e.currentTarget.style.boxShadow = '2px 2px 0 #1a1a1a';
+                }}
+              >
+                keep generating
+              </button>
+              <button
+                onClick={handleConfirmRedo}
+                style={{
+                  flex: 1,
+                  padding: '14px 24px',
+                  background: '#f59e0b',
+                  border: '3px solid #1a1a1a',
+                  borderRadius: '50px',
+                  color: '#fff',
+                  fontSize: '14px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  boxShadow: '4px 4px 0 #1a1a1a',
+                  textTransform: 'lowercase'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.transform = 'translate(-2px, -2px)';
+                  e.currentTarget.style.boxShadow = '6px 6px 0 #1a1a1a';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.transform = 'translate(0, 0)';
+                  e.currentTarget.style.boxShadow = '4px 4px 0 #1a1a1a';
+                }}
+                onMouseDown={(e) => {
+                  e.currentTarget.style.transform = 'translate(2px, 2px)';
+                  e.currentTarget.style.boxShadow = '2px 2px 0 #1a1a1a';
+                }}
+              >
+                🔄 retry now
               </button>
             </div>
           </div>

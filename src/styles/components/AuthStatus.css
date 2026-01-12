@@ -1,14 +1,32 @@
 /* AuthStatus Component Styles - Starface Inspired */
 
-/* Daily Boost Glow Animation */
+/* Daily Boost Glow Animation - Enhanced for visibility */
 @keyframes dailyBoostGlow {
   0%, 100% {
-    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.6), 0 4px 0 #1a1a1a;
-    transform: translate(0, 0);
+    box-shadow: 0 0 20px 4px rgba(16, 185, 129, 0.7), 0 0 40px 8px rgba(16, 185, 129, 0.4), 0 4px 0 #1a1a1a;
+    transform: translate(0, 0) scale(1);
+  }
+  25% {
+    box-shadow: 0 0 30px 6px rgba(16, 185, 129, 0.9), 0 0 60px 12px rgba(16, 185, 129, 0.6), 0 6px 0 #1a1a1a;
+    transform: translate(-2px, -2px) scale(1.05);
   }
   50% {
-    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.8), 0 6px 0 #1a1a1a;
-    transform: translate(-1px, -1px);
+    box-shadow: 0 0 35px 8px rgba(16, 185, 129, 1), 0 0 70px 16px rgba(16, 185, 129, 0.7), 0 8px 0 #1a1a1a;
+    transform: translate(-3px, -3px) scale(1.08);
+  }
+  75% {
+    box-shadow: 0 0 30px 6px rgba(16, 185, 129, 0.9), 0 0 60px 12px rgba(16, 185, 129, 0.6), 0 6px 0 #1a1a1a;
+    transform: translate(-2px, -2px) scale(1.05);
+  }
+}
+
+/* Pulse animation for extra attention */
+@keyframes dailyBoostPulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.85;
   }
 }
 

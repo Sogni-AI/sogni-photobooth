@@ -7076,7 +7076,7 @@ const PhotoGallery = ({
     setStitchedVideoReturnToSegmentReview(true); // Mark that we should return to segment review on close
   }, [pendingSegments]);
 
-  // Watch for segment regeneration completion (success, failure, or timeout)
+  // Watch for segment regeneration completion (success, failure, or timeout) AND track progress
   useEffect(() => {
     if (regeneratingSegmentIndex === null || !pendingSegments[regeneratingSegmentIndex]) {
       return;
@@ -7136,6 +7136,17 @@ const PhotoGallery = ({
         message: `Segment ${regeneratingSegmentIndex + 1} failed: ${photo.videoError || 'Timeout'}. You can retry it.`,
         type: 'error',
         timeout: 5000
+      });
+    }
+    // Still generating - update progress from photo properties
+    else if (photo.generatingVideo) {
+      // Sync photo's video progress to segmentRegenerationProgress for UI display
+      setSegmentRegenerationProgress({
+        progress: photo.videoProgress || 0,
+        eta: photo.videoETA || 0,
+        workerName: photo.videoWorkerName || null,
+        status: photo.videoStatus || null,
+        elapsed: photo.videoElapsed || 0
       });
     }
   }, [photos, regeneratingSegmentIndex, pendingSegments, showToast]);

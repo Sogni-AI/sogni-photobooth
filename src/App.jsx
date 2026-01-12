@@ -10085,6 +10085,7 @@ const App = () => {
               onHistoryClick={authState.isAuthenticated && authState.authMode === 'frontend' ? () => setShowRecentProjects(true) : undefined}
               textColor={showStartMenu ? "#000000" : "#ffffff"}
               playRandomFlashSound={playRandomFlashSound}
+              showToast={showToast}
             />
           </div>
         )}
