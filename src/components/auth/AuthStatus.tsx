@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import { useSogniAuth } from '../../services/sogniAuth';
 import { useWallet } from '../../hooks/useWallet';
 import { formatTokenAmount, getTokenLabel } from '../../services/walletService';
@@ -27,7 +27,11 @@ interface AuthStatusProps {
   showToast?: (options: { type: 'success' | 'error' | 'warning' | 'info'; title: string; message: string; timeout?: number }) => void;
 }
 
-export const AuthStatus: React.FC<AuthStatusProps> = ({ onPurchaseClick, onSignupComplete, onHistoryClick, textColor = '#ffffff', playRandomFlashSound, showToast }) => {
+export interface AuthStatusRef {
+  openLoginModal: () => void;
+}
+
+export const AuthStatus = forwardRef<AuthStatusRef, AuthStatusProps>(({ onPurchaseClick, onSignupComplete, onHistoryClick, textColor = '#ffffff', playRandomFlashSound, showToast }, ref) => {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [loginModalMode, setLoginModalMode] = useState<LoginModalMode>('login');
@@ -234,6 +238,11 @@ export const AuthStatus: React.FC<AuthStatusProps> = ({ onPurchaseClick, onSignu
     setLoginModalMode(defaultModalModeRef.current);
     setShowLoginModal(true);
   };
+
+  // Expose openLoginModal method to parent via ref
+  useImperativeHandle(ref, () => ({
+    openLoginModal: handleLoginClick
+  }));
 
 
   const handleCloseLoginModal = () => {
@@ -1139,4 +1148,4 @@ export const AuthStatus: React.FC<AuthStatusProps> = ({ onPurchaseClick, onSignu
     />
     </>
   );
-};
+});

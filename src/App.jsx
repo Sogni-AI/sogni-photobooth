@@ -986,6 +986,9 @@ const App = () => {
   // Add state for login upsell popup (for non-authenticated users who've used their demo render)
   const [showLoginUpsellPopup, setShowLoginUpsellPopup] = useState(false);
 
+  // Ref to AuthStatus component to trigger login modal
+  const authStatusRef = useRef(null);
+
   // Connection state management
   const [connectionState, setConnectionState] = useState(getCurrentConnectionState());
   const [isGenerating, setIsGenerating] = useState(false);
@@ -7478,6 +7481,7 @@ const App = () => {
                   console.log('[ENHANCE] Triggering out of credits popup from PhotoGallery (prompt selector)');
                   setShowOutOfCreditsPopup(true);
                 }}
+                onOpenLoginModal={() => authStatusRef.current?.openLoginModal()}
                 // New props for prompt selector mode
                 isPromptSelectorMode={true}
                 selectedModel={selectedModel}
@@ -10080,6 +10084,7 @@ const App = () => {
               alignItems: 'center',
             }}>
             <AuthStatus
+              ref={authStatusRef}
               onPurchaseClick={authState.isAuthenticated && authState.authMode === 'frontend' ? () => setShowStripePurchase(true) : undefined}
               onSignupComplete={triggerSignupCelebration}
               onHistoryClick={authState.isAuthenticated && authState.authMode === 'frontend' ? () => setShowRecentProjects(true) : undefined}
@@ -10436,6 +10441,7 @@ const App = () => {
             console.log('[ENHANCE] Triggering out of credits popup from PhotoGallery (main)');
             setShowOutOfCreditsPopup(true);
           }}
+          onOpenLoginModal={() => authStatusRef.current?.openLoginModal()}
           numImages={numImages}
           authState={authState}
           onCopyImageStyleSelect={handleStyleReferenceUpload}

@@ -1686,19 +1686,6 @@ const AnimateReplacePopup = ({
                   </div>
                 )}
               </div>
-
-              {/* SAM2 Info Note */}
-              <div style={{
-                marginTop: '12px',
-                padding: '10px 12px',
-                background: 'rgba(255, 255, 255, 0.15)',
-                borderRadius: '8px',
-                fontSize: '11px',
-                color: 'rgba(255, 255, 255, 0.9)',
-                lineHeight: '1.4'
-              }}>
-                💡 <strong>Tip:</strong> The main subject in the center of the video will be replaced with your image.
-              </div>
             </>
           )}
 

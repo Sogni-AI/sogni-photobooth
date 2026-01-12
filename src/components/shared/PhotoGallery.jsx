@@ -2646,8 +2646,12 @@ const PhotoGallery = ({
         message: 'just need u to sign in first to create ur videos :)',
         type: 'info'
       });
+      // Automatically open the login modal after showing the toast
+      if (onOpenLoginModal) {
+        setTimeout(() => onOpenLoginModal(), 500);
+      }
     }
-  }, [isAuthenticated, showToast]);
+  }, [isAuthenticated, showToast, onOpenLoginModal]);
 
   // Handle video intro popup dismiss
   const handleVideoIntroDismiss = useCallback(() => {
@@ -10909,6 +10913,10 @@ const PhotoGallery = ({
                     message: 'just need u to sign in first to create ur videos :)',
                     type: 'info'
                   });
+                  // Automatically open the login modal after showing the toast
+                  if (onOpenLoginModal) {
+                    setTimeout(() => onOpenLoginModal(), 500);
+                  }
                 }
               }}
               disabled={isBulkDownloading}
@@ -17817,7 +17825,8 @@ PhotoGallery.propTypes = {
   updateStyle: PropTypes.func, // Function to update selected style
   switchToModel: PropTypes.func, // Function to switch AI model
   onNavigateToVibeExplorer: PropTypes.func, // Function to navigate to full vibe explorer
-  onRegisterVideoIntroTrigger: PropTypes.func // Callback to register function that triggers video intro popup
+  onRegisterVideoIntroTrigger: PropTypes.func, // Callback to register function that triggers video intro popup
+  onOpenLoginModal: PropTypes.func // Function to open the login modal
 };
 
 export default PhotoGallery; 
