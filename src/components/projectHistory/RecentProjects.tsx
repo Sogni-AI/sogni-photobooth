@@ -1,10 +1,13 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import type { SogniClient } from '@sogni-ai/sogni-client';
 import { useProjectHistory } from '../../hooks/useProjectHistory';
+import { useLocalProjects } from '../../hooks/useLocalProjects';
 import { useInfiniteScroll } from '../../hooks/useInfiniteScroll';
 import JobItem from './JobItem';
 import MediaSlideshow from './MediaSlideshow';
 import type { ArchiveProject } from '../../types/projectHistory';
+import type { LocalProject } from '../../types/localProjects';
+import { LOCAL_PROJECT_MAX_IMAGES, LOCAL_PROJECT_SUPPORTED_EXTENSIONS } from '../../types/localProjects';
 import { pluralize, timeAgo } from '../../utils/string';
 import './RecentProjects.css';
 
@@ -12,6 +15,8 @@ interface RecentProjectsProps {
   sogniClient: SogniClient | null;
   onClose: () => void;
   onReuseProject?: (projectId: string) => void;
+  onReuseLocalProject?: (projectId: string) => void;
+  onStartNewProject?: () => void;
 }
 
 const DISCLAIMER_STORAGE_KEY = 'sogni_recent_projects_disclaimer_dismissed';
@@ -179,7 +184,13 @@ function setPinnedProjectsCookie(projectIds: string[]): void {
   }
 }
 
-function RecentProjects({ sogniClient, onClose, onReuseProject }: RecentProjectsProps) {
+function RecentProjects({
+  sogniClient,
+  onClose,
+  onReuseProject,
+  onReuseLocalProject,
+  onStartNewProject
+}: RecentProjectsProps) {
   const [slideshow, setSlideshow] = useState<{ project: ArchiveProject; jobId: string } | null>(
     null
   );
@@ -217,6 +228,160 @@ function RecentProjects({ sogniClient, onClose, onReuseProject }: RecentProjects
 
   // Track scroll container ref for preserving scroll position
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  // File input ref for local project image uploads
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // ============================================================================
+  // Local Projects State & Handlers
+  // ============================================================================
+  const {
+    projects: localProjects,
+    initialized: localProjectsInitialized,
+    createProject: createLocalProject,
+    renameProject: renameLocalProject,
+    deleteProject: deleteLocalProject,
+    addImages: addLocalImages,
+    getThumbnailUrl: getLocalThumbnailUrl,
+    isSupported: localProjectsSupported
+  } = useLocalProjects();
+
+  // Local project creation dialog state
+  const [showCreateLocalProject, setShowCreateLocalProject] = useState(false);
+  const [newLocalProjectName, setNewLocalProjectName] = useState('');
+  const [creatingLocalProject, setCreatingLocalProject] = useState(false);
+
+  // Local project rename dialog state
+  const [renameDialog, setRenameDialog] = useState<{
+    show: boolean;
+    projectId: string;
+    currentName: string;
+    newName: string;
+  }>({ show: false, projectId: '', currentName: '', newName: '' });
+
+  // Local project delete confirmation state
+  const [localDeleteConfirm, setLocalDeleteConfirm] = useState<{
+    show: boolean;
+    projectId: string;
+    projectName: string;
+  }>({ show: false, projectId: '', projectName: '' });
+
+  // Local project image upload state
+  const [uploadingToProject, setUploadingToProject] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<{ added: number; total: number } | null>(null);
+
+  // Thumbnail URL cache for local projects
+  const [localThumbnails, setLocalThumbnails] = useState<Record<string, string | null>>({});
+
+  // Load thumbnails for local projects
+  useEffect(() => {
+    if (!localProjectsInitialized) return;
+
+    const loadThumbnails = async () => {
+      const thumbnails: Record<string, string | null> = {};
+      for (const project of localProjects) {
+        if (project.thumbnailId && !localThumbnails[project.id]) {
+          thumbnails[project.id] = await getLocalThumbnailUrl(project);
+        }
+      }
+      if (Object.keys(thumbnails).length > 0) {
+        setLocalThumbnails(prev => ({ ...prev, ...thumbnails }));
+      }
+    };
+
+    loadThumbnails();
+  }, [localProjects, localProjectsInitialized, getLocalThumbnailUrl, localThumbnails]);
+
+  // Handle creating a new local project
+  const handleCreateLocalProject = useCallback(async () => {
+    if (!newLocalProjectName.trim() || creatingLocalProject) return;
+
+    setCreatingLocalProject(true);
+    try {
+      const project = await createLocalProject(newLocalProjectName.trim());
+      if (project) {
+        setShowCreateLocalProject(false);
+        setNewLocalProjectName('');
+        // Automatically open file picker for the new project
+        setUploadingToProject(project.id);
+        setTimeout(() => {
+          fileInputRef.current?.click();
+        }, 100);
+      }
+    } finally {
+      setCreatingLocalProject(false);
+    }
+  }, [newLocalProjectName, creatingLocalProject, createLocalProject]);
+
+  // Handle renaming a local project
+  const handleRenameLocalProject = useCallback(async () => {
+    if (!renameDialog.newName.trim() || renameDialog.newName === renameDialog.currentName) {
+      setRenameDialog({ show: false, projectId: '', currentName: '', newName: '' });
+      return;
+    }
+
+    await renameLocalProject(renameDialog.projectId, renameDialog.newName.trim());
+    setRenameDialog({ show: false, projectId: '', currentName: '', newName: '' });
+  }, [renameDialog, renameLocalProject]);
+
+  // Handle deleting a local project
+  const handleDeleteLocalProject = useCallback(async () => {
+    if (!localDeleteConfirm.projectId) return;
+
+    await deleteLocalProject(localDeleteConfirm.projectId);
+    setLocalDeleteConfirm({ show: false, projectId: '', projectName: '' });
+  }, [localDeleteConfirm.projectId, deleteLocalProject]);
+
+  // Handle file selection for local project image upload
+  const handleFileSelect = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0 || !uploadingToProject) {
+      setUploadingToProject(null);
+      return;
+    }
+
+    const fileArray = Array.from(files);
+    setUploadProgress({ added: 0, total: fileArray.length });
+
+    try {
+      const result = await addLocalImages(uploadingToProject, fileArray);
+      setUploadProgress({ added: result.added, total: fileArray.length });
+
+      // Show result briefly then clear
+      setTimeout(() => {
+        setUploadProgress(null);
+        setUploadingToProject(null);
+      }, 2000);
+    } catch {
+      setUploadProgress(null);
+      setUploadingToProject(null);
+    }
+
+    // Reset file input
+    event.target.value = '';
+  }, [uploadingToProject, addLocalImages]);
+
+  // Handle clicking upload button on a local project
+  const handleUploadClick = useCallback((projectId: string) => {
+    setUploadingToProject(projectId);
+    fileInputRef.current?.click();
+  }, []);
+
+  // Handle reusing a local project (loading into gallery)
+  const handleReuseLocalProject = useCallback((projectId: string) => {
+    if (onReuseLocalProject) {
+      onReuseLocalProject(projectId);
+      onClose();
+    }
+  }, [onReuseLocalProject, onClose]);
+
+  // Handle starting a new cloud project
+  const handleStartNewProject = useCallback(() => {
+    if (onStartNewProject) {
+      onStartNewProject();
+      onClose();
+    }
+  }, [onStartNewProject, onClose]);
 
   const {
     visibleProjects,
@@ -569,14 +734,53 @@ function RecentProjects({ sogniClient, onClose, onReuseProject }: RecentProjects
             </button>
           </div>
         </div>
-        <button
-          className="recent-projects-close-btn"
-          onClick={onClose}
-          title="Close"
-        >
-          ✕
-        </button>
+        <div className="recent-projects-header-right">
+          {/* New Project Buttons */}
+          {onStartNewProject && (
+            <button
+              className="recent-projects-new-btn"
+              onClick={handleStartNewProject}
+              title="Start a new project with camera or uploads"
+            >
+              ➕ New Project
+            </button>
+          )}
+          {localProjectsSupported && (
+            <button
+              className="recent-projects-new-btn recent-projects-new-local-btn"
+              onClick={() => setShowCreateLocalProject(true)}
+              title="Create a local project with your own images"
+            >
+              💾 New Local Project
+              <span className="recent-projects-info-tooltip">
+                <span className="recent-projects-info-icon">ℹ️</span>
+                <span className="recent-projects-info-content">
+                  <strong>Local Projects</strong> are stored in your browser and never expire.
+                  Upload your own images to use with video workflows like Batch Transition,
+                  Sound to Video, Animate Replace, and more!
+                </span>
+              </span>
+            </button>
+          )}
+          <button
+            className="recent-projects-close-btn"
+            onClick={onClose}
+            title="Close"
+          >
+            ✕
+          </button>
+        </div>
       </div>
+
+      {/* Hidden file input for local project uploads */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        multiple
+        accept={LOCAL_PROJECT_SUPPORTED_EXTENSIONS.join(',')}
+        onChange={handleFileSelect}
+        style={{ display: 'none' }}
+      />
 
       <div ref={scrollContainerRef} className="recent-projects-scroll-container">
         {showDisclaimer && (
@@ -611,8 +815,126 @@ function RecentProjects({ sogniClient, onClose, onReuseProject }: RecentProjects
           </div>
         )}
 
+        {/* Local Projects Section */}
+        {localProjectsSupported && localProjectsInitialized && localProjects.length > 0 && (
+          <div className="recent-projects-local-section">
+            <div className="recent-projects-section-header">
+              <h3>
+                💾 Local Projects
+                <span className="recent-projects-local-badge">Never Expires</span>
+              </h3>
+            </div>
+            <div className="recent-projects-list">
+              {localProjects.map((project: LocalProject) => (
+                <div key={project.id} className="recent-project recent-project-local">
+                  <div className="recent-project-heading">
+                    <div className="recent-project-title-wrapper">
+                      <div className="recent-project-title">
+                        <span className="recent-project-local-icon">💾</span>
+                        {project.name}
+                        <span>
+                          ({project.imageIds.length} {pluralize(project.imageIds.length, 'image')})
+                        </span>
+                      </div>
+                      <div className="recent-project-date">
+                        Created {timeAgo(project.createdAt)}
+                        {project.updatedAt !== project.createdAt && (
+                          <> · Updated {timeAgo(project.updatedAt)}</>
+                        )}
+                      </div>
+                    </div>
+                    <div className="recent-project-actions">
+                      <button
+                        className="recent-project-action-btn"
+                        onClick={() => setRenameDialog({
+                          show: true,
+                          projectId: project.id,
+                          currentName: project.name,
+                          newName: project.name
+                        })}
+                        title="Rename project"
+                      >
+                        ✏️
+                      </button>
+                      <button
+                        className="recent-project-action-btn"
+                        onClick={() => handleUploadClick(project.id)}
+                        title={`Add images (${project.imageIds.length}/${LOCAL_PROJECT_MAX_IMAGES})`}
+                        disabled={project.imageIds.length >= LOCAL_PROJECT_MAX_IMAGES}
+                      >
+                        📤
+                      </button>
+                      {project.imageIds.length > 0 && onReuseLocalProject && (
+                        <button
+                          className="recent-project-reuse-btn"
+                          onClick={() => handleReuseLocalProject(project.id)}
+                          title="Load images into Photo Gallery"
+                        >
+                          Remix
+                        </button>
+                      )}
+                      <button
+                        className="recent-project-delete-btn"
+                        onClick={() => setLocalDeleteConfirm({
+                          show: true,
+                          projectId: project.id,
+                          projectName: project.name
+                        })}
+                        title="Delete project"
+                      >
+                        🗑️
+                      </button>
+                    </div>
+                  </div>
+                  {/* Local project thumbnail/content preview */}
+                  <div className="recent-project-local-content">
+                    {project.imageIds.length === 0 ? (
+                      <div
+                        className="recent-project-local-empty"
+                        onClick={() => handleUploadClick(project.id)}
+                      >
+                        <span className="recent-project-local-empty-icon">📤</span>
+                        <span>Click to upload images</span>
+                        <span className="recent-project-local-empty-hint">
+                          Supports JPG, PNG, WebP, GIF
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="recent-project-local-preview">
+                        {localThumbnails[project.id] && (
+                          <img
+                            src={localThumbnails[project.id]!}
+                            alt={project.name}
+                            className="recent-project-local-thumb"
+                          />
+                        )}
+                        <div className="recent-project-local-stats">
+                          <span>{project.imageIds.length} images</span>
+                          {uploadingToProject === project.id && uploadProgress && (
+                            <span className="recent-project-upload-progress">
+                              Uploading... {uploadProgress.added}/{uploadProgress.total}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Divider between local and cloud projects */}
+            {sortedProjects.length > 0 && (
+              <div className="recent-projects-section-divider">
+                <span>☁️ Cloud Projects</span>
+                <span className="recent-projects-cloud-note">Expires after ~24 hours</span>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Empty state */}
-        {initialized && !loading && sortedProjects.length === 0 && !error && (
+        {initialized && !loading && sortedProjects.length === 0 && localProjects.length === 0 && !error && (
           <div className="recent-projects-empty">
             {mediaFilter !== 'all' && visibleProjects.length > 0 ? (
               <>
@@ -621,14 +943,14 @@ function RecentProjects({ sogniClient, onClose, onReuseProject }: RecentProjects
               </>
             ) : (
               <>
-                <p>No recent projects found.</p>
-                <p>Start creating to see your work here!</p>
+                <p>No projects found.</p>
+                <p>Create a Local Project or start generating to see your work here!</p>
               </>
             )}
           </div>
         )}
 
-        {/* Project list */}
+        {/* Cloud Project list */}
         <div className="recent-projects-list">
           {sortedProjects.map((project) => {
             const isPinned = pinnedProjectIds.includes(project.id);
@@ -755,6 +1077,131 @@ function RecentProjects({ sogniClient, onClose, onReuseProject }: RecentProjects
                 onClick={handleDeleteModalConfirm}
               >
                 Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create Local Project Modal */}
+      {showCreateLocalProject && (
+        <div
+          className="recent-projects-modal-overlay"
+          onClick={() => {
+            setShowCreateLocalProject(false);
+            setNewLocalProjectName('');
+          }}
+        >
+          <div className="recent-projects-modal" onClick={(e) => e.stopPropagation()}>
+            <h3>💾 New Local Project</h3>
+            <p>
+              Local projects are stored in your browser and never expire.
+              Give your project a name to get started.
+            </p>
+            <input
+              type="text"
+              className="recent-projects-modal-input"
+              placeholder="Project name..."
+              value={newLocalProjectName}
+              onChange={(e) => setNewLocalProjectName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && newLocalProjectName.trim()) {
+                  handleCreateLocalProject();
+                }
+              }}
+              autoFocus
+              maxLength={100}
+            />
+            <div className="recent-projects-modal-actions">
+              <button
+                className="recent-projects-modal-btn recent-projects-modal-btn-cancel"
+                onClick={() => {
+                  setShowCreateLocalProject(false);
+                  setNewLocalProjectName('');
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                className="recent-projects-modal-btn recent-projects-modal-btn-confirm"
+                onClick={handleCreateLocalProject}
+                disabled={!newLocalProjectName.trim() || creatingLocalProject}
+              >
+                {creatingLocalProject ? 'Creating...' : 'Create & Upload'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Rename Local Project Modal */}
+      {renameDialog.show && (
+        <div
+          className="recent-projects-modal-overlay"
+          onClick={() => setRenameDialog({ show: false, projectId: '', currentName: '', newName: '' })}
+        >
+          <div className="recent-projects-modal" onClick={(e) => e.stopPropagation()}>
+            <h3>✏️ Rename Project</h3>
+            <input
+              type="text"
+              className="recent-projects-modal-input"
+              placeholder="Project name..."
+              value={renameDialog.newName}
+              onChange={(e) => setRenameDialog(prev => ({ ...prev, newName: e.target.value }))}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && renameDialog.newName.trim()) {
+                  handleRenameLocalProject();
+                }
+              }}
+              autoFocus
+              maxLength={100}
+            />
+            <div className="recent-projects-modal-actions">
+              <button
+                className="recent-projects-modal-btn recent-projects-modal-btn-cancel"
+                onClick={() => setRenameDialog({ show: false, projectId: '', currentName: '', newName: '' })}
+              >
+                Cancel
+              </button>
+              <button
+                className="recent-projects-modal-btn recent-projects-modal-btn-confirm"
+                onClick={handleRenameLocalProject}
+                disabled={!renameDialog.newName.trim()}
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Local Project Confirmation Modal */}
+      {localDeleteConfirm.show && (
+        <div
+          className="recent-projects-modal-overlay"
+          onClick={() => setLocalDeleteConfirm({ show: false, projectId: '', projectName: '' })}
+        >
+          <div className="recent-projects-modal" onClick={(e) => e.stopPropagation()}>
+            <h3>🗑️ Delete Local Project</h3>
+            <p>
+              Are you sure you want to delete <strong>"{localDeleteConfirm.projectName}"</strong>?
+            </p>
+            <p className="recent-projects-modal-warning">
+              ⚠️ This will permanently delete the project and all its images from your browser.
+              This action cannot be undone.
+            </p>
+            <div className="recent-projects-modal-actions">
+              <button
+                className="recent-projects-modal-btn recent-projects-modal-btn-cancel"
+                onClick={() => setLocalDeleteConfirm({ show: false, projectId: '', projectName: '' })}
+              >
+                Cancel
+              </button>
+              <button
+                className="recent-projects-modal-btn recent-projects-modal-btn-confirm recent-projects-modal-btn-danger"
+                onClick={handleDeleteLocalProject}
+              >
+                Delete Forever
               </button>
             </div>
           </div>

@@ -90,6 +90,7 @@ import { subscribeToConnectionState, getCurrentConnectionState } from './service
 import StripePurchase from './components/stripe/StripePurchase.tsx';
 import { ApiProvider } from './hooks/useSogniApi.ts';
 import { RecentProjects } from './components/projectHistory';
+import { getProjectImages, createImageBlobUrl } from './utils/localProjectsDB.ts';
 
 
 
@@ -8570,6 +8571,87 @@ const App = () => {
     }
   }, [sogniClient, showToast, stopCamera]);
 
+  // Handle reusing a LOCAL project - loads images from IndexedDB into Photo Gallery
+  const handleReuseLocalProject = useCallback(async (projectId) => {
+    console.log(`[Reuse Local Project] Starting to load project: ${projectId}`);
+
+    try {
+      // Get all images from IndexedDB
+      const images = await getProjectImages(projectId);
+
+      console.log('[Reuse Local Project] Loaded images:', images.length);
+
+      if (images.length === 0) {
+        showToast({
+          title: 'No Images',
+          message: 'This local project has no images. Add some images first!',
+          type: 'error'
+        });
+        return;
+      }
+
+      // Convert images to photo objects with blob URLs
+      const loadedPhotos = images.map((image, index) => {
+        const blobUrl = createImageBlobUrl(image);
+
+        return {
+          id: image.id,
+          generating: false,
+          loading: false,
+          images: [blobUrl],
+          originalDataUrl: blobUrl,
+          newlyArrived: false,
+          isOriginal: false,
+          hidden: false,
+          sourceType: 'local-project',
+          // Assign frame numbers for equal distribution (1-6)
+          taipeiFrameNumber: (index % 6) + 1,
+          framePadding: 0,
+          // Store image dimensions
+          width: image.width,
+          height: image.height,
+          // Store original filename for reference
+          filename: image.filename
+        };
+      });
+
+      console.log('[Reuse Local Project] Created photo objects:', loadedPhotos.length);
+
+      // Load photos into the gallery
+      setPhotos(loadedPhotos);
+      setRegularPhotos(loadedPhotos);
+
+      // Show photo grid
+      setShowPhotoGrid(true);
+      setShowStartMenu(false);
+      stopCamera();
+
+      showToast({
+        title: '📁 Project Loaded',
+        message: `Loaded ${loadedPhotos.length} images from your local project!`,
+        type: 'success'
+      });
+
+    } catch (error) {
+      console.error('[Reuse Local Project] Failed to load project:', error);
+      showToast({
+        title: 'Error',
+        message: 'Failed to load local project. Please try again.',
+        type: 'error'
+      });
+    }
+  }, [showToast, stopCamera]);
+
+  // Handle starting a new project (redirect to main screen)
+  const handleStartNewProject = useCallback(() => {
+    // Clear current photos and go to start menu
+    setPhotos([]);
+    setRegularPhotos([]);
+    setShowPhotoGrid(false);
+    setShowStartMenu(true);
+    stopCamera();
+  }, [stopCamera]);
+
   // Handle Bald for Base popup generate button
   const handleBaldForBaseGenerate = useCallback(() => {
     setShowBaldForBasePopup(false);
@@ -10755,6 +10837,8 @@ const App = () => {
           sogniClient={sogniClient}
           onClose={() => setShowRecentProjects(false)}
           onReuseProject={handleReuseProject}
+          onReuseLocalProject={handleReuseLocalProject}
+          onStartNewProject={handleStartNewProject}
         />
       )}
     </>

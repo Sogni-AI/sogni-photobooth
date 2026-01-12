@@ -998,3 +998,437 @@
     padding: 28px;
   }
 }
+
+/* ============================================
+   Local Projects - Additional Styles
+   ============================================ */
+
+.recent-projects-header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+/* New Project Buttons */
+.recent-projects-new-btn {
+  background: #ffffff;
+  border: 3px solid #1a1a1a;
+  color: #1a1a1a;
+  font-size: 0.75rem;
+  font-weight: 800;
+  padding: 12px 20px;
+  border-radius: 50px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.25s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  box-shadow: 3px 3px 0 #1a1a1a;
+  text-transform: lowercase;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  position: relative;
+}
+
+.recent-projects-new-btn:hover {
+  background: #FFED4E;
+  transform: translate(-2px, -2px);
+  box-shadow: 5px 5px 0 #1a1a1a;
+}
+
+.recent-projects-new-btn:active {
+  transform: translate(1px, 1px);
+  box-shadow: 2px 2px 0 #1a1a1a;
+}
+
+.recent-projects-new-local-btn {
+  background: linear-gradient(135deg, #e8f4fd 0%, #ffffff 100%);
+  border-color: #06b6d4;
+}
+
+.recent-projects-new-local-btn:hover {
+  background: linear-gradient(135deg, #cceeff 0%, #e8f4fd 100%);
+}
+
+/* Info Tooltip */
+.recent-projects-info-tooltip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  margin-left: 4px;
+}
+
+.recent-projects-info-icon {
+  font-size: 0.9rem;
+  cursor: help;
+  opacity: 0.7;
+  transition: opacity 0.2s ease;
+}
+
+.recent-projects-info-tooltip:hover .recent-projects-info-icon {
+  opacity: 1;
+}
+
+.recent-projects-info-content {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  width: 280px;
+  padding: 16px;
+  background: #1a1a1a;
+  color: #ffffff;
+  border-radius: 16px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  line-height: 1.5;
+  text-transform: none;
+  letter-spacing: 0;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-8px);
+  transition: all 0.25s ease;
+  z-index: 1000;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  pointer-events: none;
+}
+
+.recent-projects-info-content::before {
+  content: '';
+  position: absolute;
+  top: -8px;
+  right: 20px;
+  width: 16px;
+  height: 16px;
+  background: #1a1a1a;
+  transform: rotate(45deg);
+}
+
+.recent-projects-info-content strong {
+  color: #06b6d4;
+  font-weight: 800;
+}
+
+.recent-projects-info-tooltip:hover .recent-projects-info-content {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+/* Local Projects Section */
+.recent-projects-local-section {
+  margin-bottom: 28px;
+}
+
+.recent-projects-section-header {
+  margin-bottom: 20px;
+}
+
+.recent-projects-section-header h3 {
+  font-family: 'Permanent Marker', 'Comic Sans MS', cursive;
+  font-size: 1.25rem;
+  font-weight: 400;
+  color: #1a1a1a;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.recent-projects-local-badge {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 0.65rem;
+  font-weight: 800;
+  padding: 6px 12px;
+  background: #06b6d4;
+  color: #ffffff;
+  border-radius: 50px;
+  border: 2px solid #1a1a1a;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  box-shadow: 2px 2px 0 #1a1a1a;
+}
+
+/* Section Divider */
+.recent-projects-section-divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin: 32px 0 24px;
+  padding: 16px 0;
+  border-top: 3px dashed rgba(26, 26, 26, 0.15);
+  border-bottom: 3px dashed rgba(26, 26, 26, 0.15);
+  font-family: 'Permanent Marker', 'Comic Sans MS', cursive;
+  font-size: 1rem;
+  color: #666;
+}
+
+.recent-projects-cloud-note {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  background: rgba(255, 51, 102, 0.1);
+  color: #ff3366;
+  border-radius: 50px;
+  border: 2px solid rgba(255, 51, 102, 0.3);
+}
+
+/* Local Project Card Styling */
+.recent-project-local {
+  border-color: #06b6d4;
+  background: linear-gradient(135deg, #f0feff 0%, #ffffff 100%);
+}
+
+.recent-project-local::before {
+  content: '💾';
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  font-size: 24px;
+  opacity: 0.15;
+}
+
+.recent-project-local-icon {
+  margin-right: 4px;
+  font-size: 1rem;
+}
+
+/* Local Project Action Button */
+.recent-project-action-btn {
+  background: #ffffff;
+  border: 3px solid #1a1a1a;
+  color: #1a1a1a;
+  font-size: 1rem;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.25s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  padding: 0;
+  box-shadow: 3px 3px 0 #1a1a1a;
+}
+
+.recent-project-action-btn:hover {
+  background: #06b6d4;
+  color: #ffffff;
+  transform: translate(-2px, -2px);
+  box-shadow: 5px 5px 0 #1a1a1a;
+}
+
+.recent-project-action-btn:active {
+  transform: translate(1px, 1px);
+  box-shadow: 2px 2px 0 #1a1a1a;
+}
+
+.recent-project-action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: 2px 2px 0 rgba(26, 26, 26, 0.3);
+}
+
+.recent-project-action-btn:disabled:hover {
+  background: #ffffff;
+  color: #1a1a1a;
+  transform: none;
+  box-shadow: 2px 2px 0 rgba(26, 26, 26, 0.3);
+}
+
+/* Local Project Content Area */
+.recent-project-local-content {
+  min-height: 100px;
+}
+
+.recent-project-local-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 32px 24px;
+  border: 3px dashed rgba(6, 182, 212, 0.4);
+  border-radius: 20px;
+  background: rgba(6, 182, 212, 0.05);
+  cursor: pointer;
+  transition: all 0.25s ease;
+  color: #666;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.recent-project-local-empty:hover {
+  background: rgba(6, 182, 212, 0.1);
+  border-color: #06b6d4;
+  color: #06b6d4;
+}
+
+.recent-project-local-empty-icon {
+  font-size: 2rem;
+  opacity: 0.7;
+}
+
+.recent-project-local-empty-hint {
+  font-size: 0.75rem;
+  opacity: 0.6;
+}
+
+/* Local Project Preview */
+.recent-project-local-preview {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.recent-project-local-thumb {
+  width: 100px;
+  height: 100px;
+  object-fit: cover;
+  border-radius: 16px;
+  border: 3px solid #1a1a1a;
+  box-shadow: 3px 3px 0 #1a1a1a;
+}
+
+.recent-project-local-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #666;
+}
+
+.recent-project-upload-progress {
+  color: #06b6d4;
+  font-weight: 700;
+  animation: gentle-bob 1s ease-in-out infinite;
+}
+
+/* Modal Input Field */
+.recent-projects-modal-input {
+  width: 100%;
+  padding: 16px 20px;
+  border: 3px solid #1a1a1a;
+  border-radius: 16px;
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 24px;
+  outline: none;
+  transition: all 0.2s ease;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.recent-projects-modal-input:focus {
+  border-color: #06b6d4;
+  box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.2);
+}
+
+.recent-projects-modal-input::placeholder {
+  color: #999;
+  font-weight: 500;
+}
+
+/* Modal Warning Text */
+.recent-projects-modal-warning {
+  color: #ff3366;
+  font-size: 0.85rem;
+  padding: 12px 16px;
+  background: rgba(255, 51, 102, 0.08);
+  border-radius: 12px;
+  border: 2px solid rgba(255, 51, 102, 0.2);
+}
+
+/* Danger Button */
+.recent-projects-modal-btn-danger {
+  background: #ff3366;
+  color: #ffffff;
+}
+
+.recent-projects-modal-btn-danger:hover {
+  background: #ff1a4d;
+}
+
+/* Disabled Button */
+.recent-projects-modal-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: 2px 2px 0 rgba(26, 26, 26, 0.3);
+}
+
+.recent-projects-modal-btn:disabled:hover {
+  transform: none;
+  box-shadow: 2px 2px 0 rgba(26, 26, 26, 0.3);
+}
+
+/* Mobile Optimizations for Local Projects */
+@media (max-width: 600px) {
+  .recent-projects-header-right {
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .recent-projects-new-btn {
+    padding: 10px 14px;
+    font-size: 0.7rem;
+  }
+
+  .recent-projects-info-content {
+    width: 240px;
+    right: -20px;
+    font-size: 0.75rem;
+    padding: 12px;
+  }
+
+  .recent-projects-info-content::before {
+    right: 30px;
+  }
+
+  .recent-projects-section-header h3 {
+    font-size: 1.1rem;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .recent-projects-local-badge {
+    font-size: 0.6rem;
+    padding: 4px 8px;
+  }
+
+  .recent-projects-section-divider {
+    flex-direction: column;
+    gap: 8px;
+    margin: 24px 0 20px;
+    padding: 12px 0;
+  }
+
+  .recent-project-action-btn {
+    width: 38px;
+    height: 38px;
+    font-size: 0.9rem;
+  }
+
+  .recent-project-local-empty {
+    padding: 24px 16px;
+    font-size: 0.85rem;
+  }
+
+  .recent-project-local-thumb {
+    width: 80px;
+    height: 80px;
+  }
+
+  .recent-project-local-stats {
+    font-size: 0.85rem;
+  }
+
+  .recent-projects-modal-input {
+    padding: 14px 16px;
+    font-size: 0.95rem;
+  }
+}
