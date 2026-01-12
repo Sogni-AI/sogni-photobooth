@@ -33,7 +33,7 @@ router.post('/submit', async (req, res) => {
     if (!contestId || !imageUrl || !prompt) {
       return res.status(400).json({
         success: false,
-        message: 'Missing required fields: contestId, imageUrl, and prompt are required'
+        message: 'oops! we need a contest id, image url, and prompt :)'
       });
     }
 
@@ -63,7 +63,7 @@ router.post('/submit', async (req, res) => {
     console.error('[Contest] Error submitting entry:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to submit contest entry',
+      message: 'oops! something went wrong submitting ur entry. try again? 🙏',
       error: error.message
     });
   }
@@ -117,7 +117,7 @@ router.get('/gallery-submissions/approved/:promptKey', async (req, res) => {
     console.error('[Gallery] Error fetching approved gallery submissions:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to fetch gallery submissions',
+      message: 'oops! couldn\'t load the gallery right now. try again? 🙏',
       error: error.message
     });
   }
@@ -139,7 +139,7 @@ router.post('/gallery-submissions/entry', async (req, res) => {
     if (!imageUrl || !promptKey) {
       return res.status(400).json({
         success: false,
-        message: 'Missing required fields: imageUrl and promptKey are required'
+        message: 'oops! we need an image url and prompt key :)'
       });
     }
 
@@ -147,7 +147,7 @@ router.post('/gallery-submissions/entry', async (req, res) => {
     if (promptKey === 'custom') {
       return res.status(400).json({
         success: false,
-        message: 'Custom prompts cannot be submitted to the gallery'
+        message: 'custom prompts can\'t be submitted to the gallery, sorry! 💫'
       });
     }
 
@@ -179,7 +179,7 @@ router.post('/gallery-submissions/entry', async (req, res) => {
 
     res.json({
       success: true,
-      message: 'Gallery submission successful. Your image will be reviewed by moderators.',
+      message: 'yay! ur submission is in! we\'ll review it soon ✨',
       entry: {
         id: entry.id,
         timestamp: entry.timestamp
@@ -189,7 +189,7 @@ router.post('/gallery-submissions/entry', async (req, res) => {
     console.error('[Gallery] Error submitting to gallery:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to submit to gallery',
+      message: 'oops! couldn\'t submit to the gallery. try again? 🙏',
       error: error.message
     });
   }
@@ -221,7 +221,7 @@ router.get('/:contestId/entries', async (req, res) => {
     console.error('[Contest] Error fetching entries:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to fetch contest entries',
+      message: 'oops! couldn\'t load entries right now. try again? 🙏',
       error: error.message
     });
   }
@@ -237,7 +237,7 @@ router.get('/:contestId/entry/:entryId', async (req, res) => {
     if (!entry) {
       return res.status(404).json({
         success: false,
-        message: 'Contest entry not found'
+        message: 'hmm, can\'t find that entry 🤔'
       });
     }
 
@@ -249,7 +249,7 @@ router.get('/:contestId/entry/:entryId', async (req, res) => {
     console.error('[Contest] Error fetching entry:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to fetch contest entry',
+      message: 'oops! couldn\'t load that entry. try again? 🙏',
       error: error.message
     });
   }
@@ -270,7 +270,7 @@ router.get('/:contestId/stats', async (req, res) => {
     console.error('[Contest] Error fetching stats:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to fetch contest statistics',
+      message: 'oops! couldn\'t load stats right now. try again? 🙏',
       error: error.message
     });
   }
@@ -285,7 +285,7 @@ router.get('/:contestId/image/:filename', async (req, res) => {
     if (!filename.match(/^[a-f0-9-]+(-video)?\.(jpg|jpeg|png|gif|webp|mp4|webm)$/i)) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid filename'
+        message: 'hmm, that filename looks weird 🤔'
       });
     }
 
@@ -313,7 +313,7 @@ router.get('/:contestId/image/:filename', async (req, res) => {
     console.error('[Contest] Error serving media:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to serve media',
+      message: 'oops! couldn\'t load that media file. try again? 🙏',
       error: error.message
     });
   }
@@ -330,7 +330,7 @@ router.patch('/:contestId/entry/:entryId/moderation', async (req, res) => {
     if (!validStatuses.includes(moderationStatus)) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid moderation status. Must be PENDING, APPROVED, or REJECTED'
+        message: 'oops! moderation status must be pending, approved, or rejected'
       });
     }
 
@@ -340,7 +340,7 @@ router.patch('/:contestId/entry/:entryId/moderation', async (req, res) => {
     if (!entry) {
       return res.status(404).json({
         success: false,
-        message: 'Contest entry not found'
+        message: 'hmm, can\'t find that entry 🤔'
       });
     }
 
@@ -373,7 +373,7 @@ router.patch('/:contestId/entry/:entryId/moderation', async (req, res) => {
     console.error('[Contest] Error updating moderation status:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to update moderation status',
+      message: 'oops! couldn\'t update moderation status. try again? 🙏',
       error: error.message
     });
   }
@@ -391,7 +391,7 @@ router.post('/:contestId/entry/:entryId/vote', async (req, res) => {
       console.log('[Contest] No username provided in POST request');
       return res.status(401).json({
         success: false,
-        message: 'Authentication required. Please provide username.'
+        message: 'hey! just need u to sign in first :)'
       });
     }
 
@@ -401,7 +401,7 @@ router.post('/:contestId/entry/:entryId/vote', async (req, res) => {
     if (!entry) {
       return res.status(404).json({
         success: false,
-        message: 'Contest entry not found'
+        message: 'hmm, can\'t find that entry 🤔'
       });
     }
 
@@ -415,7 +415,7 @@ router.post('/:contestId/entry/:entryId/vote', async (req, res) => {
     if (existingVoteIndex !== -1) {
       return res.status(400).json({
         success: false,
-        message: 'You have already voted for this entry'
+        message: 'u already voted for this one! 💛'
       });
     }
 
@@ -448,7 +448,7 @@ router.post('/:contestId/entry/:entryId/vote', async (req, res) => {
     console.error('[Contest] Error recording vote:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to record vote',
+      message: 'oops! couldn\'t record ur vote. try again? 🙏',
       error: error.message
     });
   }
@@ -466,7 +466,7 @@ router.delete('/:contestId/entry/:entryId/vote', async (req, res) => {
       console.log('[Contest] No username provided in DELETE request');
       return res.status(401).json({
         success: false,
-        message: 'Authentication required. Please provide username.'
+        message: 'hey! just need u to sign in first :)'
       });
     }
 
@@ -476,7 +476,7 @@ router.delete('/:contestId/entry/:entryId/vote', async (req, res) => {
     if (!entry) {
       return res.status(404).json({
         success: false,
-        message: 'Contest entry not found'
+        message: 'hmm, can\'t find that entry 🤔'
       });
     }
 
@@ -492,7 +492,7 @@ router.delete('/:contestId/entry/:entryId/vote', async (req, res) => {
     if (entry.votes.length === initialLength) {
       return res.status(400).json({
         success: false,
-        message: 'You have not voted for this entry'
+        message: 'u haven\'t voted for this one yet!'
       });
     }
 
@@ -519,7 +519,7 @@ router.delete('/:contestId/entry/:entryId/vote', async (req, res) => {
     console.error('[Contest] Error removing vote:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to remove vote',
+      message: 'oops! couldn\'t remove ur vote. try again? 🙏',
       error: error.message
     });
   }
@@ -536,7 +536,7 @@ router.delete('/:contestId/entry/:entryId', async (req, res) => {
     if (!entry) {
       return res.status(404).json({
         success: false,
-        message: 'Contest entry not found'
+        message: 'hmm, can\'t find that entry 🤔'
       });
     }
 
@@ -576,7 +576,7 @@ router.delete('/:contestId/entry/:entryId', async (req, res) => {
     console.error('[Contest] Error deleting entry:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to delete contest entry',
+      message: 'oops! couldn\'t delete that entry. try again? 🙏',
       error: error.message
     });
   }

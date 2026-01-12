@@ -580,11 +580,11 @@ const SoundToVideoPopup = ({
     if (file) {
       const validTypes = ['audio/mpeg', 'audio/mp3', 'audio/m4a', 'audio/mp4', 'audio/wav', 'audio/x-m4a'];
       if (!validTypes.some(type => file.type.includes(type.split('/')[1]))) {
-        setError('Please upload a valid audio file (MP3, M4A, WAV)');
+        setError('oops! we need an mp3, m4a, or wav file for this :)');
         return;
       }
       if (file.size > 50 * 1024 * 1024) {
-        setError('Audio file must be less than 50MB');
+        setError('whoa! that file is huge 😅 keep it under 50mb plz');
         return;
       }
 
@@ -635,7 +635,7 @@ const SoundToVideoPopup = ({
     } else {
       audio.currentTime = audioStartOffset;
       audio.play().catch(() => {
-        setError('Unable to play audio preview');
+        setError('hmm, couldn\'t play that preview 🤔 try another file?');
       });
       setIsPlaying(true);
 
@@ -669,11 +669,11 @@ const SoundToVideoPopup = ({
 
   const handleConfirm = async () => {
     if (sourceType === 'sample' && !selectedSample) {
-      setError('Please select an audio track or upload your own');
+      setError('pick a track or upload ur own! ✨');
       return;
     }
     if (sourceType === 'upload' && !uploadedAudio) {
-      setError('Please upload an audio file');
+      setError('need an audio file first! 🎵');
       return;
     }
 

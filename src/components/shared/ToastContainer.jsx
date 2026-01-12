@@ -10,14 +10,14 @@ const ToastContainer = ({ toasts }) => {
   const getToastIcon = (type) => {
     switch (type) {
       case 'success':
-        return '✅';
+        return '✨';
       case 'error':
-        return '❌';
+        return '💫';
       case 'warning':
-        return '⚠️';
+        return '⭐';
       case 'info':
       default:
-        return 'ℹ️';
+        return '💛';
     }
   };
 

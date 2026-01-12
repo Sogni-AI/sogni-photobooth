@@ -2642,8 +2642,8 @@ const PhotoGallery = ({
       setShowVideoSelectionPopup(true);
     } else {
       showToast({
-        title: 'Authentication Required',
-        message: 'Please sign in to generate videos.',
+        title: 'hey there! 👋',
+        message: 'just need u to sign in first to create ur videos :)',
         type: 'info'
       });
     }
@@ -10905,8 +10905,8 @@ const PhotoGallery = ({
                   setShowVideoSelectionPopup(true);
                 } else {
                   showToast({
-                    title: 'Authentication Required',
-                    message: 'Please sign in to generate videos.',
+                    title: 'hey there! 👋',
+                    message: 'just need u to sign in first to create ur videos :)',
                     type: 'info'
                   });
                 }

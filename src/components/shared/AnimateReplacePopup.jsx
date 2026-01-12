@@ -798,7 +798,7 @@ const AnimateReplacePopup = ({
       }
 
       video.play().catch(() => {
-        setError('Unable to play video preview');
+        setError('hmm, couldn\'t play that preview 🤔 try another file?');
       });
       setIsPlaying(true);
 
@@ -902,12 +902,12 @@ const AnimateReplacePopup = ({
     if (file) {
       // Validate file type
       if (!file.type.startsWith('video/')) {
-        setError('Please upload a valid video file');
+        setError('oops! we need a video file for this :)');
         return;
       }
       // Validate file size (max 100MB)
       if (file.size > 100 * 1024 * 1024) {
-        setError('Video file must be less than 100MB');
+        setError('whoa! that video is huge 😅 keep it under 100mb plz');
         return;
       }
 
@@ -1009,11 +1009,11 @@ const AnimateReplacePopup = ({
   const handleConfirm = async () => {
     // Validate source video selection
     if (sourceType === 'sample' && !selectedSample) {
-      setError('Please select a motion style or upload a video');
+      setError('pick a motion style or upload ur own! ✨');
       return;
     }
     if (sourceType === 'upload' && !uploadedVideo) {
-      setError('Please upload a source video');
+      setError('need a video file first! 🎬');
       return;
     }
 
