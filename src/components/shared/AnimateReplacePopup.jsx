@@ -101,8 +101,8 @@ const AnimateReplacePopup = ({
   videoDuration: externalVideoDuration,
   onDurationChange
 }) => {
-  const [positivePrompt, setPositivePrompt] = useState('High quality animation preserving subject identity with smooth natural movement');
-  const [negativePrompt, setNegativePrompt] = useState('blurry, low quality, static, deformed, overexposed, worst quality, JPEG compression, identity change');
+  const [positivePrompt, setPositivePrompt] = useState('');
+  const [negativePrompt, setNegativePrompt] = useState('');
   const [sourceType, setSourceType] = useState('sample'); // 'sample' or 'upload'
   const [selectedSample, setSelectedSample] = useState(null);
   const [uploadedVideo, setUploadedVideo] = useState(null);
@@ -1050,8 +1050,8 @@ const AnimateReplacePopup = ({
   };
 
   const handleClose = () => {
-    setPositivePrompt('High quality animation preserving subject identity with smooth natural movement');
-    setNegativePrompt('blurry, low quality, static, deformed, overexposed, worst quality, JPEG compression, identity change');
+    setPositivePrompt('');
+    setNegativePrompt('');
     setSourceType('sample');
     setSelectedSample(null);
     setUploadedVideo(null);

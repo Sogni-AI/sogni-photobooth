@@ -13,6 +13,32 @@ const formatDuration = (seconds) => {
 };
 
 /**
+ * Helper function to clean up error messages by removing long URLs and debug info
+ */
+const cleanErrorMessage = (error) => {
+  if (!error) return '';
+  
+  // Remove long URLs (anything starting with http/https and containing query params)
+  let cleaned = error.replace(/https?:\/\/[^\s)]+\?[^\s)]+/g, '[URL]');
+  
+  // If the error starts with a known prefix, extract just the meaningful part
+  if (cleaned.startsWith('Error downloading video')) {
+    // Extract just "Error downloading video X" without the URL
+    const match = cleaned.match(/Error downloading video (\d+)/);
+    if (match) {
+      return `Error downloading video ${match[1]}: Failed to fetch`;
+    }
+  }
+  
+  // Truncate to reasonable length
+  if (cleaned.length > 80) {
+    cleaned = cleaned.substring(0, 80) + '...';
+  }
+  
+  return cleaned;
+};
+
+/**
  * Workflow configuration for display labels and styling
  * Bright yellow Starface photobooth theme
  */
@@ -114,16 +140,50 @@ const VideoReviewPopup = ({
 
   // Cache last known ETAs to prevent flickering between ETA and "Starting..."
   const lastKnownETAsRef = useRef({});
+  
+  // Track currently playing audio video (only one can play audio at a time)
+  const [playingAudioIndex, setPlayingAudioIndex] = useState(null);
+  const videoRefs = useRef({});
 
   // Get workflow config
   const config = WORKFLOW_CONFIG[workflowType] || WORKFLOW_CONFIG['s2v'];
 
-  // Clear cached ETAs when popup closes
+  // Clear cached ETAs and playing audio when popup closes
   useEffect(() => {
     if (!visible) {
       lastKnownETAsRef.current = {};
+      setPlayingAudioIndex(null);
+      videoRefs.current = {};
     }
   }, [visible]);
+  
+  // Handle hover to unmute video (only one can play audio at a time)
+  const handleVideoMouseEnter = useCallback((index) => {
+    if (!videoRefs.current[index]) return;
+    
+    // Mute the previously playing video
+    if (playingAudioIndex !== null && videoRefs.current[playingAudioIndex]) {
+      videoRefs.current[playingAudioIndex].muted = true;
+    }
+    
+    // Unmute and play the hovered video
+    videoRefs.current[index].muted = false;
+    videoRefs.current[index].play().catch(() => {});
+    setPlayingAudioIndex(index);
+  }, [playingAudioIndex]);
+  
+  // Handle hover leave to mute video
+  const handleVideoMouseLeave = useCallback((index) => {
+    if (!videoRefs.current[index]) return;
+    
+    videoRefs.current[index].muted = true;
+    videoRefs.current[index].pause();
+    videoRefs.current[index].currentTime = 0;
+    
+    if (playingAudioIndex === index) {
+      setPlayingAudioIndex(null);
+    }
+  }, [playingAudioIndex]);
 
   // Detect mobile viewport
   useEffect(() => {
@@ -1136,6 +1196,7 @@ const VideoReviewPopup = ({
                         </div>
                       ) : item.url ? (
                         <video
+                          ref={(el) => { videoRefs.current[index] = el; }}
                           src={item.url}
                           style={{
                             // Portrait: fill the container, Landscape: auto height
@@ -1150,8 +1211,8 @@ const VideoReviewPopup = ({
                           muted
                           playsInline
                           autoPlay
-                          onMouseOver={(e) => e.target.play().catch(() => {})}
-                          onMouseOut={(e) => { e.target.pause(); e.target.currentTime = 0; }}
+                          onMouseEnter={() => handleVideoMouseEnter(index)}
+                          onMouseLeave={() => handleVideoMouseLeave(index)}
                         />
                       ) : item.thumbnail ? (
                         <img
@@ -1314,7 +1375,7 @@ const VideoReviewPopup = ({
                         }}
                         title={item.error}
                         >
-                          ⚠️ {item.error.length > 30 ? item.error.slice(0, 30) + '...' : item.error}
+                          ⚠️ {cleanErrorMessage(item.error)}
                         </div>
                       )}
 

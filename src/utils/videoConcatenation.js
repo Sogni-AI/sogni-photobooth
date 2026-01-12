@@ -26,8 +26,8 @@ export async function concatenateVideos(videos, onProgress = null, audioOptions 
     if (onProgress) onProgress(1, 1, 'Downloading video...');
     const response = await fetchWithRetry(videos[0].url, undefined, {
       context: 'Video Download',
-      maxRetries: 2,
-      initialDelay: 1000
+      maxRetries: 3,
+      initialDelay: 5000 // Wait 5 seconds before first retry
     });
     return await response.blob();
   }
@@ -50,8 +50,8 @@ export async function concatenateVideos(videos, onProgress = null, audioOptions 
     try {
       const response = await fetchWithRetry(videos[i].url, undefined, {
         context: `Video ${i + 1} Download`,
-        maxRetries: 3, // Increased from 2 to 3 retries for better resilience
-        initialDelay: 1500 // Increased from 1000ms for better recovery from rate limits
+        maxRetries: 3, // 4 total attempts: initial + 3 retries
+        initialDelay: 5000 // Wait 5 seconds before first retry (as requested)
       });
       if (!response.ok) {
         throw new Error(`Failed to download video ${i + 1}: ${response.status} ${response.statusText}`);

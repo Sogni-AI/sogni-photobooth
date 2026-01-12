@@ -125,8 +125,8 @@ const SoundToVideoPopup = ({
   videoDuration: externalVideoDuration,
   onDurationChange
 }) => {
-  const [positivePrompt, setPositivePrompt] = useState('A person speaking naturally with synchronized lip movements to the audio');
-  const [negativePrompt, setNegativePrompt] = useState('blurry, low quality, static, deformed, overexposed, worst quality, JPEG compression, out of sync');
+  const [positivePrompt, setPositivePrompt] = useState('');
+  const [negativePrompt, setNegativePrompt] = useState('');
   const [sourceType, setSourceType] = useState('sample'); // 'sample' or 'upload'
   const [selectedSample, setSelectedSample] = useState(null);
   const [uploadedAudio, setUploadedAudio] = useState(null);
@@ -704,8 +704,6 @@ const SoundToVideoPopup = ({
   };
 
   const handleClose = () => {
-    setPositivePrompt('A person speaking naturally with synchronized lip movements to the audio');
-    setNegativePrompt('blurry, low quality, static, deformed, overexposed, worst quality, JPEG compression, out of sync');
     setSourceType('sample');
     setSelectedSample(null);
     setUploadedAudio(null);

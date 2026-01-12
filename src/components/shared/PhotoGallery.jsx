@@ -3858,8 +3858,14 @@ const PhotoGallery = ({
         ? videoStartOffset + (batchIndex * perImageDuration)
         : videoStartOffset;
 
+      // DEBUG: Log videoStart calculation for each clip
+      console.log(`[Animate Move Montage] Clip ${batchIndex}: videoStartOffset=${videoStartOffset}, batchIndex=${batchIndex}, perImageDuration=${perImageDuration}, imageStartOffset=${imageStartOffset}, imageDuration=${imageDuration}`);
+
       const img = new Image();
       img.onload = () => {
+        // DEBUG: Log inside onload to verify closure captured correct values
+        console.log(`[Animate Move Montage] Image loaded for clip ${batchIndex}, using videoStart=${imageStartOffset}`);
+
         // Helper function to generate video with retry capability
         const attemptGeneration = (retryCount = 0) => {
           generateVideo({
@@ -4153,8 +4159,14 @@ const PhotoGallery = ({
         ? videoStartOffset + (batchIndex * perImageDuration)
         : videoStartOffset;
 
+      // DEBUG: Log videoStart calculation for each clip
+      console.log(`[Animate Replace Montage] Clip ${batchIndex}: videoStartOffset=${videoStartOffset}, batchIndex=${batchIndex}, perImageDuration=${perImageDuration}, imageStartOffset=${imageStartOffset}, imageDuration=${imageDuration}`);
+
       const img = new Image();
       img.onload = () => {
+        // DEBUG: Log inside onload to verify closure captured correct values
+        console.log(`[Animate Replace Montage] Image loaded for clip ${batchIndex}, using videoStart=${imageStartOffset}`);
+
         // Helper function to generate video with retry capability
         const attemptGeneration = (retryCount = 0) => {
           generateVideo({
@@ -4449,8 +4461,14 @@ const PhotoGallery = ({
         ? audioStartOffset + (batchIndex * perImageDuration)
         : audioStartOffset;
 
+      // DEBUG: Log audioStart calculation for each clip
+      console.log(`[S2V Montage] Clip ${batchIndex}: audioStartOffset=${audioStartOffset}, batchIndex=${batchIndex}, perImageDuration=${perImageDuration}, imageAudioStartOffset=${imageAudioStartOffset}, imageDuration=${imageDuration}`);
+
       const img = new Image();
       img.onload = () => {
+        // DEBUG: Log inside onload to verify closure captured correct values
+        console.log(`[S2V Montage] Image loaded for clip ${batchIndex}, using audioStart=${imageAudioStartOffset}`);
+
         // Helper function to generate video with retry capability
         const attemptGeneration = (retryCount = 0) => {
           generateVideo({
@@ -5694,6 +5712,24 @@ const PhotoGallery = ({
       }
     }
   }, [wantsFullscreen, selectedPhotoIndex, isPromptSelectorMode, filteredPhotos, photos]);
+
+  // Auto-play generated video when entering slideshow mode
+  // Note: Must be defined after filteredPhotos to avoid temporal dead zone
+  useEffect(() => {
+    if (selectedPhotoIndex !== null) {
+      const currentPhotosArray = isPromptSelectorMode ? filteredPhotos : photos;
+      const selectedPhoto = currentPhotosArray[selectedPhotoIndex];
+      
+      // If the selected photo has a generated video, add it to playing set so it auto-plays with audio and loops
+      if (selectedPhoto?.videoUrl && selectedPhoto?.id && !selectedPhoto.generatingVideo) {
+        setPlayingGeneratedVideoIds(prev => {
+          const newSet = new Set(prev);
+          newSet.add(selectedPhoto.id);
+          return newSet;
+        });
+      }
+    }
+  }, [selectedPhotoIndex, isPromptSelectorMode, filteredPhotos, photos]);
 
   // Show infinite loop stitch tip when batch videos complete (non-transition mode)
   // Note: Must be defined after filteredPhotos to avoid temporal dead zone
@@ -14673,6 +14709,7 @@ const PhotoGallery = ({
                     })()}
                     autoPlay
                     loop={photo.promptKey !== 'anime1990s'}
+                    muted={false}
                     playsInline
                     preload="metadata"
                     onEnded={() => {
