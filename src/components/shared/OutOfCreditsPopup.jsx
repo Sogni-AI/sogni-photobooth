@@ -115,22 +115,22 @@ const OutOfCreditsPopup = ({ isOpen, onClose, onPurchase }) => {
               className="sloth-mascot"
             />
           </div>
-          <h2>Uh oh! You&apos;re out of credits!</h2>
+          <h2>uh oh! ur out of credits! 😅</h2>
         </div>
 
         <div className="out-of-credits-modal-content">
           <div className="out-of-credits-message">
             <p className="message-main">
-              You can get back to creating in no time.
+              u can get back to creating in no time! ✨
             </p>
             <div className="credits-info">
               <div className="info-item" onClick={handleInfoItemClick}>
                 <span className="info-icon">🎁</span>
-                <span className="info-text">Check for <strong>free daily credits</strong></span>
+                <span className="info-text">check for <strong>free daily credits</strong></span>
               </div>
               <div className="info-item" onClick={handleInfoItemClick}>
                 <span className="info-icon">💳</span>
-                <span className="info-text">Buy more render credits</span>
+                <span className="info-text">buy more render credits</span>
               </div>
             </div>
           </div>
@@ -141,14 +141,14 @@ const OutOfCreditsPopup = ({ isOpen, onClose, onPurchase }) => {
             className="out-of-credits-get-credits-btn"
             onClick={handleGetCreditsClick}
           >
-            <span className="get-credits-text">Get More Credits</span>
+            <span className="get-credits-text">get more credits</span>
             <span className="get-credits-arrow">→</span>
           </button>
           <button
             className="out-of-credits-close-btn"
             onClick={onClose}
           >
-            Close
+            close
           </button>
         </div>
       </div>

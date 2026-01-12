@@ -7,7 +7,7 @@ const FriendlyErrorModal = ({ error, onClose, onRetry }) => {
   // Handle legacy string errors
   const errorData = typeof error === 'string' ? {
     type: 'generic',
-    title: '⚠️ Something went wrong',
+    title: 'oops! something went wrong 😅',
     message: error,
     canRetry: false
   } : error;
@@ -112,7 +112,7 @@ const FriendlyErrorModal = ({ error, onClose, onRetry }) => {
                 color: '#856404',
                 fontWeight: '500'
               }}>
-                💡 To enable automatic sharing in the future:
+                💡 wanna enable automatic sharing?
               </p>
               <ul style={{ 
                 margin: '0',
@@ -121,9 +121,9 @@ const FriendlyErrorModal = ({ error, onClose, onRetry }) => {
                 color: '#856404',
                 lineHeight: '1.4'
               }}>
-                <li>Click the popup blocker icon in your browser's address bar</li>
-                <li>Select "Always allow popups from this site"</li>
-                <li>Refresh the page and try sharing again</li>
+                <li>click the popup blocker icon in ur browser's address bar</li>
+                <li>select "always allow popups from this site"</li>
+                <li>refresh the page and try sharing again!</li>
               </ul>
             </div>
           )}
@@ -258,7 +258,7 @@ const FriendlyErrorModal = ({ error, onClose, onRetry }) => {
                   e.target.style.boxShadow = '0 4px 12px rgba(76, 175, 80, 0.3)';
                 }}
               >
-                🔄 Try Again
+                🔄 try again
               </button>
             )}
 
@@ -286,7 +286,7 @@ const FriendlyErrorModal = ({ error, onClose, onRetry }) => {
                 e.target.style.transform = 'translateY(0)';
               }}
             >
-              Got it
+              got it!
             </button>
           </div>
         </div>
