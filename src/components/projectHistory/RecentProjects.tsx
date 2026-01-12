@@ -9,6 +9,7 @@ import type { ArchiveProject } from '../../types/projectHistory';
 import type { LocalProject } from '../../types/localProjects';
 import { LOCAL_PROJECT_MAX_IMAGES, LOCAL_PROJECT_SUPPORTED_EXTENSIONS } from '../../types/localProjects';
 import { pluralize, timeAgo } from '../../utils/string';
+import { downloadImagesAsZip, downloadVideosAsZip } from '../../utils/bulkDownload';
 import './RecentProjects.css';
 
 interface RecentProjectsProps {
@@ -299,6 +300,10 @@ function RecentProjects({
     projectId: string;
     filename: string;
   }>({ show: false, imageId: '', projectId: '', filename: '' });
+
+  // Cloud project download state
+  const [downloadingProject, setDownloadingProject] = useState<string | null>(null);
+  const [downloadProgress, setDownloadProgress] = useState<{ current: number; total: number; message: string } | null>(null);
 
   // Auto-load all images for local projects when initialized
   useEffect(() => {
@@ -927,6 +932,230 @@ function RecentProjects({
     }
   }, [onReuseProject, onClose]);
 
+  // Handle downloading all media from a cloud project
+  const handleDownloadProject = useCallback(async (project: ArchiveProject) => {
+    if (!sogniClient || downloadingProject) return;
+
+    setDownloadingProject(project.id);
+    setDownloadProgress({ current: 0, total: 0, message: 'Preparing download...' });
+
+    try {
+      // Get all completed, non-hidden jobs
+      const completedJobs = project.jobs.filter(
+        job => job.status === 'completed' && !job.hidden && !job.isNSFW
+      );
+
+      if (completedJobs.length === 0) {
+        setDownloadProgress({ current: 0, total: 0, message: 'No media available to download' });
+        setTimeout(() => {
+          setDownloadingProject(null);
+          setDownloadProgress(null);
+        }, 2000);
+        return;
+      }
+
+      // Helper to get download URL using SDK (same as useMediaUrl hook)
+      const getMediaUrl = async (job: typeof completedJobs[0]): Promise<string> => {
+        if (project.type === 'video') {
+          return await sogniClient.projects.mediaDownloadUrl({
+            jobId: project.id,
+            id: job.id,
+            type: 'complete'
+          });
+        } else {
+          return await sogniClient.projects.downloadUrl({
+            jobId: project.id,
+            imageId: job.id,
+            type: 'complete'
+          });
+        }
+      };
+
+      // If only one job, download it directly without ZIP
+      if (completedJobs.length === 1) {
+        const job = completedJobs[0];
+        setDownloadProgress({ current: 0, total: 1, message: 'Fetching download URL...' });
+
+        const mediaUrl = await getMediaUrl(job);
+        const extension = project.type === 'video' ? 'mp4' : 'png';
+        const filename = `sogni-${project.model.name.toLowerCase().replace(/\s+/g, '-')}-${job.id.slice(0, 8)}.${extension}`;
+
+        setDownloadProgress({ current: 0, total: 1, message: 'Downloading...' });
+
+        const response = await fetch(mediaUrl);
+        if (!response.ok) throw new Error('Failed to fetch media');
+
+        const blob = await response.blob();
+        const blobUrl = URL.createObjectURL(blob);
+
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = filename;
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 100);
+
+        setDownloadProgress({ current: 1, total: 1, message: 'Download complete!' });
+      } else {
+        // Multiple jobs - get all URLs first, then download as ZIP
+        const mediaItems: Array<{ url: string; filename: string }> = [];
+        const extension = project.type === 'video' ? 'mp4' : 'png';
+
+        setDownloadProgress({ current: 0, total: completedJobs.length, message: 'Fetching download URLs...' });
+
+        for (let i = 0; i < completedJobs.length; i++) {
+          const job = completedJobs[i];
+          try {
+            const mediaUrl = await getMediaUrl(job);
+            const filename = `sogni-${project.model.name.toLowerCase().replace(/\s+/g, '-')}-${i + 1}.${extension}`;
+            mediaItems.push({ url: mediaUrl, filename });
+            setDownloadProgress({ current: i + 1, total: completedJobs.length, message: `Fetching URL ${i + 1} of ${completedJobs.length}...` });
+          } catch (urlError) {
+            console.warn(`Failed to get URL for job ${job.id}:`, urlError);
+            // Continue with other jobs
+          }
+        }
+
+        if (mediaItems.length === 0) {
+          setDownloadProgress({ current: 0, total: 0, message: 'No media available to download' });
+          setTimeout(() => {
+            setDownloadingProject(null);
+            setDownloadProgress(null);
+          }, 2000);
+          return;
+        }
+
+        // Generate ZIP filename with timestamp
+        const timestamp = new Date().toISOString().split('T')[0];
+        const mediaType = project.type === 'video' ? 'videos' : 'images';
+        const zipFilename = `sogni-${project.model.name.toLowerCase().replace(/\s+/g, '-')}-${mediaType}-${timestamp}.zip`;
+
+        // Download using the appropriate function
+        const downloadFn = project.type === 'video' ? downloadVideosAsZip : downloadImagesAsZip;
+        const success = await downloadFn(
+          mediaItems,
+          zipFilename,
+          (current: number, total: number, message: string) => {
+            setDownloadProgress({ current, total, message });
+          }
+        );
+
+        if (!success) {
+          setDownloadProgress({ current: 0, total: 0, message: 'Download failed. Please try again.' });
+        }
+      }
+
+      // Reset after a delay
+      setTimeout(() => {
+        setDownloadingProject(null);
+        setDownloadProgress(null);
+      }, 2000);
+    } catch (error) {
+      console.error('Error downloading project:', error);
+      setDownloadProgress({
+        current: 0,
+        total: 0,
+        message: `Error: ${error instanceof Error ? error.message : 'Unknown error'}`
+      });
+      setTimeout(() => {
+        setDownloadingProject(null);
+        setDownloadProgress(null);
+      }, 3000);
+    }
+  }, [sogniClient, downloadingProject]);
+
+  // Handle downloading all images from a local project
+  const handleDownloadLocalProject = useCallback(async (project: LocalProject) => {
+    if (downloadingProject) return;
+
+    setDownloadingProject(project.id);
+    setDownloadProgress({ current: 0, total: 0, message: 'Preparing download...' });
+
+    try {
+      const images = expandedProjectImages[project.id];
+      
+      // If images aren't loaded yet, load them
+      let imagesToDownload = images;
+      if (!imagesToDownload) {
+        imagesToDownload = await getLocalProjectImageUrls(project.id);
+      }
+
+      if (!imagesToDownload || imagesToDownload.length === 0) {
+        setDownloadProgress({ current: 0, total: 0, message: 'No images available to download' });
+        setTimeout(() => {
+          setDownloadingProject(null);
+          setDownloadProgress(null);
+        }, 2000);
+        return;
+      }
+
+      // If only one image, download it directly
+      if (imagesToDownload.length === 1) {
+        const image = imagesToDownload[0];
+        setDownloadProgress({ current: 0, total: 1, message: 'Downloading...' });
+
+        const response = await fetch(image.url);
+        const blob = await response.blob();
+        const blobUrl = URL.createObjectURL(blob);
+
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = image.filename;
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 100);
+
+        setDownloadProgress({ current: 1, total: 1, message: 'Download complete!' });
+      } else {
+        // Multiple images - download as ZIP
+        const mediaItems = imagesToDownload.map(img => ({
+          url: img.url,
+          filename: img.filename
+        }));
+
+        // Generate ZIP filename
+        const timestamp = new Date().toISOString().split('T')[0];
+        const projectNameSlug = project.name.toLowerCase().replace(/\s+/g, '-');
+        const zipFilename = `${projectNameSlug}-images-${timestamp}.zip`;
+
+        const success = await downloadImagesAsZip(
+          mediaItems,
+          zipFilename,
+          (current: number, total: number, message: string) => {
+            setDownloadProgress({ current, total, message });
+          }
+        );
+
+        if (!success) {
+          setDownloadProgress({ current: 0, total: 0, message: 'Download failed. Please try again.' });
+        }
+      }
+
+      // Reset after a delay
+      setTimeout(() => {
+        setDownloadingProject(null);
+        setDownloadProgress(null);
+      }, 2000);
+    } catch (error) {
+      console.error('Error downloading local project:', error);
+      setDownloadProgress({
+        current: 0,
+        total: 0,
+        message: `Error: ${error instanceof Error ? error.message : 'Unknown error'}`
+      });
+      setTimeout(() => {
+        setDownloadingProject(null);
+        setDownloadProgress(null);
+      }, 3000);
+    }
+  }, [downloadingProject, expandedProjectImages, getLocalProjectImageUrls]);
+
   return (
     <div className="recent-projects-page">
       <div className="recent-projects-header">
@@ -1097,6 +1326,20 @@ function RecentProjects({
                       >
                         ↑
                       </button>
+                      {project.imageIds.length > 0 && (
+                        <button
+                          className="recent-project-action-btn"
+                          onClick={() => handleDownloadLocalProject(project)}
+                          disabled={downloadingProject === project.id}
+                          title={
+                            downloadingProject === project.id
+                              ? downloadProgress?.message || 'Downloading...'
+                              : 'Download all images'
+                          }
+                        >
+                          {downloadingProject === project.id ? '⏳' : '↓'}
+                        </button>
+                      )}
                       {project.imageIds.length > 0 && onReuseLocalProject && (
                         <button
                           className="recent-project-reuse-btn"
@@ -1306,6 +1549,18 @@ function RecentProjects({
                     title={isPinned ? 'Unpin project' : 'Pin project to top'}
                   >
                     {isPinned ? '📌' : '📍'}
+                  </button>
+                  <button
+                    className="recent-project-action-btn"
+                    onClick={() => handleDownloadProject(project)}
+                    disabled={downloadingProject === project.id}
+                    title={
+                      downloadingProject === project.id
+                        ? downloadProgress?.message || 'Downloading...'
+                        : `Download all ${project.type === 'video' ? 'videos' : 'images'}`
+                    }
+                  >
+                    {downloadingProject === project.id ? '⏳' : '↓'}
                   </button>
                   {project.type === 'image' && (
                     <button

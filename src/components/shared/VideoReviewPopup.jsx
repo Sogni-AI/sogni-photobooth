@@ -1126,12 +1126,13 @@ const VideoReviewPopup = ({
                       padding: isPortraitLayout ? '14px 16px' : '10px 12px',
                       display: 'flex',
                       flexDirection: 'column',
-                      gap: isPortraitLayout ? '8px' : '6px',
-                      // Portrait: take remaining space beside thumbnail
+                      gap: isPortraitLayout ? '6px' : '4px',
+                      // Portrait: take remaining space beside thumbnail, top-aligned
                       ...(isPortraitLayout ? {
                         flex: 1,
-                        justifyContent: 'center',
-                        minWidth: 0
+                        justifyContent: 'flex-start',
+                        minWidth: 0,
+                        paddingTop: '12px'
                       } : {})
                     }}>
                       {/* Title row - Adaptive for portrait/landscape */}
@@ -1211,15 +1212,6 @@ const VideoReviewPopup = ({
                             🔄 redo
                           </button>
                         )}
-                        {item.status === 'generating' && (
-                          <span style={{
-                            fontSize: '11px',
-                            color: config.accentColor,
-                            fontWeight: '600'
-                          }}>
-                            ⏳
-                          </span>
-                        )}
                         {item.status === 'ready' && (
                           <span style={{
                             fontSize: '14px',
@@ -1259,13 +1251,13 @@ const VideoReviewPopup = ({
                       {/* Generation metadata */}
                       {isInProgress && (
                         <div style={{
-                          fontSize: '0.65rem',
-                          color: '#666',
+                          fontSize: '0.75rem',
+                          color: '#444',
                           display: 'flex',
                           flexDirection: 'column',
-                          gap: '3px',
-                          paddingTop: '6px',
-                          borderTop: '2px solid rgba(255, 237, 78, 0.3)',
+                          gap: '4px',
+                          paddingTop: '8px',
+                          borderTop: '2px solid rgba(255, 237, 78, 0.4)',
                           fontWeight: '600'
                         }}>
                           {isThisRegenerating && regenerationProgress ? (
@@ -1279,13 +1271,13 @@ const VideoReviewPopup = ({
                                 const displayETA = lastKnownETAsRef.current[index] || eta;
                                 
                                 return displayETA > 0 ? (
-                                  <div style={{ display: 'flex', gap: '5px', alignItems: 'center' }}>
-                                    <span style={{ fontSize: '0.875rem' }}>⏱️</span>
+                                  <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                                    <span style={{ fontSize: '1rem' }}>⏱️</span>
                                     <span style={{ 
                                       fontWeight: '700', 
                                       color: config.accentColor, 
                                       fontFamily: '"Permanent Marker", cursive', 
-                                      fontSize: '0.75rem',
+                                      fontSize: '0.9rem',
                                       // Add blink animation when ETA is at 1 second or less
                                       ...(displayETA <= 1 ? {
                                         animationName: 'blink',
@@ -1300,7 +1292,7 @@ const VideoReviewPopup = ({
                                     }}>{formatDuration(displayETA)}</span>
                                   </div>
                                 ) : regenerationProgress.status?.startsWith('Queue') ? (
-                                  <div style={{ color: config.accentColor }}>⏳ queued...</div>
+                                  <div style={{ color: config.accentColor, fontSize: '0.8rem' }}>⏳ queued...</div>
                                 ) : null;
                               })()}
                               
@@ -1308,33 +1300,34 @@ const VideoReviewPopup = ({
                               {regenerationProgress.workerName && (
                                 <div style={{ 
                                   display: 'flex', 
-                                  gap: '5px', 
+                                  gap: '6px', 
                                   alignItems: 'center',
                                   overflow: 'hidden',
                                   textOverflow: 'ellipsis',
                                   whiteSpace: 'nowrap'
                                 }}>
-                                  <span style={{ fontSize: '0.75rem' }}>🖥️</span>
-                                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', color: config.accentColor, fontWeight: '700' }}>{regenerationProgress.workerName}</span>
+                                  <span style={{ fontSize: '0.85rem' }}>🖥️</span>
+                                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', color: config.accentColor, fontWeight: '700', fontSize: '0.8rem' }}>{regenerationProgress.workerName}</span>
                                 </div>
                               )}
                               
                               {/* Elapsed time */}
                               {regenerationProgress.elapsed > 0 && (
-                                <div style={{ display: 'flex', gap: '5px', alignItems: 'center' }}>
-                                  <span style={{ fontSize: '0.75rem' }}>⏲️</span>
-                                  <span>{formatDuration(regenerationProgress.elapsed)}</span>
+                                <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                                  <span style={{ fontSize: '0.85rem' }}>⏲️</span>
+                                  <span style={{ fontSize: '0.8rem', color: '#333' }}>{formatDuration(regenerationProgress.elapsed)}</span>
                                 </div>
                               )}
                               
                               {/* Status message */}
                               {regenerationProgress.status && !regenerationProgress.status.startsWith('Queue') && (
                                 <div style={{ 
-                                  color: '#999',
+                                  color: '#666',
                                   fontStyle: 'italic',
                                   overflow: 'hidden',
                                   textOverflow: 'ellipsis',
-                                  whiteSpace: 'nowrap'
+                                  whiteSpace: 'nowrap',
+                                  fontSize: '0.75rem'
                                 }}>
                                   {regenerationProgress.status}
                                 </div>
@@ -1352,13 +1345,13 @@ const VideoReviewPopup = ({
                                 const displayETA = lastKnownETAsRef.current[index] || eta;
                                 
                                 return displayETA > 0 ? (
-                                  <div style={{ display: 'flex', gap: '5px', alignItems: 'center' }}>
-                                    <span style={{ fontSize: '0.875rem' }}>⏱️</span>
+                                  <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                                    <span style={{ fontSize: '1rem' }}>⏱️</span>
                                     <span style={{ 
                                       fontWeight: '700', 
                                       color: config.accentColor, 
                                       fontFamily: '"Permanent Marker", cursive', 
-                                      fontSize: '0.75rem',
+                                      fontSize: '0.9rem',
                                       // Add blink animation when ETA is at 1 second or less
                                       ...(displayETA <= 1 ? {
                                         animationName: 'blink',
@@ -1373,9 +1366,9 @@ const VideoReviewPopup = ({
                                     }}>{formatDuration(displayETA)}</span>
                                   </div>
                                 ) : itemStatuses[index]?.startsWith('Queue') ? (
-                                  <div style={{ color: config.accentColor }}>⏳ queued...</div>
+                                  <div style={{ color: config.accentColor, fontSize: '0.8rem' }}>⏳ queued...</div>
                                 ) : (
-                                  <div style={{ color: config.accentColor }}>⏳ starting...</div>
+                                  <div style={{ color: config.accentColor, fontSize: '0.8rem' }}>⏳ starting...</div>
                                 );
                               })()}
                               
@@ -1383,41 +1376,42 @@ const VideoReviewPopup = ({
                               {item.status === 'generating' && itemWorkers[index] && (
                                 <div style={{ 
                                   display: 'flex', 
-                                  gap: '5px', 
+                                  gap: '6px', 
                                   alignItems: 'center',
                                   overflow: 'hidden',
                                   textOverflow: 'ellipsis',
                                   whiteSpace: 'nowrap'
                                 }}>
-                                  <span style={{ fontSize: '0.75rem' }}>🖥️</span>
-                                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', color: config.accentColor, fontWeight: '700' }}>{itemWorkers[index]}</span>
+                                  <span style={{ fontSize: '0.85rem' }}>🖥️</span>
+                                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', color: config.accentColor, fontWeight: '700', fontSize: '0.8rem' }}>{itemWorkers[index]}</span>
                                 </div>
                               )}
                               
-                              {/* Progress percentage */}
+                              {/* Progress percentage - shows step-based progress from video model */}
                               {item.status === 'generating' && itemProgress[index] > 0 && (
-                                <div style={{ display: 'flex', gap: '5px', alignItems: 'center' }}>
-                                  <span style={{ fontSize: '0.75rem' }}>📊</span>
-                                  <span>{Math.round(itemProgress[index])}%</span>
+                                <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                                  <span style={{ fontSize: '0.85rem' }}>⚡</span>
+                                  <span style={{ fontWeight: '700', color: config.accentColor, fontSize: '0.85rem' }}>{Math.round(itemProgress[index])}%</span>
                                 </div>
                               )}
                               
                               {/* Elapsed time */}
                               {item.status === 'generating' && itemElapsed[index] > 0 && (
-                                <div style={{ display: 'flex', gap: '5px', alignItems: 'center' }}>
-                                  <span style={{ fontSize: '0.75rem' }}>⏲️</span>
-                                  <span>{formatDuration(itemElapsed[index])}</span>
+                                <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                                  <span style={{ fontSize: '0.85rem' }}>⏲️</span>
+                                  <span style={{ fontSize: '0.8rem', color: '#333' }}>{formatDuration(itemElapsed[index])}</span>
                                 </div>
                               )}
                               
                               {/* Status message */}
                               {item.status === 'generating' && itemStatuses[index] && !itemStatuses[index].startsWith('Queue') && (
                                 <div style={{ 
-                                  color: '#999',
+                                  color: '#666',
                                   fontStyle: 'italic',
                                   overflow: 'hidden',
                                   textOverflow: 'ellipsis',
-                                  whiteSpace: 'nowrap'
+                                  whiteSpace: 'nowrap',
+                                  fontSize: '0.75rem'
                                 }}>
                                   {itemStatuses[index]}
                                 </div>
@@ -1514,10 +1508,10 @@ const VideoReviewPopup = ({
                 padding: '16px 36px',
                 background: canStitch
                   ? '#ff3366'
-                  : '#e5e5e5',
-                border: '3px solid #1a1a1a',
+                  : '#d4d4d4',
+                border: canStitch ? '3px solid #1a1a1a' : '3px solid #a3a3a3',
                 borderRadius: '50px',
-                color: '#fff',
+                color: canStitch ? '#fff' : '#737373',
                 fontSize: '1rem',
                 fontWeight: '800',
                 fontFamily: '"Permanent Marker", cursive',
@@ -1527,7 +1521,7 @@ const VideoReviewPopup = ({
                 boxShadow: canStitch
                   ? `4px 4px 0 #1a1a1a`
                   : 'none',
-                opacity: canStitch ? 1 : 0.6,
+                opacity: canStitch ? 1 : 0.5,
                 textTransform: 'lowercase',
                 letterSpacing: '0.02em'
               }}

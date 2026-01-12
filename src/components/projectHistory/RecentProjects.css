@@ -1455,16 +1455,18 @@
     gap: 8px;
     order: 2;
     width: 100%;
+    flex-wrap: wrap;
   }
 
   .recent-projects-header-right {
     order: 1;
-    flex: 1;
-    justify-content: flex-end;
+    width: 100%;
+    justify-content: space-between;
   }
 
   .recent-projects-header h2 {
     font-size: 1.3rem;
+    flex-shrink: 0;
   }
 
   .recent-projects-header h2::after {
@@ -1474,10 +1476,23 @@
 
   .recent-projects-filter {
     flex: 1;
+    min-width: 0;
+  }
+
+  .recent-projects-filter-btn {
+    padding: 8px 12px;
+    font-size: 0.7rem;
+  }
+
+  .recent-projects-filter-count {
+    min-width: 22px;
+    height: 22px;
+    padding: 0 6px;
+    font-size: 0.65rem;
   }
 
   .recent-projects-new-btn {
-    font-size: 0.6rem;
+    font-size: 0.65rem;
     padding: 6px 10px;
   }
 
@@ -1493,9 +1508,9 @@
   }
 
   .recent-projects-close-btn {
-    width: 36px;
-    height: 36px;
-    font-size: 1rem;
+    width: 40px;
+    height: 40px;
+    font-size: 1.1rem;
   }
 }
 

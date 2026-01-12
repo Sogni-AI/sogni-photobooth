@@ -46,6 +46,39 @@ const StitchOptionsPopup = ({
     return minutes;
   }, [videoCount]);
 
+  // Calculate weighted progress percentage (accounts for partial progress of each transition)
+  // This mirrors the robust approach from PhotoGallery's video progress tracking
+  const weightedProgressPercent = useMemo(() => {
+    if (!generationProgress || !generationProgress.total || generationProgress.total <= 0) {
+      return 0;
+    }
+
+    const { transitionStatus, transitionProgress, current, total, phase } = generationProgress;
+
+    // For non-generating phases, use simple current/total
+    if (phase !== 'generating' || !transitionStatus || !transitionProgress) {
+      return (current / total) * 100;
+    }
+
+    // Calculate weighted progress:
+    // - Each complete transition contributes 100%
+    // - Each generating transition contributes its actual progress (0-100%)
+    // - Each pending/failed transition contributes 0%
+    let totalProgress = 0;
+    transitionStatus.forEach((status, i) => {
+      if (status === 'complete') {
+        totalProgress += 100;
+      } else if (status === 'generating') {
+        totalProgress += (transitionProgress[i] || 0);
+      }
+      // 'pending' and 'failed' contribute 0
+    });
+
+    // Average across all transitions
+    const weightedAverage = total > 0 ? totalProgress / total : 0;
+    return Math.min(100, Math.max(0, weightedAverage));
+  }, [generationProgress]);
+
 
   if (!visible) return null;
 
@@ -373,7 +406,7 @@ const StitchOptionsPopup = ({
                 </div>
               )}
 
-              {/* Progress bar */}
+              {/* Progress bar - uses weighted progress for smooth, accurate tracking */}
               {generationProgress.total > 0 && (
                 <div style={{
                   background: 'rgba(255, 255, 255, 0.2)',
@@ -384,7 +417,7 @@ const StitchOptionsPopup = ({
                   <div style={{
                     background: 'linear-gradient(90deg, #ffeb3b, #ffc107)',
                     height: '100%',
-                    width: `${(generationProgress.current / generationProgress.total) * 100}%`,
+                    width: `${weightedProgressPercent}%`,
                     transition: 'width 0.3s ease',
                     borderRadius: '8px'
                   }} />
@@ -396,7 +429,7 @@ const StitchOptionsPopup = ({
                 color: 'rgba(255, 255, 255, 0.6)',
                 marginTop: '8px'
               }}>
-                {generationProgress.current}/{generationProgress.total}
+                {generationProgress.current}/{generationProgress.total} ({Math.round(weightedProgressPercent)}%)
               </div>
 
               {/* Cancel button */}
@@ -786,6 +819,7 @@ StitchOptionsPopup.propTypes = {
     message: PropTypes.string,
     transitionStatus: PropTypes.arrayOf(PropTypes.string),
     transitionETAs: PropTypes.arrayOf(PropTypes.number),
+    transitionProgress: PropTypes.arrayOf(PropTypes.number), // Per-transition progress (0-100)
     maxETA: PropTypes.number
   }),
   hasCachedVideo: PropTypes.bool,
