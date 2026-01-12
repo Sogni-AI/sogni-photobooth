@@ -1120,35 +1120,35 @@
   transform: translateY(-50%) scale(1.1);
 }
 
-/* Info Dropdown */
+/* Info Dropdown - shows on ? hover */
 .recent-projects-info-dropdown {
   position: absolute;
   top: calc(100% + 8px);
-  right: 0;
-  width: 260px;
-  padding: 12px 14px;
+  right: -8px;
+  width: 220px;
+  padding: 10px 12px;
   background: #1a1a1a;
-  border-radius: 12px;
-  font-size: 0.75rem;
+  border-radius: 10px;
+  font-size: 0.7rem;
   font-weight: 500;
-  line-height: 1.5;
+  line-height: 1.4;
   color: #fff;
   opacity: 0;
   visibility: hidden;
   transform: translateY(-4px);
-  transition: all 0.2s ease;
-  z-index: 100010;
+  transition: all 0.15s ease;
+  z-index: 999999;
   pointer-events: none;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
 }
 
 .recent-projects-info-dropdown::before {
   content: '';
   position: absolute;
-  top: -6px;
-  right: 16px;
-  width: 12px;
-  height: 12px;
+  top: -5px;
+  right: 14px;
+  width: 10px;
+  height: 10px;
   background: #1a1a1a;
   transform: rotate(45deg);
 }
@@ -1157,16 +1157,18 @@
   display: block;
   color: #06b6d4;
   font-weight: 700;
-  font-size: 0.85rem;
-  margin-bottom: 6px;
+  font-size: 0.75rem;
+  margin-bottom: 4px;
 }
 
 .recent-projects-info-dropdown p {
   margin: 0;
-  color: rgba(255, 255, 255, 0.85);
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.65rem;
 }
 
-.recent-projects-local-btn-wrapper:hover .recent-projects-info-dropdown {
+.recent-projects-info-hint:hover + .recent-projects-info-dropdown,
+.recent-projects-info-dropdown:hover {
   opacity: 1;
   visibility: visible;
   transform: translateY(0);
@@ -1441,24 +1443,59 @@
   box-shadow: 2px 2px 0 rgba(26, 26, 26, 0.3);
 }
 
-/* Tablet Optimizations */
+/* Tablet Optimizations - iPad Air ~820px */
 @media (max-width: 900px) {
   .recent-projects-header {
-    padding: 14px 20px;
-    gap: 10px;
+    padding: 12px 16px;
+    gap: 8px;
+    flex-wrap: wrap;
   }
 
   .recent-projects-header-left {
-    gap: 10px;
+    gap: 8px;
+    order: 2;
+    width: 100%;
+  }
+
+  .recent-projects-header-right {
+    order: 1;
+    flex: 1;
+    justify-content: flex-end;
   }
 
   .recent-projects-header h2 {
-    font-size: 1.4rem;
+    font-size: 1.3rem;
+  }
+
+  .recent-projects-header h2::after {
+    font-size: 1rem;
+    margin-left: 6px;
+  }
+
+  .recent-projects-filter {
+    flex: 1;
   }
 
   .recent-projects-new-btn {
-    font-size: 0.65rem;
-    padding: 7px 12px;
+    font-size: 0.6rem;
+    padding: 6px 10px;
+  }
+
+  .recent-projects-new-local-btn {
+    padding-right: 22px;
+  }
+
+  .recent-projects-info-hint {
+    width: 14px;
+    height: 14px;
+    font-size: 0.5rem;
+    right: 5px;
+  }
+
+  .recent-projects-close-btn {
+    width: 36px;
+    height: 36px;
+    font-size: 1rem;
   }
 }
 
@@ -1924,5 +1961,221 @@
 
   .local-project-image-item .job-item-media {
     height: 200px;
+  }
+}
+
+/* ============================================
+   Adjust Image Button on Job Items
+   ============================================ */
+
+.job-item-adjust-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.6);
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  color: #fff;
+  font-size: 0.85rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: all 0.2s ease;
+  z-index: 10;
+}
+
+.job-item:hover .job-item-adjust-btn,
+.local-project-image-item:hover .job-item-adjust-btn {
+  opacity: 1;
+}
+
+.job-item-adjust-btn:hover {
+  background: #06b6d4;
+  border-color: #fff;
+  transform: scale(1.1);
+}
+
+/* ============================================
+   Local Project Slideshow
+   ============================================ */
+
+.local-slideshow-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.95);
+  z-index: 100010;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.local-slideshow-content {
+  position: relative;
+  max-width: 95vw;
+  max-height: 95vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.local-slideshow-close {
+  position: absolute;
+  top: -40px;
+  right: -40px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  color: #fff;
+  font-size: 1.25rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.local-slideshow-close:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: #fff;
+}
+
+.local-slideshow-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 16px;
+  width: 100%;
+  padding: 0 60px;
+}
+
+.local-slideshow-title {
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.local-slideshow-counter {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.85rem;
+}
+
+.local-slideshow-image-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.local-slideshow-image {
+  max-width: 90vw;
+  max-height: 75vh;
+  object-fit: contain;
+  border-radius: 4px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.local-slideshow-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  font-size: 2rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.local-slideshow-nav:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.local-slideshow-prev {
+  left: -70px;
+}
+
+.local-slideshow-next {
+  right: -70px;
+}
+
+.local-slideshow-actions {
+  margin-top: 20px;
+  display: flex;
+  gap: 12px;
+}
+
+.local-slideshow-adjust-btn {
+  background: #06b6d4;
+  border: 2px solid #fff;
+  color: #fff;
+  padding: 10px 20px;
+  border-radius: 50px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+}
+
+.local-slideshow-adjust-btn:hover {
+  background: #0891b2;
+  transform: translateY(-2px);
+}
+
+/* Mobile slideshow adjustments */
+@media (max-width: 600px) {
+  .local-slideshow-close {
+    top: 10px;
+    right: 10px;
+    width: 40px;
+    height: 40px;
+  }
+
+  .local-slideshow-header {
+    padding: 0 20px;
+  }
+
+  .local-slideshow-nav {
+    width: 40px;
+    height: 40px;
+    font-size: 1.5rem;
+  }
+
+  .local-slideshow-prev {
+    left: 10px;
+  }
+
+  .local-slideshow-next {
+    right: 10px;
+  }
+
+  .local-slideshow-image {
+    max-width: 95vw;
+    max-height: 70vh;
   }
 }
