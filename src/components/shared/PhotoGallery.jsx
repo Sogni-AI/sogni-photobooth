@@ -1726,8 +1726,8 @@ const PhotoGallery = ({
           console.error('[Montage] Auto-stitch failed:', error);
           // Only show toast for final error (not individual retry errors)
           showToast({
-            title: 'Stitching Failed',
-            message: 'Failed to stitch videos. You can try using Remix to regenerate segments.',
+            title: 'oops! stitching didn\'t work 😅',
+            message: 'try using remix to regenerate segments and we\'ll try again!',
             type: 'error'
           });
           setIsGeneratingStitchedVideo(false);
@@ -2207,8 +2207,8 @@ const PhotoGallery = ({
             setCancelRateLimited(true);
             setCancelCooldownSeconds(result.cooldownRemaining || 20);
             showToast({
-              title: 'Please wait',
-              message: `You can cancel again in ${result.cooldownRemaining || 20} seconds`,
+              title: 'hold on a sec! ⏳',
+              message: `u can cancel again in ${result.cooldownRemaining || 20} seconds`,
               type: 'warning',
               timeout: 4000
             });
@@ -2241,7 +2241,7 @@ const PhotoGallery = ({
           : 'Generation cancelled';
 
         showToast({
-          title: 'Generation Cancelled',
+          title: 'all done! cancelled ✨',
           message: completedMsg,
           type: 'info',
           timeout: 3000
@@ -2260,8 +2260,8 @@ const PhotoGallery = ({
         }));
         
         showToast({
-          title: 'Generation Cancelled',
-          message: 'Generation stopped (server cancel may have failed)',
+          title: 'stopped! ✋',
+          message: 'generation stopped (server cancel might not have worked)',
           type: 'warning',
           timeout: 4000
         });
@@ -2309,15 +2309,15 @@ const PhotoGallery = ({
         
         if (result.cancelled > 0) {
           showToast({
-            title: 'Videos Cancelled',
-            message: `${result.cancelled} video${result.cancelled !== 1 ? 's' : ''} cancelled. You will be refunded for incomplete work.`,
+            title: 'videos cancelled! ✨',
+            message: `${result.cancelled} video${result.cancelled !== 1 ? 's' : ''} cancelled. we'll refund u for incomplete work!`,
             type: 'info',
             timeout: 4000
           });
         } else {
           showToast({
-            title: 'Videos Cancelled',
-            message: 'Video generation was cancelled.',
+            title: 'video cancelled! ✨',
+            message: 'video generation was cancelled',
             type: 'info',
             timeout: 3000
           });
@@ -2325,8 +2325,8 @@ const PhotoGallery = ({
       } catch (error) {
         console.error('[Cancel Videos] Error during bulk cancel:', error);
         showToast({
-          title: 'Cancellation Error',
-          message: 'There was an error cancelling the videos. Some may still complete.',
+          title: 'oops! cancel error 😅',
+          message: 'couldn\'t cancel the videos. some might still finish!',
           type: 'warning',
           timeout: 4000
         });
@@ -2767,8 +2767,8 @@ const PhotoGallery = ({
     const imageUrl = photo.enhancedImageUrl || photo.images?.[selectedSubIndex || 0] || photo.originalDataUrl;
     if (!imageUrl) {
       showToast({
-        title: 'Video Failed',
-        message: 'No image available for video generation.',
+        title: 'oops! no image 📸',
+        message: 'need an image to make a video!',
         type: 'error'
       });
       return;
@@ -2855,15 +2855,15 @@ const PhotoGallery = ({
         },
         onError: (error) => {
           showToast({
-            title: 'Video Failed',
-            message: error.message || 'Video generation failed. Please try again.',
+            title: 'video didn\'t work 😅',
+            message: error.message || 'video generation failed. wanna try again?',
             type: 'error'
           });
         },
         onCancel: () => {
           showToast({
-            title: 'Video Cancelled',
-            message: 'Video generation was cancelled.',
+            title: 'video cancelled ✨',
+            message: 'video generation was cancelled',
             type: 'info'
           });
         },
@@ -2940,15 +2940,15 @@ const PhotoGallery = ({
         },
         onError: (error) => {
           showToast({
-            title: 'Video Failed',
-            message: error.message || 'Video generation failed. Please try again.',
+            title: 'video didn\'t work 😅',
+            message: error.message || 'video generation failed. wanna try again?',
             type: 'error'
           });
         },
         onCancel: () => {
           showToast({
-            title: 'Video Cancelled',
-            message: 'Video generation was cancelled.',
+            title: 'video cancelled ✨',
+            message: 'video generation was cancelled',
             type: 'info'
           });
         },
@@ -3113,8 +3113,8 @@ const PhotoGallery = ({
     
     if (loadedPhotos.length === 0) {
       showToast({
-        title: '📸 Photos Needed',
-        message: 'Please generate some photos first. We\'ll automatically create your Bald for Base videos after!',
+        title: 'need some photos first! 📸',
+        message: 'generate some photos and we\'ll automatically create ur videos after!',
         type: 'info',
         timeout: 5000
       });
@@ -3149,8 +3149,8 @@ const PhotoGallery = ({
     const imageUrl = photo.enhancedImageUrl || photo.images?.[selectedSubIndex || 0] || photo.originalDataUrl;
     if (!imageUrl) {
       showToast({
-        title: 'Video Failed',
-        message: 'No image available for video generation.',
+        title: 'oops! no image 📸',
+        message: 'need an image to make a video!',
         type: 'error'
       });
       return;
@@ -3221,8 +3221,8 @@ const PhotoGallery = ({
         onError: (error) => {
           console.error('[VIDEO] Bald for Base video generation error:', error);
           showToast({
-            title: 'Video Generation Failed',
-            message: error.message || 'Failed to generate video. Please try again.',
+            title: 'couldn\'t generate video 😅',
+            message: error.message || 'failed to generate video. wanna try again?',
             type: 'error'
           });
         },
@@ -3271,8 +3271,8 @@ const PhotoGallery = ({
     const imageUrl = photo.enhancedImageUrl || photo.images?.[selectedSubIndex || 0] || photo.originalDataUrl;
     if (!imageUrl) {
       showToast({
-        title: 'Video Failed',
-        message: 'No image available for video generation.',
+        title: 'oops! no image 📸',
+        message: 'need an image to make a video!',
         type: 'error'
       });
       return;
@@ -3323,8 +3323,8 @@ const PhotoGallery = ({
         onError: (error) => {
           console.error('[VIDEO] Prompt video generation error:', error);
           showToast({
-            title: 'Video Generation Failed',
-            message: error.message || 'Failed to generate video. Please try again.',
+            title: 'couldn\'t generate video 😅',
+            message: error.message || 'failed to generate video. wanna try again?',
             type: 'error'
           });
         },
@@ -3419,8 +3419,8 @@ const PhotoGallery = ({
     if (loadedPhotos.length === 0) {
       // Show toast and navigate to intro/start menu
       showToast({
-        title: '📸 Photos Needed',
-        message: 'Please generate some photos first. We\'ll automatically create your Bald for Base videos after!',
+        title: 'need some photos first! 📸',
+        message: 'generate some photos and we\'ll automatically create ur videos after!',
         type: 'info',
         timeout: 5000
       });
@@ -3519,8 +3519,8 @@ const PhotoGallery = ({
             
             if (errorCount === loadedPhotos.length) {
               showToast({
-                title: 'Batch Failed',
-                message: 'All videos failed to generate. Please try again.',
+                title: 'batch didn\'t work 😅',
+                message: 'all videos failed to generate. wanna try again?',
                 type: 'error'
               });
             }
@@ -3558,8 +3558,8 @@ const PhotoGallery = ({
 
     if (loadedPhotos.length === 0) {
       showToast({
-        title: 'No Images',
-        message: 'No images available for video generation.',
+        title: 'oops! no images 📸',
+        message: 'need some images to make videos!',
         type: 'error'
       });
       return;
@@ -3649,8 +3649,8 @@ const PhotoGallery = ({
             
             if (errorCount === loadedPhotos.length) {
               showToast({
-                title: 'Batch Failed',
-                message: 'All videos failed to generate. Please try again.',
+                title: 'batch didn\'t work 😅',
+                message: 'all videos failed to generate. wanna try again?',
                 type: 'error'
               });
             }
@@ -3704,7 +3704,7 @@ const PhotoGallery = ({
         const arrayBuffer = await response.arrayBuffer();
         videoBuffer = new Uint8Array(arrayBuffer);
       } catch (err) {
-        showToast({ title: 'Video Failed', message: 'Failed to load source video.', type: 'error' });
+        showToast({ title: 'couldn\'t load video 📹', message: 'failed to load source video', type: 'error' });
         return;
       }
     }
@@ -3738,7 +3738,7 @@ const PhotoGallery = ({
           setPlayingGeneratedVideoIds(prev => new Set([...prev, photo.id]));
         },
         onError: (error) => {
-          showToast({ title: 'Video Failed', message: error.message || 'Video generation failed', type: 'error' });
+          showToast({ title: 'video didn\'t work 😅', message: error.message || 'video generation failed', type: 'error' });
         },
         onOutOfCredits: () => { if (onOutOfCredits) onOutOfCredits(); }
       });
@@ -3770,7 +3770,7 @@ const PhotoGallery = ({
         const arrayBuffer = await response.arrayBuffer();
         videoBuffer = new Uint8Array(arrayBuffer);
       } catch (err) {
-        showToast({ title: 'Video Failed', message: 'Failed to load source video.', type: 'error' });
+        showToast({ title: 'couldn\'t load video 📹', message: 'failed to load source video', type: 'error' });
         return;
       }
     }
@@ -3937,8 +3937,8 @@ const PhotoGallery = ({
                 
                 // Show retry toast only for montage segments
                 showToast({
-                  title: 'Retrying Segment',
-                  message: `Segment ${batchIndex + 1} failed, retrying automatically (${nextRetryCount + 1}/3)...`,
+                  title: 'retrying segment ♻️',
+                  message: `segment ${batchIndex + 1} didn't work, trying again (${nextRetryCount + 1}/3)...`,
                   type: 'warning',
                   timeout: 3000
                 });
@@ -3951,8 +3951,8 @@ const PhotoGallery = ({
                 
                 if (splitMode && retryCount >= 2) {
                   showToast({
-                    title: 'Segment Failed',
-                    message: `Segment ${batchIndex + 1} failed after 3 attempts. This may affect the full montage.`,
+                    title: 'segment didn\'t work 😅',
+                    message: `segment ${batchIndex + 1} failed after 3 tries. this might affect the full montage`,
                     type: 'error',
                     timeout: 5000
                   });
@@ -4004,7 +4004,7 @@ const PhotoGallery = ({
         const arrayBuffer = await response.arrayBuffer();
         videoBuffer = new Uint8Array(arrayBuffer);
       } catch (err) {
-        showToast({ title: 'Video Failed', message: 'Failed to load source video.', type: 'error' });
+        showToast({ title: 'couldn\'t load video 📹', message: 'failed to load source video', type: 'error' });
         return;
       }
     }
@@ -4039,7 +4039,7 @@ const PhotoGallery = ({
           setPlayingGeneratedVideoIds(prev => new Set([...prev, photo.id]));
         },
         onError: (error) => {
-          showToast({ title: 'Video Failed', message: error.message || 'Video generation failed', type: 'error' });
+          showToast({ title: 'video didn\'t work 😅', message: error.message || 'video generation failed', type: 'error' });
         },
         onOutOfCredits: () => { if (onOutOfCredits) onOutOfCredits(); }
       });
@@ -4071,7 +4071,7 @@ const PhotoGallery = ({
         const arrayBuffer = await response.arrayBuffer();
         videoBuffer = new Uint8Array(arrayBuffer);
       } catch (err) {
-        showToast({ title: 'Video Failed', message: 'Failed to load source video.', type: 'error' });
+        showToast({ title: 'couldn\'t load video 📹', message: 'failed to load source video', type: 'error' });
         return;
       }
     }
@@ -4239,8 +4239,8 @@ const PhotoGallery = ({
 
                 // Show retry toast only for montage segments
                 showToast({
-                  title: 'Retrying Segment',
-                  message: `Segment ${batchIndex + 1} failed, retrying automatically (${nextRetryCount + 1}/3)...`,
+                  title: 'retrying segment ♻️',
+                  message: `segment ${batchIndex + 1} didn't work, trying again (${nextRetryCount + 1}/3)...`,
                   type: 'warning',
                   timeout: 3000
                 });
@@ -4253,8 +4253,8 @@ const PhotoGallery = ({
 
                 if (splitMode && retryCount >= 2) {
                   showToast({
-                    title: 'Segment Failed',
-                    message: `Segment ${batchIndex + 1} failed after 3 attempts. This may affect the full montage.`,
+                    title: 'segment didn\'t work 😅',
+                    message: `segment ${batchIndex + 1} failed after 3 tries. this might affect the full montage`,
                     type: 'error',
                     timeout: 5000
                   });
@@ -4306,7 +4306,7 @@ const PhotoGallery = ({
         const arrayBuffer = await response.arrayBuffer();
         audioBuffer = new Uint8Array(arrayBuffer);
       } catch (err) {
-        showToast({ title: 'Video Failed', message: 'Failed to load audio file.', type: 'error' });
+        showToast({ title: 'couldn\'t load audio 🎵', message: 'failed to load audio file', type: 'error' });
         return;
       }
     }
@@ -4341,7 +4341,7 @@ const PhotoGallery = ({
           setPlayingGeneratedVideoIds(prev => new Set([...prev, photo.id]));
         },
         onError: (error) => {
-          showToast({ title: 'Video Failed', message: error.message || 'Video generation failed', type: 'error' });
+          showToast({ title: 'video didn\'t work 😅', message: error.message || 'video generation failed', type: 'error' });
         },
         onOutOfCredits: () => { if (onOutOfCredits) onOutOfCredits(); }
       });
@@ -4373,7 +4373,7 @@ const PhotoGallery = ({
         const arrayBuffer = await response.arrayBuffer();
         audioBuffer = new Uint8Array(arrayBuffer);
       } catch (err) {
-        showToast({ title: 'Video Failed', message: 'Failed to load audio file.', type: 'error' });
+        showToast({ title: 'couldn\'t load audio 🎵', message: 'failed to load audio file', type: 'error' });
         return;
       }
     }
@@ -4542,8 +4542,8 @@ const PhotoGallery = ({
 
                 // Show retry toast only for montage segments
                 showToast({
-                  title: 'Retrying Segment',
-                  message: `Segment ${batchIndex + 1} failed, retrying automatically (${nextRetryCount + 1}/3)...`,
+                  title: 'retrying segment ♻️',
+                  message: `segment ${batchIndex + 1} didn't work, trying again (${nextRetryCount + 1}/3)...`,
                   type: 'warning',
                   timeout: 3000
                 });
@@ -4556,8 +4556,8 @@ const PhotoGallery = ({
 
                 if (splitMode && retryCount >= 2) {
                   showToast({
-                    title: 'Segment Failed',
-                    message: `Segment ${batchIndex + 1} failed after 3 attempts. This may affect the full montage.`,
+                    title: 'segment didn\'t work 😅',
+                    message: `segment ${batchIndex + 1} failed after 3 tries. this might affect the full montage`,
                     type: 'error',
                     timeout: 5000
                   });
@@ -4586,8 +4586,8 @@ const PhotoGallery = ({
     const isAdvancedWorkflow = ['s2v', 'animate-move', 'animate-replace'].includes(workflowType);
     if (isAdvancedWorkflow && !regenerateParams) {
       showToast({
-        title: 'Cannot Regenerate',
-        message: 'Regeneration parameters not available. Please create a new video.',
+        title: 'can\'t regenerate 🤔',
+        message: 'regeneration info not available. try creating a new video?',
         type: 'warning',
         timeout: 4000
       });
@@ -4596,7 +4596,7 @@ const PhotoGallery = ({
 
     const imageUrl = photo.enhancedImageUrl || photo.images?.[0] || photo.originalDataUrl;
     if (!imageUrl) {
-      showToast({ title: 'Regenerate Failed', message: 'No image available.', type: 'error' });
+      showToast({ title: 'couldn\'t regenerate 😅', message: 'no image available', type: 'error' });
       return;
     }
 
@@ -4672,8 +4672,8 @@ const PhotoGallery = ({
           },
           onError: (error) => {
             showToast({
-              title: 'Regeneration Failed',
-              message: error.message || 'Video regeneration failed',
+              title: 'regeneration didn\'t work 😅',
+              message: error.message || 'video regeneration failed',
               type: 'error',
               timeout: 5000
             });
@@ -4709,8 +4709,8 @@ const PhotoGallery = ({
       } catch (error) {
         console.error('[Regenerate] Error:', error);
         showToast({
-          title: 'Regeneration Failed',
-          message: 'Failed to load reference media. Please try creating a new video.',
+          title: 'couldn\'t load media 😅',
+          message: 'failed to load reference media. try creating a new video?',
           type: 'error',
           timeout: 5000
         });
@@ -4718,7 +4718,7 @@ const PhotoGallery = ({
     };
     
     img.onerror = () => {
-      showToast({ title: 'Regenerate Failed', message: 'Failed to load image.', type: 'error' });
+      showToast({ title: 'couldn\'t regenerate 😅', message: 'failed to load image', type: 'error' });
     };
     
     img.src = imageUrl;
@@ -4739,8 +4739,8 @@ const PhotoGallery = ({
 
     if (loadedPhotos.length === 0) {
       showToast({
-        title: 'No Images',
-        message: 'No images available for video generation.',
+        title: 'oops! no images 📸',
+        message: 'need some images to make videos!',
         type: 'error'
       });
       return;
@@ -4821,8 +4821,8 @@ const PhotoGallery = ({
             if (successCount === loadedPhotos.length) {
               const videoMessage = getRandomVideoMessage();
               showToast({
-                title: videoMessage.title,
-                message: `All ${successCount} video${successCount > 1 ? 's' : ''} generated!`,
+                title: 'all done! 🎉',
+                message: `all ${successCount} video${successCount > 1 ? 's' : ''} generated!`,
                 type: 'success',
                 timeout: 5000
               });
@@ -4832,8 +4832,8 @@ const PhotoGallery = ({
             errorCount++;
             if (errorCount === loadedPhotos.length) {
               showToast({
-                title: 'Batch Video Failed',
-                message: 'All video generations failed. Please try again.',
+                title: 'batch didn\'t work 😅',
+                message: 'all video generations failed. wanna try again?',
                 type: 'error'
               });
             }
@@ -4879,8 +4879,8 @@ const PhotoGallery = ({
             if (successCount === loadedPhotos.length) {
               const videoMessage = getRandomVideoMessage();
               showToast({
-                title: videoMessage.title,
-                message: `All ${successCount} video${successCount > 1 ? 's' : ''} generated!`,
+                title: 'all done! 🎉',
+                message: `all ${successCount} video${successCount > 1 ? 's' : ''} generated!`,
                 type: 'success',
                 timeout: 5000
               });
@@ -4890,8 +4890,8 @@ const PhotoGallery = ({
             errorCount++;
             if (errorCount === loadedPhotos.length) {
               showToast({
-                title: 'Batch Video Failed',
-                message: 'All video generations failed. Please try again.',
+                title: 'batch didn\'t work 😅',
+                message: 'all video generations failed. wanna try again?',
                 type: 'error'
               });
             }
@@ -4935,8 +4935,8 @@ const PhotoGallery = ({
     } catch (error) {
       console.error('[Stitched Video] Failed to generate:', error);
       showToast({
-        title: 'Failed',
-        message: 'Failed to generate stitched video. Please try again.',
+        title: 'stitching didn\'t work 😅',
+        message: 'failed to generate stitched video. wanna try again?',
         type: 'error'
       });
       setIsGeneratingStitchedVideo(false);
@@ -4986,8 +4986,8 @@ const PhotoGallery = ({
 
     if (loadedPhotos.length === 0) {
       showToast({
-        title: 'No Images',
-        message: 'No images available for transition video generation.',
+        title: 'oops! no images 📸',
+        message: 'need some images for transition videos!',
         type: 'error'
       });
       return;
