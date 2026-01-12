@@ -104,7 +104,11 @@ const VideoReviewPopup = ({
   const [showCancelConfirmation, setShowCancelConfirmation] = useState(false);
   const [isMuted, setIsMuted] = useState(true); // Start muted for mobile autoplay
   const previewVideoRef = useRef(null);
-  
+
+  // Content orientation detection - portrait vs landscape
+  const [contentOrientation, setContentOrientation] = useState('landscape'); // 'portrait' | 'landscape'
+  const [isMobile, setIsMobile] = useState(false);
+
   // Cache last known ETAs to prevent flickering between ETA and "Starting..."
   const lastKnownETAsRef = useRef({});
 
@@ -118,6 +122,52 @@ const VideoReviewPopup = ({
     }
   }, [visible]);
 
+  // Detect mobile viewport
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 640);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Detect content orientation from first available thumbnail or video
+  useEffect(() => {
+    if (!visible || !items?.length) return;
+
+    const detectOrientation = async () => {
+      // Find first item with thumbnail or video URL
+      const firstItem = items.find(item => item.thumbnail || item.url);
+      if (!firstItem) return;
+
+      const src = firstItem.thumbnail || firstItem.url;
+      if (!src) return;
+
+      // If it's a video URL, create a video element to get dimensions
+      if (firstItem.url && !firstItem.thumbnail) {
+        const video = document.createElement('video');
+        video.muted = true;
+        video.preload = 'metadata';
+        video.onloadedmetadata = () => {
+          const isPortrait = video.videoHeight > video.videoWidth;
+          setContentOrientation(isPortrait ? 'portrait' : 'landscape');
+        };
+        video.src = src;
+      } else {
+        // It's an image thumbnail
+        const img = new Image();
+        img.onload = () => {
+          const isPortrait = img.naturalHeight > img.naturalWidth;
+          setContentOrientation(isPortrait ? 'portrait' : 'landscape');
+        };
+        img.src = src;
+      }
+    };
+
+    detectOrientation();
+  }, [visible, items]);
+
   // Reset selection when popup opens
   useEffect(() => {
     if (visible) {
@@ -125,6 +175,7 @@ const VideoReviewPopup = ({
       setIsPlaying(false);
       setShowCancelConfirmation(false);
       setIsMuted(true); // Reset to muted when opening
+      setContentOrientation('landscape'); // Reset orientation detection
     }
   }, [visible]);
 
@@ -697,22 +748,28 @@ const VideoReviewPopup = ({
               </div>
             </div>
           ) : (
-            /* Grid Mode */
+            /* Grid Mode - Adaptive layout based on content orientation */
             <div style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-              gap: '16px'
+              // Portrait: fewer columns with taller cards, Landscape: more columns with shorter cards
+              gridTemplateColumns: contentOrientation === 'portrait'
+                ? (isMobile ? '1fr' : 'repeat(auto-fill, minmax(320px, 1fr))')
+                : 'repeat(auto-fill, minmax(200px, 1fr))',
+              gap: contentOrientation === 'portrait' ? '20px' : '16px'
             }}>
               {items?.map((item, index) => {
                 const isInProgress = item.status === 'regenerating' || item.status === 'generating';
                 const isThisRegenerating = item.status === 'regenerating' && regeneratingIndex === index;
-                
+
+                // Portrait cards use horizontal layout (thumbnail beside info)
+                const isPortraitLayout = contentOrientation === 'portrait';
+
                 return (
                   <div
                     key={item.photoId || index}
                     onClick={() => handleItemClick(index)}
                     style={{
-                      backgroundColor: isInProgress 
+                      backgroundColor: isInProgress
                         ? 'rgba(255, 237, 78, 0.2)'
                         : item.status === 'ready'
                         ? '#f0fdf4'
@@ -730,13 +787,16 @@ const VideoReviewPopup = ({
                       transition: 'all 0.25s cubic-bezier(0.68, -0.55, 0.265, 1.55)',
                       opacity: isInProgress ? 0.9 : 1,
                       display: 'flex',
-                      flexDirection: 'column',
-                      boxShadow: isInProgress 
+                      // Portrait: horizontal layout, Landscape: vertical layout
+                      flexDirection: isPortraitLayout ? 'row' : 'column',
+                      boxShadow: isInProgress
                         ? '0 0 0 rgba(0,0,0,0)'
                         : item.status === 'ready'
                         ? '4px 4px 0 #1a1a1a'
                         : '3px 3px 0 rgba(26, 26, 26, 0.2)',
-                      overflow: 'hidden'
+                      overflow: 'hidden',
+                      // Portrait cards need minimum height for the side-by-side layout
+                      ...(isPortraitLayout ? { minHeight: '180px' } : {})
                     }}
                     onMouseOver={(e) => {
                       if (!isInProgress) {
@@ -749,27 +809,29 @@ const VideoReviewPopup = ({
                       if (!isInProgress) {
                         e.currentTarget.style.borderColor = item.status === 'failed' ? '#ff3366' : item.status === 'ready' ? '#22c55e' : 'rgba(26, 26, 26, 0.15)';
                         e.currentTarget.style.transform = 'translate(0, 0)';
-                        e.currentTarget.style.boxShadow = item.status === 'ready' 
+                        e.currentTarget.style.boxShadow = item.status === 'ready'
                           ? '4px 4px 0 #1a1a1a'
                           : '3px 3px 0 rgba(26, 26, 26, 0.2)';
                       }
                     }}
                   >
-                    {/* Ready checkmark badge */}
+                    {/* Ready checkmark badge - Position adapts to layout */}
                     {item.status === 'ready' && (
                       <div style={{
                         position: 'absolute',
                         top: '10px',
-                        right: '10px',
+                        // Portrait: position on thumbnail area, Landscape: top right of card
+                        right: isPortraitLayout ? 'auto' : '10px',
+                        left: isPortraitLayout ? '10px' : 'auto',
                         background: '#22c55e',
                         border: '2px solid #1a1a1a',
                         borderRadius: '50%',
-                        width: '36px',
-                        height: '36px',
+                        width: isPortraitLayout ? '28px' : '36px',
+                        height: isPortraitLayout ? '28px' : '36px',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        fontSize: '18px',
+                        fontSize: isPortraitLayout ? '14px' : '18px',
                         zIndex: 2,
                         boxShadow: '2px 2px 0 #1a1a1a',
                         animation: 'videoReviewPop 0.3s ease-out',
@@ -779,21 +841,22 @@ const VideoReviewPopup = ({
                         ✓
                       </div>
                     )}
-                    {/* Failed X badge */}
+                    {/* Failed X badge - Position adapts to layout */}
                     {item.status === 'failed' && (
                       <div style={{
                         position: 'absolute',
                         top: '10px',
-                        right: '10px',
+                        right: isPortraitLayout ? 'auto' : '10px',
+                        left: isPortraitLayout ? '10px' : 'auto',
                         background: '#ff3366',
                         border: '2px solid #1a1a1a',
                         borderRadius: '50%',
-                        width: '36px',
-                        height: '36px',
+                        width: isPortraitLayout ? '28px' : '36px',
+                        height: isPortraitLayout ? '28px' : '36px',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        fontSize: '18px',
+                        fontSize: isPortraitLayout ? '14px' : '18px',
                         zIndex: 2,
                         boxShadow: '2px 2px 0 #1a1a1a',
                         animation: 'videoReviewPop 0.3s ease-out',
@@ -809,17 +872,18 @@ const VideoReviewPopup = ({
                         onClick={(e) => handleCancelItemClick(index, e)}
                         style={{
                           position: 'absolute',
-                          top: '10px',
+                          top: isPortraitLayout ? 'auto' : '10px',
+                          bottom: isPortraitLayout ? '10px' : 'auto',
                           left: '10px',
                           background: '#ff3366',
                           border: '2px solid #1a1a1a',
                           borderRadius: '50%',
-                          width: '32px',
-                          height: '32px',
+                          width: isPortraitLayout ? '28px' : '32px',
+                          height: isPortraitLayout ? '28px' : '32px',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          fontSize: '14px',
+                          fontSize: isPortraitLayout ? '12px' : '14px',
                           zIndex: 3,
                           boxShadow: '2px 2px 0 #1a1a1a',
                           color: '#fff',
@@ -840,14 +904,25 @@ const VideoReviewPopup = ({
                         ✕
                       </button>
                     )}
-                    {/* Video Thumbnail */}
+                    {/* Video Thumbnail - Adaptive sizing for portrait/landscape */}
                     <div style={{
-                      minHeight: '120px',
+                      // Portrait: fixed width with full height, Landscape: full width with fixed height
+                      ...(isPortraitLayout ? {
+                        width: '140px',
+                        minWidth: '140px',
+                        height: '100%',
+                        minHeight: '180px'
+                      } : {
+                        minHeight: '120px',
+                        width: '100%'
+                      }),
                       backgroundColor: '#000',
                       position: 'relative',
-                      borderTopLeftRadius: '10px',
-                      borderTopRightRadius: '10px',
-                      overflow: 'hidden'
+                      borderTopLeftRadius: isPortraitLayout ? '21px' : '21px',
+                      borderTopRightRadius: isPortraitLayout ? '0' : '21px',
+                      borderBottomLeftRadius: isPortraitLayout ? '21px' : '0',
+                      overflow: 'hidden',
+                      flexShrink: 0
                     }}>
                       {isInProgress ? (
                         <div style={{
@@ -912,7 +987,7 @@ const VideoReviewPopup = ({
                             </>
                           ) : item.thumbnail ? (
                             /* Single thumbnail - show it without dimming */
-                            <img 
+                            <img
                               src={item.thumbnail}
                               alt="Source"
                               style={{
@@ -920,7 +995,8 @@ const VideoReviewPopup = ({
                                 inset: 0,
                                 width: '100%',
                                 height: '100%',
-                                objectFit: 'contain'
+                                objectFit: isPortraitLayout ? 'cover' : 'contain',
+                                objectPosition: isPortraitLayout ? 'top center' : 'center'
                               }}
                             />
                           ) : (
@@ -995,7 +1071,15 @@ const VideoReviewPopup = ({
                       ) : item.url ? (
                         <video
                           src={item.url}
-                          style={{ width: '100%', height: 'auto', display: 'block', objectFit: 'contain' }}
+                          style={{
+                            // Portrait: fill the container, Landscape: auto height
+                            width: '100%',
+                            height: isPortraitLayout ? '100%' : 'auto',
+                            display: 'block',
+                            objectFit: isPortraitLayout ? 'cover' : 'contain',
+                            // For portrait, position at top to show face/subject
+                            objectPosition: isPortraitLayout ? 'top center' : 'center'
+                          }}
                           loop
                           muted
                           playsInline
@@ -1009,14 +1093,15 @@ const VideoReviewPopup = ({
                           alt=""
                           style={{
                             width: '100%',
-                            height: 'auto',
+                            height: isPortraitLayout ? '100%' : 'auto',
                             display: 'block',
-                            objectFit: 'contain'
+                            objectFit: isPortraitLayout ? 'cover' : 'contain',
+                            objectPosition: isPortraitLayout ? 'top center' : 'center'
                           }}
                         />
                       ) : null}
                       
-                      {/* Play icon overlay */}
+                      {/* Play icon overlay - Smaller for portrait cards */}
                       {!isInProgress && item.url && (
                         <div style={{
                           position: 'absolute',
@@ -1031,27 +1116,35 @@ const VideoReviewPopup = ({
                         }}
                         className="video-play-overlay"
                         >
-                          <span style={{ fontSize: '32px' }}>▶️</span>
+                          <span style={{ fontSize: isPortraitLayout ? '24px' : '32px' }}>▶️</span>
                         </div>
                       )}
                     </div>
 
-                    {/* Info Bar */}
+                    {/* Info Bar - Adaptive layout for portrait/landscape */}
                     <div style={{
-                      padding: '10px 12px',
+                      padding: isPortraitLayout ? '14px 16px' : '10px 12px',
                       display: 'flex',
                       flexDirection: 'column',
-                      gap: '6px'
+                      gap: isPortraitLayout ? '8px' : '6px',
+                      // Portrait: take remaining space beside thumbnail
+                      ...(isPortraitLayout ? {
+                        flex: 1,
+                        justifyContent: 'center',
+                        minWidth: 0
+                      } : {})
                     }}>
-                      {/* Title row */}
+                      {/* Title row - Adaptive for portrait/landscape */}
                       <div style={{
                         display: 'flex',
                         justifyContent: 'space-between',
-                        alignItems: 'center'
+                        alignItems: isPortraitLayout ? 'flex-start' : 'center',
+                        flexDirection: isPortraitLayout ? 'column' : 'row',
+                        gap: isPortraitLayout ? '10px' : '0'
                       }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          {/* Source thumbnail (small) */}
-                          {item.thumbnail && !item.startThumbnail && (
+                          {/* Source thumbnail (small) - Hide in portrait as we already have large thumbnail */}
+                          {!isPortraitLayout && item.thumbnail && !item.startThumbnail && (
                             <img
                               src={item.thumbnail}
                               alt=""
@@ -1065,15 +1158,16 @@ const VideoReviewPopup = ({
                           )}
                           <div>
                             <div style={{
-                              fontSize: '0.8rem',
+                              fontSize: isPortraitLayout ? '1rem' : '0.8rem',
                               fontWeight: '700',
-                              color: '#1a1a1a'
+                              color: '#1a1a1a',
+                              fontFamily: isPortraitLayout ? '"Permanent Marker", cursive' : 'inherit'
                             }}>
                               {config.itemLabel} {index + 1}
                             </div>
                             {config.showFromTo && item.fromIndex !== undefined && (
                               <div style={{
-                                fontSize: '0.7rem',
+                                fontSize: isPortraitLayout ? '0.8rem' : '0.7rem',
                                 color: '#666',
                                 fontWeight: '600'
                               }}>
@@ -1664,7 +1758,14 @@ const VideoReviewPopup = ({
         /* Mobile responsive adjustments */
         @media (max-width: 640px) {
           .video-review-popup {
-            padding: 16px !important;
+            padding: 12px !important;
+          }
+        }
+
+        /* Portrait layout mobile optimizations */
+        @media (max-width: 480px) {
+          .video-review-popup {
+            padding: 8px !important;
           }
         }
       `}</style>
