@@ -54,18 +54,6 @@ const SAMPLE_MOTION_VIDEOS = [
     url: 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/video-samples/spongebob-dance.mp4'
   },
   {
-    id: 'dance-barbies',
-    title: '💃 Barbies',
-    description: '',
-    url: 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/video-samples/barbies-dance.mp4'
-  },
-  {
-    id: 'dance-sailor-moon',
-    title: '💃 Sailor moon',
-    description: '',
-    url: 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/video-samples/sailor-moon.mp4'
-  },
-  {
     id: 'dance-keep-it-gangsta',
     title: '🕺 Keep it gangsta',
     description: '',

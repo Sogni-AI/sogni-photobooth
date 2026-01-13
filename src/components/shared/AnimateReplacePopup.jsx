@@ -30,18 +30,6 @@ const SAMPLE_REPLACEMENT_VIDEOS = [
     url: 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/video-samples/techno-viking.mp4'
   },
   {
-    id: 'dance-dance-dance',
-    title: '🕺 Dance Dance Dance',
-    description: '',
-    url: 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/video-samples/viral-dance.mp4'
-  },
-  {
-    id: 'dance-chanel',
-    title: '💃 Chanel',
-    description: '',
-    url: 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/video-samples/chanel.mp4'
-  },
-  {
     id: 'dance-leave-the-party',
     title: 'Leave the party',
     description: '',
@@ -54,29 +42,11 @@ const SAMPLE_REPLACEMENT_VIDEOS = [
     url: 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/video-samples/spongebob-dance.mp4'
   },
   {
-    id: 'dance-barbies',
-    title: '💃 Barbies',
-    description: '',
-    url: 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/video-samples/barbies-dance.mp4'
-  },
-  {
-    id: 'dance-sailor-moon',
-    title: '💃 Sailor moon',
-    description: '',
-    url: 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/video-samples/sailor-moon.mp4'
-  },
-  {
     id: 'dance-keep-it-gangsta',
     title: '🕺 Keep it gangsta',
     description: '',
     url: 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/video-samples/dance-keep-it-gangsta.mp4'
   },
-  {
-    id: 'dance-big-guy',
-    title: '💃 Big guy',
-    description: '',
-    url: 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/video-samples/big-guy-dance.mp4'
-  }
 ];
 
 const BASE_MAX_DURATION = 20; // Max 20 seconds per image
