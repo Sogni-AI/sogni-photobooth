@@ -7295,6 +7295,8 @@ const PhotoGallery = ({
 
     console.log(`[Segment Review] Changing segment ${segmentIndex + 1} to version ${newVersionIndex + 1} of ${history.length}`);
 
+    const selectedUrl = history[newVersionIndex];
+
     // Update the selected version
     setSelectedSegmentVersions(prev => {
       const updated = new Map(prev);
@@ -7308,12 +7310,22 @@ const PhotoGallery = ({
       if (updated[segmentIndex]) {
         updated[segmentIndex] = {
           ...updated[segmentIndex],
-          url: history[newVersionIndex]
+          url: selectedUrl
         };
       }
       return updated;
     });
-  }, [segmentVersionHistories]);
+
+    // IMPORTANT: Also update the photo's videoUrl so the selected version persists in the Photo Gallery grid
+    const segment = pendingSegments[segmentIndex];
+    if (segment?.photoId) {
+      setPhotos(prev => prev.map(photo => 
+        photo.id === segment.photoId
+          ? { ...photo, videoUrl: selectedUrl }
+          : photo
+      ));
+    }
+  }, [segmentVersionHistories, pendingSegments, setPhotos]);
 
   // Watch for segment regeneration completion (success, failure, or timeout) AND track progress
   // Now supports multiple simultaneous regenerating segments
