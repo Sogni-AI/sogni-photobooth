@@ -957,6 +957,10 @@ const PhotoGallery = ({
   const [segmentRegenerationProgresses, setSegmentRegenerationProgresses] = useState(new Map());
   // Track the previous video URL when starting regeneration (to detect actual completion vs stale state)
   const segmentPreviousVideoUrlsRef = useRef(new Map());
+  // Version history tracking: Map of segmentIndex -> array of successful video URLs (for back/forward navigation)
+  const [segmentVersionHistories, setSegmentVersionHistories] = useState(new Map()); // Map<segmentIndex, string[]>
+  // Track which version is currently selected for each segment (for stitching and display)
+  const [selectedSegmentVersions, setSelectedSegmentVersions] = useState(new Map()); // Map<segmentIndex, versionIndex>
   // Per-segment progress tracking arrays (mirrors infiniteLoopProgress structure)
   const [segmentProgress, setSegmentProgress] = useState(null); // { itemETAs, itemProgress, itemWorkers, itemStatuses, itemElapsed }
   // Track active montage batch for completion detection
@@ -3805,12 +3809,14 @@ const PhotoGallery = ({
       montageStitchCompletedRef.current = false; // Reset for new batch
       montageAutoStitchInProgressRef.current = false; // Reset auto-stitch flag
       
-      // Clear any previous segment review data
+      // Clear any previous segment review data and version history
       setPendingSegments([]);
       setSegmentReviewData(null);
+      setSegmentVersionHistories(new Map()); // Clear version histories for new workflow
+      setSelectedSegmentVersions(new Map()); // Clear selected versions for new workflow
       setShowStitchedVideoOverlay(false);
       setShowSegmentReview(false);
-      
+
       // Initialize segment review with generating status immediately (like Infinite Loop)
       const initialSegments = photoIds.map((photoId, index) => {
         const photo = loadedPhotos.find(p => p.id === photoId);
@@ -3910,7 +3916,7 @@ const PhotoGallery = ({
               // Clear retry count on success
               videoRetryAttempts.current.delete(photo.id);
               playSonicLogo(settings.soundEnabled);
-              
+
               // Update pendingSegments to mark this segment as ready
               if (splitMode) {
                 setPendingSegments(prev => {
@@ -3918,11 +3924,26 @@ const PhotoGallery = ({
                   const segmentIndex = updated.findIndex(s => s.photoId === photo.id);
                   if (segmentIndex !== -1) {
                     updated[segmentIndex] = { ...updated[segmentIndex], url: videoUrl, status: 'ready' };
+                    // Initialize version history for this segment (first successful generation)
+                    setSegmentVersionHistories(prevHistories => {
+                      const newHistories = new Map(prevHistories);
+                      const history = newHistories.get(segmentIndex) || [];
+                      if (!history.includes(videoUrl)) {
+                        newHistories.set(segmentIndex, [...history, videoUrl]);
+                      }
+                      return newHistories;
+                    });
+                    setSelectedSegmentVersions(prevVersions => {
+                      const newVersions = new Map(prevVersions);
+                      const history = segmentVersionHistories.get(segmentIndex) || [];
+                      newVersions.set(segmentIndex, history.length); // Latest version
+                      return newVersions;
+                    });
                   }
                   return updated;
                 });
               }
-              
+
               // Don't auto-play videos during segment review mode
               if (!splitMode) {
                 setPlayingGeneratedVideoIds(prev => new Set([...prev, photo.id]));
@@ -3930,7 +3951,7 @@ const PhotoGallery = ({
             },
             onError: (error) => {
               console.error('[BATCH ANIMATE MOVE] Error:', error);
-              
+
               // Update pendingSegments to mark this segment as failed (after retries exhausted)
               if (splitMode && retryCount >= 2) {
                 setPendingSegments(prev => {
@@ -4106,12 +4127,14 @@ const PhotoGallery = ({
       montageStitchCompletedRef.current = false; // Reset for new batch
       montageAutoStitchInProgressRef.current = false; // Reset auto-stitch flag
       
-      // Clear any previous segment review data
+      // Clear any previous segment review data and version history
       setPendingSegments([]);
       setSegmentReviewData(null);
+      setSegmentVersionHistories(new Map()); // Clear version histories for new workflow
+      setSelectedSegmentVersions(new Map()); // Clear selected versions for new workflow
       setShowStitchedVideoOverlay(false);
       setShowSegmentReview(false);
-      
+
       // Initialize segment review with generating status immediately (like Infinite Loop)
       const initialSegments = photoIds.map((photoId, index) => {
         const photo = loadedPhotos.find(p => p.id === photoId);
@@ -4212,7 +4235,7 @@ const PhotoGallery = ({
               // Clear retry count on success
               videoRetryAttempts.current.delete(photo.id);
               playSonicLogo(settings.soundEnabled);
-              
+
               // Update pendingSegments to mark this segment as ready
               if (splitMode) {
                 setPendingSegments(prev => {
@@ -4220,11 +4243,26 @@ const PhotoGallery = ({
                   const segmentIndex = updated.findIndex(s => s.photoId === photo.id);
                   if (segmentIndex !== -1) {
                     updated[segmentIndex] = { ...updated[segmentIndex], url: videoUrl, status: 'ready' };
+                    // Initialize version history for this segment (first successful generation)
+                    setSegmentVersionHistories(prevHistories => {
+                      const newHistories = new Map(prevHistories);
+                      const history = newHistories.get(segmentIndex) || [];
+                      if (!history.includes(videoUrl)) {
+                        newHistories.set(segmentIndex, [...history, videoUrl]);
+                      }
+                      return newHistories;
+                    });
+                    setSelectedSegmentVersions(prevVersions => {
+                      const newVersions = new Map(prevVersions);
+                      const history = segmentVersionHistories.get(segmentIndex) || [];
+                      newVersions.set(segmentIndex, history.length); // Latest version
+                      return newVersions;
+                    });
                   }
                   return updated;
                 });
               }
-              
+
               // Don't auto-play videos during segment review mode
               if (!splitMode) {
                 setPlayingGeneratedVideoIds(prev => new Set([...prev, photo.id]));
@@ -4408,12 +4446,14 @@ const PhotoGallery = ({
       montageStitchCompletedRef.current = false; // Reset for new batch
       montageAutoStitchInProgressRef.current = false; // Reset auto-stitch flag
       
-      // Clear any previous segment review data
+      // Clear any previous segment review data and version history
       setPendingSegments([]);
       setSegmentReviewData(null);
+      setSegmentVersionHistories(new Map()); // Clear version histories for new workflow
+      setSelectedSegmentVersions(new Map()); // Clear selected versions for new workflow
       setShowStitchedVideoOverlay(false);
       setShowSegmentReview(false);
-      
+
       // Initialize segment review with generating status immediately (like Infinite Loop)
       const initialSegments = photoIds.map((photoId, index) => {
         const photo = loadedPhotos.find(p => p.id === photoId);
@@ -4514,7 +4554,7 @@ const PhotoGallery = ({
               // Clear retry count on success
               videoRetryAttempts.current.delete(photo.id);
               playSonicLogo(settings.soundEnabled);
-              
+
               // Update pendingSegments to mark this segment as ready
               if (splitMode) {
                 setPendingSegments(prev => {
@@ -4522,11 +4562,26 @@ const PhotoGallery = ({
                   const segmentIndex = updated.findIndex(s => s.photoId === photo.id);
                   if (segmentIndex !== -1) {
                     updated[segmentIndex] = { ...updated[segmentIndex], url: videoUrl, status: 'ready' };
+                    // Initialize version history for this segment (first successful generation)
+                    setSegmentVersionHistories(prevHistories => {
+                      const newHistories = new Map(prevHistories);
+                      const history = newHistories.get(segmentIndex) || [];
+                      if (!history.includes(videoUrl)) {
+                        newHistories.set(segmentIndex, [...history, videoUrl]);
+                      }
+                      return newHistories;
+                    });
+                    setSelectedSegmentVersions(prevVersions => {
+                      const newVersions = new Map(prevVersions);
+                      const history = segmentVersionHistories.get(segmentIndex) || [];
+                      newVersions.set(segmentIndex, history.length); // Latest version
+                      return newVersions;
+                    });
                   }
                   return updated;
                 });
               }
-              
+
               // Don't auto-play videos during segment review mode
               if (!splitMode) {
                 setPlayingGeneratedVideoIds(prev => new Set([...prev, photo.id]));
@@ -5026,13 +5081,15 @@ const PhotoGallery = ({
     // CRITICAL: Reset ALL montage/segment state to prevent stale data from previous batches
     montageStitchCompletedRef.current = false;
     montageAutoStitchInProgressRef.current = false;
-    
-    // Clear any previous segment review data
+
+    // Clear any previous segment review data and version history
     setPendingSegments([]);
     setSegmentReviewData(null);
+    setSegmentVersionHistories(new Map()); // Clear version histories for new workflow
+    setSelectedSegmentVersions(new Map()); // Clear selected versions for new workflow
     setShowStitchedVideoOverlay(false);
     setShowSegmentReview(false);
-    
+
     // Initialize segment review with generating status immediately (like Infinite Loop)
     const initialSegments = photoIds.map((photoId, index) => {
       const photo = loadedPhotos.find(p => p.id === photoId);
@@ -5340,29 +5397,44 @@ const PhotoGallery = ({
           onComplete: (videoUrl) => {
             successCount++;
             console.log(`[Transition]${retryLabel} Video ${i + 1} completed successfully`);
-            
+
             // Play sonic logo and auto-play this video immediately as it completes
             playSonicLogo(settings.soundEnabled);
-            
+
             // Update pendingSegments to mark this segment as ready
             setPendingSegments(prev => {
               const updated = [...prev];
               const segmentIndex = updated.findIndex(s => s.photoId === photo.id);
               if (segmentIndex !== -1) {
                 updated[segmentIndex] = { ...updated[segmentIndex], url: videoUrl, status: 'ready' };
+                // Initialize version history for this segment (first successful generation)
+                setSegmentVersionHistories(prevHistories => {
+                  const newHistories = new Map(prevHistories);
+                  const history = newHistories.get(segmentIndex) || [];
+                  if (!history.includes(videoUrl)) {
+                    newHistories.set(segmentIndex, [...history, videoUrl]);
+                  }
+                  return newHistories;
+                });
+                setSelectedSegmentVersions(prevVersions => {
+                  const newVersions = new Map(prevVersions);
+                  const history = segmentVersionHistories.get(segmentIndex) || [];
+                  newVersions.set(segmentIndex, history.length); // Latest version
+                  return newVersions;
+                });
               }
               return updated;
             });
-            
+
             // Set this polaroid to play its own video
             setCurrentVideoIndexByPhoto(prev => ({
               ...prev,
               [photo.id]: i
             }));
-            
+
             // Don't auto-play videos on polaroids during segment review mode
             // (they can preview in the segment review popup)
-            
+
             checkCompletion();
           },
           onError: async (error) => {
@@ -7213,6 +7285,36 @@ const PhotoGallery = ({
     setStitchedVideoReturnToSegmentReview(true); // Mark that we should return to segment review on close
   }, [pendingSegments]);
 
+  // Handle version change for a segment (user navigating between successful generations)
+  const handleSegmentVersionChange = useCallback((segmentIndex, newVersionIndex) => {
+    const history = segmentVersionHistories.get(segmentIndex) || [];
+    if (newVersionIndex < 0 || newVersionIndex >= history.length) {
+      console.error('[Segment Review] Invalid version index:', newVersionIndex, 'for segment', segmentIndex);
+      return;
+    }
+
+    console.log(`[Segment Review] Changing segment ${segmentIndex + 1} to version ${newVersionIndex + 1} of ${history.length}`);
+
+    // Update the selected version
+    setSelectedSegmentVersions(prev => {
+      const updated = new Map(prev);
+      updated.set(segmentIndex, newVersionIndex);
+      return updated;
+    });
+
+    // Update the segment URL to show the selected version
+    setPendingSegments(prev => {
+      const updated = [...prev];
+      if (updated[segmentIndex]) {
+        updated[segmentIndex] = {
+          ...updated[segmentIndex],
+          url: history[newVersionIndex]
+        };
+      }
+      return updated;
+    });
+  }, [segmentVersionHistories]);
+
   // Watch for segment regeneration completion (success, failure, or timeout) AND track progress
   // Now supports multiple simultaneous regenerating segments
   useEffect(() => {
@@ -7245,6 +7347,26 @@ const PhotoGallery = ({
       if (hasNewUrl && !photo.generatingVideo && segment.status === 'regenerating') {
         console.log(`[Segment Review] Segment ${segmentIndex + 1} regeneration complete`);
 
+        // Add the new successful URL to version history
+        setSegmentVersionHistories(prev => {
+          const updated = new Map(prev);
+          const history = updated.get(segmentIndex) || [];
+          // Only add if not already in history (avoid duplicates)
+          if (!history.includes(photo.videoUrl)) {
+            updated.set(segmentIndex, [...history, photo.videoUrl]);
+          }
+          return updated;
+        });
+
+        // Update selected version to the new one (latest)
+        setSelectedSegmentVersions(prev => {
+          const updated = new Map(prev);
+          const history = segmentVersionHistories.get(segmentIndex) || [];
+          // New version will be at index = current history length (since we're adding it)
+          updated.set(segmentIndex, history.length);
+          return updated;
+        });
+
         // Update segment with new URL
         setPendingSegments(prev => {
           const updated = [...prev];
@@ -7272,13 +7394,21 @@ const PhotoGallery = ({
       else if (!photo.generatingVideo && (photo.videoError || photo.timedOut)) {
         console.log(`[Segment Review] Segment ${segmentIndex + 1} regeneration failed:`, photo.videoError || 'Timeout');
 
-        // Update segment status to failed
+        // DON'T add failed URL to version history - keep previous successful version
+        // Get the previously selected version's URL to fall back to
+        const history = segmentVersionHistories.get(segmentIndex) || [];
+        const selectedVersionIdx = selectedSegmentVersions.get(segmentIndex) ?? (history.length - 1);
+        const fallbackUrl = history[selectedVersionIdx] || previousVideoUrl;
+
+        // Update segment status to failed but KEEP the previous successful URL for display
         setPendingSegments(prev => {
           const updated = [...prev];
           updated[segmentIndex] = {
             ...updated[segmentIndex],
             status: 'failed',
-            error: photo.videoError || 'Generation timed out'
+            error: photo.videoError || 'Generation timed out',
+            // Keep the fallback URL so user can still see/use previous version
+            url: fallbackUrl || updated[segmentIndex].url
           };
           return updated;
         });
@@ -7362,11 +7492,29 @@ const PhotoGallery = ({
     });
 
     try {
-      // Build the video sequence in order, filtering out failed segments
+      // Build the video sequence in order, using the selected version URL for each segment
+      // Filter out segments that don't have a valid URL (failed without any successful versions)
       const videosToStitch = pendingSegments
-        .filter(segment => segment.status === 'ready' && segment.url)
-        .map((segment, index) => ({
-          url: segment.url,
+        .map((segment, segmentIndex) => {
+          // Get the selected version's URL from history, or fall back to segment.url
+          const history = segmentVersionHistories.get(segmentIndex) || [];
+          const selectedVersionIdx = selectedSegmentVersions.get(segmentIndex) ?? (history.length - 1);
+          const selectedUrl = history[selectedVersionIdx] || segment.url;
+
+          // A segment is usable if it has a successful version URL (even if current status is 'failed')
+          // This allows using previous successful versions when the latest generation failed
+          const hasUsableUrl = selectedUrl && selectedUrl.length > 0;
+
+          return {
+            url: selectedUrl,
+            segmentIndex,
+            status: segment.status,
+            hasUsableUrl
+          };
+        })
+        .filter(item => item.hasUsableUrl)
+        .map((item, index) => ({
+          url: item.url,
           filename: `segment-${index + 1}.mp4`
         }));
 
@@ -7635,11 +7783,13 @@ const PhotoGallery = ({
           // Cancel all active video projects
           await cancelAllActiveVideoProjects(setPhotos);
 
-          // Close popup and clear state
+          // Close popup and clear state (including version history)
           setShowSegmentReview(false);
           setSegmentProgress(null);
           setPendingSegments([]);
           setSegmentReviewData(null);
+          setSegmentVersionHistories(new Map()); // Clear version histories
+          setSelectedSegmentVersions(new Map()); // Clear selected versions
           setActiveMontagePhotoIds(null);
           setActiveMontageWorkflowType(null);
           montageCompletedRef.current.clear();
@@ -16200,6 +16350,9 @@ const PhotoGallery = ({
         itemWorkers={segmentProgress?.itemWorkers || []}
         itemStatuses={segmentProgress?.itemStatuses || []}
         itemElapsed={segmentProgress?.itemElapsed || []}
+        itemVersionHistories={segmentVersionHistories}
+        selectedVersions={selectedSegmentVersions}
+        onVersionChange={handleSegmentVersionChange}
       />
 
       {/* Transition Prompt Editor Popup - Edit transition prompt before generating */}

@@ -127,7 +127,11 @@ const VideoReviewPopup = ({
   itemProgress = [],
   itemWorkers = [],
   itemStatuses = [],
-  itemElapsed = []
+  itemElapsed = [],
+  // Version navigation props (for cycling through successful generations)
+  itemVersionHistories = null, // Map<segmentIndex, string[]> - array of successful video URLs per segment
+  selectedVersions = null, // Map<segmentIndex, number> - currently selected version index per segment
+  onVersionChange = null // (segmentIndex, newVersionIndex) => void - callback to change selected version
 }) => {
   // Helper to get regeneration progress for a specific index
   // Supports both legacy single-segment and new multi-segment props
@@ -152,6 +156,63 @@ const VideoReviewPopup = ({
     // Fall back to legacy single-segment prop
     return regeneratingIndex === index;
   };
+
+  // Helper to get version history for a segment
+  const getVersionHistory = (index) => {
+    if (itemVersionHistories instanceof Map) {
+      return itemVersionHistories.get(index) || [];
+    }
+    return [];
+  };
+
+  // Helper to get currently selected version index for a segment
+  const getSelectedVersionIndex = (index) => {
+    if (selectedVersions instanceof Map) {
+      const selected = selectedVersions.get(index);
+      if (selected !== undefined) return selected;
+    }
+    // Default to latest version
+    const history = getVersionHistory(index);
+    return history.length > 0 ? history.length - 1 : 0;
+  };
+
+  // Helper to check if a segment has multiple versions to navigate
+  const hasMultipleVersions = (index) => {
+    const history = getVersionHistory(index);
+    return history.length > 1;
+  };
+
+  // Helper to check if we can go to previous version
+  const canGoPrevVersion = (index) => {
+    const selectedIdx = getSelectedVersionIndex(index);
+    return selectedIdx > 0;
+  };
+
+  // Helper to check if we can go to next version
+  const canGoNextVersion = (index) => {
+    const history = getVersionHistory(index);
+    const selectedIdx = getSelectedVersionIndex(index);
+    return selectedIdx < history.length - 1;
+  };
+
+  // Handle going to previous version
+  const handlePrevVersion = useCallback((index, e) => {
+    e.stopPropagation();
+    const selectedIdx = getSelectedVersionIndex(index);
+    if (selectedIdx > 0 && onVersionChange) {
+      onVersionChange(index, selectedIdx - 1);
+    }
+  }, [onVersionChange, selectedVersions, itemVersionHistories]);
+
+  // Handle going to next version
+  const handleNextVersion = useCallback((index, e) => {
+    e.stopPropagation();
+    const history = getVersionHistory(index);
+    const selectedIdx = getSelectedVersionIndex(index);
+    if (selectedIdx < history.length - 1 && onVersionChange) {
+      onVersionChange(index, selectedIdx + 1);
+    }
+  }, [onVersionChange, selectedVersions, itemVersionHistories]);
   const [selectedIndex, setSelectedIndex] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [showCancelConfirmation, setShowCancelConfirmation] = useState(false);
@@ -281,10 +342,12 @@ const VideoReviewPopup = ({
   }, [selectedIndex]);
 
   const handleItemClick = useCallback((index) => {
-    // Don't allow clicking on generating or regenerating items
-    if (items[index]?.status === 'regenerating' || items[index]?.status === 'generating') return;
+    // Don't allow clicking on generating items (no video yet)
+    if (items[index]?.status === 'generating') return;
+    // For regenerating items, allow if they have a URL (previous version available)
+    if (items[index]?.status === 'regenerating' && !items[index]?.url) return;
     if (!items[index]?.url) return; // Don't allow clicking if no video URL
-    
+
     // If onPlayItem is provided, use fullscreen playback instead of inline preview
     if (onPlayItem) {
       onPlayItem(index);
@@ -585,17 +648,88 @@ const VideoReviewPopup = ({
                 >
                   ← back
                 </button>
-                <span style={{
-                  color: '#1a1a1a',
-                  fontSize: '1rem',
-                  fontWeight: '700',
-                  fontFamily: '"Permanent Marker", cursive',
-                  textAlign: 'center',
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '4px',
                   flex: '1 1 auto',
                   minWidth: '120px'
                 }}>
-                  {getItemLabel(selectedIndex)}
-                </span>
+                  <span style={{
+                    color: '#1a1a1a',
+                    fontSize: '1rem',
+                    fontWeight: '700',
+                    fontFamily: '"Permanent Marker", cursive',
+                    textAlign: 'center'
+                  }}>
+                    {getItemLabel(selectedIndex)}
+                  </span>
+                  {/* Version Navigation in Preview Mode */}
+                  {hasMultipleVersions(selectedIndex) && onVersionChange && (
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px'
+                    }}>
+                      <button
+                        onClick={(e) => handlePrevVersion(selectedIndex, e)}
+                        disabled={!canGoPrevVersion(selectedIndex)}
+                        style={{
+                          background: canGoPrevVersion(selectedIndex) ? config.accentColor : '#d4d4d4',
+                          border: '2px solid #1a1a1a',
+                          borderRadius: '50%',
+                          width: '28px',
+                          height: '28px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          cursor: canGoPrevVersion(selectedIndex) ? 'pointer' : 'not-allowed',
+                          fontSize: '0.75rem',
+                          fontWeight: '800',
+                          color: canGoPrevVersion(selectedIndex) ? '#fff' : '#737373',
+                          transition: 'all 0.2s ease',
+                          boxShadow: canGoPrevVersion(selectedIndex) ? '2px 2px 0 #1a1a1a' : 'none'
+                        }}
+                        title="View previous version"
+                      >
+                        ←
+                      </button>
+                      <span style={{
+                        fontSize: '0.75rem',
+                        fontWeight: '700',
+                        color: '#666',
+                        minWidth: '50px',
+                        textAlign: 'center'
+                      }}>
+                        v{getSelectedVersionIndex(selectedIndex) + 1}/{getVersionHistory(selectedIndex).length}
+                      </span>
+                      <button
+                        onClick={(e) => handleNextVersion(selectedIndex, e)}
+                        disabled={!canGoNextVersion(selectedIndex)}
+                        style={{
+                          background: canGoNextVersion(selectedIndex) ? config.accentColor : '#d4d4d4',
+                          border: '2px solid #1a1a1a',
+                          borderRadius: '50%',
+                          width: '28px',
+                          height: '28px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          cursor: canGoNextVersion(selectedIndex) ? 'pointer' : 'not-allowed',
+                          fontSize: '0.75rem',
+                          fontWeight: '800',
+                          color: canGoNextVersion(selectedIndex) ? '#fff' : '#737373',
+                          transition: 'all 0.2s ease',
+                          boxShadow: canGoNextVersion(selectedIndex) ? '2px 2px 0 #1a1a1a' : 'none'
+                        }}
+                        title="View next version"
+                      >
+                        →
+                      </button>
+                    </div>
+                  )}
+                </div>
                 <button
                   onClick={(e) => handleRegenerateClick(selectedIndex, e)}
                   style={{
@@ -917,7 +1051,8 @@ const VideoReviewPopup = ({
                         ? '#f0fdf4'
                         : '#fafafa',
                       borderRadius: '24px',
-                      cursor: isInProgress ? 'wait' : 'pointer',
+                      // Allow clicking on regenerating items if they have a previous version URL
+                      cursor: (isInProgress && !item.url) ? 'wait' : 'pointer',
                       border: '3px solid',
                       borderColor: isInProgress
                         ? '#FFED4E'
@@ -941,19 +1076,21 @@ const VideoReviewPopup = ({
                       ...(isPortraitLayout ? { minHeight: '180px' } : {})
                     }}
                     onMouseOver={(e) => {
-                      if (!isInProgress) {
+                      // Allow hover effects if not in progress, OR if regenerating with a URL (previous version)
+                      if (!isInProgress || (isInProgress && item.url)) {
                         e.currentTarget.style.borderColor = config.accentColor;
                         e.currentTarget.style.transform = 'translate(-3px, -3px)';
                         e.currentTarget.style.boxShadow = `6px 6px 0 #1a1a1a`;
                       }
                     }}
                     onMouseOut={(e) => {
-                      if (!isInProgress) {
-                        e.currentTarget.style.borderColor = item.status === 'failed' ? '#ff3366' : item.status === 'ready' ? '#22c55e' : 'rgba(26, 26, 26, 0.15)';
+                      // Allow hover effects if not in progress, OR if regenerating with a URL (previous version)
+                      if (!isInProgress || (isInProgress && item.url)) {
+                        e.currentTarget.style.borderColor = item.status === 'failed' ? '#ff3366' : item.status === 'ready' ? '#22c55e' : isInProgress ? '#FFED4E' : 'rgba(26, 26, 26, 0.15)';
                         e.currentTarget.style.transform = 'translate(0, 0)';
                         e.currentTarget.style.boxShadow = item.status === 'ready'
                           ? '4px 4px 0 #1a1a1a'
-                          : '3px 3px 0 rgba(26, 26, 26, 0.2)';
+                          : isInProgress ? '0 0 0 rgba(0,0,0,0)' : '3px 3px 0 rgba(26, 26, 26, 0.2)';
                       }
                     }}
                   >
@@ -1066,7 +1203,56 @@ const VideoReviewPopup = ({
                       overflow: 'hidden',
                       flexShrink: 0
                     }}>
-                      {isInProgress ? (
+                      {/* Show video with regeneration overlay if regenerating but has previous versions */}
+                      {isInProgress && item.url && hasMultipleVersions(index) ? (
+                        <>
+                          {/* Show previous version video */}
+                          <video
+                            ref={(el) => { videoRefs.current[index] = el; }}
+                            src={item.url}
+                            style={{
+                              width: '100%',
+                              height: isPortraitLayout ? '100%' : 'auto',
+                              display: 'block',
+                              objectFit: isPortraitLayout ? 'cover' : 'contain',
+                              objectPosition: isPortraitLayout ? 'top center' : 'center'
+                            }}
+                            loop
+                            muted
+                            playsInline
+                            autoPlay
+                            onMouseEnter={() => handleVideoMouseEnter(index)}
+                            onMouseLeave={() => handleVideoMouseLeave(index)}
+                          />
+                          {/* Regeneration overlay indicator */}
+                          <div style={{
+                            position: 'absolute',
+                            top: '8px',
+                            right: '8px',
+                            background: 'rgba(245, 158, 11, 0.9)',
+                            border: '2px solid #1a1a1a',
+                            borderRadius: '50px',
+                            padding: '4px 10px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            fontSize: '0.65rem',
+                            fontWeight: '700',
+                            color: '#fff',
+                            boxShadow: '2px 2px 0 rgba(0,0,0,0.3)'
+                          }}>
+                            <div style={{
+                              width: '10px',
+                              height: '10px',
+                              border: '2px solid rgba(255,255,255,0.3)',
+                              borderTopColor: '#fff',
+                              borderRadius: '50%',
+                              animation: 'videoReviewSpin 1s linear infinite'
+                            }} />
+                            <span>generating...</span>
+                          </div>
+                        </>
+                      ) : isInProgress ? (
                         <div style={{
                           position: 'absolute',
                           inset: 0,
@@ -1394,6 +1580,99 @@ const VideoReviewPopup = ({
                         )}
                       </div>
 
+                      {/* Version Navigation - Show when segment has multiple successful generations */}
+                      {hasMultipleVersions(index) && onVersionChange && (
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '8px',
+                          padding: '6px 0',
+                          borderTop: '2px solid rgba(168, 85, 247, 0.2)',
+                          marginTop: '6px'
+                        }}>
+                          <button
+                            onClick={(e) => handlePrevVersion(index, e)}
+                            disabled={!canGoPrevVersion(index)}
+                            style={{
+                              background: canGoPrevVersion(index) ? config.accentColor : '#d4d4d4',
+                              border: '2px solid #1a1a1a',
+                              borderRadius: '50%',
+                              width: '28px',
+                              height: '28px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              cursor: canGoPrevVersion(index) ? 'pointer' : 'not-allowed',
+                              fontSize: '0.75rem',
+                              fontWeight: '800',
+                              color: canGoPrevVersion(index) ? '#fff' : '#737373',
+                              transition: 'all 0.2s ease',
+                              boxShadow: canGoPrevVersion(index) ? '2px 2px 0 #1a1a1a' : 'none'
+                            }}
+                            onMouseOver={(e) => {
+                              if (canGoPrevVersion(index)) {
+                                e.currentTarget.style.transform = 'translate(-1px, -1px)';
+                                e.currentTarget.style.boxShadow = '3px 3px 0 #1a1a1a';
+                              }
+                            }}
+                            onMouseOut={(e) => {
+                              if (canGoPrevVersion(index)) {
+                                e.currentTarget.style.transform = 'translate(0, 0)';
+                                e.currentTarget.style.boxShadow = '2px 2px 0 #1a1a1a';
+                              }
+                            }}
+                            title="View previous version"
+                          >
+                            ←
+                          </button>
+                          <span style={{
+                            fontSize: '0.7rem',
+                            fontWeight: '700',
+                            color: '#666',
+                            minWidth: '60px',
+                            textAlign: 'center'
+                          }}>
+                            v{getSelectedVersionIndex(index) + 1}/{getVersionHistory(index).length}
+                          </span>
+                          <button
+                            onClick={(e) => handleNextVersion(index, e)}
+                            disabled={!canGoNextVersion(index)}
+                            style={{
+                              background: canGoNextVersion(index) ? config.accentColor : '#d4d4d4',
+                              border: '2px solid #1a1a1a',
+                              borderRadius: '50%',
+                              width: '28px',
+                              height: '28px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              cursor: canGoNextVersion(index) ? 'pointer' : 'not-allowed',
+                              fontSize: '0.75rem',
+                              fontWeight: '800',
+                              color: canGoNextVersion(index) ? '#fff' : '#737373',
+                              transition: 'all 0.2s ease',
+                              boxShadow: canGoNextVersion(index) ? '2px 2px 0 #1a1a1a' : 'none'
+                            }}
+                            onMouseOver={(e) => {
+                              if (canGoNextVersion(index)) {
+                                e.currentTarget.style.transform = 'translate(-1px, -1px)';
+                                e.currentTarget.style.boxShadow = '3px 3px 0 #1a1a1a';
+                              }
+                            }}
+                            onMouseOut={(e) => {
+                              if (canGoNextVersion(index)) {
+                                e.currentTarget.style.transform = 'translate(0, 0)';
+                                e.currentTarget.style.boxShadow = '2px 2px 0 #1a1a1a';
+                              }
+                            }}
+                            title="View next version"
+                          >
+                            →
+                          </button>
+                        </div>
+                      )}
+
                       {/* Error message for failed items */}
                       {item.status === 'failed' && item.error && (
                         <div style={{
@@ -1573,14 +1852,6 @@ const VideoReviewPopup = ({
                                 }}>
                                   <span style={{ fontSize: '0.85rem' }}>🖥️</span>
                                   <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', color: config.accentColor, fontWeight: '700', fontSize: '0.8rem' }}>{itemWorkers[index]}</span>
-                                </div>
-                              )}
-                              
-                              {/* Progress percentage - shows step-based progress from video model */}
-                              {item.status === 'generating' && itemProgress[index] > 0 && (
-                                <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                                  <span style={{ fontSize: '0.85rem' }}>⚡</span>
-                                  <span style={{ fontWeight: '700', color: config.accentColor, fontSize: '0.85rem' }}>{Math.round(itemProgress[index])}%</span>
                                 </div>
                               )}
                               
@@ -2291,6 +2562,8 @@ VideoReviewPopup.propTypes = {
   onStitchAll: PropTypes.func.isRequired,
   onRegenerateItem: PropTypes.func.isRequired,
   onCancelGeneration: PropTypes.func,
+  onCancelItem: PropTypes.func,
+  onPlayItem: PropTypes.func,
   items: PropTypes.arrayOf(PropTypes.shape({
     url: PropTypes.string,
     index: PropTypes.number,
@@ -2320,7 +2593,11 @@ VideoReviewPopup.propTypes = {
   itemProgress: PropTypes.arrayOf(PropTypes.number),
   itemWorkers: PropTypes.arrayOf(PropTypes.string),
   itemStatuses: PropTypes.arrayOf(PropTypes.string),
-  itemElapsed: PropTypes.arrayOf(PropTypes.number)
+  itemElapsed: PropTypes.arrayOf(PropTypes.number),
+  // Version navigation props (for cycling through successful generations)
+  itemVersionHistories: PropTypes.instanceOf(Map),
+  selectedVersions: PropTypes.instanceOf(Map),
+  onVersionChange: PropTypes.func
 };
 
 export default VideoReviewPopup;
