@@ -4468,11 +4468,15 @@ const PhotoGallery = ({
       setPendingSegments(initialSegments);
 
       // Build audioSource for S2V montage stitching (mutes individual clips, uses single parent audio)
+      // S2V workflow skips first 3 video frames (ImageFromBatch batch_index=3) but audio starts at 0
+      // Plus AAC encoder adds ~2048 samples priming delay (~0.75 frames at 16fps)
+      // Total compensation: 4 frames at 16fps = 0.25s to the parent audio startOffset
+      const S2V_SKIPPED_FRAMES_OFFSET = 4 / 16; // 0.25 seconds (3 skipped frames + ~1 for AAC priming)
       const audioSourceForStitch = {
         type: 's2v',
         audioBuffer: audioBuffer,
         audioUrl: audioUrl,
-        startOffset: audioStartOffset || 0,
+        startOffset: (audioStartOffset || 0) + S2V_SKIPPED_FRAMES_OFFSET,
         duration: baseDuration
       };
 

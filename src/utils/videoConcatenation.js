@@ -353,12 +353,12 @@ async function concatenateMP4s_Base(buffers, options = {}) {
         let samplesToSkip = 0;
         let maxSamplesToInclude = Infinity;
         
-        // TEMPORARY FIX: Skip 1 priming sample at start, trim 1 padding sample at end
-        // This compensates for audio/video sync issues in the ComfyUI workflow where:
-        // - S2V skips 3 video frames (ImageFromBatch batch_index=3) but audio starts at 0
-        // - Animate Move/Replace skips 1 video frame (batch_index=1) but audio starts at 0
-        // TODO: Remove this fix once ComfyUI worker properly offsets audio start to match skipped frames
-        // See: ComfyUI/workflows/wan2.2/ - TrimAudioDuration should use audioStart + (skippedFrames/fps)
+        // AAC encoder priming compensation: Skip 1 priming sample at start, trim 1 padding sample at end
+        // This fixes minor audio glitches at segment boundaries caused by AAC encoder priming samples.
+        // 
+        // NOTE: The skipped video frame offset (S2V=3 frames, Animate Move/Replace=1 frame) is handled
+        // separately in PhotoGallery.jsx via the S2V_SKIPPED_FRAMES_OFFSET when creating audioSourceForStitch.
+        // That offset (3/16fps = 0.1875s for S2V) is added to the parent audio startOffset, not here.
         samplesToSkip = 1;
         maxSamplesToInclude = sampleCount - samplesToSkip - 1;
         
