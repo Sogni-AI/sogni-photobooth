@@ -323,12 +323,17 @@ const StyleDropdown = ({
 
   // Handle custom prompt application
   const handleApplyCustomPrompt = (promptText, sceneName) => {
+    console.log('🎨 [StyleDropdown] handleApplyCustomPrompt called:', { promptText, sceneName });
+    
     // First update the style to custom
     updateStyle('custom');
     
     // Then update the custom prompt if callback is provided
     if (onCustomPromptChange) {
+      console.log('🎨 [StyleDropdown] Calling onCustomPromptChange');
       onCustomPromptChange(promptText, sceneName);
+    } else {
+      console.warn('🎨 [StyleDropdown] onCustomPromptChange callback is missing!');
     }
   };
 
@@ -464,7 +469,7 @@ const StyleDropdown = ({
                     }}
                   >
                     <span className="model-radio">{selectedModel === 'qwen_image_edit_2511_fp8_lightning' ? '●' : '○'}</span>
-                    <span>✏️ Qwen Image Edit Lightning</span>
+                    <span>✏️ Qwen Image Edit 2511 Lightning</span>
                   </div>
                   <div
                     className={`model-option ${selectedModel === 'qwen_image_edit_2511_fp8' ? 'selected' : ''}`}
@@ -770,7 +775,7 @@ const StyleDropdown = ({
                         onModelSelect('qwen_image_edit_2511_fp8_lightning');
                         if (showToast) {
                           showToast({
-                            message: 'Switched to Qwen Image Edit Lightning for Copy Image Style',
+                            message: 'Switched to Qwen Image Edit 2511 Lightning for Copy Image Style',
                             type: 'info'
                           });
                         }

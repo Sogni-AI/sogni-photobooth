@@ -21,7 +21,7 @@ export const getPhotoHashtag = (photo) => {
   }
 
   if (!foundLabel || foundLabel.length < 3) {
-    foundLabel = '#SogniPhotobooth';
+    foundLabel = ''; // No placeholder text
   }
   
   return foundLabel;

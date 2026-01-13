@@ -12,7 +12,7 @@
     "cleanup-random-mix": "node scripts/cleanup-random-mix.js"
   },
   "dependencies": {
-    "@sogni-ai/sogni-client": "^4.0.0-alpha.47",
+    "@sogni-ai/sogni-client": "^4.0.0-alpha.49",
     "axios": "^1.9.0",
     "connect-redis": "^8.0.3",
     "cookie-parser": "^1.4.7",
