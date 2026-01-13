@@ -862,7 +862,9 @@ export async function generateVideo(options: GenerateVideoOptions): Promise<void
         case 'progress':
           // Handle step/stepCount progress events (if video model sends them)
           if (event.step !== undefined && event.stepCount !== undefined) {
-            const progressPercent = Math.round((event.step / event.stepCount) * 100);
+            // Cap at 100% to prevent display issues when step exceeds stepCount
+            // (can happen during video encoding/post-processing phases)
+            const progressPercent = Math.min(100, Math.round((event.step / event.stepCount) * 100));
 
             // Update last activity time
             activeProject.lastActivityTime = Date.now();

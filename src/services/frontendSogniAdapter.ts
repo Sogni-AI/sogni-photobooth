@@ -458,9 +458,12 @@ export class FrontendProjectAdapter extends BrowserEventEmitter implements Sogni
               const workerName = event.workerName || cachedWorkerName || 'Worker';
 
               // Emit progress event for the UI
+              // Cap progress at 1.0 to prevent overflow when step exceeds stepCount
+              // (can happen during video encoding/post-processing phases)
+              const normalizedProgress = Math.min(1, event.step / event.stepCount);
               this.emit('job', {
                 type: 'progress',
-                progress: event.step / event.stepCount, // Convert to 0-1 range
+                progress: normalizedProgress, // Convert to 0-1 range, capped at 1.0
                 step: event.step,
                 stepCount: event.stepCount,
                 jobId: event.jobId,

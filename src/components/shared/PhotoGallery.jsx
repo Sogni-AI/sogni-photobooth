@@ -6138,7 +6138,7 @@ const PhotoGallery = ({
         audioSource = activeMontageAudioSourceRef.current;
       }
 
-      if (audioSource && ['s2v', 'animate-move', 'animate-replace'].includes(segmentReviewData?.workflowType)) {
+      if (audioSource && ['s2v', 'animate-move', 'animate-replace'].includes(segmentReviewData?.workflowType || audioSource.type)) {
         try {
           if (audioSource.type === 's2v') {
             // For S2V: Use the audio file directly
