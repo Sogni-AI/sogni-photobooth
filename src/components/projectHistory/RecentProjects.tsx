@@ -1175,7 +1175,6 @@ function RecentProjects({
               </button>
               <button
                 className="recent-projects-info-hint"
-                title="Local projects are stored in your browser and never expire"
               >
                 ?
               </button>

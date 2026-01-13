@@ -14596,7 +14596,7 @@ const PhotoGallery = ({
                         style={{
                           position: 'absolute',
                           bottom: '8px',
-                          right: photo.videoRegenerateParams ? '88px' : '48px', // Left of regenerate button, or left of play if no regenerate
+                          right: '44px', // Positioned next to play button with minimal gap
                           width: '32px',
                           height: '32px',
                           borderRadius: '50%',
