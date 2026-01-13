@@ -360,7 +360,7 @@ body.extension-mode .action-button:not(.use-prompt-btn) {
   }
 }
 
-.film-frame img {
+.film-frame img:not(.placeholder) {
   width: calc(100% - 0px) !important;
   height: calc(100% - 0px) !important;
   object-fit: cover !important; /* Cover instead of contain to fill the frame */
@@ -369,7 +369,9 @@ body.extension-mode .action-button:not(.use-prompt-btn) {
   flex-grow: 1 !important;
   margin: 0 !important;
   padding: 0 !important;
-  transition: opacity 100ms ease-in !important;
+  /* Start invisible - JavaScript controls visibility via inline styles and animations */
+  /* NO !important here so inline styles can override */
+  opacity: 0;
   /* Prevent pixelation during image loading */
   image-rendering: -webkit-optimize-contrast !important;
   image-rendering: auto !important;
@@ -382,6 +384,9 @@ body.extension-mode .action-button:not(.use-prompt-btn) {
   user-drag: auto !important;
   pointer-events: auto !important;
 }
+
+/* Preview image fade-in effect - handled by Web Animations API in PhotoGallery.jsx */
+/* Preview images get blur(5px) via inline styles and 2-second fade via JavaScript */
 
 /* Ensure minimum 4 images per row on desktop landscape for regular photo grid */
 @media (orientation: landscape) and (min-width: 1200px) {
@@ -779,6 +784,7 @@ body .film-frame.selected,
 }
 
 /* Add inner bevel/shadow effect to all selected photos (desktop and mobile) */
+/* z-index must be higher than images (which use zIndex: 2 in inline styles) */
 .film-frame.selected::after {
   content: "";
   position: absolute;
@@ -788,7 +794,7 @@ body .film-frame.selected,
   bottom: var(--polaroid-bottom-border);
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.1), inset 0 2px 4px rgba(0, 0, 0, 0.1);
   pointer-events: none;
-  z-index: 1;
+  z-index: 10; /* Must be above images (zIndex: 2) */
   border-radius: 2px;
 }
 

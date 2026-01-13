@@ -202,21 +202,21 @@ export const enhancePhoto = async (options) => {
         // Note: sampler and scheduler omitted - server provides defaults for context image models
       };
     } else {
-      // Use Flux.1 Krea for standard enhancement
+      // Use Z-Image Turbo for standard enhancement
       projectConfig = {
         type: 'image', // Required in SDK v4.x.x
         testnet: false,
         tokenType: tokenType,
-        modelId: "flux1-krea-dev_fp8_scaled",
+        modelId: "z_image_turbo_bf16",
         positivePrompt: `(Extra detailed and contrasty portrait) ${photo.positivePrompt || 'Portrait masterpiece'}`,
         sizePreset: 'custom',
         width,
         height,
-        steps: 24,
-        guidance: 5.5,
+        steps: 6, // Z-Image Turbo uses fewer steps
+        guidance: 3.5, // Z-Image Turbo default guidance
         numberOfMedia: 1,
         outputFormat: outputFormat || 'jpg',
-        sensitiveContentFilter: false, // HARDCODED: Krea model is not NSFW-aware, always disable filter
+        sensitiveContentFilter: false, // HARDCODED: Model is not NSFW-aware, always disable filter
         startingImage: new Uint8Array(arrayBuffer),
         startingImageStrength: 0.75,
         sourceType: 'enhancement', // Add sourceType for backend tracking
@@ -315,7 +315,35 @@ export const enhancePhoto = async (options) => {
           });
         }
         
-        // Handle progress events
+        // Handle ETA events - prioritize over progress for display
+        if (type === 'eta' && event.eta !== undefined && jobId) {
+          const etaSeconds = typeof event.eta === 'number' ? event.eta : 0;
+          console.log(`[ENHANCE] Job ETA: ${etaSeconds}s remaining`);
+          
+          setPhotos(prev => {
+            const current = prev[photoIndex];
+            if (!current || !current.enhancing) return prev;
+            
+            // Only accept ETA updates for the correct job ID
+            if (current.currentEnhancementJobId && current.currentEnhancementJobId !== jobId) {
+              return prev;
+            }
+            
+            // Check if ETA actually changed to avoid unnecessary updates
+            if (current.enhancementETA === etaSeconds) {
+              return prev;
+            }
+            
+            const updated = [...prev];
+            updated[photoIndex] = {
+              ...current,
+              enhancementETA: etaSeconds
+            };
+            return updated;
+          });
+        }
+        
+        // Handle progress events (only used as fallback if no ETA available)
         if (type === 'progress' && progress !== undefined && jobId) {
           const progressValue = typeof progress === 'number' ? progress : 0;
           const progressPercent = Math.floor(progressValue * 100);

@@ -5017,6 +5017,12 @@ const App = () => {
       }
 
       // Prompt logic: use context state
+      console.log('🎨 [generateFromBlob] Using custom prompt:', { 
+        selectedStyle, 
+        positivePrompt,
+        customSceneName,
+        positivePromptLength: positivePrompt?.length 
+      });
       let finalPositivePrompt = positivePrompt.trim();
       
       // Handle special style modes (these override any existing prompt text)
@@ -5573,14 +5579,30 @@ const App = () => {
                 const currentWorkerName = (workerName && workerName !== 'Worker') ? workerName : cachedWorkerName;
                 const displayProgress = Math.round((progress ?? 0) * 100);
                 
+                // Preserve ETA if available
+                const currentETA = updated[photoIndex].eta;
+                let etaText = '';
+                if (currentETA > 0) {
+                  if (currentETA >= 60) {
+                    const minutes = Math.floor(currentETA / 60);
+                    const seconds = currentETA % 60;
+                    etaText = ` - ${minutes}:${seconds.toString().padStart(2, '0')}`;
+                  } else {
+                    etaText = ` - ${currentETA}`;
+                  }
+                }
+                
                 updated[photoIndex] = {
                   ...updated[photoIndex],
                   generating: true,
                   loading: true,
                   progress: displayProgress,
-                  statusText: displayProgress > 0 
-                    ? `${currentWorkerName} makin art ${displayProgress}%`
-                    : `${currentWorkerName} makin art`,
+                  // Only show percentage if no ETA is available
+                  statusText: etaText 
+                    ? `${currentWorkerName} makin art${etaText}`
+                    : (displayProgress > 0 
+                      ? `${currentWorkerName} makin art ${displayProgress}%`
+                      : `${currentWorkerName} makin art`),
                   workerName: currentWorkerName, // Update the cached worker name
                   jobId,
                   lastProgressTime: Date.now()
@@ -5599,6 +5621,47 @@ const App = () => {
         // Update project watchdog timer for non-progress events
         if (['initiating', 'started'].includes(type)) {
           updateWatchdogTimer();
+        }
+
+        // Handle ETA events separately (not throttled, but less frequent)
+        if (type === 'eta') {
+          const eta = event.eta;
+          
+          const updateETA = (prev) => {
+            const updated = [...prev];
+            if (updated[photoIndex] && !updated[photoIndex].permanentError) {
+              const cachedWorkerName = updated[photoIndex].workerName || workerName || 'Worker';
+              const displayProgress = updated[photoIndex].progress || 0;
+              
+              // Format ETA for display (eta is in seconds)
+              let etaText = '';
+              if (eta > 0) {
+                if (eta >= 60) {
+                  const minutes = Math.floor(eta / 60);
+                  const seconds = eta % 60;
+                  etaText = ` - ${minutes}:${seconds.toString().padStart(2, '0')}`;
+                } else {
+                  etaText = ` - ${eta}`;
+                }
+              }
+              
+              updated[photoIndex] = {
+                ...updated[photoIndex],
+                eta: eta,
+                // Only show percentage if no ETA is available
+                statusText: etaText 
+                  ? `${cachedWorkerName} makin art${etaText}`
+                  : (displayProgress > 0 
+                    ? `${cachedWorkerName} makin art ${displayProgress}%`
+                    : `${cachedWorkerName} makin art`),
+              };
+            }
+            return updated;
+          };
+          
+          setRegularPhotos(updateETA);
+          setPhotos(updateETA);
+          return;
         }
 
         // Throttle non-progress events to reduce cascade renders
@@ -6069,7 +6132,8 @@ const App = () => {
         const effectiveProjectId = errorProjectId || failedProjectId;
         
         // Only clear active project reference if it matches the failed project
-        if (activeProjectReference.current && activeProjectReference.current.id === effectiveProjectId) {
+        // Note: activeProjectReference.current stores the project ID string directly (not an object)
+        if (activeProjectReference.current && activeProjectReference.current === effectiveProjectId) {
           console.log(`Project failed with ID ${effectiveProjectId}`);
           console.log(`Clearing active project reference for failed project ${effectiveProjectId}`);
           activeProjectReference.current = null;
@@ -6230,15 +6294,12 @@ const App = () => {
         
         // Handle preview vs final image loading
         if (isPreview) {
-          
           // PREVIEW IMAGE - load immediately without affecting status text
           fetch(job.resultUrl)
             .then(response => {
-              
               if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
               }
-              
               return response.blob();
             })
             .then(blob => {
@@ -6247,29 +6308,37 @@ const App = () => {
               setRegularPhotos(previous => {
                 const updated = [...previous];
                 if (updated[photoIndex] && !updated[photoIndex].permanentError) {
-                  // Clean up previous preview image URL to prevent memory leaks with frequent previews
+                  // Save the current image as previousPreviewUrl for crossfade effect
+                  // This allows the new image to fade in over the old one instead of white
                   const currentImages = updated[photoIndex].images;
+                  const previousPreviewUrl = (currentImages && currentImages.length > 0) 
+                    ? currentImages[0] 
+                    : updated[photoIndex].originalDataUrl; // Fall back to original photo
+                  
+                  // Schedule cleanup of old blob URLs after the fade transition completes (2.5 seconds)
                   if (currentImages && currentImages.length > 0 && updated[photoIndex].isPreview) {
-                    currentImages.forEach(imageUrl => {
-                      if (imageUrl && imageUrl.startsWith('blob:')) {
-                        URL.revokeObjectURL(imageUrl);
-                      }
-                    });
+                    const urlsToCleanup = [...currentImages];
+                    setTimeout(() => {
+                      urlsToCleanup.forEach(imageUrl => {
+                        if (imageUrl && imageUrl.startsWith('blob:')) {
+                          URL.revokeObjectURL(imageUrl);
+                        }
+                      });
+                    }, 2500); // Clean up after fade transition completes
                   }
                   
                   const newPreviewCount = (updated[photoIndex].previewUpdateCount || 0) + 1;
                   
                   updated[photoIndex] = {
                     ...updated[photoIndex],
-                    images: [objectUrl], // Show preview
-                    newlyArrived: true,
+                    images: [objectUrl], // Show new preview
+                    previousPreviewUrl, // Store previous image for crossfade background
+                    newlyArrived: false, // Don't trigger pop-in animation for previews
                     isPreview: true, // Mark as preview for styling
                     previewUpdateCount: newPreviewCount // Track preview updates
                     // Keep existing generating: true and progress from generation events
                     // Don't override loading or statusText
                   };
-                  
-
                 }
                 return updated;
               });
@@ -6333,14 +6402,14 @@ const App = () => {
           hashtag = `#${selectedStyle}`;
         }
 
-        // Strategy 3.5: For custom prompts, use custom scene name if available, otherwise #SogniPhotobooth
+        // Strategy 3.5: For custom prompts, use custom scene name if available, otherwise empty string
         if (!hashtag && selectedStyle === 'custom') {
           if (customSceneName && customSceneName.trim()) {
             console.log('📸 Using custom scene name for hashtag:', customSceneName);
             hashtag = customSceneName; // Use scene name directly without # for custom prompts
           } else {
-            console.log('📸 Using #SogniPhotobooth for custom prompt');
-            hashtag = '#SogniPhotobooth';
+            console.log('📸 Using empty string for custom prompt (no placeholder)');
+            hashtag = ''; // No placeholder text
           }
         }
 
@@ -6381,16 +6450,14 @@ const App = () => {
               const extractedPromptKey = hashtag ? hashtag.replace('#', '') : 
                 (selectedStyle && selectedStyle !== 'custom' && selectedStyle !== 'random' && selectedStyle !== 'randomMix' && selectedStyle !== 'oneOfEach') ? selectedStyle : undefined;
               
-              // Determine statusText - preserve #SogniPhotobooth for custom prompts
+              // Determine statusText - use empty string for custom prompts (no placeholder)
               let statusText;
-              if (hashtag === '#SogniPhotobooth') {
-                statusText = '#SogniPhotobooth';
-              } else if (hashtag) {
+              if (hashtag) {
                 statusText = styleIdToDisplay(hashtag.replace('#', ''));
               } else if (selectedStyle && selectedStyle !== 'custom' && selectedStyle !== 'random' && selectedStyle !== 'randomMix') {
                 statusText = styleIdToDisplay(selectedStyle);
               } else {
-                statusText = '#SogniPhotobooth';
+                statusText = ''; // No placeholder text
               }
               
               // Save first custom prompt image to localStorage for display in UI

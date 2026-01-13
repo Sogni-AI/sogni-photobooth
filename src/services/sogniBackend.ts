@@ -794,8 +794,6 @@ export class BackendSogniClient {
                 const jobId = event.jobId as string;
                 const imgId = event.imgID as string;
                 
-
-                
                 if (previewUrl) {
                   // Check if this is a direct URL or needs to be constructed
                   let finalPreviewUrl = previewUrl;
@@ -873,8 +871,6 @@ export class BackendSogniClient {
                   // Set ONLY the preview URL - DO NOT set resultUrl (that would mark job as completed)
                   targetJob.previewUrl = finalPreviewUrl;
                   
-
-                  
                   // Emit a jobCompleted-like event but mark it as preview
                   project.emit('jobCompleted', {
                     ...targetJob,
@@ -882,10 +878,8 @@ export class BackendSogniClient {
                     previewUrl: finalPreviewUrl,
                     isPreview: true
                   });
-                  
-
                 } else {
-                  console.warn(`[PREVIEW DEBUG] Preview event received but no previewUrl found:`, event);
+                  console.warn(`Preview event received but no previewUrl found for job ${jobId}`);
                 }
               } else {
                 console.warn(`[PREVIEW DEBUG] Preview event received but no target job found for jobId:`, event.jobId);

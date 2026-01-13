@@ -724,10 +724,14 @@ const PlaceholderImage = memo(({ placeholderUrl }) => {
         width: '100%',
         height: '100%',
         objectFit: 'cover',
-        position: 'relative',
+        position: 'absolute',
         top: 0,
         left: 0,
-        opacity: 0.25,
+        // Base opacity - CSS animation will control actual opacity during loading
+        // Keep this low so if animation stops, we don't get a bright flash
+        opacity: 0.15,
+        // Add blur to match preview thumbnails for seamless morphing transition
+        filter: 'blur(5px)',
         zIndex: 1
       }}
     />
@@ -843,16 +847,16 @@ const PhotoGallery = ({
     return result;
   };
 
-  // Cost estimation for Krea enhancement (one-click image enhance)
-  // Krea uses the image as a guide/starting image for enhancement
+  // Cost estimation for Z-Image Turbo enhancement (one-click image enhance)
+  // Z-Image Turbo uses the image as a guide/starting image for enhancement
   const { loading: kreaLoading, formattedCost: kreaCost, costInUSD: kreaUSD } = useCostEstimation({
-    model: 'flux1-krea-dev_fp8_scaled',
+    model: 'z_image_turbo_bf16',
     imageCount: 1,
-    stepCount: 24, // Krea uses 24 steps (from PhotoEnhancer)
-    guidance: 5.5, // Krea uses 5.5 guidance (from PhotoEnhancer)
+    stepCount: 6, // Z-Image Turbo uses 6 steps (from PhotoEnhancer)
+    guidance: 3.5, // Z-Image Turbo uses 3.5 guidance (from PhotoEnhancer)
     scheduler: 'DPM++ SDE',
     network: 'fast',
-    previewCount: 0, // Krea typically has no previews
+    previewCount: 0, // Typically has no previews
     contextImages: 0, // Not using Qwen Image Edit
     cnEnabled: false, // Not using ControlNet
     guideImage: true, // Using guide/starting image for enhancement
@@ -2547,7 +2551,7 @@ const PhotoGallery = ({
     return () => document.removeEventListener('click', handleGlobalClick);
   }, [isPromptSelectorMode, touchHoveredPhotoIndex]);
 
-  // Handle enhancement with Krea (default behavior)
+  // Handle enhancement with Z-Image Turbo (default behavior)
   const handleEnhanceWithKrea = useCallback(() => {
     setShowEnhanceDropdown(false);
     
@@ -9318,8 +9322,8 @@ const PhotoGallery = ({
         if (includeFrames) {
           // FRAMED DOWNLOAD - USE EXACT SAME LOGIC AS handleDownloadPhoto
           try {
-            // Use statusText directly if it's a hashtag, otherwise use styleDisplayText
-            const photoLabel = (photo?.statusText && photo.statusText.includes('#')) 
+            // Use statusText directly if it's a hashtag (but not #SogniPhotobooth), otherwise use styleDisplayText
+            const photoLabel = (photo?.statusText && photo.statusText.includes('#') && photo.statusText !== '#SogniPhotobooth') 
               ? photo.statusText 
               : styleDisplayText || '';
             
@@ -10268,8 +10272,8 @@ const PhotoGallery = ({
       // Get style display text (spaced format, no hashtags)
       const styleDisplayText = getStyleDisplayText(targetPhoto);
       
-      // Use statusText directly if it's a hashtag (like #SogniPhotobooth), otherwise use styleDisplayText
-      const photoLabel = (targetPhoto?.statusText && targetPhoto.statusText.includes('#')) 
+      // Use statusText directly if it's a hashtag (but not #SogniPhotobooth), otherwise use styleDisplayText
+      const photoLabel = (targetPhoto?.statusText && targetPhoto.statusText.includes('#') && targetPhoto.statusText !== '#SogniPhotobooth') 
         ? targetPhoto.statusText 
         : styleDisplayText || '';
       
@@ -10643,6 +10647,18 @@ const PhotoGallery = ({
           showToast={showToast}
           onNavigateToVibeExplorer={onNavigateToVibeExplorer}
           slideInPanel={true}
+          onCustomPromptChange={(prompt, sceneName) => {
+            // Update the settings using the context's updateSetting function
+            console.log('🎨 [PhotoGallery] Custom prompt change:', { prompt, sceneName });
+            updateSetting('positivePrompt', prompt);
+            updateSetting('customSceneName', sceneName || '');
+            console.log('🎨 [PhotoGallery] After updateSetting - settings:', { 
+              positivePrompt: settings.positivePrompt, 
+              customSceneName: settings.customSceneName 
+            });
+          }}
+          currentCustomPrompt={settings.positivePrompt || ''}
+          currentCustomSceneName={settings.customSceneName || ''}
         />
       )}
 
@@ -11784,15 +11800,15 @@ const PhotoGallery = ({
                     e.stopPropagation();
                     
                     if (selectedPhoto.enhancing) return;
-                    // Show the enhance options dropdown (Krea/context image models)
+                    // Show the enhance options dropdown (context image models)
                     setShowEnhanceDropdown(prev => !prev);
                   }}
                   disabled={selectedPhoto.loading || selectedPhoto.enhancing}
                 >
                   <span>✨ {selectedPhoto.enhancing ? 
-                    (selectedPhoto.enhancementProgress !== undefined ? 
-                      `Enhancing ${Math.round((selectedPhoto.enhancementProgress || 0) * 100)}%` : 
-                      'Enhancing') : 
+                    (selectedPhoto.enhancementETA !== undefined && selectedPhoto.enhancementETA > 0 ? 
+                      `Enhancing ${formatVideoDuration(selectedPhoto.enhancementETA)}` : 
+                      'Enhancing...') : 
                     'Enhance'}</span>
                 </button>
               </div>
@@ -11834,9 +11850,9 @@ const PhotoGallery = ({
                   disabled={selectedPhoto.loading || selectedPhoto.enhancing}
                 >
                   <span>✨ {selectedPhoto.enhancing ? 
-                    (selectedPhoto.enhancementProgress !== undefined ? 
-                      `Enhancing ${Math.round((selectedPhoto.enhancementProgress || 0) * 100)}%` : 
-                      'Enhancing') : 
+                    (selectedPhoto.enhancementETA !== undefined && selectedPhoto.enhancementETA > 0 ? 
+                      `Enhancing ${formatVideoDuration(selectedPhoto.enhancementETA)}` : 
+                      'Enhancing...') : 
                     'Enhance'}</span>
                 </button>
               </div>
@@ -11858,9 +11874,9 @@ const PhotoGallery = ({
                 disabled={photos[selectedPhotoIndex].loading || photos[selectedPhotoIndex].enhancing}
               >
                 <span>✨ {photos[selectedPhotoIndex].enhancing ? 
-                  (photos[selectedPhotoIndex].enhancementProgress !== undefined ? 
-                    `Enhancing ${Math.round((photos[selectedPhotoIndex].enhancementProgress || 0) * 100)}%` : 
-                    'Enhancing') : 
+                  (photos[selectedPhotoIndex].enhancementETA !== undefined && photos[selectedPhotoIndex].enhancementETA > 0 ? 
+                    `Enhancing ${formatVideoDuration(photos[selectedPhotoIndex].enhancementETA)}` : 
+                    'Enhancing...') : 
                   'Enhance'}</span>
               </button>
             )}
@@ -13533,6 +13549,22 @@ const PhotoGallery = ({
                   overflow: 'hidden'
                 }}>
                   <PlaceholderImage placeholderUrl={placeholderUrl} />
+                  
+                  {/* Dark shadow overlay to mask white halo from blurred placeholder */}
+                  {/* Shows during loading state for seamless transition to previews */}
+                  {/* Reduced transparency by 30% per user feedback (0.3 -> 0.21) */}
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      boxShadow: 'inset 0 0 30px 15px rgba(0, 0, 0, 0.21)',
+                      pointerEvents: 'none',
+                      zIndex: 5 // Above placeholder image
+                    }}
+                  />
 
                   {/* Hide button, refresh button, and favorite button for loading/error state */}
                   {!isSelected && !photo.isOriginal && !photo.isGalleryImage && (
@@ -13940,8 +13972,8 @@ const PhotoGallery = ({
                       )}
                     </div>
                     : photo.loading || photo.generating ? 
-                      (photo.statusText || loadingLabel || labelText) 
-                      : photo.isGalleryImage ? labelText : (photo.statusText || (labelText + (getStyleDisplayText(photo) ? ` ${getStyleDisplayText(photo)}` : '')))}
+                      ((photo.statusText && photo.statusText !== '#SogniPhotobooth') ? photo.statusText : (loadingLabel || labelText))
+                      : photo.isGalleryImage ? labelText : ((photo.statusText && photo.statusText !== '#SogniPhotobooth') ? photo.statusText : (labelText + (getStyleDisplayText(photo) ? ` ${getStyleDisplayText(photo)}` : '')))}
                 </div>
               </div>
             );
@@ -13955,6 +13987,7 @@ const PhotoGallery = ({
             <div 
               key={photo.id}
               className={`film-frame ${(isSelected && (!isPromptSelectorMode || wantsFullscreen)) ? 'selected' : ''} ${isSelected && wantsFullscreen ? 'fullscreen-mode' : ''} ${isTouchHovered ? 'touch-hovered' : ''} ${isCurrentStyle ? 'current-style' : ''} ${photo.loading ? 'loading' : ''} ${isLoaded ? 'loaded' : ''} ${photo.newlyArrived ? 'newly-arrived' : ''} ${photo.hidden ? 'hidden' : ''} ${isSelected && isThemeSupported() && !photo.isGalleryImage && tezdevTheme === 'supercasual' ? 'super-casual-theme' : ''} ${isSelected && isThemeSupported() && !photo.isGalleryImage && tezdevTheme === 'tezoswebx' ? 'tezos-webx-theme' : ''} ${isSelected && isThemeSupported() && !photo.isGalleryImage && tezdevTheme === 'taipeiblockchain' ? 'taipei-blockchain-theme' : ''} ${isSelected && isThemeSupported() && !photo.isGalleryImage && tezdevTheme === 'showup' ? 'showup-theme' : ''} ${isSelected && isThemeSupported() && !photo.isGalleryImage ? `${tezdevTheme}-theme` : ''}`}
+              data-is-preview={photo.isPreview ? 'true' : undefined}
               onClick={e => {
                 // Don't open photo if clicking on action buttons
                 const target = e.target;
@@ -14103,9 +14136,51 @@ const PhotoGallery = ({
                 aspectRatio: dynamicStyle.aspectRatio,
                 overflow: 'hidden'
               }}>
+                {/* PlaceholderImage MUST be first child - same position as Block 1 */}
+                {/* This allows React to preserve the DOM element and its animation state */}
+                {/* CSS hides it when final image loads via .film-frame.loaded:not([data-is-preview]) .placeholder */}
+                <PlaceholderImage placeholderUrl={placeholderUrl} />
+                {/* Background for crossfade during 2nd+ preview transitions */}
+                {/* Only render when we have a REAL previous preview (not originalDataUrl) */}
+                {photo.isPreview && !isSelected && photo.previousPreviewUrl && photo.previousPreviewUrl !== photo.originalDataUrl && (
+                  <img
+                    src={photo.previousPreviewUrl}
+                    alt="Previous preview"
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover',
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      opacity: 1,
+                      filter: 'blur(5px)',
+                      zIndex: 1
+                    }}
+                  />
+                )}
+                {/* Dark shadow overlay to mask white halo from blurred previews */}
+                {/* Only shows during preview state, not for final images */}
+                {/* Reduced transparency by 30% per user feedback (0.3 -> 0.21) */}
+                {photo.isPreview && !isSelected && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      boxShadow: 'inset 0 0 30px 15px rgba(0, 0, 0, 0.21)',
+                      pointerEvents: 'none',
+                      zIndex: 5 // Above images (zIndex 1, 2) but below other UI
+                    }}
+                  />
+                )}
                 <img 
-                  key={`${photo.id}-${photo.isPreview ? 'preview' : 'final'}`} // Force re-render when preview state changes
+                  key={`${photo.id}-${photo.isPreview ? 'preview' : 'final'}-${photo.previewUpdateCount || 0}`}
                   className={`${isSelected && photo.enhancing && photo.isPreview ? 'enhancement-preview-selected' : ''}`}
+                  data-preview-count={photo.previewUpdateCount || 0}
+                  data-is-preview={photo.isPreview ? 'true' : 'false'}
                   src={(() => {
                     // For selected photos with supported themes OR QR watermark enabled, use composite framed image if available
                     // Skip custom theme framing for gallery images, but allow basic polaroid frames
@@ -14140,43 +14215,70 @@ const PhotoGallery = ({
                     // Enable mobile-optimized download functionality when image loads
                     enableMobileImageDownload(e.target);
                     
-                    // Remove fade-in animation to prevent post-load pulse
                     const img = e.target;
+                    const isPreview = img.dataset.isPreview === 'true';
+                    const previewCount = parseInt(img.dataset.previewCount || '0', 10);
+                    
+                    // For PREVIEW images in THUMBNAILS: fade in with "developing" effect
+                    // Skip for selected photos - they show immediately
+                    const isSelectedPhoto = img.closest('.film-frame')?.classList.contains('selected');
+                    
+                    if (isPreview && !isSelectedPhoto) {
+                      console.log(`[PREVIEW] Thumbnail loaded, preview #${previewCount}`);
+                      
+                      // Element starts at opacity 0 from CSS (new element each preview due to key change)
+                      // Set blur for preview images
+                      img.style.filter = 'blur(5px)';
+                      
+                      console.log(`[PREVIEW] Starting 2-second fade from 0 to 1`);
+                      
+                      // Animate opacity from 0 to 1
+                      // Use fill: forwards to maintain opacity 1 after animation
+                      // No popup issue because this is a NEW element each time (key includes previewUpdateCount)
+                      img.animate([
+                        { opacity: 0 },
+                        { opacity: 1 }
+                      ], {
+                        duration: 2000,
+                        easing: 'ease-in-out',
+                        fill: 'forwards'
+                      });
+                      
+                      return; // Don't add fade-in-complete for previews
+                    }
+                    
+                    // For SELECTED preview photos - show immediately without animation
+                    if (isPreview && isSelectedPhoto) {
+                      console.log(`[PREVIEW] Selected photo preview loaded, showing immediately`);
+                      img.style.opacity = '1';
+                      img.style.filter = 'blur(5px)';
+                      return;
+                    }
+                    
+                    // For NON-PREVIEW images (final images): pop-in effect
+                    console.log(`[FINAL] Image loaded, newlyArrived: ${photo.newlyArrived}, isPreview: ${isPreview}`);
+                    
                     if (!img.classList.contains('fade-in-complete')) {
                       img.classList.add('fade-in-complete');
                       
-                      // For newly arrived photos, delay opacity setting to allow transition
-                      // BUT: Don't set inline opacity on placeholder images during loading - let CSS animation control it
-                      if (img.classList.contains('placeholder') && photo.loading) {
-                        // Skip opacity setting for loading placeholders - CSS animation controls this
-                        console.log('Skipping inline opacity for loading placeholder - CSS animation controls it');
-                      } else if (photo.newlyArrived) {
-                        // For preview images, use a faster transition to handle rapid updates
-                        const transitionDelay = photo.isPreview ? 5 : 10;
-                        // Start with opacity 0.01 (almost invisible but not completely transparent)
-                        // This prevents white background from showing while keeping transition smooth
+                      // For newly arrived photos, use opacity fade (no scale - original behavior)
+                      if (photo.newlyArrived) {
+                        console.log('[FINAL] Starting fade-in for newly arrived image');
+                        // Start almost invisible (0.01 prevents white flash)
                         img.style.opacity = '0.01';
+                        img.style.filter = 'none';
+                        
+                        // Short delay then set to full opacity
+                        // This matches the original simple behavior
                         setTimeout(() => {
-                          img.style.opacity = photo.isPreview ? '0.25' : '1';
-                          // Add smooth transition for preview updates
-                          if (photo.isPreview) {
-                            img.style.transition = 'opacity 0.2s ease-in-out';
-                          }
-                        }, transitionDelay);
+                          img.style.opacity = '1';
+                        }, 10);
+                        console.log('[FINAL] Fade-in started');
                       } else {
-                        // Set opacity immediately without animation to prevent pulse
-                        const targetOpacity = photo.isPreview ? '0.25' : '1';
-                        img.style.opacity = targetOpacity;
-                        
-
-                        
-                        // Add smooth transition for preview updates
-                        if (photo.isPreview) {
-                          img.style.transition = 'opacity 0.2s ease-in-out';
-                        } else {
-                          // Remove transition for final images to ensure immediate full opacity
-                          img.style.transition = 'none';
-                        }
+                        // Set opacity immediately without animation
+                        console.log('[FINAL] Setting opacity to 1 immediately (not newly arrived)');
+                        img.style.opacity = '1';
+                        img.style.filter = 'none';
                       }
                     }
                   }}
@@ -14214,11 +14316,33 @@ const PhotoGallery = ({
                     e.stopPropagation();
                   }}
                   style={(() => {
+                    // IMPORTANT: Don't set opacity here - let JavaScript control it in onLoad
+                    // This prevents React from fighting with our animations
+                    // NOTE: Only use absolute positioning for thumbnails (crossfade needs it)
+                    // Selected photos must NOT use absolute positioning (CSS sets width/height: auto)
+                    const useAbsolutePosition = !isSelected;
+                    
                     const baseStyle = {
                       objectFit: 'cover',
-                      position: 'relative',
+                      // Only use absolute positioning for thumbnails, not selected photos
+                      ...(useAbsolutePosition ? {
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        height: '100%',
+                        zIndex: 2, // Above background image (zIndex 1)
+                      } : {
+                        // For selected photos, ensure z-index is BELOW ::after shadow (z-index: 10)
+                        position: 'relative',
+                        zIndex: 1
+                      }),
                       display: 'block',
-                      opacity: 0, // Start invisible, will be set to 1 immediately via onLoad without transition
+                      // For preview images, add blur effect (non-previews get filter:none in onLoad)
+                      filter: photo.isPreview ? 'blur(5px)' : undefined,
+                      // CRITICAL: Transparent background for previews so background image shows through
+                      // during fade-in (CSS sets background:#000 which blocks the crossfade)
+                      background: photo.isPreview && useAbsolutePosition ? 'transparent' : undefined,
                       // Add strong anti-aliasing for crisp thumbnail rendering
                       imageRendering: 'high-quality',
                       WebkitImageSmoothing: true,
@@ -15630,8 +15754,8 @@ const PhotoGallery = ({
               {/* No special label for selected view - use standard grid label below */}
               <div className="photo-label">
                 {photo.loading || photo.generating ? 
-                  (photo.statusText || labelText) 
-                  : photo.isGalleryImage ? labelText : (photo.statusText || labelText)}
+                  ((photo.statusText && photo.statusText !== '#SogniPhotobooth') ? photo.statusText : labelText)
+                  : photo.isGalleryImage ? labelText : ((photo.statusText && photo.statusText !== '#SogniPhotobooth') ? photo.statusText : labelText)}
                 {/* UGC Attribution - show for Vibe Explorer photos with attribution */}
                 {isPromptSelectorMode && photo.promptKey && getAttributionText(photo.promptKey) && (
                   <div style={{

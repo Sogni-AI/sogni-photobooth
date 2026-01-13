@@ -783,6 +783,18 @@ export async function generateImage(params: Record<string, unknown>, progressCal
                 connectionTimeout = undefined;
               }
 
+              // Debug: Log preview events specifically for thumbnail troubleshooting
+              if (data.type === 'preview') {
+                const previewUrlStr = typeof data.previewUrl === 'string' ? data.previewUrl : '';
+                console.log(`[THUMBNAIL DEBUG] 🖼️ SSE preview event received:`, {
+                  jobId: data.jobId,
+                  hasPreviewUrl: !!data.previewUrl,
+                  hasResultUrl: !!data.resultUrl,
+                  previewUrlPrefix: previewUrlStr ? previewUrlStr.substring(0, 80) + '...' : 'null',
+                  projectId: projectIdStr
+                });
+              }
+
               // Only handle connection/heartbeat events internally
               if (data.type === 'connected' || data.type === 'heartbeat') {
                 // Optionally log or handle connection events

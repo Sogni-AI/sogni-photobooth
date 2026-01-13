@@ -418,6 +418,26 @@ export async function generateImage(client, params, progressCallback, localProje
     // CRITICAL: Krea and context image models are not NSFW-aware, must always disable filter
     const isNsfwUnawareModel = isKreaUpscaling || isContextImageModel;
     
+    // Calculate the number of inference steps
+    const inferenceSteps = params.inferenceSteps || (isEnhancement ? 4 : 7);
+    
+    // Calculate numberOfPreviews based on steps
+    // - Krea upscaling: no previews (0)
+    // - For fast models with few steps (e.g., 4-step models like Qwen Lightning): cap at steps - 1 to ensure previews work
+    // - For other models: request 10 previews
+    let numberOfPreviews = 10;
+    if (isKreaUpscaling) {
+      numberOfPreviews = 0;
+    } else if (inferenceSteps <= 4) {
+      // For 4-step models, request 3 previews (steps - 1) to ensure they work
+      numberOfPreviews = Math.max(1, inferenceSteps - 1);
+    } else if (inferenceSteps < 10) {
+      // For models with 5-9 steps, cap previews at steps - 1
+      numberOfPreviews = inferenceSteps - 1;
+    }
+    
+    console.log(`[IMAGE] Model: ${params.selectedModel}, Steps: ${inferenceSteps}, Previews: ${numberOfPreviews}`);
+    
     const projectOptions = {
       type: 'image', // Required in SDK v4.x.x
       modelId: params.selectedModel,
@@ -427,10 +447,10 @@ export async function generateImage(client, params, progressCallback, localProje
       sizePreset: 'custom',
       width: params.width,
       height: params.height,
-      steps: params.inferenceSteps || (isEnhancement ? 4 : 7),
+      steps: inferenceSteps,
       guidance: params.promptGuidance || (isEnhancement ? 1 : 2),
       numberOfMedia: params.numberImages || 1,
-      numberOfPreviews: isKreaUpscaling ? 0 : 10, // Disable previews for Krea upscaling
+      numberOfPreviews: numberOfPreviews,
       sampler: params.sampler || 'DPM++ SDE',
       scheduler: params.scheduler || 'Karras',
       // FORCE disable NSFW filter for Krea/Qwen Image Edit (not NSFW-aware), otherwise use user setting
@@ -606,15 +626,22 @@ export async function generateImage(client, params, progressCallback, localProje
             switch (event.type) {
               case 'preview':
                 // Handle preview events
+                console.log(`[THUMBNAIL DEBUG] 🖼️ Server received preview event from SDK:`, {
+                  jobId: event.jobId,
+                  hasUrl: !!event.url,
+                  urlPrefix: event.url ? event.url.substring(0, 80) + '...' : 'null',
+                  imgID: event.imgID,
+                  projectId: event.projectId
+                });
                 
                 if (!event.jobId || !event.url) {
-                  console.log(`[IMAGE] Skipping preview event - missing jobId or url:`, { jobId: event.jobId, hasUrl: !!event.url });
+                  console.log(`[THUMBNAIL DEBUG] ⚠️ Skipping preview event - missing jobId or url:`, { jobId: event.jobId, hasUrl: !!event.url });
                   break;
                 }
                 
                 // Cancel fallback completion timeout since we received a preview (job is still actively generating)
                 if (projectCompletionTracker.jobCompletionTimeouts.has(event.jobId)) {
-                  console.log(`[IMAGE] Preview received for job ${event.jobId}, canceling fallback completion timeout`);
+                  console.log(`[THUMBNAIL DEBUG] Preview received for job ${event.jobId}, canceling fallback completion timeout`);
                   clearTimeout(projectCompletionTracker.jobCompletionTimeouts.get(event.jobId));
                   projectCompletionTracker.jobCompletionTimeouts.delete(event.jobId);
                 }
@@ -630,7 +657,11 @@ export async function generateImage(client, params, progressCallback, localProje
                   imgID: event.imgID // Include imgID for debugging
                 };
                 
-
+                console.log(`[THUMBNAIL DEBUG] 📤 Server forwarding preview event to client:`, {
+                  type: progressEvent.type,
+                  jobId: progressEvent.jobId,
+                  hasPreviewUrl: !!progressEvent.previewUrl
+                });
 
                 break;
                 

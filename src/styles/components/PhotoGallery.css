@@ -283,8 +283,13 @@
   transition: opacity 1.3s ease-out !important;
 }
 
+/* Preview image fade-in effect - handled by Web Animations API in PhotoGallery.jsx */
+/* Preview images get blur(5px) via inline styles and 2-second fade via JavaScript */
+
 /* Ensure placeholder fades out smoothly when final image loads */
-.film-frame.loaded .placeholder {
+/* BUT: Don't hide placeholder during preview state - it needs to stay visible */
+/* for the preview thumbnails to fade in over it */
+.film-frame.loaded:not([data-is-preview="true"]) .placeholder {
   animation: none !important;
   opacity: 0 !important;
   transition: opacity 0.2s ease-out !important;

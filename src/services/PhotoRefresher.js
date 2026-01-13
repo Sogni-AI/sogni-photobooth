@@ -502,12 +502,12 @@ export const refreshPhoto = async (options) => {
             const finalPromptKey = originalPromptKey || 
               Object.entries(stylePrompts || {}).find(([, value]) => value === promptToUse)?.[0];
             
-            let statusText = '#SogniPhotobooth'; // Default fallback
+            let statusText = ''; // Default fallback - no placeholder text
             if (finalPromptKey && finalPromptKey !== 'custom' && finalPromptKey !== 'random' && finalPromptKey !== 'randomMix') {
               statusText = styleIdToDisplay(finalPromptKey);
             }
             
-            console.log(`[REFRESH] Setting statusText to: ${statusText}, promptKey to: ${finalPromptKey}`);
+            console.log(`[REFRESH] Setting statusText to: ${statusText || '(empty)'}, promptKey to: ${finalPromptKey}`);
             
             updated[photoIndex] = {
               ...current,
@@ -537,12 +537,12 @@ export const refreshPhoto = async (options) => {
           const finalPromptKey = originalPromptKey || 
             Object.entries(stylePrompts || {}).find(([, value]) => value === promptToUse)?.[0];
           
-          let statusText = '#SogniPhotobooth'; // Default fallback
+          let statusText = ''; // Default fallback - no placeholder text
           if (finalPromptKey && finalPromptKey !== 'custom' && finalPromptKey !== 'random' && finalPromptKey !== 'randomMix') {
             statusText = styleIdToDisplay(finalPromptKey);
           }
           
-          console.log(`[REFRESH] (error path) Setting statusText to: ${statusText}, promptKey to: ${finalPromptKey}`);
+          console.log(`[REFRESH] (error path) Setting statusText to: ${statusText || '(empty)'}, promptKey to: ${finalPromptKey}`);
           
           setPhotos(prev => {
             const updated = [...prev];

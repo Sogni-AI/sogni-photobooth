@@ -144,6 +144,9 @@ export class FrontendProjectAdapter extends BrowserEventEmitter implements Sogni
       captureJobPrompt(event);
     });
 
+    // NOTE: Preview events are handled in the global job handler (setupGlobalProgressHandler)
+    // The 'preview' case in the switch statement handles SDK preview events.
+
     // ADDITIONAL: Listen for job events directly from the real client if available
     if (this.realClient && this.realClient.projects && typeof this.realClient.projects.on === 'function') {
       this.realClient.projects.on('job', (event: any) => {
@@ -400,6 +403,49 @@ export class FrontendProjectAdapter extends BrowserEventEmitter implements Sogni
             break;
           }
 
+          case 'preview': {
+            // SDK JobPreview event has: { type: 'preview', projectId, jobId, url: string }
+            const previewUrl = event.url;
+            const jobId = event.jobId;
+            
+            if (previewUrl && jobId) {
+              // Get cached worker name or use default
+              const cachedWorkerName = this.workerNameCache.get(jobId);
+              const workerName = event.workerName || cachedWorkerName || 'Worker';
+              
+              // Emit as jobCompleted with isPreview flag (matching backend behavior)
+              this.emit('jobCompleted', {
+                id: jobId,
+                resultUrl: previewUrl,
+                previewUrl: previewUrl,
+                isPreview: true,
+                positivePrompt: this.jobPrompts.get(jobId) || this.realProject.params?.positivePrompt || '',
+                workerName: workerName
+              });
+            }
+            break;
+          }
+
+          case 'jobETA': {
+            // SDK JobETA event has: { type: 'jobETA', projectId, jobId, etaSeconds: number }
+            const etaSeconds = event.etaSeconds;
+            
+            if (event.jobId && typeof etaSeconds === 'number') {
+              const cachedWorkerName = this.workerNameCache.get(event.jobId);
+              const workerName = cachedWorkerName || 'Worker';
+              
+              // Emit ETA event for the UI
+              this.emit('job', {
+                type: 'eta',
+                eta: etaSeconds,
+                jobId: event.jobId,
+                projectId: this.realProject.id,
+                workerName: workerName
+              });
+            }
+            break;
+          }
+
           case 'progress': {
             if (event.step && event.stepCount) {
               // Cache worker name if provided (matches backend logic)
@@ -582,6 +628,7 @@ export class FrontendSogniClientAdapter {
           hasReferenceImage: !!params.referenceImage,
           sourceType: params.sourceType
         });
+        
 
         // Convert sensitiveContentFilter to disableNSFWFilter for SDK compatibility
         // This matches the backend's conversion logic in server/services/sogni.js
