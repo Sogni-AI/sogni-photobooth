@@ -36,16 +36,22 @@ const SAMPLE_REPLACEMENT_VIDEOS = [
     url: 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/video-samples/leave-the-party.mp4'
   },
   {
-    id: 'dance-spongebob',
-    title: '🕺 SpongeBob dance',
-    description: '',
-    url: 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/video-samples/spongebob-dance.mp4'
-  },
-  {
     id: 'dance-keep-it-gangsta',
     title: '🕺 Keep it gangsta',
     description: '',
     url: 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/video-samples/dance-keep-it-gangsta.mp4'
+  },
+  {
+    id: 'this-is-america',
+    title: 'This is America',
+    description: '',
+    url: 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/video-samples/this-is-america.mp4'
+  },
+  {
+    id: 'not-enough',
+    title: 'not enough',
+    description: '',
+    url: 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/video-samples/snaptik_7584458675423677703_v2.mp4'
   },
 ];
 
@@ -997,6 +1003,9 @@ const AnimateReplacePopup = ({
       // Read file as buffer
       const arrayBuffer = await uploadedVideo.arrayBuffer();
       videoData = new Uint8Array(arrayBuffer);
+      // Create a persistent blob URL for regeneration
+      // This is separate from uploadedVideoUrl (used for preview) and won't be revoked when popup closes
+      videoUrl = URL.createObjectURL(uploadedVideo);
     } else if (sourceType === 'sample' && selectedSample) {
       videoUrl = selectedSample.url;
     }

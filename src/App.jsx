@@ -8731,12 +8731,6 @@ const App = () => {
       setShowStartMenu(false);
       stopCamera();
 
-      showToast({
-        title: '📁 Project Loaded',
-        message: `Loaded ${loadedPhotos.length} images from your local project!`,
-        type: 'success'
-      });
-
     } catch (error) {
       console.error('[Reuse Local Project] Failed to load project:', error);
       showToast({

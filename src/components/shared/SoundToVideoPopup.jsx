@@ -685,6 +685,9 @@ const SoundToVideoPopup = ({
     if (sourceType === 'upload' && uploadedAudio) {
       const arrayBuffer = await uploadedAudio.arrayBuffer();
       audioData = new Uint8Array(arrayBuffer);
+      // Create a persistent blob URL for regeneration
+      // This is separate from uploadedAudioUrl (used for preview) and won't be revoked when popup closes
+      audioUrl = URL.createObjectURL(uploadedAudio);
     } else if (sourceType === 'sample' && selectedSample) {
       audioUrl = selectedSample.url;
     }
