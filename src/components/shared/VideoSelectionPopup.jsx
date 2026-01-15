@@ -529,10 +529,18 @@ const VideoSelectionPopup = ({
           {videoOptions.map((option) => {
             const isDisabled = option.disabled;
             return (
-              <button
+              <div
                 key={option.id}
+                role="button"
+                tabIndex={isDisabled ? -1 : 0}
                 onClick={() => !isDisabled && onSelectVideoType(option.id)}
-                disabled={isDisabled}
+                onKeyDown={(e) => {
+                  if (!isDisabled && (e.key === 'Enter' || e.key === ' ')) {
+                    e.preventDefault();
+                    onSelectVideoType(option.id);
+                  }
+                }}
+                aria-disabled={isDisabled}
                 style={{
                   background: isDisabled
                     ? 'linear-gradient(135deg, #E5E7EB 0%, #D1D5DB 100%)'
@@ -1014,7 +1022,7 @@ const VideoSelectionPopup = ({
                     }} />
                   )}
                 </div>
-              </button>
+              </div>
             );
           })}
         </div>

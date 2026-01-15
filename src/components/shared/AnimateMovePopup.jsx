@@ -2,6 +2,9 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import PropTypes from 'prop-types';
 import { getTokenLabel } from '../../services/walletService';
+import { useApp } from '../../context/AppContext';
+import VideoRecorderPopup from './VideoRecorderPopup';
+import { saveRecording } from '../../utils/recordingsDB';
 
 // Sample motion videos for Animate Move
 const SAMPLE_MOTION_VIDEOS = [
@@ -126,12 +129,32 @@ const AnimateMovePopup = ({
   videoDuration: externalVideoDuration,
   onDurationChange
 }) => {
+  const { settings } = useApp();
+
+  // Convert aspect ratio key to CSS format for video recording
+  const getAspectRatioCss = (key) => {
+    const map = {
+      'ultranarrow': '768/1344',
+      'narrow': '832/1216',
+      'portrait': '896/1152',
+      'square': '1024/1024',
+      'landscape': '1152/896',
+      'wide': '1216/832',
+      'ultrawide': '1344/768'
+    };
+    return map[key] || '832/1216'; // Default to narrow (2:3)
+  };
+  const userAspectRatio = getAspectRatioCss(settings?.aspectRatio);
+
   const [positivePrompt, setPositivePrompt] = useState('');
   const [negativePrompt, setNegativePrompt] = useState('');
-  const [sourceType, setSourceType] = useState('sample'); // 'sample' or 'upload'
+  const [sourceType, setSourceType] = useState('sample'); // 'sample', 'upload', or 'record'
   const [selectedSample, setSelectedSample] = useState(null);
   const [uploadedVideo, setUploadedVideo] = useState(null);
   const [uploadedVideoUrl, setUploadedVideoUrl] = useState(null);
+  const [recordedVideo, setRecordedVideo] = useState(null);
+  const [recordedVideoUrl, setRecordedVideoUrl] = useState(null);
+  const [showVideoRecorder, setShowVideoRecorder] = useState(false);
   const [error, setError] = useState('');
   
   // Use external model variant state if provided (for cost estimation), otherwise use internal
@@ -274,8 +297,11 @@ const AnimateMovePopup = ({
       if (uploadedVideoUrl) {
         URL.revokeObjectURL(uploadedVideoUrl);
       }
+      if (recordedVideoUrl) {
+        URL.revokeObjectURL(recordedVideoUrl);
+      }
     };
-  }, [uploadedVideoUrl]);
+  }, [uploadedVideoUrl, recordedVideoUrl]);
 
   // Reset state when popup opens
   useEffect(() => {
@@ -305,7 +331,7 @@ const AnimateMovePopup = ({
   }, []);
 
   // Generate thumbnails from video
-  const generateThumbnails = useCallback(async (videoUrl) => {
+  const generateThumbnails = useCallback(async (videoUrl, knownDuration = null) => {
     setVideoThumbnails(null); // Reset thumbnails
     setPreviewPlayhead(0); // Reset playhead
 
@@ -327,17 +353,76 @@ const AnimateMovePopup = ({
       // Create video element for thumbnail extraction
       const video = document.createElement('video');
       video.crossOrigin = 'anonymous';
-      video.src = workingUrl;
       video.muted = true;
       video.preload = 'auto';
+      video.playsInline = true;
 
+      // For blob URLs, we need to wait longer for proper loading
+      const isRecordedBlob = isBlobUrl && !blobUrl;
+
+      // Set source
+      video.src = workingUrl;
+
+      // Wait for metadata to load
       await new Promise((resolve, reject) => {
-        video.onloadedmetadata = resolve;
-        video.onerror = reject;
-        setTimeout(() => reject(new Error('Video load timeout')), 15000);
+        const timeoutId = setTimeout(() => reject(new Error('Video load timeout')), 15000);
+        video.onloadedmetadata = () => {
+          clearTimeout(timeoutId);
+          resolve();
+        };
+        video.onerror = (e) => {
+          clearTimeout(timeoutId);
+          reject(new Error('Video load error'));
+        };
       });
 
-      const duration = video.duration;
+      // For recorded blobs, wait for more data to be available
+      if (isRecordedBlob) {
+        await new Promise((resolve) => {
+          if (video.readyState >= 3) {
+            resolve();
+          } else {
+            video.oncanplaythrough = resolve;
+            setTimeout(resolve, 1000); // Timeout after 1s
+          }
+        });
+      }
+
+      // Use known duration if provided (WebM blobs often report Infinity)
+      // Fall back to video.duration if available and finite
+      let duration = knownDuration;
+      if (!duration || !isFinite(duration) || duration <= 0) {
+        duration = video.duration;
+      }
+
+      // If duration is still not valid, try to determine it by seeking to the end
+      if (!isFinite(duration) || duration <= 0) {
+        // For WebM files without duration metadata, seek to a large time
+        // The video will clamp to the actual end
+        try {
+          video.currentTime = 1e10; // Large number
+          await new Promise((resolve) => {
+            video.onseeked = resolve;
+            setTimeout(resolve, 2000); // Timeout after 2s
+          });
+          duration = video.currentTime;
+          if (isFinite(duration) && duration > 0) {
+            video.currentTime = 0;
+            await new Promise((resolve) => {
+              video.onseeked = resolve;
+              setTimeout(resolve, 500);
+            });
+          }
+        } catch (e) {
+          // Seeking failed, will use known duration or throw error
+        }
+      }
+
+      // Final validation
+      if (!isFinite(duration) || duration <= 0) {
+        throw new Error('Could not determine video duration');
+      }
+
       setSourceVideoDuration(duration);
 
       // Set default duration to source video duration or base max, whichever is smaller
@@ -359,7 +444,16 @@ const AnimateMovePopup = ({
       // Calculate thumbnail dimensions based on video's actual aspect ratio
       const videoWidth = video.videoWidth;
       const videoHeight = video.videoHeight;
+
+      // Validate video dimensions
+      if (!videoWidth || !videoHeight || videoWidth <= 0 || videoHeight <= 0) {
+        throw new Error('Invalid video dimensions');
+      }
+
       const aspectRatio = videoWidth / videoHeight;
+      if (!isFinite(aspectRatio) || aspectRatio <= 0) {
+        throw new Error('Invalid video aspect ratio');
+      }
       setVideoAspectRatio(aspectRatio);
 
       // Generate thumbnails at higher resolution for quality, then scale down when drawing
@@ -381,8 +475,13 @@ const AnimateMovePopup = ({
       const maxThumbnails = 24; // Higher cap for wider videos / desktop
       const calculatedThumbnails = Math.ceil(estimatedContainerWidth / displayThumbWidth);
       const numThumbnails = Math.max(minThumbnails, Math.min(maxThumbnails, calculatedThumbnails));
-      
+
       const interval = duration / numThumbnails;
+
+      // Validate interval
+      if (!isFinite(interval) || interval <= 0) {
+        throw new Error('Invalid thumbnail interval');
+      }
       const thumbnails = [];
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
@@ -877,7 +976,7 @@ const AnimateMovePopup = ({
     if (!visible) return;
     
     // Only observe if no source is selected yet
-    const hasSource = (sourceType === 'sample' && selectedSample) || (sourceType === 'upload' && uploadedVideo);
+    const hasSource = (sourceType === 'sample' && selectedSample) || (sourceType === 'upload' && uploadedVideo) || (sourceType === 'record' && recordedVideo);
     if (hasSource) return;
 
     const observer = new IntersectionObserver(
@@ -909,7 +1008,7 @@ const AnimateMovePopup = ({
     return () => {
       observer.disconnect();
     };
-  }, [visible, sourceType, selectedSample, uploadedVideo]);
+  }, [visible, sourceType, selectedSample, uploadedVideo, recordedVideo]);
 
   // Get video duration when loaded (fallback if thumbnails fail)
   const handleVideoLoadedMetadata = useCallback(() => {
@@ -1025,6 +1124,32 @@ const AnimateMovePopup = ({
     }
   };
 
+  // Handle video recording complete
+  const handleRecordingComplete = async ({ file, url, duration: recordedDuration }) => {
+    setShowVideoRecorder(false);
+    setRecordedVideo(file);
+    setSourceType('record');
+    setSelectedSample(null);
+    setUploadedVideo(null);
+    if (uploadedVideoUrl) {
+      URL.revokeObjectURL(uploadedVideoUrl);
+      setUploadedVideoUrl(null);
+    }
+    if (recordedVideoUrl) {
+      URL.revokeObjectURL(recordedVideoUrl);
+    }
+    setRecordedVideoUrl(url);
+    setError('');
+    setVideoThumbnails(null);
+    setVideoStartOffset(0);
+    setIsPlaying(false);
+    setPreviewPlayhead(0);
+
+    // Generate thumbnails for timeline
+    // Pass the known duration since WebM blobs often report Infinity
+    await generateThumbnails(url, recordedDuration);
+  };
+
   const formatCost = (tokenCost, usdCost) => {
     if (!tokenCost || !usdCost) return null;
     const formattedTokenCost = typeof tokenCost === 'number' ? tokenCost.toFixed(2) : parseFloat(tokenCost).toFixed(2);
@@ -1041,6 +1166,10 @@ const AnimateMovePopup = ({
       setError('Please upload a source video');
       return;
     }
+    if (sourceType === 'record' && !recordedVideo) {
+      setError('Please record a video first');
+      return;
+    }
 
     setError('');
 
@@ -1055,6 +1184,17 @@ const AnimateMovePopup = ({
       // Create a persistent blob URL for regeneration
       // This is separate from uploadedVideoUrl (used for preview) and won't be revoked when popup closes
       videoUrl = URL.createObjectURL(uploadedVideo);
+    } else if (sourceType === 'record' && recordedVideo) {
+      // Read file as buffer
+      const arrayBuffer = await recordedVideo.arrayBuffer();
+      videoData = new Uint8Array(arrayBuffer);
+      // Create a persistent blob URL for regeneration
+      videoUrl = URL.createObjectURL(recordedVideo);
+      // Also save to IndexedDB for retry capability (in background)
+      const blob = new Blob([arrayBuffer], { type: recordedVideo.type || 'video/webm' });
+      saveRecording('video', blob, sourceVideoDuration, userAspectRatio).catch((err) => {
+        console.error('Failed to save recording for retry:', err);
+      });
     } else if (sourceType === 'sample' && selectedSample) {
       videoUrl = selectedSample.url;
     }
@@ -1079,10 +1219,16 @@ const AnimateMovePopup = ({
     setSourceType('sample');
     setSelectedSample(null);
     setUploadedVideo(null);
+    setRecordedVideo(null);
     if (uploadedVideoUrl) {
       URL.revokeObjectURL(uploadedVideoUrl);
       setUploadedVideoUrl(null);
     }
+    if (recordedVideoUrl) {
+      URL.revokeObjectURL(recordedVideoUrl);
+      setRecordedVideoUrl(null);
+    }
+    setShowVideoRecorder(false);
     setError('');
     setVideoDuration(5);
     setSourceVideoDuration(0);
@@ -1097,7 +1243,7 @@ const AnimateMovePopup = ({
 
   if (!visible) return null;
 
-  const hasValidSource = (sourceType === 'sample' && selectedSample) || (sourceType === 'upload' && uploadedVideo);
+  const hasValidSource = (sourceType === 'sample' && selectedSample) || (sourceType === 'upload' && uploadedVideo) || (sourceType === 'record' && recordedVideo);
   // Round max duration down to nearest 0.25s to ensure frame count is divisible at 16fps
   const maxDuration = sourceVideoDuration > 0 ? Math.floor(Math.min(sourceVideoDuration, MAX_DURATION) * 4) / 4 : MAX_DURATION;
 
@@ -1226,9 +1372,14 @@ const AnimateMovePopup = ({
                 onClick={() => {
                   setSelectedSample(null);
                   setUploadedVideo(null);
+                  setRecordedVideo(null);
                   if (uploadedVideoUrl) {
                     URL.revokeObjectURL(uploadedVideoUrl);
                     setUploadedVideoUrl(null);
+                  }
+                  if (recordedVideoUrl) {
+                    URL.revokeObjectURL(recordedVideoUrl);
+                    setRecordedVideoUrl(null);
                   }
                   setSourceVideoDuration(0);
                   setVideoThumbnails(null);
@@ -1293,13 +1444,21 @@ const AnimateMovePopup = ({
                   color: 'white',
                   zIndex: 2
                 }}>
-                  {sourceType === 'sample' && selectedSample ? selectedSample.title : uploadedVideo?.name || 'Uploaded Video'}
+                  {sourceType === 'sample' && selectedSample
+                    ? selectedSample.title
+                    : sourceType === 'record'
+                      ? '🎬 Recorded Video'
+                      : uploadedVideo?.name || 'Uploaded Video'}
                 </div>
 
                 {/* Video element */}
                 <video
                   ref={videoPreviewRef}
-                  src={sourceType === 'sample' && selectedSample ? selectedSample.url : uploadedVideoUrl}
+                  src={sourceType === 'sample' && selectedSample
+                    ? selectedSample.url
+                    : sourceType === 'record'
+                      ? recordedVideoUrl
+                      : uploadedVideoUrl}
                   muted={isMuted}
                   playsInline
                   onLoadedMetadata={handleVideoLoadedMetadata}
@@ -1713,126 +1872,197 @@ const AnimateMovePopup = ({
             </>
           )}
 
-          {/* Sample Videos Carousel - only shown when no video selected */}
+          {/* Source Selection Tabs - only shown when no video selected */}
           {!hasValidSource && (
             <>
-              <div
-                style={{
-                  display: 'flex',
-                  gap: '10px',
-                  marginBottom: '12px',
-                  overflowX: 'auto',
-                  overflowY: 'hidden',
-                  scrollSnapType: 'x mandatory',
-                  WebkitOverflowScrolling: 'touch',
-                  paddingBottom: '8px',
-                  marginLeft: '-4px',
-                  marginRight: '-4px',
-                  paddingLeft: '4px',
-                  paddingRight: '4px'
-                }}
-              >
-                {SAMPLE_MOTION_VIDEOS.map((sample) => (
+              {/* Tab Headers */}
+              <div style={{
+                display: 'flex',
+                gap: '4px',
+                marginBottom: '12px',
+                background: 'rgba(0, 0, 0, 0.2)',
+                borderRadius: '8px',
+                padding: '4px'
+              }}>
+                {[
+                  { id: 'sample', label: '📹 Samples' },
+                  { id: 'record', label: '🎬 Record' },
+                  { id: 'upload', label: '📁 Upload' }
+                ].map((tab) => (
                   <button
-                    key={sample.id}
-                    onClick={() => handleSampleSelect(sample)}
-                    ref={(el) => {
-                      if (el) {
-                        sampleVideoContainerRefs.current[sample.id] = el;
-                      }
-                    }}
-                    data-video-id={sample.id}
+                    key={tab.id}
+                    onClick={() => setSourceType(tab.id)}
                     style={{
-                      position: 'relative',
-                      padding: 0,
-                      borderRadius: '10px',
-                      border: '3px solid rgba(255, 255, 255, 0.3)',
-                      background: 'rgba(0, 0, 0, 0.3)',
-                      color: 'white',
+                      flex: 1,
+                      padding: '8px 12px',
+                      borderRadius: '6px',
+                      border: 'none',
+                      background: sourceType === tab.id 
+                        ? 'rgba(255, 255, 255, 0.95)' 
+                        : 'transparent',
+                      color: sourceType === tab.id ? '#0891b2' : 'white',
+                      fontSize: '12px',
+                      fontWeight: '600',
                       cursor: 'pointer',
-                      transition: 'all 0.2s ease',
-                      overflow: 'hidden',
-                      flexShrink: 0,
-                      width: isMobile ? '100px' : '90px',
-                      height: isMobile ? '178px' : '160px',
-                      scrollSnapAlign: 'start',
-                      display: 'flex',
-                      flexDirection: 'column'
+                      transition: 'all 0.2s ease'
                     }}
                   >
-                    {visibleSampleVideos[sample.id] && (
-                      <video
-                        ref={(el) => { sampleVideoRefs.current[sample.id] = el; }}
-                        src={sample.url}
-                        autoPlay
-                        muted
-                        loop
-                        playsInline
-                        preload="auto"
-                        style={{
-                          width: '100%',
-                          height: '100%',
-                          objectFit: 'cover',
-                          pointerEvents: 'none'
-                        }}
-                      />
-                    )}
-                    <div style={{
-                      position: 'absolute',
-                      bottom: 0,
-                      left: 0,
-                      right: 0,
-                      background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 100%)',
-                      padding: '4px 6px',
-                      textAlign: 'center'
-                    }}>
-                      <div style={{ fontSize: '10px', fontWeight: '700', textShadow: '0 1px 3px rgba(0,0,0,0.5)' }}>
-                        {sample.title}
-                      </div>
-                    </div>
+                    {tab.label}
                   </button>
                 ))}
               </div>
 
-              {/* Or divider */}
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                margin: '12px 0',
-                color: 'rgba(255, 255, 255, 0.6)',
-                fontSize: '11px'
-              }}>
-                <div style={{ flex: 1, height: '1px', backgroundColor: 'rgba(255, 255, 255, 0.3)' }} />
-                <span>or upload your own</span>
-                <div style={{ flex: 1, height: '1px', backgroundColor: 'rgba(255, 255, 255, 0.3)' }} />
-              </div>
+              {/* Tab Content */}
+              <div style={{ minHeight: '80px' }}>
+                {/* Samples Tab */}
+                {sourceType === 'sample' && (
+                  <div
+                    style={{
+                      display: 'flex',
+                      gap: '10px',
+                      overflowX: 'auto',
+                      overflowY: 'hidden',
+                      scrollSnapType: 'x mandatory',
+                      WebkitOverflowScrolling: 'touch',
+                      paddingBottom: '8px',
+                      marginLeft: '-4px',
+                      marginRight: '-4px',
+                      paddingLeft: '4px',
+                      paddingRight: '4px'
+                    }}
+                  >
+                    {SAMPLE_MOTION_VIDEOS.map((sample) => (
+                      <button
+                        key={sample.id}
+                        onClick={() => handleSampleSelect(sample)}
+                        ref={(el) => {
+                          if (el) {
+                            sampleVideoContainerRefs.current[sample.id] = el;
+                          }
+                        }}
+                        data-video-id={sample.id}
+                        style={{
+                          position: 'relative',
+                          padding: 0,
+                          borderRadius: '10px',
+                          border: '3px solid rgba(255, 255, 255, 0.3)',
+                          background: 'rgba(0, 0, 0, 0.3)',
+                          color: 'white',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease',
+                          overflow: 'hidden',
+                          flexShrink: 0,
+                          width: isMobile ? '100px' : '90px',
+                          height: isMobile ? '178px' : '160px',
+                          scrollSnapAlign: 'start',
+                          display: 'flex',
+                          flexDirection: 'column'
+                        }}
+                      >
+                        {visibleSampleVideos[sample.id] && (
+                          <video
+                            ref={(el) => { sampleVideoRefs.current[sample.id] = el; }}
+                            src={sample.url}
+                            autoPlay
+                            muted
+                            loop
+                            playsInline
+                            preload="auto"
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                              objectFit: 'cover',
+                              pointerEvents: 'none'
+                            }}
+                          />
+                        )}
+                        <div style={{
+                          position: 'absolute',
+                          bottom: 0,
+                          left: 0,
+                          right: 0,
+                          background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 100%)',
+                          padding: '4px 6px',
+                          textAlign: 'center'
+                        }}>
+                          <div style={{ fontSize: '10px', fontWeight: '700', textShadow: '0 1px 3px rgba(0,0,0,0.5)' }}>
+                            {sample.title}
+                          </div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
 
-              {/* Upload Button */}
-              <input
-                type="file"
-                ref={videoInputRef}
-                accept="video/*"
-                style={{ display: 'none' }}
-                onChange={handleVideoUpload}
-              />
-              <button
-                onClick={() => videoInputRef.current?.click()}
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  borderRadius: '8px',
-                  border: '2px dashed rgba(255, 255, 255, 0.4)',
-                  background: 'rgba(255, 255, 255, 0.1)',
-                  color: 'white',
-                  cursor: 'pointer',
-                  fontSize: '13px',
-                  fontWeight: '500',
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                📁 Upload Motion Video (MP4)
-              </button>
+                {/* Record Tab - Coming Soon */}
+                {sourceType === 'record' && (
+                  <div style={{ 
+                    textAlign: 'center',
+                    padding: '24px 16px',
+                    borderRadius: '10px',
+                    border: '2px dashed rgba(255, 255, 255, 0.3)',
+                    background: 'rgba(255, 255, 255, 0.05)'
+                  }}>
+                    <span style={{ fontSize: '40px', display: 'block', marginBottom: '12px' }}>🚧</span>
+                    <span style={{ 
+                      color: 'white', 
+                      fontSize: '16px', 
+                      fontWeight: '600',
+                      display: 'block',
+                      marginBottom: '8px'
+                    }}>
+                      Coming Soon!
+                    </span>
+                    <span style={{ 
+                      color: 'rgba(255, 255, 255, 0.7)', 
+                      fontSize: '13px',
+                      display: 'block'
+                    }}>
+                      Video recording will be available in a future update.
+                      <br />
+                      For now, please upload a video file instead.
+                    </span>
+                  </div>
+                )}
+
+                {/* Upload Tab */}
+                {sourceType === 'upload' && (
+                  <div style={{ textAlign: 'center' }}>
+                    <input
+                      type="file"
+                      ref={videoInputRef}
+                      accept="video/*"
+                      style={{ display: 'none' }}
+                      onChange={handleVideoUpload}
+                    />
+                    <button
+                      onClick={() => videoInputRef.current?.click()}
+                      style={{
+                        width: '100%',
+                        padding: '24px 16px',
+                        borderRadius: '10px',
+                        border: '2px dashed rgba(255, 255, 255, 0.4)',
+                        background: 'rgba(255, 255, 255, 0.1)',
+                        color: 'white',
+                        cursor: 'pointer',
+                        fontSize: '14px',
+                        fontWeight: '600',
+                        transition: 'all 0.2s ease',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: '8px'
+                      }}
+                    >
+                      <span style={{ fontSize: '32px' }}>📁</span>
+                      <span>Tap to Upload Video</span>
+                      <span style={{ fontSize: '11px', opacity: 0.7 }}>
+                        Select a video file from your device
+                      </span>
+                    </button>
+                  </div>
+                )}
+              </div>
             </>
           )}
         </div>
@@ -2052,6 +2282,17 @@ const AnimateMovePopup = ({
           opacity: 1;
         }
       `}</style>
+
+      {/* Video Recorder Popup */}
+      <VideoRecorderPopup
+        visible={showVideoRecorder}
+        onRecordingComplete={handleRecordingComplete}
+        onClose={() => setShowVideoRecorder(false)}
+        maxDuration={60}
+        title="Record Motion Video"
+        accentColor="#06b6d4"
+        aspectRatio={userAspectRatio}
+      />
     </div>,
     document.body
   );

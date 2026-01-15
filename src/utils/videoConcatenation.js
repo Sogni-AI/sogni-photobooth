@@ -133,24 +133,38 @@ export async function concatenateVideos(videos, onProgress = null, audioOptions 
   if (audioOptions && audioOptions.buffer) {
     if (onProgress) onProgress(videos.length, videos.length, 'Adding music track...');
     console.log('[Concatenate] Adding parent audio track (source audio was stripped)');
-    try {
-      if (audioOptions.isVideoSource) {
-        // Extract audio from video source file, then mux it
-        console.log('[Concatenate] Extracting audio from video source file...');
-        const audioBuffer = audioOptions.buffer instanceof ArrayBuffer 
-          ? audioOptions.buffer 
-          : audioOptions.buffer.buffer || audioOptions.buffer;
-        result = await muxAudioTrack(result, audioBuffer, audioOptions.startOffset || 0);
-        console.log('[Concatenate] Parent audio (from video source) muxed successfully');
-      } else {
-        // Regular audio file (M4A)
-        console.log('[Concatenate] Muxing M4A audio file...');
-        result = await muxAudioTrack(result, audioOptions.buffer, audioOptions.startOffset || 0);
-        console.log('[Concatenate] Parent audio (M4A) muxed successfully');
+    
+    // Check if the audio source is a WebM file (not supported for audio extraction)
+    const audioBufferForCheck = audioOptions.buffer instanceof ArrayBuffer 
+      ? new Uint8Array(audioOptions.buffer)
+      : audioOptions.buffer instanceof Uint8Array
+        ? audioOptions.buffer
+        : new Uint8Array(audioOptions.buffer.buffer || audioOptions.buffer);
+    const isWebM = audioBufferForCheck[0] === 0x1A && audioBufferForCheck[1] === 0x45 && 
+                   audioBufferForCheck[2] === 0xDF && audioBufferForCheck[3] === 0xA3;
+    
+    if (isWebM) {
+      console.log('[Concatenate] Skipping audio muxing - WebM format not supported for audio extraction. Use M4A/MP4 audio source for audio track.');
+    } else {
+      try {
+        if (audioOptions.isVideoSource) {
+          // Extract audio from video source file, then mux it
+          console.log('[Concatenate] Extracting audio from video source file...');
+          const audioBuffer = audioOptions.buffer instanceof ArrayBuffer 
+            ? audioOptions.buffer 
+            : audioOptions.buffer.buffer || audioOptions.buffer;
+          result = await muxAudioTrack(result, audioBuffer, audioOptions.startOffset || 0);
+          console.log('[Concatenate] Parent audio (from video source) muxed successfully');
+        } else {
+          // Regular audio file (M4A)
+          console.log('[Concatenate] Muxing M4A audio file...');
+          result = await muxAudioTrack(result, audioOptions.buffer, audioOptions.startOffset || 0);
+          console.log('[Concatenate] Parent audio (M4A) muxed successfully');
+        }
+      } catch (error) {
+        console.error('[Concatenate] Failed to add parent audio track:', error);
+        // Continue without audio rather than failing completely
       }
-    } catch (error) {
-      console.error('[Concatenate] Failed to add parent audio track:', error);
-      // Continue without audio rather than failing completely
     }
   }
   
@@ -1519,6 +1533,13 @@ function muxConcatenatedAudio(videoData, audioInfo, targetDurationSeconds = null
  */
 // eslint-disable-next-line no-unused-vars
 async function muxAudioTrack(videoData, audioBuffer, startOffset = 0) {
+  // Check if the audio source is a WebM file (not supported - WebM uses different container format)
+  // WebM files start with 0x1A 0x45 0xDF 0xA3 (EBML header)
+  const audioView = new Uint8Array(audioBuffer);
+  if (audioView[0] === 0x1A && audioView[1] === 0x45 && audioView[2] === 0xDF && audioView[3] === 0xA3) {
+    throw new Error('WebM audio format not supported - only MP4/M4A audio can be muxed. Recorded video audio will be skipped.');
+  }
+  
   // Parse the video MP4
   const videoArrayBuffer = videoData.buffer.slice(
     videoData.byteOffset,

@@ -2,6 +2,8 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import PropTypes from 'prop-types';
 import { getTokenLabel } from '../../services/walletService';
+import AudioRecorderPopup from './AudioRecorderPopup';
+import { saveRecording } from '../../utils/recordingsDB';
 
 // Sample audio tracks for S2V
 const SAMPLE_AUDIO_TRACKS = [
@@ -127,10 +129,13 @@ const SoundToVideoPopup = ({
 }) => {
   const [positivePrompt, setPositivePrompt] = useState('');
   const [negativePrompt, setNegativePrompt] = useState('');
-  const [sourceType, setSourceType] = useState('sample'); // 'sample' or 'upload'
+  const [sourceType, setSourceType] = useState('sample'); // 'sample', 'upload', or 'record'
   const [selectedSample, setSelectedSample] = useState(null);
   const [uploadedAudio, setUploadedAudio] = useState(null);
   const [uploadedAudioUrl, setUploadedAudioUrl] = useState(null);
+  const [recordedAudio, setRecordedAudio] = useState(null);
+  const [recordedAudioUrl, setRecordedAudioUrl] = useState(null);
+  const [showAudioRecorder, setShowAudioRecorder] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [error, setError] = useState('');
 
@@ -247,11 +252,14 @@ const SoundToVideoPopup = ({
       if (uploadedAudioUrl) {
         URL.revokeObjectURL(uploadedAudioUrl);
       }
+      if (recordedAudioUrl) {
+        URL.revokeObjectURL(recordedAudioUrl);
+      }
       if (playbackAnimationRef.current) {
         cancelAnimationFrame(playbackAnimationRef.current);
       }
     };
-  }, [uploadedAudioUrl]);
+  }, [uploadedAudioUrl, recordedAudioUrl]);
 
   // Reset state when popup opens
   useEffect(() => {
@@ -622,6 +630,29 @@ const SoundToVideoPopup = ({
     await generateWaveform(sample.url);
   };
 
+  // Handle audio recording complete
+  const handleRecordingComplete = async ({ file, url }) => {
+    setShowAudioRecorder(false);
+    setRecordedAudio(file);
+    setSourceType('record');
+    setSelectedSample(null);
+    setUploadedAudio(null);
+    if (uploadedAudioUrl) {
+      URL.revokeObjectURL(uploadedAudioUrl);
+      setUploadedAudioUrl(null);
+    }
+    if (recordedAudioUrl) {
+      URL.revokeObjectURL(recordedAudioUrl);
+    }
+    setRecordedAudioUrl(url);
+    setError('');
+    setIsPlaying(false);
+    setAudioStartOffset(0);
+
+    // Generate waveform for timeline
+    await generateWaveform(url);
+  };
+
   const toggleAudioPreview = () => {
     const audio = audioPreviewRef.current;
     if (!audio) return;
@@ -676,6 +707,10 @@ const SoundToVideoPopup = ({
       setError('need an audio file first! 🎵');
       return;
     }
+    if (sourceType === 'record' && !recordedAudio) {
+      setError('please record some audio first! 🎤');
+      return;
+    }
 
     setError('');
 
@@ -688,6 +723,16 @@ const SoundToVideoPopup = ({
       // Create a persistent blob URL for regeneration
       // This is separate from uploadedAudioUrl (used for preview) and won't be revoked when popup closes
       audioUrl = URL.createObjectURL(uploadedAudio);
+    } else if (sourceType === 'record' && recordedAudio) {
+      const arrayBuffer = await recordedAudio.arrayBuffer();
+      audioData = new Uint8Array(arrayBuffer);
+      // Create a persistent blob URL for regeneration
+      audioUrl = URL.createObjectURL(recordedAudio);
+      // Also save to IndexedDB for retry capability (in background)
+      const blob = new Blob([arrayBuffer], { type: recordedAudio.type || 'audio/webm' });
+      saveRecording('audio', blob, audioDuration).catch((err) => {
+        console.error('Failed to save audio recording for retry:', err);
+      });
     } else if (sourceType === 'sample' && selectedSample) {
       audioUrl = selectedSample.url;
     }
@@ -710,10 +755,16 @@ const SoundToVideoPopup = ({
     setSourceType('sample');
     setSelectedSample(null);
     setUploadedAudio(null);
+    setRecordedAudio(null);
     if (uploadedAudioUrl) {
       URL.revokeObjectURL(uploadedAudioUrl);
       setUploadedAudioUrl(null);
     }
+    if (recordedAudioUrl) {
+      URL.revokeObjectURL(recordedAudioUrl);
+      setRecordedAudioUrl(null);
+    }
+    setShowAudioRecorder(false);
     setIsPlaying(false);
     setError('');
     setAudioWaveform(null);
@@ -725,8 +776,12 @@ const SoundToVideoPopup = ({
 
   if (!visible) return null;
 
-  const hasValidSource = (sourceType === 'sample' && selectedSample) || (sourceType === 'upload' && uploadedAudio);
-  const previewAudioUrl = sourceType === 'upload' ? uploadedAudioUrl : selectedSample?.url;
+  const hasValidSource = (sourceType === 'sample' && selectedSample) || (sourceType === 'upload' && uploadedAudio) || (sourceType === 'record' && recordedAudio);
+  const previewAudioUrl = sourceType === 'record'
+    ? recordedAudioUrl
+    : sourceType === 'upload'
+      ? uploadedAudioUrl
+      : selectedSample?.url;
   // Round max duration down to nearest 0.25s to ensure frame count is divisible at 16fps
   const maxDuration = audioDuration > 0 ? Math.floor(Math.min(audioDuration, MAX_DURATION) * 4) / 4 : MAX_DURATION;
   
@@ -840,138 +895,339 @@ const SoundToVideoPopup = ({
           </p>
         </div>
 
-        {/* Source Audio Section */}
+        {/* Source Audio Tabs */}
         <div style={{
           background: 'rgba(0, 0, 0, 0.2)',
           borderRadius: '12px',
-          padding: isMobile ? '14px' : '16px',
+          padding: isMobile ? '12px' : '16px',
           marginBottom: '16px'
         }}>
-          <label style={{
-            display: 'block',
-            color: 'white',
-            fontSize: '13px',
-            fontWeight: '600',
-            marginBottom: '12px',
-            textTransform: 'uppercase',
-            letterSpacing: '0.5px'
-          }}>
-            🎵 Source Audio
-          </label>
-
-          {/* Sample Audio Dropdown */}
-          <select
-            value={selectedSample?.id || ''}
-            onChange={(e) => {
-              const sample = SAMPLE_AUDIO_TRACKS.find(s => s.id === e.target.value);
-              if (sample) {
-                handleSampleSelect(sample);
-              }
-            }}
-            style={{
-              width: '100%',
-              padding: '12px 16px',
-              borderRadius: '10px',
-              border: '2px solid rgba(255, 255, 255, 0.3)',
-              background: 'rgba(255, 255, 255, 0.1)',
-              color: 'white',
-              fontSize: '14px',
-              fontWeight: '500',
-              cursor: 'pointer',
-              marginBottom: '12px',
-              transition: 'all 0.2s ease',
-              outline: 'none',
-              appearance: 'none',
-              backgroundImage: `url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`,
-              backgroundRepeat: 'no-repeat',
-              backgroundPosition: 'right 16px center',
-              paddingRight: '44px'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)';
-              e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.5)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
-              e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.3)';
-            }}
-          >
-            <option value="" disabled style={{ background: '#1a1a1a', color: 'white' }}>
-              Select a sample audio track...
-            </option>
-            {SAMPLE_AUDIO_TRACKS.map((sample) => (
-              <option 
-                key={sample.id} 
-                value={sample.id}
-                style={{ background: '#1a1a1a', color: 'white', padding: '8px' }}
-              >
-                {sample.emoji} {sample.title}
-              </option>
-            ))}
-          </select>
-
-          {/* Or divider */}
+          {/* Tab Headers */}
           <div style={{
             display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            margin: '12px 0',
-            color: 'rgba(255, 255, 255, 0.6)',
-            fontSize: '11px'
+            gap: '4px',
+            marginBottom: '12px',
+            background: 'rgba(0, 0, 0, 0.2)',
+            borderRadius: '8px',
+            padding: '4px'
           }}>
-            <div style={{ flex: 1, height: '1px', backgroundColor: 'rgba(255, 255, 255, 0.3)' }} />
-            <span>or upload your own</span>
-            <div style={{ flex: 1, height: '1px', backgroundColor: 'rgba(255, 255, 255, 0.3)' }} />
+            {[
+              { id: 'sample', label: '🎵 Samples', hasContent: !!selectedSample },
+              { id: 'record', label: '🎤 Record', hasContent: !!recordedAudio },
+              { id: 'upload', label: '📁 Upload', hasContent: !!uploadedAudio }
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setSourceType(tab.id)}
+                style={{
+                  flex: 1,
+                  padding: '8px 12px',
+                  borderRadius: '6px',
+                  border: 'none',
+                  background: sourceType === tab.id 
+                    ? 'rgba(255, 255, 255, 0.95)' 
+                    : tab.hasContent 
+                      ? 'rgba(255, 255, 255, 0.12)'
+                      : 'transparent',
+                  color: sourceType === tab.id ? '#db2777' : 'white',
+                  fontSize: '12px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  position: 'relative'
+                }}
+              >
+                {tab.label}
+                {tab.hasContent && sourceType !== tab.id && (
+                  <span style={{
+                    position: 'absolute',
+                    top: '4px',
+                    right: '4px',
+                    width: '6px',
+                    height: '6px',
+                    background: '#4caf50',
+                    borderRadius: '50%',
+                    boxShadow: '0 0 4px rgba(76, 175, 80, 0.6)'
+                  }} />
+                )}
+              </button>
+            ))}
           </div>
 
-          {/* Upload Button */}
-          <input
-            type="file"
-            ref={audioInputRef}
-            accept="audio/*,.mp3,.m4a,.wav"
-            style={{ display: 'none' }}
-            onChange={handleAudioUpload}
-          />
-          <button
-            onClick={() => audioInputRef.current?.click()}
-            style={{
-              width: '100%',
-              padding: '12px',
-              borderRadius: '8px',
-              border: uploadedAudio
-                ? '2px solid rgba(76, 175, 80, 0.8)'
-                : '2px dashed rgba(255, 255, 255, 0.4)',
-              background: uploadedAudio
-                ? 'rgba(76, 175, 80, 0.3)'
-                : 'rgba(255, 255, 255, 0.1)',
-              color: 'white',
-              cursor: 'pointer',
-              fontSize: '13px',
-              fontWeight: '500',
-              transition: 'all 0.2s ease'
-            }}
-          >
-            {uploadedAudio ? `✅ ${uploadedAudio.name}` : '📁 Upload Audio (MP3, M4A, WAV)'}
-          </button>
+          {/* Tab Content */}
+          <div style={{ minHeight: '60px' }}>
+            {/* Samples Tab */}
+            {sourceType === 'sample' && (
+              <select
+                value={selectedSample?.id || ''}
+                onChange={(e) => {
+                  const sample = SAMPLE_AUDIO_TRACKS.find(s => s.id === e.target.value);
+                  if (sample) {
+                    handleSampleSelect(sample);
+                  }
+                }}
+                style={{
+                  width: '100%',
+                  padding: '12px 16px',
+                  borderRadius: '8px',
+                  border: '2px solid rgba(255, 255, 255, 0.3)',
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  color: 'white',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  outline: 'none',
+                  appearance: 'none',
+                  backgroundImage: `url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`,
+                  backgroundRepeat: 'no-repeat',
+                  backgroundPosition: 'right 16px center',
+                  paddingRight: '44px'
+                }}
+              >
+                <option value="" disabled style={{ background: '#1a1a1a', color: 'white' }}>
+                  Select a sample audio track...
+                </option>
+                {SAMPLE_AUDIO_TRACKS.map((sample) => (
+                  <option 
+                    key={sample.id} 
+                    value={sample.id}
+                    style={{ background: '#1a1a1a', color: 'white', padding: '8px' }}
+                  >
+                    {sample.emoji} {sample.title}
+                  </option>
+                ))}
+              </select>
+            )}
 
-          {/* Waveform Visualization */}
-          {hasValidSource && audioWaveform && (
-            <div style={{ marginTop: '14px' }}>
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                marginBottom: '8px'
+            {/* Record Tab */}
+            {sourceType === 'record' && (
+              <div style={{ textAlign: 'center' }}>
+                {recordedAudio ? (
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '12px',
+                    padding: '16px',
+                    background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.08) 100%)',
+                    borderRadius: '12px',
+                    border: '1px solid rgba(255, 255, 255, 0.25)',
+                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
+                  }}>
+                    <div style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '12px',
+                      flex: 1,
+                      minWidth: 0
+                    }}>
+                      <div style={{
+                        width: '36px',
+                        height: '36px',
+                        borderRadius: '8px',
+                        background: 'rgba(255, 255, 255, 0.2)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '20px',
+                        flexShrink: 0
+                      }}>
+                        ✅
+                      </div>
+                      <div style={{ 
+                        textAlign: 'left',
+                        flex: 1,
+                        minWidth: 0
+                      }}>
+                        <div style={{ 
+                          color: 'white', 
+                          fontSize: '14px', 
+                          fontWeight: '600',
+                          marginBottom: '2px'
+                        }}>
+                          Audio Recorded
+                        </div>
+                        <div style={{
+                          color: 'rgba(255, 255, 255, 0.85)',
+                          fontSize: '12px',
+                          fontWeight: '500'
+                        }}>
+                          {formatTime(audioDuration)}
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setShowAudioRecorder(true)}
+                      style={{
+                        padding: '8px 16px',
+                        borderRadius: '8px',
+                        border: '1px solid rgba(255,255,255,0.4)',
+                        background: 'rgba(255, 255, 255, 0.15)',
+                        color: 'white',
+                        fontSize: '13px',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        flexShrink: 0
+                      }}
+                    >
+                      Change
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setShowAudioRecorder(true)}
+                    style={{
+                      width: '100%',
+                      padding: '24px 16px',
+                      borderRadius: '12px',
+                      border: '2px dashed rgba(255, 255, 255, 0.3)',
+                      background: 'linear-gradient(135deg, rgba(219, 39, 119, 0.08) 0%, rgba(219, 39, 119, 0.15) 100%)',
+                      color: 'white',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      transition: 'all 0.2s ease',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: '12px',
+                      position: 'relative',
+                      overflow: 'hidden'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = 'linear-gradient(135deg, rgba(219, 39, 119, 0.15) 0%, rgba(219, 39, 119, 0.22) 100%)';
+                      e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.5)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'linear-gradient(135deg, rgba(219, 39, 119, 0.08) 0%, rgba(219, 39, 119, 0.15) 100%)';
+                      e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.3)';
+                    }}
+                  >
+                    <div style={{
+                      width: '56px',
+                      height: '56px',
+                      borderRadius: '50%',
+                      background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.1) 100%)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '28px',
+                      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
+                    }}>
+                      🎤
+                    </div>
+                    <div style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '4px'
+                    }}>
+                      <span style={{ fontSize: '15px', fontWeight: '700' }}>
+                        Record Your Audio
+                      </span>
+                      <span style={{ 
+                        fontSize: '12px', 
+                        opacity: 0.75,
+                        fontWeight: '400'
+                      }}>
+                        Tap to start recording with your microphone
+                      </span>
+                    </div>
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Upload Tab */}
+            {sourceType === 'upload' && (
+              <div style={{ textAlign: 'center' }}>
+                <input
+                  type="file"
+                  ref={audioInputRef}
+                  accept="audio/*,.mp3,.m4a,.wav"
+                  onChange={handleAudioUpload}
+                  style={{ display: 'none' }}
+                />
+                {uploadedAudio ? (
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '12px',
+                    padding: '8px',
+                    background: 'rgba(76, 175, 80, 0.2)',
+                    borderRadius: '8px'
+                  }}>
+                    <span style={{ fontSize: '20px' }}>📁</span>
+                    <span style={{ 
+                      color: 'white', 
+                      fontSize: '13px', 
+                      fontWeight: '500',
+                      maxWidth: '150px',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap'
+                    }}>
+                      {uploadedAudio.name}
+                    </span>
+                    <button
+                      onClick={() => audioInputRef.current?.click()}
+                      style={{
+                        padding: '6px 12px',
+                        borderRadius: '6px',
+                        border: '1px solid rgba(255,255,255,0.3)',
+                        background: 'transparent',
+                        color: 'white',
+                        fontSize: '12px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Change
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => audioInputRef.current?.click()}
+                    style={{
+                      width: '100%',
+                      padding: '16px',
+                      borderRadius: '8px',
+                      border: '2px dashed rgba(255, 255, 255, 0.4)',
+                      background: 'rgba(255, 255, 255, 0.1)',
+                      color: 'white',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    📁 Tap to Upload Audio
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Waveform Visualization */}
+        {hasValidSource && audioWaveform && (
+          <div style={{ marginTop: '14px' }}>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '8px'
+            }}>
+              <label style={{
+                color: 'rgba(255, 255, 255, 0.9)',
+                fontSize: '12px',
+                fontWeight: '600'
               }}>
-                <label style={{
-                  color: 'rgba(255, 255, 255, 0.9)',
-                  fontSize: '12px',
-                  fontWeight: '600'
-                }}>
-                  Select Audio Segment
-                </label>
-                <button
-                  onClick={toggleAudioPreview}
+                Select Audio Segment
+              </label>
+              <button
+                onClick={toggleAudioPreview}
                   style={{
                     padding: '6px 14px',
                     backgroundColor: isPlaying ? '#ef4444' : 'rgba(255, 255, 255, 0.9)',
@@ -1171,9 +1427,8 @@ const SoundToVideoPopup = ({
               )}
             </div>
           )}
-        </div>
 
-        {/* Prompt Section */}
+          {/* Prompt Section */}
         <div style={{ marginBottom: '16px' }}>
           <label style={{
             display: 'block',
@@ -1426,6 +1681,16 @@ const SoundToVideoPopup = ({
           background: rgba(255, 255, 255, 0.5);
         }
       `}</style>
+
+      {/* Audio Recorder Popup */}
+      <AudioRecorderPopup
+        visible={showAudioRecorder}
+        onRecordingComplete={handleRecordingComplete}
+        onClose={() => setShowAudioRecorder(false)}
+        maxDuration={60}
+        title="Record Audio"
+        accentColor="#ec4899"
+      />
     </div>,
     document.body
   );

@@ -35,6 +35,7 @@ import { getTokenLabel } from '../../services/walletService';
 import { useToastContext } from '../../context/ToastContext';
 import { generateGalleryFilename, getPortraitFolderWithFallback } from '../../utils/galleryLoader';
 import { generateVideo, cancelVideoGeneration, cancelAllActiveVideoProjects, getActiveVideoProjectIds, downloadVideo } from '../../services/VideoGenerator.ts';
+import { getLastRecording } from '../../utils/recordingsDB';
 import CancelConfirmationPopup, { useCancelConfirmation } from './CancelConfirmationPopup.tsx';
 import { shouldSkipConfirmation, clearSkipConfirmation } from '../../services/cancellationService.ts';
 import { 
@@ -4700,16 +4701,45 @@ const PhotoGallery = ({
     img.onload = async () => {
       try {
         // Fetch reference media if needed (only for advanced workflows)
+        // Falls back to IndexedDB if blob URL fails (e.g., after page refresh or blob revocation)
         let referenceBuffer = null;
         
         if (workflowType === 's2v' && regenerateParams?.referenceAudioUrl) {
-          const response = await fetch(regenerateParams.referenceAudioUrl);
-          const arrayBuffer = await response.arrayBuffer();
-          referenceBuffer = new Uint8Array(arrayBuffer);
+          try {
+            const response = await fetch(regenerateParams.referenceAudioUrl);
+            if (!response.ok) throw new Error(`Fetch failed: ${response.status}`);
+            const arrayBuffer = await response.arrayBuffer();
+            referenceBuffer = new Uint8Array(arrayBuffer);
+          } catch (fetchError) {
+            console.warn('[Regenerate] Audio URL fetch failed, trying IndexedDB fallback:', fetchError);
+            // Fallback to last stored recording from IndexedDB
+            const storedRecording = await getLastRecording('audio');
+            if (storedRecording) {
+              const arrayBuffer = await storedRecording.blob.arrayBuffer();
+              referenceBuffer = new Uint8Array(arrayBuffer);
+              console.log('[Regenerate] Using stored audio from IndexedDB');
+            } else {
+              throw new Error('Could not load audio. Please record a new audio clip.');
+            }
+          }
         } else if ((workflowType === 'animate-move' || workflowType === 'animate-replace') && regenerateParams?.referenceVideoUrl) {
-          const response = await fetch(regenerateParams.referenceVideoUrl);
-          const arrayBuffer = await response.arrayBuffer();
-          referenceBuffer = new Uint8Array(arrayBuffer);
+          try {
+            const response = await fetch(regenerateParams.referenceVideoUrl);
+            if (!response.ok) throw new Error(`Fetch failed: ${response.status}`);
+            const arrayBuffer = await response.arrayBuffer();
+            referenceBuffer = new Uint8Array(arrayBuffer);
+          } catch (fetchError) {
+            console.warn('[Regenerate] Video URL fetch failed, trying IndexedDB fallback:', fetchError);
+            // Fallback to last stored recording from IndexedDB
+            const storedRecording = await getLastRecording('video');
+            if (storedRecording) {
+              const arrayBuffer = await storedRecording.blob.arrayBuffer();
+              referenceBuffer = new Uint8Array(arrayBuffer);
+              console.log('[Regenerate] Using stored video from IndexedDB');
+            } else {
+              throw new Error('Could not load video. Please record a new video.');
+            }
+          }
         }
 
         // Build generation options based on workflow type
