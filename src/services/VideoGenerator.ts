@@ -33,7 +33,7 @@ import {
 } from './cancellationService';
 
 // Workflow types for different video generation modes
-export type VideoWorkflowType = 'i2v' | 's2v' | 'animate-move' | 'animate-replace';
+export type VideoWorkflowType = 'i2v' | 's2v' | 'animate-move' | 'animate-replace' | 'batch-transition';
 import { Photo } from '../types/index';
 import { trackVideoGeneration } from './frontendAnalytics';
 import { fetchWithRetry } from '../utils/index';
@@ -93,6 +93,7 @@ interface GenerateVideoOptions {
   referenceVideoUrl?: string; // URL to video file (for animate-move/replace regeneration)
   isMontageSegment?: boolean; // Whether this is part of a montage batch
   segmentIndex?: number; // Index within the montage batch (0-based)
+  nextPhotoId?: string; // For batch-transition - ID of the next photo in sequence (for end frame)
 }
 
 interface ActiveVideoProject {
@@ -188,7 +189,8 @@ export async function generateVideo(options: GenerateVideoOptions): Promise<void
     referenceAudioUrl,
     referenceVideoUrl,
     isMontageSegment,
-    segmentIndex
+    segmentIndex,
+    nextPhotoId
   } = options;
 
   if (typeof photoIndex !== 'number' || photoIndex < 0 || !photo) {
@@ -385,8 +387,8 @@ export async function generateVideo(options: GenerateVideoOptions): Promise<void
     };
 
     // Add workflow-specific parameters
-    if (workflowType === 'i2v') {
-      // Standard I2V - add referenceImageEnd if provided (for transitions)
+    if (workflowType === 'i2v' || workflowType === 'batch-transition') {
+      // Standard I2V or Batch Transition - add referenceImageEnd if provided (for transitions)
       if (referenceImageEnd) {
         createParams.referenceImageEnd = referenceImageEnd;
       }
@@ -994,6 +996,9 @@ export async function generateVideo(options: GenerateVideoOptions): Promise<void
           if (workflowType === 'animate-replace') {
             regenerateParams.sam2Coordinates = sam2Coordinates;
           }
+        } else if (workflowType === 'batch-transition') {
+          // Batch transition needs the next photo ID to load the end frame for regeneration
+          regenerateParams.nextPhotoId = nextPhotoId;
         }
         if (isMontageSegment) {
           regenerateParams.isMontageSegment = true;

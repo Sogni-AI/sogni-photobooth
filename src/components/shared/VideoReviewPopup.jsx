@@ -245,33 +245,44 @@ const VideoReviewPopup = ({
     }
   }, [visible]);
   
+  // Workflows that have audio and should pause on mouse leave
+  const workflowHasAudio = workflowType === 's2v';
+
   // Handle hover to unmute video (only one can play audio at a time)
+  // Only applies to workflows with audio (S2V)
   const handleVideoMouseEnter = useCallback((index) => {
     if (!videoRefs.current[index]) return;
-    
+
+    // For workflows without audio, don't change mute state
+    if (!workflowHasAudio) return;
+
     // Mute the previously playing video
     if (playingAudioIndex !== null && videoRefs.current[playingAudioIndex]) {
       videoRefs.current[playingAudioIndex].muted = true;
     }
-    
+
     // Unmute and play the hovered video
     videoRefs.current[index].muted = false;
     videoRefs.current[index].play().catch(() => {});
     setPlayingAudioIndex(index);
-  }, [playingAudioIndex]);
-  
+  }, [playingAudioIndex, workflowHasAudio]);
+
   // Handle hover leave to mute video
+  // For workflows without audio (batch-transition, infinite-loop), keep videos playing
   const handleVideoMouseLeave = useCallback((index) => {
     if (!videoRefs.current[index]) return;
-    
+
+    // For workflows without audio, keep videos playing (don't pause/reset)
+    if (!workflowHasAudio) return;
+
     videoRefs.current[index].muted = true;
     videoRefs.current[index].pause();
     videoRefs.current[index].currentTime = 0;
-    
+
     if (playingAudioIndex === index) {
       setPlayingAudioIndex(null);
     }
-  }, [playingAudioIndex]);
+  }, [playingAudioIndex, workflowHasAudio]);
 
   // Detect mobile viewport
   useEffect(() => {

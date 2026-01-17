@@ -67,6 +67,9 @@ export interface Photo {
     // Montage mode info
     isMontageSegment?: boolean; // Whether this is part of a montage batch
     segmentIndex?: number; // Index within the montage batch (0-based)
+
+    // Batch transition specific
+    nextPhotoId?: string; // ID of the next photo in sequence (for loading end frame)
   };
 }
 

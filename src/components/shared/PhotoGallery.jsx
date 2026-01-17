@@ -78,6 +78,121 @@ const VIDEO_READY_MESSAGES = [
   { title: '⚡ Zap!', message: 'Lightning fast! Your video is done.' }
 ];
 
+// Module-level helper to load an image URL as a buffer
+// Used by batch-transition generation and regeneration
+// Uses canvas approach to handle CORS issues with S3 URLs
+const loadImageAsBuffer = async (url) => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    // Set crossOrigin for S3/HTTPS URLs to enable canvas extraction
+    if (url.startsWith('http')) {
+      img.crossOrigin = 'anonymous';
+    }
+
+    img.onload = async () => {
+      const width = img.naturalWidth || img.width;
+      const height = img.naturalHeight || img.height;
+
+      try {
+        // First try fetch for blob URLs (faster and more reliable)
+        if (url.startsWith('blob:')) {
+          const response = await fetch(url);
+          if (response.ok) {
+            const imageBlob = await response.blob();
+            const arrayBuffer = await imageBlob.arrayBuffer();
+            const imageBuffer = new Uint8Array(arrayBuffer);
+            resolve({ buffer: imageBuffer, width, height });
+            return;
+          }
+        }
+
+        // For HTTPS URLs or if fetch fails, use canvas approach
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+
+        // Convert canvas to blob
+        canvas.toBlob((blob) => {
+          if (blob) {
+            blob.arrayBuffer().then(arrayBuffer => {
+              const imageBuffer = new Uint8Array(arrayBuffer);
+              resolve({ buffer: imageBuffer, width, height });
+            }).catch(reject);
+          } else {
+            reject(new Error('Failed to convert canvas to blob'));
+          }
+        }, 'image/png');
+
+      } catch (error) {
+        // If canvas is tainted (CORS), try to use canvas anyway
+        console.warn('[loadImageAsBuffer] Image load via fetch failed, trying canvas:', error.message);
+        try {
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0);
+
+          canvas.toBlob((blob) => {
+            if (blob) {
+              blob.arrayBuffer().then(arrayBuffer => {
+                const imageBuffer = new Uint8Array(arrayBuffer);
+                resolve({ buffer: imageBuffer, width, height });
+              }).catch(reject);
+            } else {
+              reject(new Error('Failed to convert canvas to blob - canvas may be tainted'));
+            }
+          }, 'image/png');
+        } catch (canvasError) {
+          reject(new Error(`Canvas tainted by cross-origin data: ${canvasError.message}`));
+        }
+      }
+    };
+
+    img.onerror = () => {
+      // If crossOrigin fails, try without it (image will display but canvas will be tainted)
+      if (img.crossOrigin) {
+        console.warn('[loadImageAsBuffer] Image failed with crossOrigin, retrying without...');
+        const retryImg = new Image();
+        retryImg.onload = () => {
+          const width = retryImg.naturalWidth || retryImg.width;
+          const height = retryImg.naturalHeight || retryImg.height;
+
+          // Try canvas extraction (will likely fail due to taint, but worth trying)
+          try {
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(retryImg, 0, 0);
+
+            canvas.toBlob((blob) => {
+              if (blob) {
+                blob.arrayBuffer().then(arrayBuffer => {
+                  const imageBuffer = new Uint8Array(arrayBuffer);
+                  resolve({ buffer: imageBuffer, width, height });
+                }).catch(() => reject(new Error('Failed to load image due to CORS restrictions')));
+              } else {
+                reject(new Error('Failed to load image due to CORS restrictions'));
+              }
+            }, 'image/png');
+          } catch {
+            reject(new Error('Failed to load image due to CORS restrictions'));
+          }
+        };
+        retryImg.onerror = () => reject(new Error('Failed to load image'));
+        retryImg.src = url;
+      } else {
+        reject(new Error('Failed to load image'));
+      }
+    };
+
+    img.src = url;
+  });
+};
+
 const getRandomVideoMessage = () => {
   return VIDEO_READY_MESSAGES[Math.floor(Math.random() * VIDEO_READY_MESSAGES.length)];
 };
@@ -1390,6 +1505,37 @@ const PhotoGallery = ({
   const [stitchedVideoReturnToSegmentReview, setStitchedVideoReturnToSegmentReview] = useState(false); // Track if we should return to segment review on close
   const stitchedVideoRef = useRef(null);
 
+  // Handle autoplay with audio when stitched video overlay opens
+  // Browsers may block autoplay with audio, so we try to play and fallback to muted
+  useEffect(() => {
+    if (!showStitchedVideoOverlay || !stitchedVideoUrl || !stitchedVideoRef.current) {
+      return;
+    }
+
+    const video = stitchedVideoRef.current;
+
+    // Reset muted state for new video
+    setStitchedVideoMuted(false);
+    video.muted = false;
+
+    // Try to play with audio
+    const playPromise = video.play();
+    if (playPromise !== undefined) {
+      playPromise.catch((error) => {
+        // Autoplay was prevented - likely due to browser policy
+        console.log('[Stitched Video] Autoplay with audio blocked, falling back to muted:', error.message);
+
+        // Mute and try again
+        video.muted = true;
+        setStitchedVideoMuted(true);
+        video.play().catch(() => {
+          // Even muted play failed - user will need to interact
+          console.log('[Stitched Video] Even muted autoplay blocked');
+        });
+      });
+    }
+  }, [showStitchedVideoOverlay, stitchedVideoUrl]);
+
   // State for caching stitched video blob (works with any workflow, not just transition mode)
   const [cachedStitchedVideoBlob, setCachedStitchedVideoBlob] = useState(null);
   const [cachedStitchedVideoPhotosHash, setCachedStitchedVideoPhotosHash] = useState(null);
@@ -1875,6 +2021,19 @@ const PhotoGallery = ({
         photoIds: [...transitionVideoQueue],
         photos: photos.filter(p => transitionVideoQueue.includes(p.id))
       });
+
+      // Initialize version histories with existing URLs for Remix mode
+      // This enables version navigation when reopening the popup after videos are already complete
+      const initialVersionHistories = new Map();
+      const initialSelectedVersions = new Map();
+      segmentsForRemix.forEach((segment, index) => {
+        if (segment.url) {
+          initialVersionHistories.set(index, [segment.url]);
+          initialSelectedVersions.set(index, 0);
+        }
+      });
+      setSegmentVersionHistories(initialVersionHistories);
+      setSelectedSegmentVersions(initialSelectedVersions);
     }
   }, [allTransitionVideosComplete, transitionVideoQueue, photos, pendingSegments, segmentReviewData]);
   
@@ -3823,6 +3982,11 @@ const PhotoGallery = ({
       setShowStitchedVideoOverlay(false);
       setShowSegmentReview(false);
 
+      // Clear batch-transition state to prevent the Remix useEffect from repopulating
+      setIsTransitionMode(false);
+      setTransitionVideoQueue([]);
+      setAllTransitionVideosComplete(false);
+
       // Initialize segment review with generating status immediately (like Infinite Loop)
       const initialSegments = photoIds.map((photoId, index) => {
         const photo = loadedPhotos.find(p => p.id === photoId);
@@ -3892,6 +4056,25 @@ const PhotoGallery = ({
       img.onload = () => {
         // DEBUG: Log inside onload to verify closure captured correct values
         console.log(`[Animate Move Montage] Image loaded for clip ${batchIndex}, using videoStart=${imageStartOffset}`);
+
+        // Store workflow type and regeneration params BEFORE calling generateVideo
+        // This ensures params are available for redo even if the video is cancelled or fails
+        setPhotos(prev => {
+          const updated = [...prev];
+          if (updated[photoIndex]) {
+            updated[photoIndex] = {
+              ...updated[photoIndex],
+              videoWorkflowType: 'animate-move',
+              videoRegenerateParams: {
+                referenceVideoUrl: videoUrl,
+                videoStart: imageStartOffset,
+                isMontageSegment: splitMode,
+                segmentIndex: splitMode ? batchIndex : undefined
+              }
+            };
+          }
+          return updated;
+        });
 
         // Helper function to generate video with retry capability
         const attemptGeneration = (retryCount = 0) => {
@@ -4146,6 +4329,11 @@ const PhotoGallery = ({
       setShowStitchedVideoOverlay(false);
       setShowSegmentReview(false);
 
+      // Clear batch-transition state to prevent the Remix useEffect from repopulating
+      setIsTransitionMode(false);
+      setTransitionVideoQueue([]);
+      setAllTransitionVideosComplete(false);
+
       // Initialize segment review with generating status immediately (like Infinite Loop)
       const initialSegments = photoIds.map((photoId, index) => {
         const photo = loadedPhotos.find(p => p.id === photoId);
@@ -4215,6 +4403,26 @@ const PhotoGallery = ({
       img.onload = () => {
         // DEBUG: Log inside onload to verify closure captured correct values
         console.log(`[Animate Replace Montage] Image loaded for clip ${batchIndex}, using videoStart=${imageStartOffset}`);
+
+        // Store workflow type and regeneration params BEFORE calling generateVideo
+        // This ensures params are available for redo even if the video is cancelled or fails
+        setPhotos(prev => {
+          const updated = [...prev];
+          if (updated[photoIndex]) {
+            updated[photoIndex] = {
+              ...updated[photoIndex],
+              videoWorkflowType: 'animate-replace',
+              videoRegenerateParams: {
+                referenceVideoUrl: videoUrl,
+                videoStart: imageStartOffset,
+                sam2Coordinates,
+                isMontageSegment: splitMode,
+                segmentIndex: splitMode ? batchIndex : undefined
+              }
+            };
+          }
+          return updated;
+        });
 
         // Helper function to generate video with retry capability
         const attemptGeneration = (retryCount = 0) => {
@@ -4470,6 +4678,11 @@ const PhotoGallery = ({
       setShowStitchedVideoOverlay(false);
       setShowSegmentReview(false);
 
+      // Clear batch-transition state to prevent the Remix useEffect from repopulating
+      setIsTransitionMode(false);
+      setTransitionVideoQueue([]);
+      setAllTransitionVideosComplete(false);
+
       // Initialize segment review with generating status immediately (like Infinite Loop)
       const initialSegments = photoIds.map((photoId, index) => {
         const photo = loadedPhotos.find(p => p.id === photoId);
@@ -4543,6 +4756,26 @@ const PhotoGallery = ({
       img.onload = () => {
         // DEBUG: Log inside onload to verify closure captured correct values
         console.log(`[S2V Montage] Image loaded for clip ${batchIndex}, using audioStart=${imageAudioStartOffset}`);
+
+        // Store workflow type and regeneration params BEFORE calling generateVideo
+        // This ensures params are available for redo even if the video is cancelled or fails
+        setPhotos(prev => {
+          const updated = [...prev];
+          if (updated[photoIndex]) {
+            updated[photoIndex] = {
+              ...updated[photoIndex],
+              videoWorkflowType: 's2v',
+              videoRegenerateParams: {
+                referenceAudioUrl: audioUrl,
+                audioStart: imageAudioStartOffset || 0,
+                audioDuration: imageDuration,
+                isMontageSegment: splitMode,
+                segmentIndex: splitMode ? batchIndex : undefined
+              }
+            };
+          }
+          return updated;
+        });
 
         // Helper function to generate video with retry capability
         const attemptGeneration = (retryCount = 0) => {
@@ -4672,8 +4905,8 @@ const PhotoGallery = ({
     const workflowType = photo.videoWorkflowType || 'default';
     const regenerateParams = photo.videoRegenerateParams;
 
-    // For S2V, Animate Move, Animate Replace - check if we have regeneration params
-    const isAdvancedWorkflow = ['s2v', 'animate-move', 'animate-replace'].includes(workflowType);
+    // For S2V, Animate Move, Animate Replace, Batch Transition - check if we have regeneration params
+    const isAdvancedWorkflow = ['s2v', 'animate-move', 'animate-replace', 'batch-transition'].includes(workflowType);
     if (isAdvancedWorkflow && !regenerateParams) {
       showToast({
         title: 'can\'t regenerate 🤔',
@@ -4697,6 +4930,7 @@ const PhotoGallery = ({
       's2v': 'Sound to Video',
       'animate-move': 'Animate Move',
       'animate-replace': 'Animate Replace',
+      'batch-transition': 'Transition',
       'default': 'Video',
       'i2v': 'Video'
     };
@@ -4824,6 +5058,39 @@ const PhotoGallery = ({
             sam2Coordinates: regenerateParams.sam2Coordinates,
             referenceVideoUrl: regenerateParams.referenceVideoUrl
           });
+        } else if (workflowType === 'batch-transition') {
+          // Batch transition requires the next photo's image for the end frame
+          const nextPhotoId = regenerateParams?.nextPhotoId;
+          const nextPhoto = photos.find(p => p.id === nextPhotoId);
+
+          if (!nextPhoto) {
+            showToast({
+              title: 'Can\'t Regenerate',
+              message: 'Next image in sequence not found.',
+              type: 'error'
+            });
+            return;
+          }
+
+          const nextImageUrl = nextPhoto.enhancedImageUrl || nextPhoto.images?.[0] || nextPhoto.originalDataUrl;
+
+          // Load both images using module-level loadImageAsBuffer helper
+          const [currentImage, nextImage] = await Promise.all([
+            loadImageAsBuffer(imageUrl),
+            loadImageAsBuffer(nextImageUrl)
+          ]);
+
+          generateVideo({
+            ...baseOptions,
+            workflowType: 'batch-transition',
+            referenceImage: currentImage.buffer,
+            referenceImageEnd: nextImage.buffer,
+            // Pass nextPhotoId so it gets stored again for subsequent regenerations
+            nextPhotoId
+          });
+        } else {
+          // Default I2V workflow
+          generateVideo({ ...baseOptions });
         }
       } catch (error) {
         console.error('[Regenerate] Error:', error);
@@ -5240,123 +5507,10 @@ const PhotoGallery = ({
       }
 
       const generatingPhotoId = photo.id;
+      const nextPhotoId = nextPhoto.id;
 
-      return { photo, photoIndex, currentPhoto, currentImageUrl, nextImageUrl, generatingPhotoId, i };
+      return { photo, photoIndex, currentPhoto, currentImageUrl, nextImageUrl, generatingPhotoId, nextPhotoId, i };
     };
-
-    // Load both images to get their data
-    // Uses canvas approach to handle CORS issues with S3 URLs
-    const loadImageAsBuffer = async (url) => {
-        return new Promise((resolve, reject) => {
-          const img = new Image();
-          // Set crossOrigin for S3/HTTPS URLs to enable canvas extraction
-          if (url.startsWith('http')) {
-            img.crossOrigin = 'anonymous';
-          }
-          
-          img.onload = async () => {
-            const width = img.naturalWidth || img.width;
-            const height = img.naturalHeight || img.height;
-            
-            try {
-              // First try fetch for blob URLs (faster and more reliable)
-              if (url.startsWith('blob:')) {
-                const response = await fetch(url);
-                if (response.ok) {
-                  const imageBlob = await response.blob();
-                  const arrayBuffer = await imageBlob.arrayBuffer();
-                  const imageBuffer = new Uint8Array(arrayBuffer);
-                  resolve({ buffer: imageBuffer, width, height });
-                  return;
-                }
-              }
-              
-              // For HTTPS URLs or if fetch fails, use canvas approach
-              const canvas = document.createElement('canvas');
-              canvas.width = width;
-              canvas.height = height;
-              const ctx = canvas.getContext('2d');
-              ctx.drawImage(img, 0, 0);
-              
-              // Convert canvas to blob
-              canvas.toBlob((blob) => {
-                if (blob) {
-                  blob.arrayBuffer().then(arrayBuffer => {
-                    const imageBuffer = new Uint8Array(arrayBuffer);
-                    resolve({ buffer: imageBuffer, width, height });
-                  }).catch(reject);
-                } else {
-                  reject(new Error('Failed to convert canvas to blob'));
-                }
-              }, 'image/png');
-              
-            } catch (error) {
-              // If canvas is tainted (CORS), try to use canvas anyway
-              console.warn('[Transition] Image load via fetch failed, trying canvas:', error.message);
-              try {
-                const canvas = document.createElement('canvas');
-                canvas.width = width;
-                canvas.height = height;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(img, 0, 0);
-                
-                canvas.toBlob((blob) => {
-                  if (blob) {
-                    blob.arrayBuffer().then(arrayBuffer => {
-                      const imageBuffer = new Uint8Array(arrayBuffer);
-                      resolve({ buffer: imageBuffer, width, height });
-                    }).catch(reject);
-                  } else {
-                    reject(new Error('Failed to convert canvas to blob - canvas may be tainted'));
-                  }
-                }, 'image/png');
-              } catch (canvasError) {
-                reject(new Error(`Canvas tainted by cross-origin data: ${canvasError.message}`));
-              }
-            }
-          };
-          
-          img.onerror = () => {
-            // If crossOrigin fails, try without it (image will display but canvas will be tainted)
-            if (img.crossOrigin) {
-              console.warn('[Transition] Image failed with crossOrigin, retrying without...');
-              const retryImg = new Image();
-              retryImg.onload = () => {
-                const width = retryImg.naturalWidth || retryImg.width;
-                const height = retryImg.naturalHeight || retryImg.height;
-                
-                // Try canvas extraction (will likely fail due to taint, but worth trying)
-                try {
-                  const canvas = document.createElement('canvas');
-                  canvas.width = width;
-                  canvas.height = height;
-                  const ctx = canvas.getContext('2d');
-                  ctx.drawImage(retryImg, 0, 0);
-                  
-                  canvas.toBlob((blob) => {
-                    if (blob) {
-                      blob.arrayBuffer().then(arrayBuffer => {
-                        const imageBuffer = new Uint8Array(arrayBuffer);
-                        resolve({ buffer: imageBuffer, width, height });
-                      }).catch(() => reject(new Error('Failed to load image due to CORS restrictions')));
-                    } else {
-                      reject(new Error('Failed to load image due to CORS restrictions'));
-                    }
-                  }, 'image/png');
-                } catch {
-                  reject(new Error('Failed to load image due to CORS restrictions'));
-                }
-              };
-              retryImg.onerror = () => reject(new Error('Failed to load image'));
-              retryImg.src = url;
-            } else {
-              reject(new Error('Failed to load image'));
-            }
-          };
-          
-          img.src = url;
-        });
-      };
 
     // Helper to check completion and show appropriate toast
     const checkCompletion = () => {
@@ -5415,7 +5569,7 @@ const PhotoGallery = ({
 
     // Generate video with retry support
     const generateWithRetry = async (photoData, isRetry = false) => {
-      const { photo, photoIndex, currentPhoto, currentImageUrl, nextImageUrl, i } = photoData;
+      const { photo, photoIndex, currentPhoto, currentImageUrl, nextImageUrl, nextPhotoId, i } = photoData;
       const retryLabel = isRetry ? ' [RETRY]' : '';
 
       try {
@@ -5428,6 +5582,24 @@ const PhotoGallery = ({
         // Use the current image dimensions for the video
         const actualWidth = currentImage.width;
         const actualHeight = currentImage.height;
+
+        // Store workflow type and regeneration params BEFORE calling generateVideo
+        // This ensures params are available for redo even if the video is cancelled or fails
+        setPhotos(prev => {
+          const updated = [...prev];
+          if (updated[photoIndex]) {
+            updated[photoIndex] = {
+              ...updated[photoIndex],
+              videoWorkflowType: 'batch-transition',
+              videoRegenerateParams: {
+                nextPhotoId,
+                isMontageSegment: true,
+                segmentIndex: i
+              }
+            };
+          }
+          return updated;
+        });
 
         generateVideo({
           photo: currentPhoto,
@@ -5444,8 +5616,13 @@ const PhotoGallery = ({
           positivePrompt: motionPrompt,
           negativePrompt: negativePrompt,
           tokenType: tokenType,
+          workflowType: 'batch-transition',
           referenceImage: currentImage.buffer,
           referenceImageEnd: nextImage.buffer,
+          // Regeneration metadata for redo functionality
+          nextPhotoId,
+          isMontageSegment: true,
+          segmentIndex: i,
           onComplete: (videoUrl) => {
             successCount++;
             console.log(`[Transition]${retryLabel} Video ${i + 1} completed successfully`);
@@ -7272,9 +7449,9 @@ const PhotoGallery = ({
       return;
     }
 
-    // For advanced workflows (S2V, Animate Move, Animate Replace), check regeneration params
+    // For advanced workflows (S2V, Animate Move, Animate Replace, Batch Transition), check regeneration params
     // For I2V/default workflow, regeneration params are optional (uses stored prompts on photo)
-    const isAdvancedWorkflow = ['s2v', 'animate-move', 'animate-replace'].includes(photo.videoWorkflowType);
+    const isAdvancedWorkflow = ['s2v', 'animate-move', 'animate-replace', 'batch-transition'].includes(photo.videoWorkflowType);
     if (isAdvancedWorkflow && !photo.videoRegenerateParams) {
       console.error('[Segment Review] No regeneration params for advanced workflow');
       showToast({
@@ -7287,14 +7464,34 @@ const PhotoGallery = ({
 
     console.log(`[Segment Review] Regenerating segment ${segmentIndex + 1} (photo: ${photo.id}, workflow: ${photo.videoWorkflowType || 'default'})`);
 
-    // Clear any error states from the photo before regenerating
+    // If the segment is currently generating, cancel the existing generation first
+    if (segment.status === 'generating' || photo.generatingVideo) {
+      console.log(`[Segment Review] Cancelling existing generation for segment ${segmentIndex + 1} before redo`);
+
+      // Cancel the video project if it exists
+      if (photo.videoProjectId) {
+        try {
+          await cancelVideoGeneration(photo.videoProjectId, sogniClient, setPhotos);
+          console.log(`[Segment Review] Cancelled existing project ${photo.videoProjectId}`);
+        } catch (error) {
+          console.error('[Segment Review] Error cancelling existing project:', error);
+          // Continue anyway - the old project may have already finished or failed
+        }
+      }
+    }
+
+    // Clear any error states and generating state from the photo before regenerating
     setPhotos(prev => {
       const updated = [...prev];
       if (updated[photoIndex]) {
         updated[photoIndex] = {
           ...updated[photoIndex],
           videoError: undefined,
-          timedOut: false
+          timedOut: false,
+          generatingVideo: false,
+          videoETA: undefined,
+          videoProjectId: undefined,
+          videoStatus: undefined
         };
       }
       return updated;
@@ -7314,12 +7511,27 @@ const PhotoGallery = ({
     // Add to regenerating set (supports multiple simultaneous regenerations)
     setRegeneratingSegmentIndices(prev => new Set([...prev, segmentIndex]));
 
-    // Call the regeneration handler
-    await handleRegenerateVideo(photo, photoIndex);
+    // Get the fresh photo after state updates (the original 'photo' variable is stale after cancellation)
+    // This ensures we don't hit the generatingVideo guard clause in handleRegenerateVideo
+    const freshPhoto = await new Promise((resolve) => {
+      setPhotos(prev => {
+        const updatedPhoto = prev.find(p => p.id === segment.photoId);
+        resolve(updatedPhoto);
+        return prev; // Don't modify state, just read it
+      });
+    });
+
+    if (!freshPhoto) {
+      console.error('[Segment Review] Could not find fresh photo after state update');
+      return;
+    }
+
+    // Call the regeneration handler with fresh photo data
+    await handleRegenerateVideo(freshPhoto, photoIndex);
 
     // The regeneration happens asynchronously via generateVideo callbacks
     // We'll detect completion via the useEffect that watches photos changes
-  }, [segmentReviewData, pendingSegments, photos, handleRegenerateVideo, showToast, setPhotos]);
+  }, [segmentReviewData, pendingSegments, photos, handleRegenerateVideo, showToast, setPhotos, sogniClient]);
 
   // Handle playing a single segment in fullscreen
   const handlePlaySegment = useCallback((segmentIndex) => {
@@ -7611,12 +7823,82 @@ const PhotoGallery = ({
 
       // Prepare audio options from the stored audio source (for parent audio overlay)
       let audioOptions = null;
-      if (audioSource) {
+
+      // For batch-transition, check appliedMusic first (user-selected music track)
+      if (segmentReviewData?.workflowType === 'batch-transition' && appliedMusic?.file) {
+        try {
+          setBulkDownloadProgress({ current: 0, total: readySegmentCount, message: 'Preparing audio track...' });
+
+          let audioBuffer;
+
+          // Check if this is a preset (has presetUrl) or a user-uploaded file
+          if (appliedMusic.file.isPreset && appliedMusic.file.presetUrl) {
+            const presetUrl = appliedMusic.file.presetUrl;
+            const isMP3 = presetUrl.toLowerCase().endsWith('.mp3');
+
+            if (isMP3) {
+              // MP3 preset - fetch and transcode via backend
+              setBulkDownloadProgress({ current: 0, total: readySegmentCount, message: 'Converting audio track...' });
+              console.log(`[Stitch] Fetching and transcoding MP3 preset from: ${presetUrl}`);
+
+              // First fetch the MP3 file
+              const mp3Response = await fetch(presetUrl);
+              if (!mp3Response.ok) {
+                throw new Error(`Failed to fetch preset audio: ${mp3Response.status}`);
+              }
+              const mp3Blob = await mp3Response.blob();
+
+              // Send to backend for transcoding
+              const formData = new FormData();
+              formData.append('audio', mp3Blob, 'preset.mp3');
+
+              const transcodeResponse = await fetch('/api/audio/mp3-to-m4a', {
+                method: 'POST',
+                body: formData
+              });
+
+              if (!transcodeResponse.ok) {
+                const error = await transcodeResponse.json().catch(() => ({ error: 'Unknown error' }));
+                throw new Error(error.details || error.error || 'Transcoding failed');
+              }
+
+              audioBuffer = await transcodeResponse.arrayBuffer();
+              console.log(`[Stitch] MP3 transcoded to M4A: ${(audioBuffer.byteLength / 1024 / 1024).toFixed(2)}MB`);
+            } else {
+              // M4A preset - fetch directly
+              setBulkDownloadProgress({ current: 0, total: readySegmentCount, message: 'Fetching audio track...' });
+              console.log(`[Stitch] Fetching preset audio from: ${presetUrl}`);
+
+              const response = await fetch(presetUrl);
+              if (!response.ok) {
+                throw new Error(`Failed to fetch preset audio: ${response.status}`);
+              }
+              audioBuffer = await response.arrayBuffer();
+            }
+          } else {
+            // User-uploaded file - read directly
+            audioBuffer = await appliedMusic.file.arrayBuffer();
+          }
+
+          audioOptions = {
+            buffer: audioBuffer,
+            startOffset: appliedMusic.startOffset || 0
+          };
+          console.log(`[Stitch] Batch-transition audio prepared: ${(audioBuffer.byteLength / 1024 / 1024).toFixed(2)}MB, offset: ${appliedMusic.startOffset}s`);
+        } catch (audioError) {
+          console.warn('[Stitch] Failed to prepare batch-transition audio, continuing without:', audioError);
+          showToast({
+            title: 'Audio Error',
+            message: 'Failed to load audio track. Video will be created without music.',
+            type: 'warning'
+          });
+        }
+      } else if (audioSource) {
         try {
           if (audioSource.type === 's2v') {
             // For S2V: Use the audio file directly
             setBulkDownloadProgress({ current: 0, total: readySegmentCount, message: 'Preparing audio track...' });
-            
+
             // Convert Uint8Array to ArrayBuffer properly
             let audioBuffer = audioSource.audioBuffer;
             if (audioBuffer instanceof Uint8Array) {
@@ -7626,7 +7908,7 @@ const PhotoGallery = ({
                 audioBuffer.byteOffset + audioBuffer.byteLength
               );
             }
-            
+
             if (audioBuffer) {
               audioOptions = {
                 buffer: audioBuffer,
@@ -7636,7 +7918,7 @@ const PhotoGallery = ({
           } else if (audioSource.type === 'animate-move' || audioSource.type === 'animate-replace') {
             // For Animate Move/Replace: Extract audio from the source video
             setBulkDownloadProgress({ current: 0, total: readySegmentCount, message: 'Extracting audio from source video...' });
-            
+
             // Convert Uint8Array to ArrayBuffer properly
             let videoBuffer = audioSource.videoBuffer;
             if (videoBuffer instanceof Uint8Array) {
@@ -7646,7 +7928,7 @@ const PhotoGallery = ({
                 videoBuffer.byteOffset + videoBuffer.byteLength
               );
             }
-            
+
             if (videoBuffer) {
               audioOptions = {
                 buffer: videoBuffer,
@@ -7706,7 +7988,7 @@ const PhotoGallery = ({
       // Go back to review instead of closing
       setShowSegmentReview(true);
     }
-  }, [segmentReviewData, pendingSegments, showToast]);
+  }, [segmentReviewData, pendingSegments, showToast, appliedMusic]);
 
   // Handle closing segment review - go back to video preview
   const handleCloseSegmentReview = useCallback(async () => {
@@ -17953,10 +18235,10 @@ const PhotoGallery = ({
             <video
               ref={stitchedVideoRef}
               src={stitchedVideoUrl}
-              autoPlay
               loop
               playsInline
               controls
+              muted={stitchedVideoMuted}
               style={{
                 maxWidth: '90vw',
                 maxHeight: '80vh',
