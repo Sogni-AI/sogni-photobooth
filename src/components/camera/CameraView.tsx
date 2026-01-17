@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useMemo } from 'react';
+import React, { useEffect, useRef, useState, useMemo, memo } from 'react';
 import styles from '../../styles/components/camera.module.css';
 import AdvancedSettings from '../shared/AdvancedSettings';
 import AspectRatioDropdown from '../shared/AspectRatioDropdown';
@@ -676,4 +676,4 @@ export const CameraView: React.FC<CameraViewProps> = (props) => {
   );
 };
 
-export default CameraView; 
+export default memo(CameraView); 

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
+import { useState, useEffect, useRef, forwardRef, useImperativeHandle, memo } from 'react';
 import { useSogniAuth } from '../../services/sogniAuth';
 import { useWallet } from '../../hooks/useWallet';
 import { formatTokenAmount, getTokenLabel } from '../../services/walletService';
@@ -31,7 +31,7 @@ export interface AuthStatusRef {
   openLoginModal: () => void;
 }
 
-export const AuthStatus = forwardRef<AuthStatusRef, AuthStatusProps>(({ onPurchaseClick, onSignupComplete, onHistoryClick, textColor = '#ffffff', playRandomFlashSound, showToast }, ref) => {
+export const AuthStatus = memo(forwardRef<AuthStatusRef, AuthStatusProps>(({ onPurchaseClick, onSignupComplete, onHistoryClick, textColor = '#ffffff', playRandomFlashSound, showToast }, ref) => {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [loginModalMode, setLoginModalMode] = useState<LoginModalMode>('login');
@@ -1148,4 +1148,4 @@ export const AuthStatus = forwardRef<AuthStatusRef, AuthStatusProps>(({ onPurcha
     />
     </>
   );
-});
+}));

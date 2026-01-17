@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef, memo } from 'react';
 import type { SogniClient } from '@sogni-ai/sogni-client';
 import { useProjectHistory } from '../../hooks/useProjectHistory';
 import { useLocalProjects } from '../../hooks/useLocalProjects';
@@ -1817,5 +1817,5 @@ function RecentProjects({
   );
 }
 
-export default RecentProjects;
+export default memo(RecentProjects);
 

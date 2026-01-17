@@ -1,4 +1,4 @@
-import React, { useRef, useState, useMemo, useEffect } from 'react';
+import React, { useRef, useState, useMemo, useEffect, memo } from 'react';
 import StyleDropdown from '../shared/StyleDropdown';
 import { styleIdToDisplay } from '../../utils';
 import { generateGalleryFilename, getPortraitFolderWithFallback } from '../../utils/galleryLoader';
@@ -693,5 +693,5 @@ const CameraStartMenu: React.FC<CameraStartMenuProps> = ({
   );
 };
 
-export default CameraStartMenu;
+export default memo(CameraStartMenu);
 

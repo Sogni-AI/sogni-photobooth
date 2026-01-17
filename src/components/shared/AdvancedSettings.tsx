@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, memo } from 'react';
 import { createPortal } from 'react-dom';
 import { useApp } from '../../context/AppContext';
 import { AspectRatioOption, TezDevTheme, OutputFormat, Settings } from '../../types/index';
@@ -1572,4 +1572,4 @@ export const AdvancedSettings: React.FC<AdvancedSettingsProps> = (props) => {
   );
 };
 
-export default AdvancedSettings; 
+export default memo(AdvancedSettings); 
