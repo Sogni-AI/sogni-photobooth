@@ -3782,8 +3782,10 @@ const PhotoGallery = ({
 
     setShowVideoNewBadge(false);
 
-    // CRITICAL: Clear previous audio source to prevent stale S2V/Animate audio from persisting
+    // CRITICAL: Clear previous workflow state to prevent stale data from persisting
     activeMontageAudioSourceRef.current = null;
+    segmentPreviousVideoUrlsRef.current.clear();
+    videoRetryAttempts.current.clear();
 
     // Fetch video data if URL provided (needed for both montage source storage and video generation)
     let videoBuffer = videoData;
@@ -4103,8 +4105,10 @@ const PhotoGallery = ({
 
     setShowVideoNewBadge(false);
 
-    // CRITICAL: Clear previous audio source to prevent stale S2V/Animate audio from persisting
+    // CRITICAL: Clear previous workflow state to prevent stale data from persisting
     activeMontageAudioSourceRef.current = null;
+    segmentPreviousVideoUrlsRef.current.clear();
+    videoRetryAttempts.current.clear();
 
     // Fetch video data if URL provided (needed for both montage source storage and video generation)
     let videoBuffer = videoData;
@@ -4425,8 +4429,10 @@ const PhotoGallery = ({
 
     setShowVideoNewBadge(false);
 
-    // CRITICAL: Clear previous audio source to prevent stale S2V/Animate audio from persisting
+    // CRITICAL: Clear previous workflow state to prevent stale data from persisting
     activeMontageAudioSourceRef.current = null;
+    segmentPreviousVideoUrlsRef.current.clear();
+    videoRetryAttempts.current.clear();
 
     // Fetch audio buffer first (needed for both montage source storage and video generation)
     let audioBuffer = audioData;
@@ -5124,6 +5130,9 @@ const PhotoGallery = ({
     // CRITICAL: Reset ALL montage/segment state to prevent stale data from previous batches
     montageStitchCompletedRef.current = false;
     montageAutoStitchInProgressRef.current = false;
+    activeMontageAudioSourceRef.current = null;
+    segmentPreviousVideoUrlsRef.current.clear();
+    videoRetryAttempts.current.clear();
 
     // Clear any previous segment review data and version history
     setPendingSegments([]);
@@ -6301,8 +6310,9 @@ const PhotoGallery = ({
       return;
     }
 
-    // Reset cancellation flag at start
+    // Reset cancellation flag and clear previous workflow state at start
     infiniteLoopCancelledRef.current = false;
+    transitionPreviousVideoUrlsRef.current.clear();
 
     try {
       // Get the correct photos array based on mode
