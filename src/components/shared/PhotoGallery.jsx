@@ -64,6 +64,7 @@ import SoundToVideoPopup from './SoundToVideoPopup';
 import ConfettiCelebration from './ConfettiCelebration';
 import StitchOptionsPopup from './StitchOptionsPopup';
 import VideoReviewPopup from './VideoReviewPopup';
+import VideoSettingsFooter from './VideoSettingsFooter';
 import { extractLastFrame, extractFirstFrame } from '../../utils/videoFrameExtraction';
 
 // Random video completion messages
@@ -12876,59 +12877,21 @@ const PhotoGallery = ({
                           {renderCustomButton(setShowVideoDropdown, setShowCustomVideoPromptPopup)}
                         </div>
 
-                        {/* Pricing info below Custom button */}
-                        {!videoLoading && formatCost(videoCostRaw, videoUSD) ? (
-                          <div style={{
-                            padding: '8px 16px 12px 16px',
-                            borderTop: '1px solid rgba(0, 0, 0, 0.15)',
-                            color: '#000',
-                            flexShrink: 0
-                          }}>
-                            <div style={{
-                              display: 'flex',
-                              justifyContent: 'space-between',
-                              alignItems: 'center',
-                              marginBottom: '4px'
-                            }}>
-                              <span style={{ fontSize: '10px', fontWeight: '500', opacity: 0.6 }}>
-                                📐 {settings.videoResolution || '480p'} • ⏱️ {settings.videoDuration || 5}s
-                              </span>
-                              <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-                                <span style={{ fontSize: '11px', fontWeight: '700' }}>
-                                  {(() => {
-                                    const formatted = formatCost(videoCostRaw, videoUSD);
-                                    const parts = formatted.split('(');
-                                    return parts[0].trim();
-                                  })()}
-                                </span>
-                                {(() => {
-                                  const formatted = formatCost(videoCostRaw, videoUSD);
-                                  const usdMatch = formatted.match(/\((.*?)\)/);
-                                  if (usdMatch) {
-                                    return (
-                                      <span style={{ fontWeight: '400', opacity: 0.75, fontSize: '10px' }}>
-                                        ≈ {usdMatch[1]}
-                                      </span>
-                                    );
-                                  }
-                                  return null;
-                                })()}
-                              </div>
-                            </div>
-                          </div>
-                        ) : videoLoading ? (
-                          <div style={{
-                            padding: '8px 16px 12px 16px',
-                            fontSize: '11px',
-                            fontWeight: '700',
-                            textAlign: 'right',
-                            borderTop: '1px solid rgba(0, 0, 0, 0.15)',
-                            color: '#000',
-                            flexShrink: 0
-                          }}>
-                            Calculating cost...
-                          </div>
-                        ) : null}
+                        {/* Video Settings Footer */}
+                        <div style={{
+                          padding: '8px 16px 12px 16px',
+                          borderTop: '1px solid rgba(0, 0, 0, 0.15)',
+                          color: '#000',
+                          flexShrink: 0
+                        }}>
+                          <VideoSettingsFooter
+                            videoCount={1}
+                            cost={videoCostRaw}
+                            costUSD={videoUSD}
+                            loading={videoLoading}
+                            tokenType={tokenType}
+                          />
+                        </div>
                         
                         <style>{`
                           @keyframes videoPulse {
@@ -12984,59 +12947,21 @@ const PhotoGallery = ({
                           {renderCustomButton(setShowVideoDropdown, setShowCustomVideoPromptPopup)}
                         </div>
 
-                        {/* Pricing info below Custom button */}
-                        {!videoLoading && formatCost(videoCostRaw, videoUSD) ? (
-                          <div style={{
-                            padding: '8px 16px 12px 16px',
-                            borderTop: '1px solid rgba(0, 0, 0, 0.15)',
-                            color: '#000',
-                            flexShrink: 0
-                          }}>
-                            <div style={{
-                              display: 'flex',
-                              justifyContent: 'space-between',
-                              alignItems: 'center',
-                              marginBottom: '4px'
-                            }}>
-                              <span style={{ fontSize: '10px', fontWeight: '500', opacity: 0.6 }}>
-                                📐 {settings.videoResolution || '480p'} • ⏱️ {settings.videoDuration || 5}s
-                              </span>
-                              <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-                                <span style={{ fontSize: '11px', fontWeight: '700' }}>
-                                  {(() => {
-                                    const formatted = formatCost(videoCostRaw, videoUSD);
-                                    const parts = formatted.split('(');
-                                    return parts[0].trim();
-                                  })()}
-                                </span>
-                                {(() => {
-                                  const formatted = formatCost(videoCostRaw, videoUSD);
-                                  const usdMatch = formatted.match(/\((.*?)\)/);
-                                  if (usdMatch) {
-                                    return (
-                                      <span style={{ fontWeight: '400', opacity: 0.75, fontSize: '10px' }}>
-                                        ≈ {usdMatch[1]}
-                                      </span>
-                                    );
-                                  }
-                                  return null;
-                                })()}
-                              </div>
-                            </div>
-                          </div>
-                        ) : videoLoading ? (
-                          <div style={{
-                            padding: '8px 16px 12px 16px',
-                            fontSize: '11px',
-                            fontWeight: '700',
-                            textAlign: 'right',
-                            borderTop: '1px solid rgba(0, 0, 0, 0.15)',
-                            color: '#000',
-                            flexShrink: 0
-                          }}>
-                            Calculating cost...
-                          </div>
-                        ) : null}
+                        {/* Video Settings Footer */}
+                        <div style={{
+                          padding: '8px 16px 12px 16px',
+                          borderTop: '1px solid rgba(0, 0, 0, 0.15)',
+                          color: '#000',
+                          flexShrink: 0
+                        }}>
+                          <VideoSettingsFooter
+                            videoCount={1}
+                            cost={videoCostRaw}
+                            costUSD={videoUSD}
+                            loading={videoLoading}
+                            tokenType={tokenType}
+                          />
+                        </div>
                         
                         <style>{`
                           @keyframes videoPulse {
@@ -17539,36 +17464,15 @@ const PhotoGallery = ({
               >
                 🎬 Generate Transition Video
               </button>
-              {/* Pricing row */}
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                marginTop: '12px'
-              }}>
-                <span style={{ fontSize: '11px', fontWeight: '500', color: 'rgba(0, 0, 0, 0.6)' }}>
-                  📹 {loadedPhotosCount} video{loadedPhotosCount !== 1 ? 's' : ''} • 📐 {settings.videoResolution || '480p'} • ⏱️ {settings.videoDuration || 5}s
-                </span>
-                {transitionVideoLoading ? (
-                  <span style={{ fontSize: '10px', color: 'rgba(0, 0, 0, 0.5)' }}>...</span>
-                ) : formatCost(transitionVideoCostRaw, transitionVideoUSD) ? (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <span style={{ fontSize: '11px', fontWeight: '700', color: '#000' }}>
-                      {(() => {
-                        const formatted = formatCost(transitionVideoCostRaw, transitionVideoUSD);
-                        return formatted.split('(')[0].trim();
-                      })()}
-                    </span>
-                    {(() => {
-                      const formatted = formatCost(transitionVideoCostRaw, transitionVideoUSD);
-                      const usdMatch = formatted.match(/\((.*?)\)/);
-                      return usdMatch ? (
-                        <span style={{ fontWeight: '500', color: 'rgba(0, 0, 0, 0.6)', fontSize: '10px' }}>≈ {usdMatch[1]}</span>
-                      ) : null;
-                    })()}
-                  </div>
-                ) : null}
-              </div>
+              {/* Video Settings Footer */}
+              <VideoSettingsFooter
+                videoCount={loadedPhotosCount}
+                cost={transitionVideoCostRaw}
+                costUSD={transitionVideoUSD}
+                loading={transitionVideoLoading}
+                tokenType={tokenType}
+                style={{ marginTop: '12px' }}
+              />
             </div>
           </div>
         </div>,
@@ -17787,59 +17691,21 @@ const PhotoGallery = ({
             {renderCustomButton(setShowBatchVideoDropdown, setShowBatchCustomVideoPromptPopup)}
           </div>
 
-          {/* Pricing info below Custom button */}
-          {!batchVideoLoading && formatCost(batchVideoCostRaw, batchVideoUSD) ? (
-            <div style={{
-              padding: '8px 16px 12px 16px',
-              borderTop: '1px solid rgba(0, 0, 0, 0.15)',
-              color: '#000',
-              flexShrink: 0
-            }}>
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                marginBottom: '4px'
-              }}>
-                <span style={{ fontSize: '10px', fontWeight: '500', opacity: 0.6 }}>
-                  📹 {loadedPhotosCount} videos • 📐 {settings.videoResolution || '480p'} • ⏱️ {settings.videoDuration || 5}s
-                </span>
-                <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-                  <span style={{ fontSize: '11px', fontWeight: '700' }}>
-                    {(() => {
-                      const formatted = formatCost(batchVideoCostRaw, batchVideoUSD);
-                      const parts = formatted.split('(');
-                      return parts[0].trim();
-                    })()}
-                  </span>
-                  {(() => {
-                    const formatted = formatCost(batchVideoCostRaw, batchVideoUSD);
-                    const usdMatch = formatted.match(/\((.*?)\)/);
-                    if (usdMatch) {
-                      return (
-                        <span style={{ fontWeight: '400', opacity: 0.75, fontSize: '10px' }}>
-                          ≈ {usdMatch[1]}
-                        </span>
-                      );
-                    }
-                    return null;
-                  })()}
-                </div>
-              </div>
-            </div>
-          ) : batchVideoLoading ? (
-            <div style={{
-              padding: '8px 16px 12px 16px',
-              fontSize: '11px',
-              fontWeight: '700',
-              textAlign: 'right',
-              borderTop: '1px solid rgba(0, 0, 0, 0.15)',
-              color: '#000',
-              flexShrink: 0
-            }}>
-              Calculating cost...
-            </div>
-          ) : null}
+          {/* Video Settings Footer */}
+          <div style={{
+            padding: '8px 16px 12px 16px',
+            borderTop: '1px solid rgba(0, 0, 0, 0.15)',
+            color: '#000',
+            flexShrink: 0
+          }}>
+            <VideoSettingsFooter
+              videoCount={loadedPhotosCount}
+              cost={batchVideoCostRaw}
+              costUSD={batchVideoUSD}
+              loading={batchVideoLoading}
+              tokenType={tokenType}
+            />
+          </div>
         </div>,
         document.body
       )}

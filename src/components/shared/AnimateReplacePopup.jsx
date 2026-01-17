@@ -5,6 +5,7 @@ import { getTokenLabel } from '../../services/walletService';
 import { useApp } from '../../context/AppContext';
 import VideoRecorderPopup from './VideoRecorderPopup';
 import { saveRecording } from '../../utils/recordingsDB';
+import VideoSettingsFooter from './VideoSettingsFooter';
 
 // Sample replacement videos for Animate Replace
 const SAMPLE_REPLACEMENT_VIDEOS = [
@@ -2126,62 +2127,21 @@ const AnimateReplacePopup = ({
           </button>
         </div>
 
-        {/* Cost Footer */}
-        {!loading && formatCost(costRaw, costUSD) ? (
-          <div style={{
-            padding: '8px 16px',
-            borderTop: '1px solid rgba(255, 255, 255, 0.15)',
-            color: 'rgba(255, 255, 255, 0.9)',
-            fontSize: '11px',
-            textAlign: 'center'
-          }}>
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center'
-            }}>
-              <span style={{ fontSize: '10px', fontWeight: '500', opacity: 0.8 }}>
-                {isBatch
-                  ? isSplitMode
-                    ? `📹 ${itemCount} videos • 📐 ${videoResolution || '480p'} • ⏱️ ${(videoDuration / effectiveItemCount).toFixed(2)}s each`
-                    : `📹 ${itemCount} videos • 📐 ${videoResolution || '480p'} • ⏱️ ${videoDuration}s each`
-                  : `📐 ${videoResolution || '480p'} • ⏱️ ${videoDuration}s`}
-              </span>
-              <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-                {costRaw && (
-                  <span style={{ fontSize: '11px', fontWeight: '700', color: 'white' }}>
-                    {(() => {
-                      const costValue = typeof costRaw === 'number' ? costRaw : parseFloat(costRaw);
-                      if (isNaN(costValue)) return null;
-                      // In split mode, cost is already calculated as (totalDuration × itemCount) by parent,
-                      // but it should just be totalDuration cost, so divide by itemCount
-                      const adjustedCost = isSplitMode ? costValue / effectiveItemCount : costValue;
-                      const tokenLabel = getTokenLabel(tokenType);
-                      return `${adjustedCost.toFixed(2)} ${tokenLabel}`;
-                    })()}
-                  </span>
-                )}
-                {costUSD && (
-                  <span style={{ fontWeight: '400', opacity: 0.75, fontSize: '10px' }}>
-                    {/* In split mode, adjust USD cost similarly */}
-                    ≈ ${(isSplitMode ? costUSD / effectiveItemCount : costUSD).toFixed(2)} USD
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
-        ) : loading ? (
-          <div style={{
-            padding: '8px 16px',
-            fontSize: '11px',
-            fontWeight: '700',
-            textAlign: 'center',
-            borderTop: '1px solid rgba(255, 255, 255, 0.15)',
-            color: 'rgba(255, 255, 255, 0.9)'
-          }}>
-            Calculating cost...
-          </div>
-        ) : null}
+        {/* Video Settings Footer */}
+        <div style={{
+          padding: '8px 16px',
+          borderTop: '1px solid rgba(255, 255, 255, 0.15)'
+        }}>
+          <VideoSettingsFooter
+            videoCount={isBatch ? itemCount : 1}
+            cost={isSplitMode ? costRaw / effectiveItemCount : costRaw}
+            costUSD={isSplitMode ? costUSD / effectiveItemCount : costUSD}
+            loading={loading}
+            tokenType={tokenType}
+            showDuration={false}
+            colorScheme="dark"
+          />
+        </div>
       </div>
 
       {/* CSS animations */}

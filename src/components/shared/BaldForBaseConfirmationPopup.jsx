@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import PropTypes from 'prop-types';
 import { getTokenLabel } from '../../services/walletService';
 import urls from '../../config/urls';
+import VideoSettingsFooter from './VideoSettingsFooter';
 
 /**
  * BaldForBaseConfirmationPopup
@@ -764,88 +765,27 @@ const BaldForBaseConfirmationPopup = ({
           </div>
         )}
 
-        {/* Cost Footer */}
-        {!loading && formatCost(costRaw, costUSD) ? (
-          <div style={{
-            padding: isWideScreen ? '14px 20px' : '14px 20px',
-            borderTop: '1px solid rgba(255, 255, 255, 0.2)',
-            background: 'rgba(0, 0, 0, 0.15)',
-            color: 'rgba(255, 255, 255, 0.95)',
-            fontSize: '12px',
-            position: 'absolute',
-            bottom: 0,
-            left: 0,
-            right: 0,
-            zIndex: 3
-          }}>
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              flexWrap: 'wrap',
-              gap: '8px'
-            }}>
-              <div style={{ 
-                display: 'flex', 
-                gap: '8px', 
-                alignItems: 'center',
-                fontSize: '11px',
-                fontWeight: '500',
-                opacity: 0.9
-              }}>
-                {isBatch && itemCount > 1 && (
-                  <span>📹 {itemCount} videos</span>
-                )}
-                <span>📐 {videoResolution || '480p'}</span>
-                <span>⏱️ 5s</span>
-              </div>
-              <div style={{ 
-                display: 'flex', 
-                gap: '6px', 
-                alignItems: 'center',
-                fontWeight: '600'
-              }}>
-                {costRaw && (
-                  <span style={{ fontSize: '13px', fontWeight: '700', color: 'white' }}>
-                    {(() => {
-                      const costValue = typeof costRaw === 'number' ? costRaw : parseFloat(costRaw);
-                      if (isNaN(costValue)) return null;
-                      const tokenLabel = getTokenLabel(tokenType);
-                      return `${costValue.toFixed(2)} ${tokenLabel}`;
-                    })()}
-                  </span>
-                )}
-                {costUSD && (
-                  <span style={{ 
-                    fontWeight: '500', 
-                    opacity: 0.85, 
-                    fontSize: '12px', 
-                    color: 'rgba(255, 255, 255, 0.9)' 
-                  }}>
-                    ≈ ${costUSD.toFixed(2)} USD
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
-        ) : loading ? (
-          <div style={{
-            padding: isWideScreen ? '14px 20px' : '14px 20px',
-            fontSize: '12px',
-            fontWeight: '600',
-            textAlign: 'center',
-            borderTop: '1px solid rgba(255, 255, 255, 0.2)',
-            background: 'rgba(0, 0, 0, 0.15)',
-            color: 'rgba(255, 255, 255, 0.95)',
-            position: 'absolute',
-            bottom: 0,
-            left: 0,
-            right: 0,
-            zIndex: 3
-          }}>
-            Calculating cost...
-          </div>
-        ) : null}
+        {/* Video Settings Footer */}
+        <div style={{
+          padding: isWideScreen ? '14px 20px' : '14px 20px',
+          borderTop: '1px solid rgba(255, 255, 255, 0.2)',
+          background: 'rgba(0, 0, 0, 0.15)',
+          position: 'absolute',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          zIndex: 3
+        }}>
+          <VideoSettingsFooter
+            videoCount={isBatch ? itemCount : 1}
+            cost={costRaw}
+            costUSD={costUSD}
+            loading={loading}
+            tokenType={tokenType}
+            showDuration={false}
+            colorScheme="dark"
+          />
+        </div>
       </div>
 
       {/* CSS animations and scrollbar fixes */}

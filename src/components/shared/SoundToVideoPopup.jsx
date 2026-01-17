@@ -4,6 +4,7 @@ import PropTypes from 'prop-types';
 import { getTokenLabel } from '../../services/walletService';
 import AudioRecorderPopup from './AudioRecorderPopup';
 import { saveRecording } from '../../utils/recordingsDB';
+import VideoSettingsFooter from './VideoSettingsFooter';
 
 // Sample audio tracks for S2V
 const SAMPLE_AUDIO_TRACKS = [
@@ -1572,62 +1573,21 @@ const SoundToVideoPopup = ({
           </button>
         </div>
 
-        {/* Cost Footer */}
-        {!loading && formatCost(costRaw, costUSD) ? (
-          <div style={{
-            padding: '8px 16px',
-            borderTop: '1px solid rgba(255, 255, 255, 0.15)',
-            color: 'rgba(255, 255, 255, 0.9)',
-            fontSize: '11px',
-            textAlign: 'center'
-          }}>
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center'
-            }}>
-              <span style={{ fontSize: '10px', fontWeight: '500', opacity: 0.8 }}>
-                {isBatch
-                  ? isMontageMode
-                    ? `🎬 ${itemCount} images • ${(visualDuration / itemCount).toFixed(2)}s each • 📐 ${videoResolution || '480p'}`
-                    : `📹 ${itemCount} videos • ⏱️ ${visualDuration.toFixed(2)}s • 📐 ${videoResolution || '480p'}`
-                  : `📐 ${videoResolution || '480p'} • ⏱️ ${visualDuration.toFixed(2)}s`}
-              </span>
-              <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-                {costRaw && (
-                  <span style={{ fontSize: '11px', fontWeight: '700', color: 'white' }}>
-                    {(() => {
-                      const costValue = typeof costRaw === 'number' ? costRaw : parseFloat(costRaw);
-                      if (isNaN(costValue)) return null;
-                      // In montage mode, cost is already calculated as (totalDuration × itemCount) by parent,
-                      // so divide by itemCount to show per-image cost
-                      const adjustedCost = isMontageMode ? costValue / effectiveItemCount : costValue;
-                      const tokenLabel = getTokenLabel(tokenType);
-                      return `${adjustedCost.toFixed(2)} ${tokenLabel}`;
-                    })()}
-                  </span>
-                )}
-                {costUSD && (
-                  <span style={{ fontWeight: '400', opacity: 0.75, fontSize: '10px' }}>
-                    {/* In montage mode, adjust USD cost similarly */}
-                    ≈ ${(isMontageMode ? costUSD / effectiveItemCount : costUSD).toFixed(2)} USD
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
-        ) : loading ? (
-          <div style={{
-            padding: '8px 16px',
-            fontSize: '11px',
-            fontWeight: '700',
-            textAlign: 'center',
-            borderTop: '1px solid rgba(255, 255, 255, 0.15)',
-            color: 'rgba(255, 255, 255, 0.9)'
-          }}>
-            Calculating cost...
-          </div>
-        ) : null}
+        {/* Video Settings Footer */}
+        <div style={{
+          padding: '8px 16px',
+          borderTop: '1px solid rgba(255, 255, 255, 0.15)'
+        }}>
+          <VideoSettingsFooter
+            videoCount={isBatch ? itemCount : 1}
+            cost={isMontageMode ? costRaw / effectiveItemCount : costRaw}
+            costUSD={isMontageMode ? costUSD / effectiveItemCount : costUSD}
+            loading={loading}
+            tokenType={tokenType}
+            showDuration={false}
+            colorScheme="dark"
+          />
+        </div>
       </div>
 
       {/* CSS animations */}
