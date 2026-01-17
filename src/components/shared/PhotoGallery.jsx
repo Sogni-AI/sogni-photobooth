@@ -3782,6 +3782,9 @@ const PhotoGallery = ({
 
     setShowVideoNewBadge(false);
 
+    // CRITICAL: Clear previous audio source to prevent stale S2V/Animate audio from persisting
+    activeMontageAudioSourceRef.current = null;
+
     // Fetch video data if URL provided (needed for both montage source storage and video generation)
     let videoBuffer = videoData;
     if (!videoBuffer && videoUrl) {
@@ -4100,6 +4103,9 @@ const PhotoGallery = ({
 
     setShowVideoNewBadge(false);
 
+    // CRITICAL: Clear previous audio source to prevent stale S2V/Animate audio from persisting
+    activeMontageAudioSourceRef.current = null;
+
     // Fetch video data if URL provided (needed for both montage source storage and video generation)
     let videoBuffer = videoData;
     if (!videoBuffer && videoUrl) {
@@ -4120,14 +4126,14 @@ const PhotoGallery = ({
     if (splitMode) {
       const photoIds = loadedPhotos.map(p => p.id);
       console.log(`[Animate Replace Montage] Setting up tracking for ${photoIds.length} segments`);
-      
+
       // CRITICAL: Reset ALL montage state to prevent stale data from previous batches
       setActiveMontagePhotoIds(photoIds);
       setActiveMontageWorkflowType('animate-replace');
       montageCompletedRef.current.clear();
       montageStitchCompletedRef.current = false; // Reset for new batch
       montageAutoStitchInProgressRef.current = false; // Reset auto-stitch flag
-      
+
       // Clear any previous segment review data and version history
       setPendingSegments([]);
       setSegmentReviewData(null);
@@ -4419,6 +4425,9 @@ const PhotoGallery = ({
 
     setShowVideoNewBadge(false);
 
+    // CRITICAL: Clear previous audio source to prevent stale S2V/Animate audio from persisting
+    activeMontageAudioSourceRef.current = null;
+
     // Fetch audio buffer first (needed for both montage source storage and video generation)
     let audioBuffer = audioData;
     if (!audioBuffer && audioUrl) {
@@ -4439,14 +4448,14 @@ const PhotoGallery = ({
     if (splitMode) {
       const photoIds = loadedPhotos.map(p => p.id);
       console.log(`[S2V Montage] Setting up tracking for ${photoIds.length} segments`);
-      
+
       // CRITICAL: Reset ALL montage state to prevent stale data from previous batches
       setActiveMontagePhotoIds(photoIds);
       setActiveMontageWorkflowType('s2v');
       montageCompletedRef.current.clear();
       montageStitchCompletedRef.current = false; // Reset for new batch
       montageAutoStitchInProgressRef.current = false; // Reset auto-stitch flag
-      
+
       // Clear any previous segment review data and version history
       setPendingSegments([]);
       setSegmentReviewData(null);
@@ -7672,6 +7681,8 @@ const PhotoGallery = ({
       setActiveMontagePhotoIds(null);
       setActiveMontageWorkflowType(null);
       montageCompletedRef.current.clear();
+      // CRITICAL: Clear audio source ref to prevent stale audio persisting to next workflow
+      activeMontageAudioSourceRef.current = null;
 
     } catch (error) {
       console.error('[Segment Review] Stitching failed:', error);
@@ -7841,6 +7852,8 @@ const PhotoGallery = ({
           montageCompletedRef.current.clear();
           montageStitchCompletedRef.current = false;
           montageAutoStitchInProgressRef.current = false;
+          // CRITICAL: Clear audio source ref to prevent stale audio persisting to next workflow
+          activeMontageAudioSourceRef.current = null;
 
           showToast({
             title: 'Generation Cancelled',
