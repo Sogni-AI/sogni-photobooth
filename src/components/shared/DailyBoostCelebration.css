@@ -1,0 +1,1029 @@
+/* Daily Boost Celebration Modal Styles - EXTRA CUTE Edition */
+
+/* Backdrop with blur */
+.daily-boost-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: backdropFadeIn 0.4s ease-out forwards;
+  padding: 20px;
+  opacity: 1;
+  transition: opacity 0.3s ease-out;
+}
+
+.daily-boost-backdrop.closing {
+  animation: backdropFadeOut 0.4s ease-out forwards;
+}
+
+@keyframes backdropFadeIn {
+  from {
+    opacity: 0;
+    backdrop-filter: blur(0);
+    -webkit-backdrop-filter: blur(0);
+  }
+  to {
+    opacity: 1;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+}
+
+@keyframes backdropFadeOut {
+  from {
+    opacity: 1;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+  to {
+    opacity: 0;
+    backdrop-filter: blur(0);
+    -webkit-backdrop-filter: blur(0);
+  }
+}
+
+/* Modal container - Starface neo-brutalist style */
+.daily-boost-modal {
+  position: relative;
+  background: linear-gradient(180deg, #FFED4E 0%, #FFE135 50%, #FFD700 100%);
+  border: 5px solid #1a1a1a;
+  border-radius: 32px;
+  box-shadow: 10px 10px 0 #1a1a1a;
+  padding: 48px 48px 40px;
+  text-align: center;
+  max-width: 400px;
+  width: 100%;
+  animation: modalBounceIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  overflow: visible;
+  transition: background 0.5s ease-out, transform 0.3s ease-out;
+}
+
+.daily-boost-modal.closing {
+  animation: modalBounceOut 0.35s ease-in forwards;
+}
+
+.daily-boost-modal.success {
+  background: linear-gradient(180deg, #A8F0A8 0%, #7CFC7C 50%, #5CE65C 100%);
+}
+
+@keyframes modalBounceIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.3) rotate(-10deg);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.05) rotate(2deg);
+  }
+  80% {
+    transform: scale(0.98) rotate(-1deg);
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+@keyframes modalBounceOut {
+  0% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.8) rotate(5deg);
+  }
+}
+
+/* FREE badge - tilted ribbon style */
+.free-badge {
+  position: absolute;
+  top: -12px;
+  right: -12px;
+  background: linear-gradient(135deg, #FF6B9D 0%, #FF3366 100%);
+  color: white;
+  font-size: 16px;
+  font-weight: 900;
+  padding: 8px 20px;
+  border-radius: 20px;
+  border: 3px solid #1a1a1a;
+  box-shadow: 4px 4px 0 #1a1a1a;
+  transform: rotate(12deg);
+  animation: badgePopIn 0.4s 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) both, badgeWiggle 2s 0.6s ease-in-out infinite;
+  z-index: 10;
+}
+
+@keyframes badgePopIn {
+  from {
+    opacity: 0;
+    transform: rotate(12deg) scale(0);
+  }
+  to {
+    opacity: 1;
+    transform: rotate(12deg) scale(1);
+  }
+}
+
+@keyframes badgeWiggle {
+  0%, 100% { transform: rotate(12deg) scale(1); }
+  50% { transform: rotate(15deg) scale(1.05); }
+}
+
+/* Corner decorations */
+.corner-deco {
+  position: absolute;
+  font-size: 24px;
+  animation: cornerPopIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) both, cornerBounce 2.5s ease-in-out infinite;
+  filter: drop-shadow(1px 1px 2px rgba(0, 0, 0, 0.2));
+  opacity: 0;
+}
+
+.corner-tl { top: 8px; left: 12px; animation-delay: 0.1s, 0.4s; }
+.corner-tr { top: 8px; right: 12px; animation-delay: 0.15s, 0.55s; }
+.corner-bl { bottom: 8px; left: 12px; animation-delay: 0.2s, 0.7s; }
+.corner-br { bottom: 8px; right: 12px; animation-delay: 0.25s, 0.85s; }
+
+@keyframes cornerPopIn {
+  from {
+    opacity: 0;
+    transform: scale(0) rotate(-20deg);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+@keyframes cornerBounce {
+  0%, 100% { transform: scale(1) rotate(0deg); }
+  50% { transform: scale(1.15) rotate(10deg); }
+}
+
+/* Floating stars around the modal */
+.daily-boost-modal::before,
+.daily-boost-modal::after {
+  content: '⭐';
+  position: absolute;
+  font-size: 36px;
+  animation: starPopIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both, starFloat 3s ease-in-out infinite;
+  filter: drop-shadow(2px 2px 0 #1a1a1a);
+}
+
+.daily-boost-modal::before {
+  top: -25px;
+  left: -25px;
+  animation-delay: 0.3s, 0.7s;
+}
+
+.daily-boost-modal::after {
+  content: '🌟';
+  bottom: -20px;
+  right: -20px;
+  font-size: 32px;
+  animation-delay: 0.4s, 0.8s;
+}
+
+@keyframes starPopIn {
+  from {
+    opacity: 0;
+    transform: scale(0) rotate(-180deg);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+@keyframes starFloat {
+  0%, 100% {
+    transform: translateY(0) rotate(0deg) scale(1);
+  }
+  50% {
+    transform: translateY(-12px) rotate(15deg) scale(1.1);
+  }
+}
+
+/* Sparkles container */
+.sparkle-container {
+  position: absolute;
+  inset: -50px;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.sparkle {
+  position: absolute;
+  font-size: 28px;
+  opacity: 0;
+  animation: sparklePopFloat 3s ease-in-out infinite;
+}
+
+/* Position sparkles around the modal */
+.sparkle-1 { top: 5%; left: 5%; animation-delay: 0.5s; }
+.sparkle-2 { top: 15%; right: 0%; animation-delay: 0.8s; }
+.sparkle-3 { top: 35%; left: -8%; animation-delay: 1.1s; }
+.sparkle-4 { top: 55%; right: -8%; animation-delay: 1.4s; }
+.sparkle-5 { bottom: 25%; left: -5%; animation-delay: 1.7s; }
+.sparkle-6 { bottom: 10%; right: 5%; animation-delay: 2s; }
+.sparkle-7 { top: 25%; left: -5%; animation-delay: 0.65s; }
+.sparkle-8 { top: 70%; right: -5%; animation-delay: 0.95s; }
+.sparkle-9 { bottom: 40%; left: -3%; animation-delay: 1.25s; }
+.sparkle-10 { top: 8%; right: 15%; animation-delay: 1.55s; }
+.sparkle-11 { bottom: 5%; left: 25%; animation-delay: 1.85s; }
+.sparkle-12 { top: 45%; right: -6%; animation-delay: 2.15s; }
+
+.sparkle::before {
+  content: '✦';
+  display: block;
+}
+
+.sparkle:nth-child(odd)::before { content: '★'; }
+.sparkle:nth-child(3n)::before { content: '✨'; }
+.sparkle:nth-child(4n)::before { content: '💫'; }
+.sparkle:nth-child(5n)::before { content: '💖'; }
+
+@keyframes sparklePopFloat {
+  0%, 100% {
+    opacity: 0;
+    transform: scale(0) rotate(0deg);
+  }
+  15% {
+    opacity: 1;
+    transform: scale(1.2) rotate(20deg);
+  }
+  30%, 70% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+  85% {
+    opacity: 0.5;
+    transform: scale(0.8) rotate(-20deg);
+  }
+}
+
+/* Header with bouncy text */
+.daily-boost-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 8px;
+  position: relative;
+  z-index: 1;
+  animation: headerSlideIn 0.4s 0.1s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes headerSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.sparkle-emoji {
+  font-size: 36px;
+  animation: emojiWiggle 0.8s ease-in-out infinite;
+  filter: drop-shadow(2px 2px 0 rgba(0,0,0,0.2));
+}
+
+.sparkle-emoji:nth-child(1) {
+  animation-delay: 0s;
+}
+
+.sparkle-emoji:nth-child(3) {
+  animation-delay: 0.4s;
+  animation-direction: reverse;
+}
+
+@keyframes emojiWiggle {
+  0%, 100% {
+    transform: rotate(-15deg) scale(1);
+  }
+  50% {
+    transform: rotate(15deg) scale(1.15);
+  }
+}
+
+.header-text {
+  font-size: 38px;
+  font-weight: 900;
+  color: #1a1a1a;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  text-shadow: 3px 3px 0 rgba(255, 255, 255, 0.6);
+}
+
+/* Cute subheader */
+.cute-subheader {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1a1a1a;
+  opacity: 0.8;
+  margin-bottom: 16px;
+  animation: fadeSlideIn 0.4s 0.15s ease-out both;
+  transition: opacity 0.3s ease;
+}
+
+@keyframes fadeSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 0.8;
+    transform: translateY(0);
+  }
+}
+
+/* Gift container with big bouncy emoji */
+.gift-container {
+  position: relative;
+  height: 150px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 20px 0;
+  z-index: 1;
+  animation: giftContainerIn 0.5s 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes giftContainerIn {
+  from {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.gift-emoji {
+  font-size: 110px;
+  line-height: 1;
+  display: block;
+  filter: drop-shadow(5px 5px 0 rgba(0, 0, 0, 0.3));
+  transition: transform 0.3s ease;
+}
+
+.gift-emoji.bouncing {
+  animation: giftBounceWiggle 1.2s ease-in-out infinite;
+}
+
+.gift-emoji.shaking {
+  animation: giftExcitedShake 0.1s ease-in-out infinite;
+}
+
+.gift-emoji.opened {
+  animation: giftExplode 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes giftBounceWiggle {
+  0%, 100% {
+    transform: translateY(0) rotate(-6deg) scale(1);
+  }
+  25% {
+    transform: translateY(-18px) rotate(6deg) scale(1.05);
+  }
+  50% {
+    transform: translateY(-6px) rotate(-4deg) scale(1.02);
+  }
+  75% {
+    transform: translateY(-14px) rotate(5deg) scale(1.04);
+  }
+}
+
+@keyframes giftExcitedShake {
+  0%, 100% {
+    transform: translateX(0) rotate(0) scale(1.08);
+  }
+  25% {
+    transform: translateX(-6px) rotate(-6deg) scale(1.1);
+  }
+  75% {
+    transform: translateX(6px) rotate(6deg) scale(1.1);
+  }
+}
+
+@keyframes giftExplode {
+  0% {
+    transform: scale(1) rotate(0);
+  }
+  30% {
+    transform: scale(1.4) rotate(12deg);
+  }
+  50% {
+    transform: scale(0.95) rotate(-6deg);
+  }
+  70% {
+    transform: scale(1.08) rotate(4deg);
+  }
+  100% {
+    transform: scale(1) rotate(0);
+  }
+}
+
+/* Sparkles around the gift */
+.gift-sparkles {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.gift-spark {
+  position: absolute;
+  font-size: 28px;
+  animation: giftSparkle 2s ease-in-out infinite;
+}
+
+.spark-1 { top: 5%; left: 15%; animation-delay: 0s; }
+.spark-2 { top: 10%; right: 15%; animation-delay: 0.7s; }
+.spark-3 { bottom: 20%; left: 50%; transform: translateX(-50%); animation-delay: 1.4s; }
+
+@keyframes giftSparkle {
+  0%, 100% { opacity: 0; transform: scale(0) rotate(0); }
+  50% { opacity: 1; transform: scale(1.1) rotate(180deg); }
+}
+
+/* Hearts floating up on success */
+.success-hearts {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.heart {
+  position: absolute;
+  font-size: 32px;
+  animation: heartFloat 1.8s ease-out forwards;
+}
+
+.heart-1 { left: 20%; animation-delay: 0s; }
+.heart-2 { left: 40%; animation-delay: 0.2s; }
+.heart-3 { left: 50%; animation-delay: 0.4s; }
+.heart-4 { left: 60%; animation-delay: 0.6s; }
+.heart-5 { left: 80%; animation-delay: 0.8s; }
+
+@keyframes heartFloat {
+  0% {
+    bottom: 30%;
+    opacity: 0;
+    transform: scale(0) rotate(0);
+  }
+  15% {
+    opacity: 1;
+    transform: scale(1.1) rotate(-8deg);
+  }
+  100% {
+    bottom: 130%;
+    opacity: 0;
+    transform: scale(0.7) rotate(15deg);
+  }
+}
+
+/* Gift opened state with burst */
+.gift-opened {
+  position: relative;
+}
+
+.gift-burst {
+  position: absolute;
+  inset: -30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.burst-particle {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  animation: burstExplode 0.8s ease-out forwards;
+}
+
+.burst-1 { --burst-angle: 0deg; --burst-distance: 85px; background: #ff6b6b; }
+.burst-2 { --burst-angle: 30deg; --burst-distance: 75px; background: #feca57; }
+.burst-3 { --burst-angle: 60deg; --burst-distance: 80px; background: #48dbfb; }
+.burst-4 { --burst-angle: 90deg; --burst-distance: 85px; background: #ff9ff3; }
+.burst-5 { --burst-angle: 120deg; --burst-distance: 75px; background: #1dd1a1; }
+.burst-6 { --burst-angle: 150deg; --burst-distance: 80px; background: #5f27cd; }
+.burst-7 { --burst-angle: 180deg; --burst-distance: 85px; background: #ff6b6b; }
+.burst-8 { --burst-angle: 210deg; --burst-distance: 75px; background: #feca57; }
+.burst-9 { --burst-angle: 240deg; --burst-distance: 80px; background: #48dbfb; }
+.burst-10 { --burst-angle: 270deg; --burst-distance: 85px; background: #ff9ff3; }
+.burst-11 { --burst-angle: 300deg; --burst-distance: 75px; background: #1dd1a1; }
+.burst-12 { --burst-angle: 330deg; --burst-distance: 80px; background: #5f27cd; }
+
+@keyframes burstExplode {
+  0% {
+    transform: rotate(var(--burst-angle)) translateY(0) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: rotate(var(--burst-angle)) translateY(calc(var(--burst-distance) * -1)) scale(0);
+    opacity: 0;
+  }
+}
+
+/* Credit display - big and bold */
+.credit-display {
+  margin: 24px 0;
+  position: relative;
+  z-index: 1;
+  animation: creditSlideIn 0.4s 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes creditSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.credit-preview,
+.credit-earned {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.plus-sign {
+  font-size: 52px;
+  font-weight: 900;
+  color: #10b981;
+  text-shadow: 3px 3px 0 rgba(0, 0, 0, 0.15);
+  animation: plusBounce 1s ease-in-out infinite;
+}
+
+@keyframes plusBounce {
+  0%, 100% { transform: scale(1) rotate(0); }
+  50% { transform: scale(1.1) rotate(3deg); }
+}
+
+.credit-amount,
+.credit-counter {
+  font-size: 88px;
+  font-weight: 900;
+  color: #1a1a1a;
+  line-height: 1;
+  text-shadow: 4px 4px 0 rgba(255, 255, 255, 0.6);
+  transition: transform 0.1s ease;
+}
+
+.credit-earned .credit-counter {
+  animation: creditPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes creditPop {
+  0% {
+    transform: scale(0.5);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.credit-label {
+  font-size: 24px;
+  font-weight: 900;
+  color: #1a1a1a;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.credit-emoji {
+  font-size: 36px;
+  animation: creditEmojiSpin 2.5s ease-in-out infinite;
+  margin-left: 4px;
+}
+
+@keyframes creditEmojiSpin {
+  0%, 100% { transform: rotate(0deg) scale(1); }
+  25% { transform: rotate(-12deg) scale(1.08); }
+  75% { transform: rotate(12deg) scale(1.08); }
+}
+
+/* Claim button - chunky Starface style */
+.claim-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  padding: 22px 40px;
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: #1a1a1a;
+  background: linear-gradient(180deg, #1dd1a1 0%, #10b981 100%);
+  border: 5px solid #1a1a1a;
+  border-radius: 60px;
+  cursor: pointer;
+  box-shadow: 7px 7px 0 #1a1a1a;
+  transition: all 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+  position: relative;
+  z-index: 1;
+  animation: buttonSlideIn 0.4s 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) both, buttonWiggle 2s 0.7s ease-in-out infinite;
+}
+
+@keyframes buttonSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(30px) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.btn-emoji {
+  font-size: 24px;
+  animation: btnEmojiWiggle 1s ease-in-out infinite;
+}
+
+.btn-emoji:last-child {
+  animation-delay: 0.5s;
+}
+
+@keyframes btnEmojiWiggle {
+  0%, 100% { transform: rotate(-8deg); }
+  50% { transform: rotate(8deg); }
+}
+
+.claim-button:hover {
+  transform: translate(-4px, -4px) rotate(-1deg);
+  box-shadow: 11px 11px 0 #1a1a1a;
+  background: linear-gradient(180deg, #2eecb6 0%, #1dd1a1 100%);
+}
+
+.claim-button:active {
+  transform: translate(3px, 3px);
+  box-shadow: 4px 4px 0 #1a1a1a;
+}
+
+@keyframes buttonWiggle {
+  0%, 100% {
+    transform: rotate(0deg) scale(1);
+  }
+  25% {
+    transform: rotate(-1deg) scale(1.01);
+  }
+  75% {
+    transform: rotate(1deg) scale(1.01);
+  }
+}
+
+/* Turnstile container */
+.turnstile-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin: 24px 0;
+  position: relative;
+  z-index: 1;
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 20px;
+  border: 4px solid #1a1a1a;
+  box-shadow: 4px 4px 0 #1a1a1a;
+  animation: turnstileSlideIn 0.3s ease-out both;
+}
+
+@keyframes turnstileSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.turnstile-label {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1a1a1a;
+}
+
+/* Claiming indicator */
+.claiming-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  font-size: 20px;
+  font-weight: 800;
+  color: #1a1a1a;
+  position: relative;
+  z-index: 1;
+  padding: 20px;
+  animation: claimingFadeIn 0.3s ease-out both;
+}
+
+@keyframes claimingFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.spinner {
+  width: 36px;
+  height: 36px;
+  border: 5px solid rgba(26, 26, 26, 0.2);
+  border-top-color: #1a1a1a;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Success message */
+.success-message {
+  font-size: 36px;
+  font-weight: 900;
+  color: #1a1a1a;
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  animation: successBounceIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  position: relative;
+  z-index: 1;
+  text-shadow: 3px 3px 0 rgba(255, 255, 255, 0.5);
+}
+
+@keyframes successBounceIn {
+  0% {
+    transform: scale(0) rotate(-15deg);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.2) rotate(8deg);
+    opacity: 1;
+  }
+  80% {
+    transform: scale(0.95) rotate(-3deg);
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+/* Dismiss link */
+.dismiss-link {
+  display: inline-block;
+  margin-top: 20px;
+  padding: 10px 24px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #1a1a1a;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  opacity: 0;
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
+  transition: all 0.2s ease;
+  position: relative;
+  z-index: 1;
+  animation: dismissFadeIn 0.3s 0.4s ease-out forwards;
+}
+
+@keyframes dismissFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 0.6;
+    transform: translateY(0);
+  }
+}
+
+.dismiss-link:hover {
+  opacity: 1;
+  transform: scale(1.05);
+}
+
+/* Mobile styles */
+@media (max-width: 480px) {
+  .daily-boost-backdrop {
+    padding: 16px;
+  }
+
+  .daily-boost-modal {
+    padding: 40px 24px 32px;
+    border-radius: 28px;
+    box-shadow: 7px 7px 0 #1a1a1a;
+  }
+
+  .daily-boost-modal::before,
+  .daily-boost-modal::after {
+    font-size: 28px;
+  }
+
+  .free-badge {
+    font-size: 14px;
+    padding: 6px 16px;
+  }
+
+  .corner-deco {
+    font-size: 20px;
+  }
+
+  .header-text {
+    font-size: 30px;
+    letter-spacing: 2px;
+  }
+
+  .sparkle-emoji {
+    font-size: 28px;
+  }
+
+  .cute-subheader {
+    font-size: 14px;
+  }
+
+  .gift-container {
+    height: 120px;
+  }
+
+  .gift-emoji {
+    font-size: 90px;
+  }
+
+  .credit-amount,
+  .credit-counter {
+    font-size: 64px;
+  }
+
+  .plus-sign {
+    font-size: 40px;
+  }
+
+  .credit-label {
+    font-size: 20px;
+  }
+
+  .credit-emoji {
+    font-size: 28px;
+  }
+
+  .claim-button {
+    padding: 18px 28px;
+    font-size: 18px;
+    box-shadow: 5px 5px 0 #1a1a1a;
+  }
+
+  .btn-emoji {
+    font-size: 20px;
+  }
+
+  .sparkle {
+    font-size: 22px;
+  }
+}
+
+/* Full screen modal on very small mobile */
+@media (max-width: 360px) {
+  .daily-boost-backdrop {
+    padding: 12px;
+  }
+
+  .daily-boost-modal {
+    padding: 36px 20px 28px;
+    max-width: none;
+  }
+
+  .gift-emoji {
+    font-size: 72px;
+  }
+
+  .credit-amount,
+  .credit-counter {
+    font-size: 52px;
+  }
+
+  .header-text {
+    font-size: 26px;
+  }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .daily-boost-backdrop {
+    animation: none;
+    opacity: 1;
+  }
+
+  .daily-boost-backdrop.closing {
+    animation: none;
+    opacity: 0;
+  }
+
+  .daily-boost-modal {
+    animation: none;
+    opacity: 1;
+  }
+
+  .daily-boost-modal.closing {
+    animation: none;
+    opacity: 0;
+  }
+
+  .daily-boost-modal::before,
+  .daily-boost-modal::after {
+    animation: none;
+    opacity: 1;
+  }
+
+  .gift-emoji.bouncing,
+  .gift-emoji.shaking {
+    animation: none;
+  }
+
+  .sparkle {
+    animation: none;
+    opacity: 0.7;
+  }
+
+  .claim-button {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .sparkle-emoji {
+    animation: none;
+  }
+
+  .plus-sign {
+    animation: none;
+  }
+
+  .free-badge {
+    animation: none;
+    opacity: 1;
+  }
+
+  .corner-deco {
+    animation: none;
+    opacity: 1;
+  }
+
+  .btn-emoji {
+    animation: none;
+  }
+
+  .credit-emoji {
+    animation: none;
+  }
+
+  .gift-spark {
+    animation: none;
+  }
+
+  .daily-boost-header,
+  .cute-subheader,
+  .gift-container,
+  .credit-display,
+  .dismiss-link,
+  .turnstile-container,
+  .claiming-indicator,
+  .success-message {
+    animation: none;
+    opacity: 1;
+  }
+}

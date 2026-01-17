@@ -1,9 +1,10 @@
-import { useState, useEffect, useRef, forwardRef, useImperativeHandle, memo } from 'react';
+import { useState, useEffect, useRef, forwardRef, useImperativeHandle, memo, useCallback } from 'react';
 import { useSogniAuth } from '../../services/sogniAuth';
 import { useWallet } from '../../hooks/useWallet';
 import { formatTokenAmount, getTokenLabel } from '../../services/walletService';
 import { useRewards } from '../../context/RewardsContext';
 import LoginModal, { LoginModalMode } from './LoginModal';
+import DailyBoostCelebration from '../shared/DailyBoostCelebration';
 import { getAuthButtonText, getDefaultModalMode, markAsVisited, incrementLoggedInVisitCount, hasShownProjectsTooltip, markProjectsTooltipShown } from '../../utils/visitorTracking';
 import '../../styles/components/AuthStatus.css';
 
@@ -31,11 +32,12 @@ export interface AuthStatusRef {
   openLoginModal: () => void;
 }
 
-export const AuthStatus = memo(forwardRef<AuthStatusRef, AuthStatusProps>(({ onPurchaseClick, onSignupComplete, onHistoryClick, textColor = '#ffffff', playRandomFlashSound, showToast }, ref) => {
+export const AuthStatus = memo(forwardRef<AuthStatusRef, AuthStatusProps>(({ onPurchaseClick, onSignupComplete, onHistoryClick, textColor = '#ffffff', playRandomFlashSound, showToast: _showToast }, ref) => {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [loginModalMode, setLoginModalMode] = useState<LoginModalMode>('login');
   const [highlightDailyBoost, setHighlightDailyBoost] = useState(false);
+  const [showDailyBoostCelebration, setShowDailyBoostCelebration] = useState(false);
   const [showProjectsTooltip, setShowProjectsTooltip] = useState(false);
   const [tooltipPosition, setTooltipPosition] = useState({ top: 0, left: 0 });
   const [tooltipBelow, setTooltipBelow] = useState(false);
@@ -53,7 +55,7 @@ export const AuthStatus = memo(forwardRef<AuthStatusRef, AuthStatusProps>(({ onP
   
   const { isAuthenticated, authMode, user, logout, isLoading } = useSogniAuth();
   const { balances, tokenType, switchPaymentMethod } = useWallet();
-  const { rewards, claimReward, loading: rewardsLoading } = useRewards();
+  const { rewards, claimRewardWithToken, claimInProgress, lastClaimSuccess, resetClaimState, error: claimError, loading: rewardsLoading } = useRewards();
 
   // Debug: Log when showProjectsTooltip changes
   useEffect(() => {
@@ -93,37 +95,21 @@ export const AuthStatus = memo(forwardRef<AuthStatusRef, AuthStatusProps>(({ onP
       return;
     }
 
-    // All conditions met - show the wallet prompt!
-    console.log('🎁 User has available Daily Boost - opening wallet view', {
+    // All conditions met - show the celebration modal!
+    console.log('🎁 User has available Daily Boost - showing celebration modal', {
       isAuthenticated,
       rewardsLoading,
       canClaimDailyBoost,
       rewardsCount: rewards.length
     });
-    
+
     hasShownLoginBoostRef.current = true;
-    
-    // Wait a moment for any animations to complete
+
+    // Wait a moment for any animations to complete, then show celebration
     setTimeout(() => {
-      setShowUserMenu(true);
-      setHighlightDailyBoost(true);
-      
-      // Show toast notification about Daily Boost
-      if (showToast) {
-        showToast({
-          type: 'success',
-          title: '🎁 Daily Boost Available!',
-          message: 'Claim your free daily credits now!',
-          timeout: 6000
-        });
-      }
-      
-      // Remove highlight after 10 seconds to give user time to notice
-      setTimeout(() => {
-        setHighlightDailyBoost(false);
-      }, 10000);
+      setShowDailyBoostCelebration(true);
     }, 800);
-  }, [isAuthenticated, canClaimDailyBoost, rewardsLoading, rewards.length, dailyBoostReward, hasClaimedToday, showToast]);
+  }, [isAuthenticated, canClaimDailyBoost, rewardsLoading, rewards.length, dailyBoostReward, hasClaimedToday]);
 
   // Track logged-in visits and show Recent Projects tooltip on second visit or later
   useEffect(() => {
@@ -251,24 +237,16 @@ export const AuthStatus = memo(forwardRef<AuthStatusRef, AuthStatusProps>(({ onP
 
   const handleSignupComplete = () => {
     // Called when signup is successfully completed
-    console.log('🎉 Signup complete - opening user menu and highlighting Daily Boost');
+    console.log('🎉 Signup complete - showing Daily Boost celebration');
     setShowLoginModal(false);
-    
+
     // Trigger confetti celebration
     if (onSignupComplete) {
       onSignupComplete();
     }
-    
-    // Wait a moment for the modal to close, then open user menu
-    setTimeout(() => {
-      setShowUserMenu(true);
-      setHighlightDailyBoost(true);
-      
-      // Remove highlight after 5 seconds
-      setTimeout(() => {
-        setHighlightDailyBoost(false);
-      }, 5000);
-    }, 500);
+
+    // Note: The existing login boost check useEffect will trigger the celebration modal
+    // when rewards are loaded and daily boost is available
   };
 
   const handleBuyPremiumSpark = () => {
@@ -295,15 +273,52 @@ export const AuthStatus = memo(forwardRef<AuthStatusRef, AuthStatusProps>(({ onP
     window.open(`${appUrl}/wallet`, '_blank');
   };
 
-  const handleClaimDailyBoost = () => {
+  // Handle claim from celebration modal
+  const handleCelebrationClaim = useCallback((turnstileToken: string) => {
     if (dailyBoostReward && canClaimDailyBoost) {
       // Play flash sound when claiming Daily Boost
       if (playRandomFlashSound) {
         playRandomFlashSound();
       }
-      claimReward(dailyBoostReward.id);
+      claimRewardWithToken(dailyBoostReward.id, turnstileToken);
     }
-  };
+  }, [dailyBoostReward, canClaimDailyBoost, playRandomFlashSound, claimRewardWithToken]);
+
+  // Handle dismissal of celebration modal - fall back to wallet highlight
+  const handleCelebrationDismiss = useCallback(() => {
+    setShowDailyBoostCelebration(false);
+    resetClaimState();
+
+    // If not claimed yet, fall back to wallet highlight behavior
+    if (canClaimDailyBoost) {
+      setShowUserMenu(true);
+      setHighlightDailyBoost(true);
+
+      // Remove highlight after 10 seconds
+      setTimeout(() => {
+        setHighlightDailyBoost(false);
+      }, 10000);
+    }
+  }, [canClaimDailyBoost, resetClaimState]);
+
+  // Handle claim from wallet button (for fallback flow)
+  const handleClaimDailyBoost = useCallback(() => {
+    if (dailyBoostReward && canClaimDailyBoost) {
+      // Play flash sound when clicking
+      if (playRandomFlashSound) {
+        playRandomFlashSound();
+      }
+      // Open celebration modal for claim
+      setShowDailyBoostCelebration(true);
+    }
+  }, [dailyBoostReward, canClaimDailyBoost, playRandomFlashSound]);
+
+  // Clear highlight when daily boost is no longer claimable (was claimed)
+  useEffect(() => {
+    if (!canClaimDailyBoost && highlightDailyBoost) {
+      setHighlightDailyBoost(false);
+    }
+  }, [canClaimDailyBoost, highlightDailyBoost]);
 
   // Prepare variables for authenticated state (used in conditional rendering)
   const currentBalance = balances?.[tokenType]?.net || '0';
@@ -1145,6 +1160,17 @@ export const AuthStatus = memo(forwardRef<AuthStatusRef, AuthStatusProps>(({ onP
       onModeChange={setLoginModalMode}
       onClose={handleCloseLoginModal}
       onSignupComplete={handleSignupComplete}
+    />
+
+    {/* Daily Boost Celebration Modal */}
+    <DailyBoostCelebration
+      isVisible={showDailyBoostCelebration}
+      creditAmount={dailyBoostReward ? parseFloat(dailyBoostReward.amount) : 50}
+      onClaim={handleCelebrationClaim}
+      onDismiss={handleCelebrationDismiss}
+      isClaiming={claimInProgress}
+      claimSuccess={lastClaimSuccess}
+      claimError={claimError}
     />
     </>
   );

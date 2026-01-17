@@ -17,8 +17,12 @@ interface RewardsContextType {
   claimableCount: number;
   error: string | null;
   loading: boolean;
+  claimInProgress: boolean;
+  lastClaimSuccess: boolean;
   refresh: () => void;
   claimReward: (id: string | string[], skipTurnstile?: boolean) => void;
+  claimRewardWithToken: (id: string | string[], turnstileToken: string) => void;
+  resetClaimState: () => void;
 }
 
 const RewardsContext = createContext<RewardsContextType>({
@@ -26,8 +30,12 @@ const RewardsContext = createContext<RewardsContextType>({
   claimableCount: 0,
   error: null,
   loading: false,
+  claimInProgress: false,
+  lastClaimSuccess: false,
   refresh: () => {},
-  claimReward: () => {}
+  claimReward: () => {},
+  claimRewardWithToken: () => {},
+  resetClaimState: () => {}
 });
 
 function isTimeLocked(reward: Reward): boolean {
@@ -49,6 +57,8 @@ export const RewardsProvider: React.FC<RewardsProviderProps> = ({ children }) =>
   const [rewards, setRewards] = useState<Reward[]>([]);
   const [claimIntent, setClaimIntent] = useState<{ id?: string | string[]; token?: string }>({});
   const [claimLoading, setClaimLoading] = useState(false);
+  const [claimInProgress, setClaimInProgress] = useState(false);
+  const [lastClaimSuccess, setLastClaimSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   
@@ -158,6 +168,19 @@ export const RewardsProvider: React.FC<RewardsProviderProps> = ({ children }) =>
     setClaimIntent({ id, token: skipTurnstile === true ? 'skip' : undefined });
   }, []);
 
+  // Claim reward with a provided turnstile token (for modal flow)
+  const claimRewardWithToken = useCallback((id: string | string[], turnstileToken: string) => {
+    setClaimInProgress(true);
+    setLastClaimSuccess(false);
+    setClaimIntent({ id, token: turnstileToken });
+  }, []);
+
+  // Reset claim state (called after modal closes)
+  const resetClaimState = useCallback(() => {
+    setClaimInProgress(false);
+    setLastClaimSuccess(false);
+  }, []);
+
   const handleTurnstileToken = useCallback((token: string) => {
     setClaimIntent((prev) => ({ ...prev, token }));
   }, []);
@@ -196,7 +219,10 @@ export const RewardsProvider: React.FC<RewardsProviderProps> = ({ children }) =>
         })
         .then(() => {
           console.log('✅ Rewards claimed successfully:', claimedRewards.map(r => r.title));
-          
+
+          // Set success state for celebration modal
+          setLastClaimSuccess(true);
+
           // Show success toast with credit amount
           const rewardTitles = claimedRewards.map(r => r.title).join(', ');
           const totalAmount = claimedRewards.reduce((sum, r) => sum + parseFloat(r.amount), 0);
@@ -244,6 +270,7 @@ export const RewardsProvider: React.FC<RewardsProviderProps> = ({ children }) =>
         })
         .finally(() => {
           setClaimLoading(false);
+          setClaimInProgress(false);
         });
     }
   }, [claimIntent, rewards, getSogniClient, fetchRewards, showToast]);
@@ -254,10 +281,14 @@ export const RewardsProvider: React.FC<RewardsProviderProps> = ({ children }) =>
       claimableCount: rewards?.filter(isClaimable).length || 0,
       error,
       loading: loading || claimLoading,
+      claimInProgress,
+      lastClaimSuccess,
       refresh: fetchRewards,
-      claimReward
+      claimReward,
+      claimRewardWithToken,
+      resetClaimState
     }),
-    [rewards, error, loading, claimLoading, fetchRewards, claimReward]
+    [rewards, error, loading, claimLoading, claimInProgress, lastClaimSuccess, fetchRewards, claimReward, claimRewardWithToken, resetClaimState]
   );
 
   return (
