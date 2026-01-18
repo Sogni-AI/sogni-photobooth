@@ -17,23 +17,9 @@ const CustomPromptPopup = ({
   currentPrompt = '',
   currentSceneName = ''
 }) => {
-  // Initialize state from localStorage if available, otherwise use props
-  const [promptText, setPromptText] = useState(() => {
-    try {
-      const stored = localStorage.getItem(CUSTOM_PROMPT_STORAGE_KEY);
-      return stored || currentPrompt;
-    } catch (e) {
-      return currentPrompt;
-    }
-  });
-  const [sceneName, setSceneName] = useState(() => {
-    try {
-      const stored = localStorage.getItem(CUSTOM_SCENE_NAME_STORAGE_KEY);
-      return stored || currentSceneName;
-    } catch (e) {
-      return currentSceneName;
-    }
-  });
+  // Initialize state from props - useEffect will handle loading when popup opens
+  const [promptText, setPromptText] = useState(currentPrompt || '');
+  const [sceneName, setSceneName] = useState(currentSceneName || '');
   const [showSparkles, setShowSparkles] = useState(false);
   const textareaRef = useRef(null);
   const popupRef = useRef(null);
@@ -71,20 +57,31 @@ const CustomPromptPopup = ({
     }
   }, [isOpen]);
 
-  // When popup opens, load from localStorage (takes precedence over props)
+  // When popup opens, prioritize props (current app state) over localStorage
   useEffect(() => {
     if (isOpen) {
       try {
-        const storedPrompt = localStorage.getItem(CUSTOM_PROMPT_STORAGE_KEY);
-        const storedSceneName = localStorage.getItem(CUSTOM_SCENE_NAME_STORAGE_KEY);
-        
-        // Use localStorage values if they exist, otherwise use props
-        const finalPrompt = storedPrompt !== null ? storedPrompt : (currentPrompt || '');
-        const finalSceneName = storedSceneName !== null ? storedSceneName : (currentSceneName || '');
-        
+        // Props are the source of truth if provided
+        // Only fall back to localStorage if props are empty (for convenience when starting fresh)
+        let finalPrompt = currentPrompt || '';
+        let finalSceneName = currentSceneName || '';
+
+        if (!finalPrompt) {
+          const storedPrompt = localStorage.getItem(CUSTOM_PROMPT_STORAGE_KEY);
+          if (storedPrompt) {
+            finalPrompt = storedPrompt;
+          }
+        }
+        if (!finalSceneName) {
+          const storedSceneName = localStorage.getItem(CUSTOM_SCENE_NAME_STORAGE_KEY);
+          if (storedSceneName) {
+            finalSceneName = storedSceneName;
+          }
+        }
+
         setPromptText(finalPrompt);
         setSceneName(finalSceneName);
-        
+
         // Store initial values for cancel functionality
         initialValuesRef.current = { prompt: finalPrompt, sceneName: finalSceneName };
       } catch (e) {

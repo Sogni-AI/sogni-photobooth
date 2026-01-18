@@ -276,9 +276,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       
       // Save model-specific settings separately
       const modelSpecificSettings = ['inferenceSteps', 'sampler', 'scheduler', 'promptGuidance', 'guidance', 'numImages'];
+      // Custom prompt settings should ALWAYS persist to localStorage (not sessionStorage)
+      // so they survive page reloads regardless of auth state
+      const alwaysPersistSettings = ['positivePrompt', 'customSceneName', 'selectedStyle'];
       if (modelSpecificSettings.includes(key)) {
         console.log(`📦 Saving model-specific setting ${String(key)}`);
         saveModelSpecificSettings(newSettings.selectedModel, { [key]: value });
+      } else if (alwaysPersistSettings.includes(key)) {
+        // Always save to localStorage for custom prompt settings
+        saveSettingsToCookies({ [key]: value }, true);
       } else {
         // Save to localStorage if authenticated, sessionStorage if not
         saveSettingsToCookies({ [key]: value }, isAuthenticated);
