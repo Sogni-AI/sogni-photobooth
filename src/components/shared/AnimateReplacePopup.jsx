@@ -1077,9 +1077,14 @@ const AnimateReplacePopup = ({
   };
 
   // Handle video recording complete
-  const handleRecordingComplete = async ({ file, url, duration: recordedDuration }) => {
+  const handleRecordingComplete = async ({ file, url, duration: recordedDuration, aspectRatio: recordedAspect }) => {
     setShowVideoRecorder(false);
     setRecordedVideo(file);
+    // Parse and set aspect ratio from recording
+    if (recordedAspect) {
+      const [w, h] = recordedAspect.split('/').map(Number);
+      if (w && h) setVideoAspectRatio(w / h);
+    }
     setSourceType('record');
     setSelectedSample(null);
     setUploadedVideo(null);
@@ -1407,7 +1412,7 @@ const AnimateReplacePopup = ({
                       : uploadedVideo?.name || 'Uploaded Video'}
                 </div>
 
-                {/* Video element */}
+                {/* Video element - properly handles aspect ratio for recorded videos */}
                 <video
                   ref={videoPreviewRef}
                   src={sourceType === 'sample' && selectedSample
@@ -1419,8 +1424,11 @@ const AnimateReplacePopup = ({
                   playsInline
                   onLoadedMetadata={handleVideoLoadedMetadata}
                   style={{
-                    width: '100%',
+                    width: sourceType === 'record' && videoAspectRatio < 1 ? 'auto' : '100%',
+                    height: sourceType === 'record' && videoAspectRatio < 1 ? '100%' : 'auto',
+                    maxWidth: '100%',
                     maxHeight: isMobile ? '180px' : '220px',
+                    margin: '0 auto',
                     objectFit: 'contain',
                     display: 'block'
                   }}
@@ -1950,34 +1958,34 @@ const AnimateReplacePopup = ({
                   </div>
                 )}
 
-                {/* Record Tab - Coming Soon */}
+                {/* Record Tab */}
                 {sourceType === 'record' && (
-                  <div style={{ 
-                    textAlign: 'center',
-                    padding: '24px 16px',
-                    borderRadius: '10px',
-                    border: '2px dashed rgba(255, 255, 255, 0.3)',
-                    background: 'rgba(255, 255, 255, 0.05)'
-                  }}>
-                    <span style={{ fontSize: '40px', display: 'block', marginBottom: '12px' }}>🚧</span>
-                    <span style={{ 
-                      color: 'white', 
-                      fontSize: '16px', 
-                      fontWeight: '600',
-                      display: 'block',
-                      marginBottom: '8px'
-                    }}>
-                      Coming Soon!
-                    </span>
-                    <span style={{ 
-                      color: 'rgba(255, 255, 255, 0.7)', 
-                      fontSize: '13px',
-                      display: 'block'
-                    }}>
-                      Video recording will be available in a future update.
-                      <br />
-                      For now, please upload a video file instead.
-                    </span>
+                  <div style={{ textAlign: 'center' }}>
+                    <button
+                      onClick={() => setShowVideoRecorder(true)}
+                      style={{
+                        width: '100%',
+                        padding: '24px 16px',
+                        borderRadius: '10px',
+                        border: '2px dashed rgba(255, 255, 255, 0.4)',
+                        background: 'rgba(255, 255, 255, 0.1)',
+                        color: 'white',
+                        cursor: 'pointer',
+                        fontSize: '14px',
+                        fontWeight: '600',
+                        transition: 'all 0.2s ease',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: '8px'
+                      }}
+                    >
+                      <span style={{ fontSize: '32px' }}>🎬</span>
+                      <span>Tap to Record Video</span>
+                      <span style={{ fontSize: '11px', opacity: 0.7 }}>
+                        Use your camera to record a source video
+                      </span>
+                    </button>
                   </div>
                 )}
 
