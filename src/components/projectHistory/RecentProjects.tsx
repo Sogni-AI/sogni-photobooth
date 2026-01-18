@@ -1406,12 +1406,17 @@ function RecentProjects({
                     <div className="recent-project-jobs-carousel">
                       {expandedProjectImages[project.id] ? (
                         /* Show all loaded images in carousel - click opens slideshow */
-                        expandedProjectImages[project.id].map((image, index) => (
+                        expandedProjectImages[project.id].map((image, index) => {
+                          // Default to 1:1 square if aspect is invalid
+                          const aspect = image.width && image.height && image.width / image.height > 0.1
+                            ? image.width / image.height
+                            : 1;
+                          return (
                           <div
                             key={image.id}
                             className="job-item local-project-image-item"
                             style={{
-                              width: `${Math.round(320 * (image.width / image.height))}px`,
+                              width: `${Math.round(320 * aspect)}px`,
                               cursor: 'pointer'
                             }}
                             onClick={() => handleLocalImageClick(
@@ -1440,7 +1445,8 @@ function RecentProjects({
                               </button>
                             )}
                           </div>
-                        ))
+                          );
+                        })
                       ) : (
                         /* Show loading spinner while images are being loaded */
                         <div className="local-project-upload-status">

@@ -259,7 +259,9 @@ function JobItem({ job, aspect, sogniClient, onView, onHideJob, modelName }: Job
   };
 
   // Calculate width based on aspect ratio and 320px height
-  const calculatedWidth = Math.round(320 * aspect);
+  // Default to 1:1 square if aspect is invalid (0, NaN, undefined, or unreasonably small)
+  const validAspect = aspect && Number.isFinite(aspect) && aspect > 0.1 ? aspect : 1;
+  const calculatedWidth = Math.round(320 * validAspect);
 
   return (
     <div
