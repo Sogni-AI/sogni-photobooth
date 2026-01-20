@@ -1070,6 +1070,310 @@ router.post('/generate', ensureSessionId, async (req, res) => {
   }
 });
 
+// ============================================
+// Camera Angle Generation (Multiple Angles LoRA)
+// ============================================
+
+// CORS preflight for camera angle generation
+router.options('/generate-angle', (req, res) => {
+  res.sendStatus(200);
+});
+
+// Generate image from different camera angle using Multiple Angles LoRA
+router.post('/generate-angle', ensureSessionId, async (req, res) => {
+  const localProjectId = `angle-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  console.log(`[${localProjectId}] Starting camera angle generation request for session ${req.sessionId}...`);
+
+  try {
+    // Get or create client app ID
+    let clientAppId = req.headers['x-client-app-id'] || req.body.clientAppId || req.query.clientAppId;
+    if (!clientAppId) {
+      clientAppId = `user-${req.sessionId}-${Date.now()}`;
+      console.log(`[${localProjectId}] Generated unique client app ID for session: ${clientAppId}`);
+    }
+
+    // Extract parameters from request
+    const {
+      contextImage, // Base64 data URL or URL string
+      azimuthPrompt,
+      elevationPrompt,
+      distancePrompt,
+      width,
+      height,
+      tokenType = 'spark',
+      loraStrength = 0.9,
+      isPremiumSpark = false
+    } = req.body;
+
+    // Validate required parameters
+    if (!contextImage) {
+      return res.status(400).json({
+        error: 'Missing required parameter',
+        message: 'contextImage is required'
+      });
+    }
+
+    if (!azimuthPrompt || !elevationPrompt || !distancePrompt) {
+      return res.status(400).json({
+        error: 'Missing required parameters',
+        message: 'azimuthPrompt, elevationPrompt, and distancePrompt are required'
+      });
+    }
+
+    // Build the full prompt with activation keyword
+    const fullPrompt = `<sks> ${azimuthPrompt} ${elevationPrompt} ${distancePrompt}`;
+    console.log(`[${localProjectId}] Camera angle prompt: ${fullPrompt}`);
+
+    // Track metrics
+    await incrementBatchesGenerated();
+    await trackMetric('batches_generated', 1);
+    await incrementPhotosGenerated(1);
+    await trackMetric('photos_generated', 1);
+    await trackMetric('camera_angle_generated', 1);
+
+    // Server-side worker preference enforcement (same as /generate)
+    let positivePrompt = fullPrompt;
+    const shouldApplyWorkerPreferences = tokenType !== 'spark' || isPremiumSpark;
+
+    if (shouldApplyWorkerPreferences) {
+      const preferredWorkers = ['SPICE.MUST.FLOW'];
+      const skipWorkers = ['freeman123'];
+      positivePrompt = `${positivePrompt} --preferred-workers=${preferredWorkers.join(',')} --skip-workers=${skipWorkers.join(',')}`.trim();
+      console.log(`[${localProjectId}] Worker preferences applied`);
+    }
+
+    // Track progress events
+    let hasReceivedFirstEvent = false;
+    let firstEventResolve = null;
+    const firstEventPromise = new Promise((resolve) => {
+      firstEventResolve = resolve;
+    });
+
+    let lastProgressUpdate = Date.now();
+    const progressHandler = (eventData) => {
+      // Signal first event received
+      if (!hasReceivedFirstEvent && (eventData.type === 'queued' || eventData.type === 'started' || eventData.type === 'initiating')) {
+        hasReceivedFirstEvent = true;
+        if (firstEventResolve) {
+          firstEventResolve();
+          firstEventResolve = null;
+        }
+      }
+
+      // Throttle progress updates
+      const now = Date.now();
+      if (now - lastProgressUpdate < 500 && eventData.type === 'progress' && eventData.progress !== 0 && eventData.progress !== 1) {
+        return;
+      }
+      lastProgressUpdate = now;
+
+      // Build SSE event
+      const { jobId: originalJobId, ...eventDataWithoutJobId } = eventData;
+      const sseEvent = {
+        ...eventDataWithoutJobId,
+        projectId: localProjectId,
+        workerName: eventData.workerName || 'Worker',
+        progress: typeof eventData.progress === 'number' ?
+                  (eventData.progress > 1 ? eventData.progress / 100 : eventData.progress) :
+                  eventData.progress
+      };
+
+      if (originalJobId !== undefined) {
+        sseEvent.jobId = originalJobId;
+      }
+
+      // Handle queued event
+      if (eventData.type === 'queued') {
+        forwardEventToSSE(localProjectId, clientAppId, {
+          type: 'queued',
+          projectId: localProjectId,
+          queuePosition: eventData.queuePosition
+        }, req.sessionId);
+        return;
+      }
+
+      // Forward all other events
+      forwardEventToSSE(localProjectId, clientAppId, sseEvent, req.sessionId);
+
+      // Store pending events for late connections
+      if (!activeProjects.has(localProjectId)) {
+        if (!pendingProjectEvents.has(localProjectId)) {
+          pendingProjectEvents.set(localProjectId, []);
+        }
+        pendingProjectEvents.get(localProjectId).push({ ...sseEvent, clientAppId });
+
+        const events = pendingProjectEvents.get(localProjectId);
+        if (events.length > 50) {
+          events.splice(0, events.length - 50);
+        }
+
+        // Handle errors
+        if (eventData.type === 'failed' || eventData.type === 'error') {
+          if (!globalThis.pendingProjectErrors) {
+            globalThis.pendingProjectErrors = new Map();
+          }
+          const isInsufficientFundsError = (eventData.error && eventData.error.code === 4024) ||
+                                           (eventData.error && eventData.error.message && eventData.error.message.includes('Insufficient funds'));
+          const errorMessage = isInsufficientFundsError
+            ? 'Insufficient credits to generate images. Please add more credits.'
+            : ((eventData.error && eventData.error.message) || eventData.message || 'Camera angle generation failed');
+
+          globalThis.pendingProjectErrors.set(localProjectId, {
+            type: 'error',
+            projectId: localProjectId,
+            message: errorMessage,
+            errorCode: isInsufficientFundsError ? 'insufficient_funds' : 'unknown_error',
+            isInsufficientFunds: isInsufficientFundsError
+          });
+
+          setTimeout(() => {
+            if (globalThis.pendingProjectErrors) {
+              globalThis.pendingProjectErrors.delete(localProjectId);
+            }
+          }, 30000);
+        }
+
+        // Cleanup pending events after 2 minutes
+        setTimeout(() => {
+          if (pendingProjectEvents.has(localProjectId)) {
+            pendingProjectEvents.delete(localProjectId);
+          }
+        }, 2 * 60 * 1000);
+      }
+    };
+
+    // Get session client
+    const client = await getSessionClient(req.sessionId, clientAppId);
+
+    // Prepare context image as buffer
+    let contextImageBuffer;
+    if (contextImage.startsWith('data:')) {
+      // Base64 data URL
+      const base64Data = contextImage.split(',')[1];
+      contextImageBuffer = Buffer.from(base64Data, 'base64');
+    } else if (contextImage.startsWith('http')) {
+      // URL - fetch it
+      const response = await fetch(contextImage);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch context image: ${response.statusText}`);
+      }
+      const arrayBuffer = await response.arrayBuffer();
+      contextImageBuffer = new Uint8Array(arrayBuffer);
+    } else {
+      // Assume it's already base64 without prefix
+      contextImageBuffer = Buffer.from(contextImage, 'base64');
+    }
+
+    // Build project parameters
+    const projectParams = {
+      selectedModel: 'qwen_image_edit_2511_fp8_lightning',
+      positivePrompt: positivePrompt,
+      negativePrompt: '',
+      contextImages: [contextImageBuffer],
+      width: width || 1024,
+      height: height || 1024,
+      numberImages: 1,
+      inferenceSteps: 5,
+      promptGuidance: 1,
+      tokenType: tokenType,
+      outputFormat: 'png',
+      sampler: 'euler',
+      scheduler: 'simple',
+      // LoRA configuration for Multiple Angles
+      loraId: 'multiple_angles',
+      loras: ['qwen-image-edit-2511-multiple-angles-lora.safetensors'],
+      loraStrengths: [loraStrength],
+      clientAppId
+    };
+
+    console.log(`[${localProjectId}] Starting camera angle generation with LoRA strength: ${loraStrength}`);
+
+    // Start generation
+    const attemptGeneration = async (clientToUse, isRetry = false) => {
+      return generateImage(clientToUse, projectParams, progressHandler, localProjectId)
+        .then((sogniResult) => {
+          console.log(`[${localProjectId}] Camera angle generation completed. Sogni Project ID: ${sogniResult.projectId}`);
+        })
+        .catch(async (error) => {
+          console.error(`[${localProjectId}] Camera angle generation failed${isRetry ? ' (retry)' : ''}:`, error);
+
+          // Handle auth errors with retry
+          const isAuthError = error.status === 401 ||
+                             (error.payload && error.payload.errorCode === 107) ||
+                             error.message?.includes('Invalid token');
+
+          if (isAuthError && !isRetry) {
+            console.log(`[${localProjectId}] Auth error detected, attempting retry...`);
+            clearInvalidTokens();
+
+            const sessionId = req.sessionId;
+            if (sessionId && sessionClients.has(sessionId)) {
+              const clientId = sessionClients.get(sessionId);
+              cleanupSogniClient(clientId);
+              sessionClients.delete(sessionId);
+            }
+
+            try {
+              const freshClient = await getSessionClient(sessionId, clientAppId);
+              return await attemptGeneration(freshClient, true);
+            } catch (retryError) {
+              console.error(`[${localProjectId}] Retry failed:`, retryError);
+            }
+          }
+
+          // Forward error to client
+          const isInsufficientFundsError = error.payload?.errorCode === 4024 ||
+                                           error.message?.includes('Insufficient funds');
+
+          const errorEvent = {
+            type: 'error',
+            projectId: localProjectId,
+            message: isInsufficientFundsError
+              ? 'Insufficient credits. Please add more credits.'
+              : (error.message || 'Camera angle generation failed'),
+            errorCode: isInsufficientFundsError ? 'insufficient_funds' : 'generation_error',
+            isInsufficientFunds: isInsufficientFundsError
+          };
+
+          forwardEventToSSE(localProjectId, clientAppId, errorEvent, req.sessionId);
+
+          throw error;
+        });
+    };
+
+    // Start generation (don't await - let it run async)
+    attemptGeneration(client).catch(error => {
+      console.error(`[${localProjectId}] Unhandled generation error:`, error);
+    });
+
+    // Wait for first event before responding
+    const firstEventTimeout = setTimeout(() => {
+      if (firstEventResolve) {
+        firstEventResolve();
+        firstEventResolve = null;
+      }
+    }, 30000);
+
+    await firstEventPromise;
+    clearTimeout(firstEventTimeout);
+
+    // Return project ID for SSE tracking
+    res.json({
+      success: true,
+      projectId: localProjectId,
+      message: 'Camera angle generation started',
+      clientAppId: clientAppId
+    });
+
+  } catch (error) {
+    console.error(`[${localProjectId}] Error in camera angle generation:`, error);
+    res.status(500).json({
+      error: 'Failed to initiate camera angle generation',
+      message: error.message
+    });
+  }
+});
+
 // Add a health check endpoint to verify server is running
 router.get('/health', (req, res) => {
   res.status(200).json({

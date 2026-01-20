@@ -502,7 +502,16 @@ export async function generateImage(client, params, progressCallback, localProje
       console.log(`[IMAGE] ControlNet image: ${(imageData.length / 1024 / 1024).toFixed(2)}MB`);
     }
 
-
+    // Add LoRA configuration if provided (for Multiple Angles LoRA and others)
+    if (params.loraId) {
+      projectOptions.loraId = params.loraId;
+    }
+    if (params.loras && Array.isArray(params.loras)) {
+      projectOptions.loras = params.loras;
+    }
+    if (params.loraStrengths && Array.isArray(params.loraStrengths)) {
+      projectOptions.loraStrengths = params.loraStrengths;
+    }
 
     // Project completion tracking (must be set up BEFORE creating project)
     const projectCompletionTracker = {

@@ -65,7 +65,9 @@ import ConfettiCelebration from './ConfettiCelebration';
 import StitchOptionsPopup from './StitchOptionsPopup';
 import VideoReviewPopup from './VideoReviewPopup';
 import VideoSettingsFooter from './VideoSettingsFooter';
+import CameraAnglePopup from './CameraAnglePopup';
 import { extractLastFrame, extractFirstFrame } from '../../utils/videoFrameExtraction';
+import { generateCameraAngle } from '../../services/CameraAngleGenerator.ts';
 
 // Random video completion messages
 const VIDEO_READY_MESSAGES = [
@@ -1030,7 +1032,11 @@ const PhotoGallery = ({
   const [showBatchAnimateReplacePopup, setShowBatchAnimateReplacePopup] = useState(false); // Batch Animate Replace popup
   const [showS2VPopup, setShowS2VPopup] = useState(false); // Single Sound to Video popup
   const [showBatchS2VPopup, setShowBatchS2VPopup] = useState(false); // Batch Sound to Video popup
-  
+
+  // Camera Angle popup states
+  const [showCameraAnglePopup, setShowCameraAnglePopup] = useState(false);
+  const [isCameraAngleBatch, setIsCameraAngleBatch] = useState(false);
+
   // Model variant states for cost estimation in new workflow popups
   const [animateMoveModelVariant, setAnimateMoveModelVariant] = useState('speed');
   const [animateReplaceModelVariant, setAnimateReplaceModelVariant] = useState('speed');
@@ -4898,6 +4904,180 @@ const PhotoGallery = ({
       img.src = imageUrl;
     });
   }, [photos, sogniClient, setPhotos, settings, tokenType, showToast, onOutOfCredits]);
+
+  // ============================================
+  // Camera Angle Generation Handlers
+  // ============================================
+
+  // Handle camera angle generation (single image) - uses SDK directly like VideoGenerator
+  const handleCameraAngleGenerate = useCallback(async (params) => {
+    setShowCameraAnglePopup(false);
+
+    const targetIndex = selectedPhotoIndex;
+    if (targetIndex === null || !sogniClient) return;
+
+    const photo = photos[targetIndex];
+    if (!photo || photo.loading || photo.generating || photo.generatingCameraAngle) return;
+
+    const imageUrl = photo.enhancedImageUrl || photo.images?.[selectedSubIndex || 0] || photo.originalDataUrl;
+    if (!imageUrl) {
+      showToast({
+        title: 'No Image',
+        message: 'No image available for camera angle generation.',
+        type: 'error'
+      });
+      return;
+    }
+
+    // Get image dimensions first
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+
+    try {
+      await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = reject;
+        img.src = imageUrl;
+      });
+    } catch {
+      showToast({
+        title: 'Image Load Error',
+        message: 'Could not load the source image.',
+        type: 'error'
+      });
+      return;
+    }
+
+    const width = img.naturalWidth;
+    const height = img.naturalHeight;
+
+    showToast({
+      title: '📐 Generating New Angle',
+      message: `Creating ${params.azimuth} view...`,
+      type: 'info',
+      timeout: 3000
+    });
+
+    // Use the CameraAngleGenerator service (same pattern as VideoGenerator)
+    generateCameraAngle({
+      photo,
+      photoIndex: targetIndex,
+      subIndex: selectedSubIndex || 0,
+      imageWidth: width,
+      imageHeight: height,
+      sogniClient,
+      setPhotos,
+      azimuth: params.azimuth,
+      elevation: params.elevation,
+      distance: params.distance,
+      loraStrength: params.loraStrength,
+      tokenType,
+      onComplete: (resultUrl) => {
+        showToast({
+          title: '📐 New Angle Ready!',
+          message: 'Swipe to view the new angle!',
+          type: 'success'
+        });
+      },
+      onError: (error) => {
+        showToast({
+          title: 'Generation Failed',
+          message: error.message || 'Camera angle generation failed',
+          type: 'error'
+        });
+      },
+      onOutOfCredits
+    });
+  }, [selectedPhotoIndex, selectedSubIndex, photos, sogniClient, setPhotos, tokenType, showToast, onOutOfCredits]);
+
+  // Handle batch camera angle generation - uses SDK directly like VideoGenerator
+  const handleBatchCameraAngleGenerate = useCallback(async (params) => {
+    setShowCameraAnglePopup(false);
+
+    if (!sogniClient) {
+      showToast({
+        title: 'Not Connected',
+        message: 'Please wait for connection to complete.',
+        type: 'error'
+      });
+      return;
+    }
+
+    const loadedPhotos = photos.filter(
+      photo => !photo.hidden && !photo.loading && !photo.generating && !photo.generatingCameraAngle && !photo.error && photo.images && photo.images.length > 0 && !photo.isOriginal
+    );
+
+    if (loadedPhotos.length === 0) {
+      showToast({
+        title: 'No Images',
+        message: 'No images available for camera angle generation.',
+        type: 'error'
+      });
+      return;
+    }
+
+    showToast({
+      title: '📐 Batch Camera Angle',
+      message: `Generating ${params.azimuth} view for ${loadedPhotos.length} images...`,
+      type: 'info',
+      timeout: 4000
+    });
+
+    // Process each photo using the CameraAngleGenerator service
+    for (const photo of loadedPhotos) {
+      const photoIndex = photos.findIndex(p => p.id === photo.id);
+      if (photoIndex === -1 || photo.generatingCameraAngle) continue;
+
+      const imageUrl = photo.enhancedImageUrl || photo.images?.[0] || photo.originalDataUrl;
+      if (!imageUrl) continue;
+
+      // Get image dimensions
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+
+      try {
+        await new Promise((resolve, reject) => {
+          img.onload = resolve;
+          img.onerror = reject;
+          img.src = imageUrl;
+        });
+      } catch {
+        console.error(`[BatchCameraAngle] Failed to load image for photo ${photo.id}`);
+        continue;
+      }
+
+      const width = img.naturalWidth;
+      const height = img.naturalHeight;
+
+      // Use the CameraAngleGenerator service (same pattern as VideoGenerator)
+      generateCameraAngle({
+        photo,
+        photoIndex,
+        subIndex: 0,
+        imageWidth: width,
+        imageHeight: height,
+        sogniClient,
+        setPhotos,
+        azimuth: params.azimuth,
+        elevation: params.elevation,
+        distance: params.distance,
+        loraStrength: params.loraStrength,
+        tokenType,
+        onComplete: () => {
+          showToast({
+            title: '📐 Angle Added',
+            message: 'New angle ready!',
+            type: 'success',
+            timeout: 2000
+          });
+        },
+        onError: (error) => {
+          console.error(`[BatchCameraAngle] Error for photo ${photo.id}:`, error);
+        },
+        onOutOfCredits
+      });
+    }
+  }, [photos, sogniClient, setPhotos, tokenType, showToast, onOutOfCredits]);
 
   // Handle video regeneration for a single photo using stored parameters
   const handleRegenerateVideo = useCallback(async (photo, photoIndex) => {
@@ -11575,6 +11755,62 @@ const PhotoGallery = ({
           </div>
           )}
 
+          {/* Batch 3D Angle Button - Shows when authenticated and there are images */}
+          {isAuthenticated && photos && photos.filter(p => !p.hidden && !p.error && p.images && p.images.length > 0 && !p.isOriginal).length > 0 && (
+            <div
+              className="batch-camera-angle-button-container"
+              style={{
+                position: 'relative',
+                background: 'linear-gradient(135deg, #ff5252, #e53935)',
+                borderRadius: '8px',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                transition: 'all 0.2s ease',
+                display: 'inline-flex',
+                overflow: 'visible'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.25)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)';
+              }}
+            >
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsCameraAngleBatch(true);
+                  setShowCameraAnglePopup(true);
+                }}
+                disabled={photos.some(p => p.generatingCameraAngle)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: 'white',
+                  padding: '8px 14px',
+                  borderRadius: '8px',
+                  cursor: photos.some(p => p.generatingCameraAngle) ? 'not-allowed' : 'pointer',
+                  fontSize: '16px',
+                  fontWeight: '600',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  transition: 'all 0.2s ease',
+                  whiteSpace: 'nowrap',
+                  pointerEvents: 'auto',
+                  position: 'relative',
+                  zIndex: 1,
+                  minHeight: '40px',
+                  opacity: photos.some(p => p.generatingCameraAngle) ? 0.5 : 1
+                }}
+                title="Generate 3D angles for all images"
+              >
+                <span>📐</span>
+              </button>
+            </div>
+          )}
+
           {/* Share Button - Shows when there are 2+ videos to stitch and share */}
           {(() => {
             const currentPhotosArray = isPromptSelectorMode ? filteredPhotos : photos;
@@ -12976,6 +13212,22 @@ const PhotoGallery = ({
                 document.body
               )}
             </div>
+          )}
+
+          {/* 3D Camera Angle Button - Only for authenticated users with generated photos */}
+          {isAuthenticated && !isPromptSelectorMode && !selectedPhoto.isOriginal && (
+            <button
+              className="action-button camera-angle-btn"
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsCameraAngleBatch(false);
+                setShowCameraAnglePopup(true);
+              }}
+              disabled={selectedPhoto.loading || selectedPhoto.generatingCameraAngle}
+            >
+              <span>📐</span>
+              <span>{selectedPhoto.generatingCameraAngle ? 'Generating...' : 'Angle'}</span>
+            </button>
           )}
         </div>
         );
@@ -15257,6 +15509,111 @@ const PhotoGallery = ({
                           photo.videoStatus
                         ) : (
                           `${formatVideoDuration(photo.videoElapsed || 0)} elapsed`
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Camera Angle generation progress overlay */}
+                {photo.generatingCameraAngle && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      bottom: '8px',
+                      left: '50%',
+                      transform: 'translateX(-50%)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      zIndex: 5,
+                      color: 'white',
+                      textAlign: 'center'
+                    }}
+                  >
+                    {/* Compact glowing card */}
+                    <div style={{
+                      position: 'relative',
+                      background: 'rgba(20, 20, 35, 0.85)',
+                      backdropFilter: 'blur(10px)',
+                      borderRadius: '12px',
+                      padding: '6px 10px',
+                      boxShadow: '0 2px 12px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 82, 82, 0.3)',
+                      minWidth: '140px',
+                      maxWidth: '160px'
+                    }}>
+                      {/* Subtle animated glow */}
+                      <div style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        borderRadius: '12px',
+                        background: 'linear-gradient(135deg, rgba(255, 82, 82, 0.15), rgba(255, 107, 107, 0.15))',
+                        animation: 'pulse 2s ease-in-out infinite',
+                        pointerEvents: 'none'
+                      }} />
+
+                      {/* Compact header */}
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '4px',
+                        marginBottom: '3px',
+                        position: 'relative'
+                      }}>
+                        <span style={{
+                          fontSize: '14px',
+                          filter: 'drop-shadow(0 0 4px rgba(255, 82, 82, 0.6))'
+                        }}>
+                          📐
+                        </span>
+                        <span style={{
+                          fontSize: '11px',
+                          fontWeight: '600',
+                          color: '#ff5252',
+                          letterSpacing: '0.3px'
+                        }}>
+                          Generating
+                        </span>
+                      </div>
+
+                      {/* Progress/Status */}
+                      <div style={{
+                        fontSize: '16px',
+                        fontWeight: '700',
+                        color: '#fff',
+                        marginBottom: '2px',
+                        textShadow: '0 1px 3px rgba(0,0,0,0.5)'
+                      }}>
+                        {photo.cameraAngleProgress !== undefined && photo.cameraAngleProgress > 0 ? (
+                          <span>{photo.cameraAngleProgress}%</span>
+                        ) : photo.cameraAngleStatus?.startsWith('Queue') || photo.cameraAngleStatus?.startsWith('Next') ? (
+                          <span style={{ fontSize: '12px' }}>In line...</span>
+                        ) : photo.cameraAngleStatus === 'Initializing' ? (
+                          <span style={{ fontSize: '12px' }}>Initializing...</span>
+                        ) : (
+                          <span style={{ fontSize: '12px' }}>{photo.cameraAngleStatus || 'Starting...'}</span>
+                        )}
+                      </div>
+
+                      {/* Worker info */}
+                      <div style={{
+                        fontSize: '9px',
+                        color: 'rgba(255, 255, 255, 0.7)',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        maxWidth: '140px'
+                      }}>
+                        {photo.cameraAngleWorkerName ? (
+                          photo.cameraAngleWorkerName
+                        ) : photo.cameraAngleStatus ? (
+                          photo.cameraAngleStatus
+                        ) : (
+                          'Processing...'
                         )}
                       </div>
                     </div>
@@ -17953,6 +18310,30 @@ const PhotoGallery = ({
         onModelVariantChange={setS2vModelVariant}
         videoDuration={s2vDuration}
         onDurationChange={setS2vDuration}
+      />
+
+      {/* Camera Angle Popup (Single) */}
+      <CameraAnglePopup
+        visible={showCameraAnglePopup && !isCameraAngleBatch}
+        onClose={() => setShowCameraAnglePopup(false)}
+        onConfirm={handleCameraAngleGenerate}
+        isBatch={false}
+        itemCount={1}
+        tokenType={tokenType}
+        imageWidth={desiredWidth || 1024}
+        imageHeight={desiredHeight || 1024}
+      />
+
+      {/* Camera Angle Popup (Batch) */}
+      <CameraAnglePopup
+        visible={showCameraAnglePopup && isCameraAngleBatch}
+        onClose={() => setShowCameraAnglePopup(false)}
+        onConfirm={handleBatchCameraAngleGenerate}
+        isBatch={true}
+        itemCount={loadedPhotosCount}
+        tokenType={tokenType}
+        imageWidth={desiredWidth || 1024}
+        imageHeight={desiredHeight || 1024}
       />
 
       {/* Custom Prompt Popup for Sample Gallery mode */}

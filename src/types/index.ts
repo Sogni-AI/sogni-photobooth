@@ -52,6 +52,18 @@ export interface Photo {
   videoWorkflowType?: string; // The workflow type used (e.g., 's2v', 'animate-move', 'animate-replace', 'default')
   videoModelVariant?: 'speed' | 'quality'; // Model variant used for generation
 
+  // Camera angle generation fields
+  generatingCameraAngle?: boolean;
+  cameraAngleProgress?: number;
+  cameraAngleETA?: number;
+  cameraAngleElapsed?: number;
+  cameraAngleStartTime?: number;
+  cameraAngleProjectId?: string;
+  cameraAngleError?: string;
+  cameraAngleWorkerName?: string;
+  cameraAngleStatus?: string;
+  cameraAngleSourceUrl?: string; // Original source image URL for camera angle generation
+
   // Regeneration parameters - stored to allow re-running failed/bad videos
   videoRegenerateParams?: {
     // S2V specific

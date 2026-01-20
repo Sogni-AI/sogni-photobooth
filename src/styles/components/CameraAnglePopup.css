@@ -1,0 +1,201 @@
+/**
+ * CameraAnglePopup.css
+ *
+ * Styles for the Camera Angle popup and 3D control components.
+ */
+
+/* Popup Backdrop */
+.camera-angle-popup-backdrop {
+  backdrop-filter: blur(4px);
+}
+
+/* Popup Container */
+.camera-angle-popup {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Custom range slider styling */
+.camera-angle-popup input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.2);
+  outline: none;
+}
+
+.camera-angle-popup input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #4A90D9;
+  cursor: pointer;
+  border: 2px solid #fff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  transition: transform 0.15s ease;
+}
+
+.camera-angle-popup input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.1);
+}
+
+.camera-angle-popup input[type="range"]::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #4A90D9;
+  cursor: pointer;
+  border: 2px solid #fff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+/* Azimuth strip scrollbar */
+.camera-angle-3d-control .azimuth-strip::-webkit-scrollbar {
+  height: 4px;
+}
+
+.camera-angle-3d-control .azimuth-strip::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+}
+
+.camera-angle-3d-control .azimuth-strip::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 2px;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 480px) {
+  .camera-angle-popup {
+    max-height: calc(100vh - 16px) !important;
+    margin: 8px;
+  }
+
+  .camera-angle-popup h2 {
+    font-size: 16px !important;
+  }
+
+  .camera-angle-3d-control button {
+    font-size: 11px !important;
+    padding: 6px !important;
+  }
+}
+
+/* Touch device optimizations */
+@media (hover: none) {
+  .camera-angle-popup button:active {
+    transform: scale(0.98);
+  }
+
+  .camera-angle-3d-control button {
+    min-height: 44px;
+  }
+}
+
+/* Animation keyframes (fallback if not inline) */
+@keyframes cameraAngleFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes cameraAngleSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Preset button styles */
+.camera-angle-preset-btn {
+  transition: all 0.15s ease;
+}
+
+.camera-angle-preset-btn:active {
+  transform: scale(0.95);
+}
+
+/* Generate button pulse on hover */
+.camera-angle-generate-btn:hover {
+  animation: cameraAnglePulse 1s ease infinite;
+}
+
+@keyframes cameraAnglePulse {
+  0%, 100% {
+    box-shadow: 0 4px 12px rgba(74, 144, 217, 0.4);
+  }
+  50% {
+    box-shadow: 0 4px 20px rgba(74, 144, 217, 0.6);
+  }
+}
+
+/* 3D Angle button in gallery */
+.camera-angle-btn {
+  background: linear-gradient(135deg, #6B5B95, #5A4A84) !important;
+  transition: all 0.2s ease !important;
+}
+
+.camera-angle-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #7B6BA5, #6A5A94) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(107, 91, 149, 0.4);
+}
+
+.camera-angle-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.camera-angle-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Batch button styles */
+.batch-camera-angle-btn {
+  background: linear-gradient(135deg, #6B5B95, #5A4A84);
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  transition: all 0.2s ease;
+}
+
+.batch-camera-angle-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+}
+
+/* Loading state for camera angle generation */
+.generating-camera-angle {
+  position: relative;
+  overflow: hidden;
+}
+
+.generating-camera-angle::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(107, 91, 149, 0.3),
+    transparent
+  );
+  animation: cameraAngleShimmer 1.5s infinite;
+}
+
+@keyframes cameraAngleShimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
