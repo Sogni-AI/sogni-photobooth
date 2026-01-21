@@ -215,7 +215,7 @@ const CameraAngle3DControl: React.FC<CameraAngle3DControlProps> = ({
           borderRadius: '50%',
           background: isSelected
             ? COLORS.accent
-            : behind ? 'rgba(255, 255, 255, 0.25)' : 'rgba(255, 255, 255, 0.5)',
+            : behind ? 'rgba(255, 255, 255, 0.4)' : 'rgba(255, 255, 255, 0.5)',
           border: 'none',
           cursor: 'pointer',
           transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -223,7 +223,7 @@ const CameraAngle3DControl: React.FC<CameraAngle3DControlProps> = ({
             ? `0 0 12px ${COLORS.accentGlow}`
             : 'none',
           padding: 0,
-          opacity: behind ? 0.5 : 1,
+          opacity: behind ? 0.7 : 1,
           zIndex: behind ? 1 : 6
         }}
         title={az.label}
@@ -243,7 +243,7 @@ const CameraAngle3DControl: React.FC<CameraAngle3DControlProps> = ({
           transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
           pointerEvents: 'none',
           zIndex: isBehindSphere ? 2 : 10,
-          opacity: isBehindSphere ? 0.5 : 1
+          opacity: isBehindSphere ? 0.7 : 1
         }}
       >
         {/* Lens cone - visibility based on angle */}
@@ -260,7 +260,7 @@ const CameraAngle3DControl: React.FC<CameraAngle3DControlProps> = ({
             transformOrigin: '50px 60px',
             pointerEvents: 'none',
             zIndex: 20,
-            opacity: coneVisibility * (isBehindSphere ? 0.6 : 1),
+            opacity: coneVisibility * (isBehindSphere ? 0.75 : 1),
             transition: 'opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
           }}
         >
@@ -288,7 +288,7 @@ const CameraAngle3DControl: React.FC<CameraAngle3DControlProps> = ({
           position: 'relative',
           zIndex: 10,
           boxShadow: `0 2px 12px ${COLORS.accentGlow}`,
-          filter: isBehindSphere ? 'brightness(0.7)' : 'none'
+          filter: isBehindSphere ? 'brightness(0.8)' : 'none'
         }}>
           <span style={{ fontSize: '16px' }}>📷</span>
         </div>
@@ -371,7 +371,7 @@ const CameraAngle3DControl: React.FC<CameraAngle3DControlProps> = ({
 
         {/* Rotate Left Button */}
         <button
-          onClick={(e) => { e.stopPropagation(); rotateCamera('cw'); }}
+          onClick={(e) => { e.stopPropagation(); rotateCamera('ccw'); }}
           style={{
             width: '28px',
             height: '28px',
@@ -497,7 +497,7 @@ const CameraAngle3DControl: React.FC<CameraAngle3DControlProps> = ({
 
         {/* Rotate Right Button */}
         <button
-          onClick={(e) => { e.stopPropagation(); rotateCamera('ccw'); }}
+          onClick={(e) => { e.stopPropagation(); rotateCamera('cw'); }}
           style={{
             width: '28px',
             height: '28px',

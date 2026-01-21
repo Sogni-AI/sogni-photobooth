@@ -178,13 +178,13 @@ const CameraAnglePopup: React.FC<CameraAnglePopupProps> = ({
             <div>
               <h2 style={{
                 margin: 0,
-                fontSize: '15px',
-                fontWeight: '600',
+                fontSize: '16px',
+                fontWeight: '700',
                 color: COLORS.textPrimary,
-                textTransform: 'lowercase',
-                letterSpacing: '-0.3px'
+                fontFamily: '"Permanent Marker", cursive',
+                letterSpacing: '0.3px'
               }}>
-                3d camera angle
+                3D Camera Angle
               </h2>
               <p style={{
                 margin: '2px 0 0',
