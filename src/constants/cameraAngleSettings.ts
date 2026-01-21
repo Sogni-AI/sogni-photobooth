@@ -8,7 +8,11 @@
  * - 8 Azimuths: front, front-right, right, back-right, back, back-left, left, front-left
  * - 4 Elevations: low-angle (-30°), eye-level (0°), elevated (30°), high-angle (60°)
  * - 3 Distances: close-up, medium, wide
+ *
+ * Multi-angle mode supports up to 16 angles from a single source image.
  */
+
+import type { MultiAnglePreset } from '../types/cameraAngle';
 
 // Model configuration for camera angle generation
 export const CAMERA_ANGLE_MODEL = 'qwen_image_edit_2511_fp8_lightning';
@@ -30,6 +34,10 @@ export const CAMERA_ANGLE_DEFAULTS = {
 } as const;
 
 // Azimuth options (8 horizontal camera positions)
+// Labels describe the direction the face points in the generated image:
+// - "Front Right" = face turns slightly right
+// - "Front Left" = face turns slightly left
+// Prompts match the labels to generate the correct face direction.
 export const AZIMUTHS = [
   { key: 'front', label: 'Front', prompt: 'front view', angle: 0 },
   { key: 'front-right', label: 'Front Right', prompt: 'front-right quarter view', angle: 45 },
@@ -107,6 +115,64 @@ export const CAMERA_PRESETS = [
     distance: 'medium'
   }
 ] as const;
+
+// Maximum number of angles for multi-angle mode
+export const MAX_ANGLES = 16;
+
+// Multi-angle preset templates
+// Each preset includes the original image first, followed by generated angles
+export const MULTI_ANGLE_PRESETS: MultiAnglePreset[] = [
+  {
+    key: 'simple-zoom-out',
+    label: 'Simple Zoom Out',
+    description: 'Original + zoomed out view',
+    icon: '🔍',
+    angles: [
+      { azimuth: 'front', elevation: 'eye-level', distance: 'close-up', isOriginal: true },
+      { azimuth: 'front', elevation: 'eye-level', distance: 'wide' }
+    ]
+  },
+  {
+    key: 'zoom-out-360',
+    label: 'Zoom Out 360',
+    description: 'Original + 4 angles - 360° rotation',
+    icon: '🔄',
+    angles: [
+      { azimuth: 'front', elevation: 'eye-level', distance: 'close-up', isOriginal: true },
+      { azimuth: 'right', elevation: 'eye-level', distance: 'close-up' },
+      { azimuth: 'back', elevation: 'eye-level', distance: 'close-up' },
+      { azimuth: 'left', elevation: 'eye-level', distance: 'close-up' },
+      { azimuth: 'front', elevation: 'eye-level', distance: 'close-up' }
+    ]
+  },
+  {
+    key: 'zoom-montage',
+    label: 'Zoom Montage',
+    description: 'Original + 6 dynamic angles',
+    icon: '🎬',
+    angles: [
+      { azimuth: 'front', elevation: 'eye-level', distance: 'close-up', isOriginal: true },
+      { azimuth: 'front-right', elevation: 'elevated', distance: 'medium' },
+      { azimuth: 'right', elevation: 'eye-level', distance: 'wide' },
+      { azimuth: 'back', elevation: 'high-angle', distance: 'medium' },
+      { azimuth: 'back-left', elevation: 'low-angle', distance: 'close-up' },
+      { azimuth: 'left', elevation: 'eye-level', distance: 'medium' },
+      { azimuth: 'front', elevation: 'eye-level', distance: 'wide' }
+    ]
+  },
+  {
+    key: 'portrait-trio',
+    label: 'Portrait Trio',
+    description: 'Original + 3 classic portraits',
+    icon: '📸',
+    angles: [
+      { azimuth: 'front', elevation: 'eye-level', distance: 'medium', isOriginal: true },
+      { azimuth: 'front-right', elevation: 'eye-level', distance: 'medium' },
+      { azimuth: 'front-left', elevation: 'eye-level', distance: 'medium' },
+      { azimuth: 'front', elevation: 'elevated', distance: 'medium' }
+    ]
+  }
+];
 
 // Types
 export type AzimuthKey = typeof AZIMUTHS[number]['key'];

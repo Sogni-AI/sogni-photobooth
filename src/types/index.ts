@@ -63,6 +63,13 @@ export interface Photo {
   cameraAngleWorkerName?: string;
   cameraAngleStatus?: string;
   cameraAngleSourceUrl?: string; // Original source image URL for camera angle generation
+  // Camera angle regeneration params - stored to allow restoring original or regenerating
+  cameraAngleRegenerateParams?: {
+    azimuth: 'front' | 'front-right' | 'right' | 'back-right' | 'back' | 'back-left' | 'left' | 'front-left';
+    elevation: 'low-angle' | 'eye-level' | 'elevated' | 'high-angle';
+    distance: 'close-up' | 'medium' | 'wide';
+    loraStrength?: number;
+  };
 
   // Regeneration parameters - stored to allow re-running failed/bad videos
   videoRegenerateParams?: {

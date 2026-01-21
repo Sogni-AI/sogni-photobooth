@@ -127,7 +127,13 @@ export async function generateCameraAngle(options: GenerateCameraAngleOptions): 
         cameraAngleWorkerName: undefined,
         cameraAngleError: undefined,
         cameraAngleStartTime: Date.now(),
-        cameraAngleSourceUrl: sourceUrl // Store for subsequent generations
+        cameraAngleSourceUrl: sourceUrl, // Store for subsequent generations
+        cameraAngleRegenerateParams: {
+          azimuth,
+          elevation,
+          distance,
+          loraStrength
+        }
       };
       return updated;
     });

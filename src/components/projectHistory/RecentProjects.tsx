@@ -4,7 +4,7 @@ import { useProjectHistory } from '../../hooks/useProjectHistory';
 import { useLocalProjects } from '../../hooks/useLocalProjects';
 import { useInfiniteScroll } from '../../hooks/useInfiniteScroll';
 import JobItem from './JobItem';
-import MediaSlideshow from './MediaSlideshow';
+import MediaSlideshow, { type LocalImage } from './MediaSlideshow';
 import type { ArchiveProject } from '../../types/projectHistory';
 import type { LocalProject } from '../../types/localProjects';
 import { LOCAL_PROJECT_MAX_IMAGES, LOCAL_PROJECT_SUPPORTED_EXTENSIONS } from '../../types/localProjects';
@@ -19,6 +19,7 @@ interface RecentProjectsProps {
   onReuseLocalProject?: (projectId: string) => void;
   onStartNewProject?: () => void;
   onAdjustImage?: (imageUrl: string) => void;
+  onRemixSingleImage?: (imageUrl: string) => void;
 }
 
 const DISCLAIMER_STORAGE_KEY = 'sogni_recent_projects_disclaimer_dismissed';
@@ -192,7 +193,8 @@ function RecentProjects({
   onReuseProject,
   onReuseLocalProject,
   onStartNewProject,
-  onAdjustImage
+  onAdjustImage,
+  onRemixSingleImage
 }: RecentProjectsProps) {
   const [slideshow, setSlideshow] = useState<{ project: ArchiveProject; jobId: string } | null>(
     null
@@ -820,16 +822,6 @@ function RecentProjects({
   const handleCloseLocalSlideshow = useCallback(() => {
     setLocalSlideshow(null);
   }, []);
-
-  // Handle navigating local slideshow
-  const handleLocalSlideshowNav = useCallback((direction: 'prev' | 'next') => {
-    if (!localSlideshow) return;
-    const { images, currentIndex } = localSlideshow;
-    let newIndex = direction === 'next' ? currentIndex + 1 : currentIndex - 1;
-    if (newIndex < 0) newIndex = images.length - 1;
-    if (newIndex >= images.length) newIndex = 0;
-    setLocalSlideshow({ ...localSlideshow, currentIndex: newIndex });
-  }, [localSlideshow]);
 
   // Handle adjust image callback
   const handleAdjustImage = useCallback((imageUrl: string) => {
@@ -1594,71 +1586,28 @@ function RecentProjects({
         )}
       </div>
 
-      {/* Media slideshow modal */}
+      {/* Media slideshow modal - Cloud projects */}
       {slideshow && sogniClient && (
         <MediaSlideshow
+          mode="cloud"
           project={slideshow.project}
           initialJobId={slideshow.jobId}
           sogniClient={sogniClient}
           onClose={handleCloseSlideshow}
+          onRemix={onRemixSingleImage}
         />
       )}
 
-      {/* Local project slideshow modal */}
+      {/* Media slideshow modal - Local projects */}
       {localSlideshow && (
-        <div
-          className="local-slideshow-overlay"
-          onClick={handleCloseLocalSlideshow}
-        >
-          <div className="local-slideshow-content" onClick={(e) => e.stopPropagation()}>
-            <button
-              className="local-slideshow-close"
-              onClick={handleCloseLocalSlideshow}
-              title="Close"
-            >
-              ✕
-            </button>
-            <div className="local-slideshow-header">
-              <span className="local-slideshow-title">{localSlideshow.projectName}</span>
-              <span className="local-slideshow-counter">
-                {localSlideshow.currentIndex + 1} / {localSlideshow.images.length}
-              </span>
-            </div>
-            <div className="local-slideshow-image-container">
-              {localSlideshow.images.length > 1 && (
-                <button
-                  className="local-slideshow-nav local-slideshow-prev"
-                  onClick={() => handleLocalSlideshowNav('prev')}
-                >
-                  ‹
-                </button>
-              )}
-              <img
-                src={localSlideshow.images[localSlideshow.currentIndex].url}
-                alt={localSlideshow.images[localSlideshow.currentIndex].filename}
-                className="local-slideshow-image"
-              />
-              {localSlideshow.images.length > 1 && (
-                <button
-                  className="local-slideshow-nav local-slideshow-next"
-                  onClick={() => handleLocalSlideshowNav('next')}
-                >
-                  ›
-                </button>
-              )}
-            </div>
-            <div className="local-slideshow-actions">
-              {onAdjustImage && (
-                <button
-                  className="local-slideshow-adjust-btn"
-                  onClick={() => handleAdjustImage(localSlideshow.images[localSlideshow.currentIndex].url)}
-                >
-                  📷 Adjust Image
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
+        <MediaSlideshow
+          mode="local"
+          projectName={localSlideshow.projectName}
+          images={localSlideshow.images as LocalImage[]}
+          initialIndex={localSlideshow.currentIndex}
+          onClose={handleCloseLocalSlideshow}
+          onRemix={onRemixSingleImage}
+        />
       )}
 
       {/* Delete confirmation modal */}

@@ -69,6 +69,33 @@
   transform: scale(1.1);
 }
 
+/* Header with title and counter */
+.slideshow-header {
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  z-index: 10001;
+}
+
+.slideshow-title {
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 600;
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.slideshow-counter {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.875rem;
+}
+
 /* Content Area */
 .slideshow-content {
   position: relative;
@@ -254,7 +281,18 @@
   font-size: 2rem;
 }
 
-/* Save Button - Floating in bottom right */
+/* Action Buttons - Floating in bottom right */
+.slideshow-actions {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  z-index: 10001;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Legacy save container for backwards compatibility */
 .slideshow-save {
   position: absolute;
   bottom: 20px;
@@ -288,10 +326,62 @@
   cursor: not-allowed;
 }
 
+/* Remix Button */
+.slideshow-action-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50px;
+  padding: 10px 20px;
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+.slideshow-action-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.5);
+  transform: translateY(-2px);
+}
+
+.slideshow-action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.slideshow-remix-btn {
+  background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+  border: 2px solid #fff;
+}
+
+.slideshow-remix-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%);
+  border-color: #fff;
+}
+
 /* Mobile Adjustments */
 @media (max-width: 768px) {
   .slideshow-content {
     padding: 60px 20px;
+  }
+
+  .slideshow-header {
+    top: 10px;
+    gap: 10px;
+  }
+
+  .slideshow-title {
+    font-size: 0.875rem;
+    max-width: 180px;
+  }
+
+  .slideshow-counter {
+    font-size: 0.75rem;
   }
 
   .slideshow-nav-btn {
@@ -316,6 +406,12 @@
     font-size: 20px;
   }
 
+  .slideshow-actions {
+    bottom: 10px;
+    right: 10px;
+    gap: 8px;
+  }
+
   .slideshow-save {
     bottom: 10px;
     right: 10px;
@@ -325,6 +421,11 @@
     width: 44px;
     height: 44px;
     font-size: 20px;
+  }
+
+  .slideshow-action-btn {
+    padding: 8px 16px;
+    font-size: 0.75rem;
   }
 
   .slideshow-video-btn {

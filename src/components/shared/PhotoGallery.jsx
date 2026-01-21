@@ -66,8 +66,18 @@ import StitchOptionsPopup from './StitchOptionsPopup';
 import VideoReviewPopup from './VideoReviewPopup';
 import VideoSettingsFooter from './VideoSettingsFooter';
 import CameraAnglePopup from './CameraAnglePopup';
+import CameraAngleReviewPopup from './CameraAngleReviewPopup';
 import { extractLastFrame, extractFirstFrame } from '../../utils/videoFrameExtraction';
 import { generateCameraAngle } from '../../services/CameraAngleGenerator.ts';
+import {
+  generateMultipleAngles,
+  createAngleGenerationItems,
+  markItemStarted,
+  updateItemProgress,
+  markItemComplete,
+  markItemFailed,
+  resetItemForRegeneration
+} from '../../services/MultiAngleGenerator.ts';
 
 // Random video completion messages
 const VIDEO_READY_MESSAGES = [
@@ -1037,6 +1047,14 @@ const PhotoGallery = ({
   const [showCameraAnglePopup, setShowCameraAnglePopup] = useState(false);
   const [isCameraAngleBatch, setIsCameraAngleBatch] = useState(false);
 
+  // Multi-angle camera generation states
+  const [showMultiAngleReview, setShowMultiAngleReview] = useState(false);
+  const [multiAngleItems, setMultiAngleItems] = useState([]);
+  const [multiAngleSourcePhoto, setMultiAngleSourcePhoto] = useState(null);
+  const [multiAngleKeepOriginal, setMultiAngleKeepOriginal] = useState(true);
+  const [multiAngleSourceUrl, setMultiAngleSourceUrl] = useState(null);
+  const multiAngleAbortRef = useRef(false);
+
   // Model variant states for cost estimation in new workflow popups
   const [animateMoveModelVariant, setAnimateMoveModelVariant] = useState('speed');
   const [animateReplaceModelVariant, setAnimateReplaceModelVariant] = useState('speed');
@@ -1188,9 +1206,17 @@ const PhotoGallery = ({
   });
 
   // Batch video cost estimation - for all batch images (excluding hidden/discarded ones)
-  const loadedPhotosCount = photos.filter(
+  const loadedPhotos = photos.filter(
     photo => !photo.hidden && !photo.loading && !photo.generating && !photo.error && photo.images && photo.images.length > 0 && !photo.isOriginal
-  ).length;
+  );
+  const loadedPhotosCount = loadedPhotos.length;
+
+  // Array of source photo URLs for batch operations (e.g., camera angle popup)
+  const loadedPhotoUrls = useMemo(() => {
+    return loadedPhotos.map(photo =>
+      photo.enhancedImageUrl || photo.images?.[0] || photo.originalDataUrl
+    );
+  }, [loadedPhotos]);
   
   const { loading: batchVideoLoading, cost: batchVideoCostRaw, costInUSD: batchVideoUSD } = useVideoCostEstimation({
     imageWidth: desiredWidth || 768,
@@ -5078,6 +5104,444 @@ const PhotoGallery = ({
       });
     }
   }, [photos, sogniClient, setPhotos, tokenType, showToast, onOutOfCredits]);
+
+  // Handle batch per-image angle generation (different angles for different images)
+  const handleBatchPerImageAngleGenerate = useCallback(async (angles, mode) => {
+    setShowCameraAnglePopup(false);
+
+    if (!sogniClient) {
+      showToast({
+        title: 'Not Connected',
+        message: 'Please wait for connection to complete.',
+        type: 'error'
+      });
+      return;
+    }
+
+    const loadedPhotos = photos.filter(
+      photo => !photo.hidden && !photo.loading && !photo.generating && !photo.generatingCameraAngle && !photo.error && photo.images && photo.images.length > 0 && !photo.isOriginal
+    );
+
+    if (loadedPhotos.length === 0) {
+      showToast({
+        title: 'No Images',
+        message: 'No images available for camera angle generation.',
+        type: 'error'
+      });
+      return;
+    }
+
+    // Count how many angles will actually generate (non-isOriginal slots)
+    const generatingCount = angles.filter(a => !a.isOriginal).length;
+
+    if (generatingCount === 0) {
+      showToast({
+        title: 'No Angles to Generate',
+        message: 'All angles are set to use original perspective.',
+        type: 'info'
+      });
+      return;
+    }
+
+    showToast({
+      title: '📐 Batch Camera Angle',
+      message: `Generating ${generatingCount} angle${generatingCount !== 1 ? 's' : ''} from ${loadedPhotos.length} image${loadedPhotos.length !== 1 ? 's' : ''}...`,
+      type: 'info',
+      timeout: 4000
+    });
+
+    // Process each photo with its corresponding angle slot
+    for (let i = 0; i < loadedPhotos.length; i++) {
+      const photo = loadedPhotos[i];
+      // Get the corresponding angle slot (loop if more images than slots, though shouldn't happen)
+      const angleSlot = angles[i % angles.length];
+
+      // Skip if this slot uses original perspective
+      if (angleSlot.isOriginal) continue;
+
+      const photoIndex = photos.findIndex(p => p.id === photo.id);
+      if (photoIndex === -1 || photo.generatingCameraAngle) continue;
+
+      const imageUrl = photo.enhancedImageUrl || photo.images?.[0] || photo.originalDataUrl;
+      if (!imageUrl) continue;
+
+      // Get image dimensions
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+
+      try {
+        await new Promise((resolve, reject) => {
+          img.onload = resolve;
+          img.onerror = reject;
+          img.src = imageUrl;
+        });
+      } catch {
+        console.error(`[BatchPerImageAngle] Failed to load image for photo ${photo.id}`);
+        continue;
+      }
+
+      const width = img.naturalWidth;
+      const height = img.naturalHeight;
+
+      // Use the CameraAngleGenerator service with this slot's angle settings
+      generateCameraAngle({
+        photo,
+        photoIndex,
+        subIndex: 0,
+        imageWidth: width,
+        imageHeight: height,
+        sogniClient,
+        setPhotos,
+        azimuth: angleSlot.azimuth,
+        elevation: angleSlot.elevation,
+        distance: angleSlot.distance,
+        loraStrength: 0.9,
+        tokenType,
+        onComplete: () => {
+          showToast({
+            title: '📐 Angle Added',
+            message: 'New angle ready!',
+            type: 'success',
+            timeout: 2000
+          });
+        },
+        onError: (error) => {
+          console.error(`[BatchPerImageAngle] Error for photo ${photo.id}:`, error);
+        },
+        onOutOfCredits
+      });
+    }
+  }, [photos, sogniClient, setPhotos, tokenType, showToast, onOutOfCredits]);
+
+  // Handle multi-angle camera generation (single image → multiple angles)
+  const handleMultiAngleConfirm = useCallback(async (angles, mode) => {
+    setShowCameraAnglePopup(false);
+
+    const targetIndex = selectedPhotoIndex;
+    if (targetIndex === null || !sogniClient) return;
+
+    const photo = photos[targetIndex];
+    if (!photo || photo.loading || photo.generating || photo.generatingCameraAngle) return;
+
+    const imageUrl = photo.enhancedImageUrl || photo.images?.[selectedSubIndex || 0] || photo.originalDataUrl;
+    if (!imageUrl) {
+      showToast({
+        title: 'No Image',
+        message: 'No image available for multi-angle generation.',
+        type: 'error'
+      });
+      return;
+    }
+
+    // Get image dimensions
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+
+    try {
+      await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = reject;
+        img.src = imageUrl;
+      });
+    } catch {
+      showToast({
+        title: 'Image Load Error',
+        message: 'Could not load the source image.',
+        type: 'error'
+      });
+      return;
+    }
+
+    const width = img.naturalWidth;
+    const height = img.naturalHeight;
+
+    // Initialize items and open review popup
+    const items = createAngleGenerationItems(angles, imageUrl);
+    setMultiAngleItems(items);
+    setMultiAngleSourcePhoto(photo);
+    setMultiAngleKeepOriginal(true);
+    setMultiAngleSourceUrl(imageUrl);
+    multiAngleAbortRef.current = false;
+    setShowMultiAngleReview(true);
+
+    showToast({
+      title: '📐 Generating Angles',
+      message: `Creating ${angles.length} camera angles...`,
+      type: 'info',
+      timeout: 3000
+    });
+
+    // Start generation with callbacks
+    await generateMultipleAngles(
+      sogniClient,
+      {
+        sourceImageUrl: imageUrl,
+        sourcePhotoId: photo.id,
+        angles,
+        tokenType,
+        imageWidth: width,
+        imageHeight: height
+      },
+      {
+        onItemStart: (index, slotId) => {
+          if (multiAngleAbortRef.current) return;
+          setMultiAngleItems(prev => markItemStarted(prev, index));
+        },
+        onItemProgress: (index, progress, eta, workerName) => {
+          if (multiAngleAbortRef.current) return;
+          setMultiAngleItems(prev => updateItemProgress(prev, index, progress, eta, workerName));
+        },
+        onItemComplete: (index, resultUrl) => {
+          if (multiAngleAbortRef.current) return;
+          setMultiAngleItems(prev => markItemComplete(prev, index, resultUrl));
+        },
+        onItemError: (index, error) => {
+          if (multiAngleAbortRef.current) return;
+          setMultiAngleItems(prev => markItemFailed(prev, index, error));
+        },
+        onOutOfCredits: () => {
+          showToast({
+            title: 'Out of Credits',
+            message: 'Please add more credits to continue.',
+            type: 'error'
+          });
+          onOutOfCredits?.();
+        },
+        onAllComplete: (results) => {
+          if (multiAngleAbortRef.current) return;
+          const successCount = results.filter(r => r.success).length;
+          const failCount = results.filter(r => !r.success).length;
+
+          if (failCount === 0) {
+            showToast({
+              title: '📐 All Angles Ready!',
+              message: `${successCount} angle${successCount > 1 ? 's' : ''} generated. Click "Apply to Gallery" to add them.`,
+              type: 'success'
+            });
+          } else if (successCount > 0) {
+            showToast({
+              title: '📐 Some Angles Ready',
+              message: `${successCount} ready, ${failCount} failed. You can regenerate failed ones.`,
+              type: 'warning'
+            });
+          } else {
+            showToast({
+              title: 'Generation Failed',
+              message: 'All angle generations failed. Please try again.',
+              type: 'error'
+            });
+          }
+        }
+      }
+    );
+  }, [selectedPhotoIndex, selectedSubIndex, photos, sogniClient, tokenType, showToast, onOutOfCredits]);
+
+  // Handle regenerating a single item in multi-angle review
+  const handleMultiAngleRegenerate = useCallback(async (index) => {
+    if (!sogniClient || !multiAngleSourceUrl) return;
+
+    const item = multiAngleItems[index];
+    if (!item || item.status === 'generating') return;
+
+    // Reset item for regeneration
+    setMultiAngleItems(prev => resetItemForRegeneration(prev, index));
+
+    // Get dimensions from a working image
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+
+    try {
+      await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = reject;
+        img.src = multiAngleSourceUrl;
+      });
+    } catch {
+      setMultiAngleItems(prev => markItemFailed(prev, index, 'Failed to load source image'));
+      return;
+    }
+
+    const width = img.naturalWidth;
+    const height = img.naturalHeight;
+
+    // Regenerate just this one
+    await generateMultipleAngles(
+      sogniClient,
+      {
+        sourceImageUrl: multiAngleSourceUrl,
+        sourcePhotoId: multiAngleSourcePhoto?.id || '',
+        angles: [{
+          id: item.slotId,
+          azimuth: item.angleConfig.azimuth,
+          elevation: item.angleConfig.elevation,
+          distance: item.angleConfig.distance
+        }],
+        tokenType,
+        imageWidth: width,
+        imageHeight: height
+      },
+      {
+        onItemStart: () => {
+          setMultiAngleItems(prev => markItemStarted(prev, index));
+        },
+        onItemProgress: (_, progress, eta, workerName) => {
+          setMultiAngleItems(prev => updateItemProgress(prev, index, progress, eta, workerName));
+        },
+        onItemComplete: (_, resultUrl) => {
+          setMultiAngleItems(prev => markItemComplete(prev, index, resultUrl));
+          showToast({
+            title: '📐 Angle Regenerated',
+            message: 'New version ready!',
+            type: 'success',
+            timeout: 2000
+          });
+        },
+        onItemError: (_, error) => {
+          setMultiAngleItems(prev => markItemFailed(prev, index, error));
+          showToast({
+            title: 'Regeneration Failed',
+            message: error,
+            type: 'error'
+          });
+        },
+        onOutOfCredits: () => {
+          onOutOfCredits?.();
+        }
+      }
+    );
+  }, [multiAngleItems, sogniClient, multiAngleSourceUrl, multiAngleSourcePhoto, tokenType, showToast, onOutOfCredits]);
+
+  // Handle version change in multi-angle review
+  const handleMultiAngleVersionChange = useCallback((index, version) => {
+    setMultiAngleItems(prev => prev.map((item, i) =>
+      i === index ? { ...item, selectedVersion: version } : item
+    ));
+  }, []);
+
+  // Handle applying multi-angle results to gallery
+  const handleMultiAngleApply = useCallback((finalUrls) => {
+    if (!multiAngleSourcePhoto || finalUrls.length === 0) {
+      setShowMultiAngleReview(false);
+      return;
+    }
+
+    // Create new photo entries for each angle result
+    // Note: Don't set isOriginal flag - all photos should participate in transitions equally
+    const newPhotos = finalUrls.map((url, idx) => ({
+      id: `${multiAngleSourcePhoto.id}-angle-${Date.now()}-${idx}`,
+      generating: false,
+      images: [url],
+      originalDataUrl: url,
+      newlyArrived: true,
+      selectedStyle: multiAngleSourcePhoto.selectedStyle,
+      promptKey: multiAngleSourcePhoto.promptKey
+    }));
+
+    // REPLACE the gallery with the new photos (don't append)
+    setPhotos(newPhotos);
+
+    showToast({
+      title: '📐 Gallery Updated',
+      message: `Replaced gallery with ${finalUrls.length} image${finalUrls.length > 1 ? 's' : ''}.`,
+      type: 'success'
+    });
+
+    // Close review popup and reset state
+    setShowMultiAngleReview(false);
+    setMultiAngleItems([]);
+    setMultiAngleSourcePhoto(null);
+    setMultiAngleSourceUrl(null);
+  }, [multiAngleSourcePhoto, setPhotos, showToast]);
+
+  // Handle canceling multi-angle generation
+  const handleMultiAngleCancelGeneration = useCallback(() => {
+    multiAngleAbortRef.current = true;
+    showToast({
+      title: 'Generation Cancelled',
+      message: 'Multi-angle generation stopped.',
+      type: 'info',
+      timeout: 2000
+    });
+  }, [showToast]);
+
+  // Handle angle regeneration for a single photo using stored parameters
+  const handleRegenerateAngle = useCallback(async (photo, photoIndex) => {
+    if (!photo || photo.generatingCameraAngle) return;
+
+    const regenerateParams = photo.cameraAngleRegenerateParams;
+    if (!regenerateParams) {
+      showToast({
+        title: 'Can\'t Regenerate',
+        message: 'Angle regeneration info not available.',
+        type: 'warning',
+        timeout: 4000
+      });
+      return;
+    }
+
+    // Use the stored source URL (original image before any angle was applied)
+    const imageUrl = photo.cameraAngleSourceUrl;
+    if (!imageUrl) {
+      showToast({ title: 'Can\'t Regenerate', message: 'Original image not available.', type: 'error' });
+      return;
+    }
+
+    showToast({
+      title: '🔄 Regenerating Angle',
+      message: 'Generating new camera angle...',
+      type: 'info',
+      timeout: 3000
+    });
+
+    // Load image dimensions
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+
+    try {
+      await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = reject;
+        img.src = imageUrl;
+      });
+
+      await generateCameraAngle({
+        photo,
+        photoIndex,
+        subIndex: 0,
+        imageWidth: img.naturalWidth,
+        imageHeight: img.naturalHeight,
+        sogniClient,
+        setPhotos,
+        azimuth: regenerateParams.azimuth,
+        elevation: regenerateParams.elevation,
+        distance: regenerateParams.distance,
+        loraStrength: regenerateParams.loraStrength,
+        tokenType,
+        onComplete: () => {
+          showToast({
+            title: '📐 Angle Regenerated',
+            message: 'New angle version ready!',
+            type: 'success',
+            timeout: 3000
+          });
+        },
+        onError: (error) => {
+          showToast({
+            title: 'Regeneration Failed',
+            message: error.message || 'Failed to regenerate angle',
+            type: 'error'
+          });
+        },
+        onOutOfCredits
+      });
+    } catch (error) {
+      showToast({
+        title: 'Regeneration Failed',
+        message: error.message || 'Failed to load source image',
+        type: 'error'
+      });
+    }
+  }, [sogniClient, setPhotos, tokenType, showToast, onOutOfCredits]);
 
   // Handle video regeneration for a single photo using stored parameters
   const handleRegenerateVideo = useCallback(async (photo, photoIndex) => {
@@ -14346,7 +14810,8 @@ const PhotoGallery = ({
                       )}
                       {/* Refresh button - show for failed images or when not generating/loading */}
                       {/* For videos with regenerate params, this will regenerate the video instead */}
-                      {(photo.error || (!photo.generating && !photo.loading)) && (photo.positivePrompt || photo.stylePrompt || photo.videoRegenerateParams) && (
+                      {/* For angles with regenerate params, this will regenerate the angle instead */}
+                      {(photo.error || (!photo.generating && !photo.loading)) && (photo.positivePrompt || photo.stylePrompt || photo.videoRegenerateParams || photo.cameraAngleRegenerateParams) && (
                         <button
                           className="photo-refresh-btn"
                           onMouseDown={(e) => {
@@ -14354,6 +14819,9 @@ const PhotoGallery = ({
                             // If photo has video regenerate params, regenerate video instead of image
                             if (photo.videoRegenerateParams && ['s2v', 'animate-move', 'animate-replace'].includes(photo.videoWorkflowType)) {
                               handleRegenerateVideo(photo, index);
+                            } else if (photo.cameraAngleRegenerateParams && photo.cameraAngleSourceUrl) {
+                              // If photo has angle regenerate params, regenerate angle
+                              handleRegenerateAngle(photo, index);
                             } else {
                               onRefreshPhoto(index);
                             }
@@ -14386,11 +14854,13 @@ const PhotoGallery = ({
                           }}
                           onMouseOut={(e) => {
                             e.currentTarget.style.background = 'rgba(0, 0, 0, 0.7)';
-                            e.currentTarget.style.transform = 'scale(0.8)';
+                            e.currentTarget.style.transform = 'scale(0.8)'
                           }}
-                          title={photo.videoRegenerateParams && ['s2v', 'animate-move', 'animate-replace'].includes(photo.videoWorkflowType) 
-                            ? "Regenerate this video" 
-                            : "Refresh this image"}
+                          title={photo.videoRegenerateParams && ['s2v', 'animate-move', 'animate-replace'].includes(photo.videoWorkflowType)
+                            ? "Regenerate this video"
+                            : (photo.cameraAngleRegenerateParams && photo.cameraAngleSourceUrl)
+                              ? "Regenerate this angle"
+                              : "Refresh this image"}
                         >
                           <svg width="11" height="11" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                             <path fill="#ffffff" d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
@@ -14442,8 +14912,30 @@ const PhotoGallery = ({
                               }
                               return updated;
                             });
+                          } else if (photo.cameraAngleRegenerateParams && photo.cameraAngleSourceUrl) {
+                            // Photo has camera angle - restore the original image
+                            setPhotos(prev => {
+                              const updated = [...prev];
+                              if (updated[index]) {
+                                const originalUrl = updated[index].cameraAngleSourceUrl;
+                                updated[index] = {
+                                  ...updated[index],
+                                  images: [originalUrl],
+                                  cameraAngleRegenerateParams: undefined,
+                                  cameraAngleSourceUrl: undefined,
+                                  cameraAngleProgress: undefined,
+                                  cameraAngleETA: undefined,
+                                  cameraAngleElapsed: undefined,
+                                  cameraAngleProjectId: undefined,
+                                  cameraAngleError: undefined,
+                                  cameraAngleWorkerName: undefined,
+                                  cameraAngleStatus: undefined
+                                };
+                              }
+                              return updated;
+                            });
                           } else {
-                            // No video, hide the photo
+                            // No video or angle, hide the photo
                             setPhotos(prev => {
                               const updated = [...prev];
                               if (updated[index]) {
@@ -14486,7 +14978,7 @@ const PhotoGallery = ({
                           e.currentTarget.style.background = 'rgba(0, 0, 0, 0.7)';
                           e.currentTarget.style.transform = 'scale(0.8)';
                         }}
-                        title={photo.videoUrl ? "Remove video" : "Hide this image"}
+                        title={photo.videoUrl ? "Remove video" : (photo.cameraAngleRegenerateParams && photo.cameraAngleSourceUrl) ? "Remove angle" : "Hide this image"}
                       >
                         ×
                       </button>
@@ -15521,94 +16013,91 @@ const PhotoGallery = ({
                   </div>
                 )}
 
-                {/* Camera Angle generation progress overlay */}
+                {/* Camera Angle generation progress overlay - matches CameraAngleReviewPopup style */}
                 {photo.generatingCameraAngle && (
                   <div
                     style={{
                       position: 'absolute',
-                      bottom: '8px',
-                      left: '50%',
-                      transform: 'translateX(-50%)',
+                      inset: 0,
                       display: 'flex',
                       flexDirection: 'column',
                       alignItems: 'center',
-                      zIndex: 5,
-                      color: 'white',
-                      textAlign: 'center'
+                      justifyContent: 'center',
+                      background: 'rgba(0, 0, 0, 0.6)',
+                      backdropFilter: 'blur(4px)',
+                      zIndex: 5
                     }}
                   >
-                    {/* Compact glowing card */}
+                    {/* Progress Ring */}
+                    <svg width="56" height="56" viewBox="0 0 56 56">
+                      <circle
+                        cx="28"
+                        cy="28"
+                        r="24"
+                        fill="none"
+                        stroke="rgba(255, 255, 255, 0.1)"
+                        strokeWidth="3"
+                      />
+                      <circle
+                        cx="28"
+                        cy="28"
+                        r="24"
+                        fill="none"
+                        stroke="#FDFF00"
+                        strokeWidth="3"
+                        strokeLinecap="round"
+                        strokeDasharray={`${(photo.cameraAngleProgress || 0) * 1.51} 151`}
+                        transform="rotate(-90 28 28)"
+                        style={{ transition: 'stroke-dasharray 0.3s ease' }}
+                      />
+                    </svg>
+
+                    {/* Percentage */}
                     <div style={{
-                      position: 'relative',
-                      background: 'rgba(20, 20, 35, 0.85)',
-                      backdropFilter: 'blur(10px)',
-                      borderRadius: '12px',
-                      padding: '6px 10px',
-                      boxShadow: '0 2px 12px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 82, 82, 0.3)',
-                      minWidth: '140px',
-                      maxWidth: '160px'
+                      marginTop: '8px',
+                      fontSize: '14px',
+                      fontWeight: '700',
+                      color: '#fff',
+                      textShadow: '0 1px 3px rgba(0,0,0,0.5)'
                     }}>
-                      {/* Subtle animated glow */}
-                      <div style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        borderRadius: '12px',
-                        background: 'linear-gradient(135deg, rgba(255, 82, 82, 0.15), rgba(255, 107, 107, 0.15))',
-                        animation: 'pulse 2s ease-in-out infinite',
-                        pointerEvents: 'none'
-                      }} />
+                      {photo.cameraAngleProgress !== undefined && photo.cameraAngleProgress > 0 ? (
+                        `${photo.cameraAngleProgress}%`
+                      ) : photo.cameraAngleStatus?.startsWith('Queue') || photo.cameraAngleStatus?.startsWith('Next') ? (
+                        'In queue...'
+                      ) : (
+                        photo.cameraAngleStatus || 'Starting...'
+                      )}
+                    </div>
 
-                      {/* Progress/Status with icon */}
+                    {/* ETA */}
+                    {photo.cameraAngleETA !== undefined && photo.cameraAngleETA > 0 && (
                       <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '6px',
-                        fontSize: '16px',
-                        fontWeight: '700',
-                        color: '#fff',
-                        marginBottom: '2px',
-                        textShadow: '0 1px 3px rgba(0,0,0,0.5)',
-                        position: 'relative'
+                        fontSize: '11px',
+                        color: 'rgba(255, 255, 255, 0.6)',
+                        marginTop: '2px'
                       }}>
-                        <span style={{
-                          fontSize: '14px',
-                          filter: 'drop-shadow(0 0 4px rgba(255, 82, 82, 0.6))'
-                        }}>
-                          📐
-                        </span>
-                        {photo.cameraAngleProgress !== undefined && photo.cameraAngleProgress > 0 ? (
-                          <span>{photo.cameraAngleProgress}%</span>
-                        ) : photo.cameraAngleStatus?.startsWith('Queue') || photo.cameraAngleStatus?.startsWith('Next') ? (
-                          <span style={{ fontSize: '12px' }}>In line...</span>
-                        ) : photo.cameraAngleStatus === 'Initializing' ? (
-                          <span style={{ fontSize: '12px' }}>Initializing...</span>
-                        ) : (
-                          <span style={{ fontSize: '12px' }}>{photo.cameraAngleStatus || 'Starting...'}</span>
-                        )}
+                        ~{photo.cameraAngleETA < 60
+                          ? `${Math.ceil(photo.cameraAngleETA)}s`
+                          : `${Math.floor(photo.cameraAngleETA / 60)}:${Math.ceil(photo.cameraAngleETA % 60).toString().padStart(2, '0')}`
+                        } left
                       </div>
+                    )}
 
-                      {/* Worker info */}
+                    {/* Worker name */}
+                    {photo.cameraAngleWorkerName && (
                       <div style={{
                         fontSize: '9px',
-                        color: 'rgba(255, 255, 255, 0.7)',
+                        color: 'rgba(255, 255, 255, 0.4)',
+                        marginTop: '4px',
+                        maxWidth: '90%',
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
                         whiteSpace: 'nowrap',
-                        maxWidth: '140px'
+                        textAlign: 'center'
                       }}>
-                        {photo.cameraAngleWorkerName ? (
-                          photo.cameraAngleWorkerName
-                        ) : photo.cameraAngleStatus ? (
-                          photo.cameraAngleStatus
-                        ) : (
-                          'Processing...'
-                        )}
+                        {photo.cameraAngleWorkerName}
                       </div>
-                    </div>
+                    )}
                   </div>
                 )}
 
@@ -18304,16 +18793,18 @@ const PhotoGallery = ({
         onDurationChange={setS2vDuration}
       />
 
-      {/* Camera Angle Popup (Single) */}
+      {/* Camera Angle Popup (Single) - with multi-angle support */}
       <CameraAnglePopup
         visible={showCameraAnglePopup && !isCameraAngleBatch}
         onClose={() => setShowCameraAnglePopup(false)}
         onConfirm={handleCameraAngleGenerate}
+        onMultiAngleConfirm={handleMultiAngleConfirm}
         isBatch={false}
         itemCount={1}
         tokenType={tokenType}
         imageWidth={desiredWidth || 1024}
         imageHeight={desiredHeight || 1024}
+        sourcePhotoUrl={selectedPhoto?.enhancedImageUrl || selectedPhoto?.images?.[selectedSubIndex || 0] || selectedPhoto?.originalDataUrl}
       />
 
       {/* Camera Angle Popup (Batch) */}
@@ -18321,11 +18812,31 @@ const PhotoGallery = ({
         visible={showCameraAnglePopup && isCameraAngleBatch}
         onClose={() => setShowCameraAnglePopup(false)}
         onConfirm={handleBatchCameraAngleGenerate}
+        onMultiAngleConfirm={handleBatchPerImageAngleGenerate}
         isBatch={true}
         itemCount={loadedPhotosCount}
         tokenType={tokenType}
         imageWidth={desiredWidth || 1024}
         imageHeight={desiredHeight || 1024}
+        sourcePhotoUrls={loadedPhotoUrls}
+      />
+
+      {/* Multi-Angle Review Popup */}
+      <CameraAngleReviewPopup
+        visible={showMultiAngleReview}
+        items={multiAngleItems}
+        sourcePhoto={multiAngleSourcePhoto || { id: '', images: [] }}
+        keepOriginal={multiAngleKeepOriginal}
+        onClose={() => {
+          if (multiAngleItems.some(item => item.status === 'generating')) {
+            handleMultiAngleCancelGeneration();
+          }
+          setShowMultiAngleReview(false);
+        }}
+        onRegenerateItem={handleMultiAngleRegenerate}
+        onApply={handleMultiAngleApply}
+        onVersionChange={handleMultiAngleVersionChange}
+        onCancelGeneration={handleMultiAngleCancelGeneration}
       />
 
       {/* Custom Prompt Popup for Sample Gallery mode */}

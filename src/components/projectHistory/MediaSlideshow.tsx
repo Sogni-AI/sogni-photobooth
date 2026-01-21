@@ -4,11 +4,35 @@ import type { ArchiveProject, ArchiveJob } from '../../types/projectHistory';
 import { useMediaUrl } from '../../hooks/useMediaUrl';
 import './MediaSlideshow.css';
 
+// Local image type for local projects
+export interface LocalImage {
+  id: string;
+  url: string;
+  width: number;
+  height: number;
+  filename: string;
+}
+
 interface SlideshowContentProps {
   job: ArchiveJob;
   sogniClient: SogniClient;
   active: boolean;
   modelName: string;
+}
+
+// Content component for local images (direct URL)
+interface LocalSlideshowContentProps {
+  image: LocalImage;
+}
+
+function LocalSlideshowContent({ image }: LocalSlideshowContentProps) {
+  return (
+    <img
+      className="slideshow-media"
+      src={image.url}
+      alt={image.filename}
+    />
+  );
 }
 
 function SlideshowContent({ job, sogniClient, active, modelName }: SlideshowContentProps) {
@@ -245,36 +269,125 @@ function DownloadButton({ job, sogniClient }: DownloadButtonProps) {
   );
 }
 
-interface MediaSlideshowProps {
+// Download button for local images
+interface LocalDownloadButtonProps {
+  image: LocalImage;
+}
+
+function LocalDownloadButton({ image }: LocalDownloadButtonProps) {
+  const [downloading, setDownloading] = useState(false);
+
+  const handleDownload = useCallback(async () => {
+    if (downloading) return;
+
+    setDownloading(true);
+    try {
+      const response = await fetch(image.url);
+      const blob = await response.blob();
+
+      // Use original filename or generate one
+      const filename = image.filename || `sogni-local-${image.id}.png`;
+
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(link.href);
+    } catch (error) {
+      console.error('Failed to download:', error);
+      window.open(image.url, '_blank');
+    } finally {
+      setDownloading(false);
+    }
+  }, [image.url, image.id, image.filename, downloading]);
+
+  return (
+    <button
+      className="slideshow-save-btn"
+      onClick={handleDownload}
+      disabled={downloading}
+      title="Download"
+    >
+      {downloading ? '⏳' : '⬇️'}
+    </button>
+  );
+}
+
+// Cloud project slideshow props
+interface CloudSlideshowProps {
+  mode: 'cloud';
   project: ArchiveProject;
   initialJobId: string;
   sogniClient: SogniClient;
   onClose: () => void;
+  onRemix?: (imageUrl: string) => void;
 }
 
-function MediaSlideshow({ project, initialJobId, sogniClient, onClose }: MediaSlideshowProps) {
+// Local project slideshow props
+interface LocalSlideshowProps {
+  mode: 'local';
+  projectName: string;
+  images: LocalImage[];
+  initialIndex: number;
+  onClose: () => void;
+  onRemix?: (imageUrl: string) => void;
+}
+
+type MediaSlideshowProps = CloudSlideshowProps | LocalSlideshowProps;
+
+function MediaSlideshow(props: MediaSlideshowProps) {
+  const { mode, onClose, onRemix } = props;
   const [isVisible, setIsVisible] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
 
-  // Get completed, non-hidden jobs only (like sogni-web)
-  const jobs = useMemo<ArchiveJob[]>(() => {
-    return project.jobs.filter(j => 
-      j.status === 'completed' && 
-      !j.hidden && 
-      !j.isNSFW
-    );
-  }, [project.jobs]);
+  // Get items based on mode
+  const { jobs, images, total, title, sogniClient, modelName } = useMemo(() => {
+    if (mode === 'cloud') {
+      const cloudProps = props as CloudSlideshowProps;
+      const filteredJobs = cloudProps.project.jobs.filter(j =>
+        j.status === 'completed' &&
+        !j.hidden &&
+        !j.isNSFW
+      );
+      return {
+        jobs: filteredJobs,
+        images: null,
+        total: filteredJobs.length,
+        title: cloudProps.project.model.name,
+        sogniClient: cloudProps.sogniClient,
+        modelName: cloudProps.project.model.name
+      };
+    } else {
+      const localProps = props as LocalSlideshowProps;
+      return {
+        jobs: null,
+        images: localProps.images,
+        total: localProps.images.length,
+        title: localProps.projectName,
+        sogniClient: null,
+        modelName: ''
+      };
+    }
+  }, [mode, props]);
 
-  const currentJob = jobs[currentIndex];
-  const total = jobs.length;
+  const currentJob = mode === 'cloud' && jobs ? jobs[currentIndex] : null;
+  const currentImage = mode === 'local' && images ? images[currentIndex] : null;
 
   // Find initial position
   useEffect(() => {
-    const initialIndex = jobs.findIndex(j => j.id === initialJobId);
-    if (initialIndex >= 0) {
-      setCurrentIndex(initialIndex);
+    if (mode === 'cloud') {
+      const cloudProps = props as CloudSlideshowProps;
+      const initialIndex = jobs?.findIndex(j => j.id === cloudProps.initialJobId) ?? -1;
+      if (initialIndex >= 0) {
+        setCurrentIndex(initialIndex);
+      }
+    } else {
+      const localProps = props as LocalSlideshowProps;
+      setCurrentIndex(localProps.initialIndex);
     }
-  }, [jobs, initialJobId]);
+  }, [mode, jobs]);
 
   // Animate in
   useEffect(() => {
@@ -320,9 +433,19 @@ function MediaSlideshow({ project, initialJobId, sogniClient, onClose }: MediaSl
     setCurrentIndex(prev => (prev === total - 1 ? 0 : prev + 1));
   }, [total]);
 
-  if (!currentJob) {
-    return null;
-  }
+  // Handle remix for current image
+  const handleRemix = useCallback(() => {
+    if (!onRemix) return;
+
+    if (mode === 'local' && currentImage) {
+      onRemix(currentImage.url);
+    }
+    // For cloud mode, we need to get the URL - this will be handled via the hook
+  }, [mode, currentImage, onRemix]);
+
+  // Check if we have something to display
+  if (mode === 'cloud' && !currentJob) return null;
+  if (mode === 'local' && !currentImage) return null;
 
   return (
     <div
@@ -333,6 +456,12 @@ function MediaSlideshow({ project, initialJobId, sogniClient, onClose }: MediaSl
         ×
       </button>
 
+      {/* Header with title and counter */}
+      <div className="slideshow-header">
+        <span className="slideshow-title">{title}</span>
+        <span className="slideshow-counter">{currentIndex + 1} / {total}</span>
+      </div>
+
       <div className="slideshow-content">
         {/* Previous button - always visible */}
         <button className="slideshow-nav-btn slideshow-prev-btn" onClick={handlePrev}>
@@ -341,12 +470,17 @@ function MediaSlideshow({ project, initialJobId, sogniClient, onClose }: MediaSl
 
         {/* Media content */}
         <div className="slideshow-slide">
-          <SlideshowContent
-            job={currentJob}
-            sogniClient={sogniClient}
-            active={true}
-            modelName={project.model.name}
-          />
+          {mode === 'cloud' && currentJob && sogniClient && (
+            <SlideshowContent
+              job={currentJob}
+              sogniClient={sogniClient}
+              active={true}
+              modelName={modelName}
+            />
+          )}
+          {mode === 'local' && currentImage && (
+            <LocalSlideshowContent image={currentImage} />
+          )}
         </div>
 
         {/* Next button - always visible */}
@@ -355,11 +489,72 @@ function MediaSlideshow({ project, initialJobId, sogniClient, onClose }: MediaSl
         </button>
       </div>
 
-      {/* Save button in bottom right */}
-      <div className="slideshow-save">
-        <DownloadButton job={currentJob} sogniClient={sogniClient} />
+      {/* Action buttons in bottom */}
+      <div className="slideshow-actions">
+        {/* Remix button */}
+        {onRemix && mode === 'local' && (
+          <button
+            className="slideshow-action-btn slideshow-remix-btn"
+            onClick={handleRemix}
+            title="Remix this image"
+          >
+            Remix
+          </button>
+        )}
+        {onRemix && mode === 'cloud' && currentJob && sogniClient && (
+          <CloudRemixButton
+            job={currentJob}
+            sogniClient={sogniClient}
+            onRemix={onRemix}
+          />
+        )}
+
+        {/* Download button */}
+        {mode === 'cloud' && currentJob && sogniClient && (
+          <DownloadButton job={currentJob} sogniClient={sogniClient} />
+        )}
+        {mode === 'local' && currentImage && (
+          <LocalDownloadButton image={currentImage} />
+        )}
       </div>
     </div>
+  );
+}
+
+// Cloud remix button - needs to fetch URL first
+interface CloudRemixButtonProps {
+  job: ArchiveJob;
+  sogniClient: SogniClient;
+  onRemix: (imageUrl: string) => void;
+}
+
+function CloudRemixButton({ job, sogniClient, onRemix }: CloudRemixButtonProps) {
+  const { url } = useMediaUrl({
+    projectId: job.projectId,
+    jobId: job.id,
+    type: job.type,
+    sogniClient,
+    enabled: true
+  });
+
+  const handleRemix = useCallback(() => {
+    if (url) {
+      onRemix(url);
+    }
+  }, [url, onRemix]);
+
+  // Only show remix for images
+  if (job.type !== 'image') return null;
+
+  return (
+    <button
+      className="slideshow-action-btn slideshow-remix-btn"
+      onClick={handleRemix}
+      disabled={!url}
+      title="Remix this image"
+    >
+      Remix
+    </button>
   );
 }
 

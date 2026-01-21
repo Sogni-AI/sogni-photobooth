@@ -8751,6 +8751,88 @@ const App = () => {
     stopCamera();
   }, [stopCamera]);
 
+  // Handle remixing a single image from the slideshow
+  const handleRemixSingleImage = useCallback(async (imageUrl) => {
+    console.log('[Remix Single Image] Loading image:', imageUrl);
+
+    try {
+      // Fetch the image to get its dimensions
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+
+      await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = reject;
+        img.src = imageUrl;
+      });
+
+      const imageWidth = img.naturalWidth;
+      const imageHeight = img.naturalHeight;
+      const imageRatio = imageWidth / imageHeight;
+
+      // Auto-detect the best aspect ratio
+      const aspectRatios = [
+        { key: 'ultranarrow', ratio: 768 / 1344 },
+        { key: 'narrow', ratio: 832 / 1216 },
+        { key: 'portrait', ratio: 896 / 1152 },
+        { key: 'square', ratio: 1 },
+        { key: 'landscape', ratio: 1152 / 896 },
+        { key: 'wide', ratio: 1216 / 832 },
+        { key: 'ultrawide', ratio: 1344 / 768 }
+      ];
+
+      let closestRatio = aspectRatios[0];
+      let minDiff = Math.abs(imageRatio - closestRatio.ratio);
+
+      for (const ar of aspectRatios) {
+        const diff = Math.abs(imageRatio - ar.ratio);
+        if (diff < minDiff) {
+          minDiff = diff;
+          closestRatio = ar;
+        }
+      }
+
+      console.log(`[Remix Single Image] Detected aspect ratio: ${closestRatio.key}`);
+      updateSetting('aspectRatio', closestRatio.key);
+
+      // Create photo object
+      const photoId = `remix-${Date.now()}`;
+      const newPhoto = {
+        id: photoId,
+        generating: false,
+        loading: false,
+        images: [imageUrl],
+        originalDataUrl: imageUrl,
+        newlyArrived: false,
+        isOriginal: false,
+        hidden: false,
+        sourceType: 'remix',
+        taipeiFrameNumber: 1,
+        framePadding: 0,
+        width: imageWidth,
+        height: imageHeight
+      };
+
+      // Load the single photo into the gallery
+      setPhotos([newPhoto]);
+      setRegularPhotos([newPhoto]);
+
+      // Show photo grid and close recent projects
+      setShowPhotoGrid(true);
+      setShowStartMenu(false);
+      setShowRecentProjects(false);
+      stopCamera();
+
+    } catch (error) {
+      console.error('[Remix Single Image] Failed to load image:', error);
+      showToast({
+        title: 'Error',
+        message: 'Failed to load image for remix. Please try again.',
+        type: 'error'
+      });
+    }
+  }, [showToast, stopCamera, updateSetting]);
+
   // Handle Bald for Base popup generate button
   const handleBaldForBaseGenerate = useCallback(() => {
     setShowBaldForBasePopup(false);
@@ -10949,6 +11031,7 @@ const App = () => {
           onReuseProject={handleReuseProject}
           onReuseLocalProject={handleReuseLocalProject}
           onStartNewProject={handleStartNewProject}
+          onRemixSingleImage={handleRemixSingleImage}
         />
       )}
     </>
