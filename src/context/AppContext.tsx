@@ -163,15 +163,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
     
     // Reset custom prompt to blank on page load (but preserve if style is 'custom')
+    // Also clear from localStorage to prevent non-authenticated user data from persisting
     if (positivePrompt && positivePrompt.trim() !== '' && selectedStyle !== 'custom') {
       console.log('🔄 [INIT] Resetting custom prompt to blank');
       positivePrompt = '';
-      saveSettingsToCookies({ positivePrompt });
+      // Clear from localStorage to prevent stale data from non-authenticated sessions
+      try {
+        localStorage.removeItem('sogni_positivePrompt');
+      } catch (e) {
+        console.warn('Failed to clear positivePrompt from localStorage:', e);
+      }
     }
-    
-    // Always load customSceneName from cookies (don't reset it)
-    // This allows users to reuse their previous scene name when creating new custom prompts
+
+    // Load customSceneName from cookies, but clear from localStorage when style is not custom
+    // This prevents non-authenticated user's scene names from persisting incorrectly
     let customSceneName = getSettingFromCookie('customSceneName', DEFAULT_SETTINGS.customSceneName) as string;
+    if (selectedStyle !== 'custom') {
+      // Clear from localStorage when not in custom mode to prevent stale data
+      try {
+        localStorage.removeItem('sogni_customSceneName');
+      } catch (e) {
+        console.warn('Failed to clear customSceneName from localStorage:', e);
+      }
+    }
     
     // Get model-specific settings for the (possibly reset) model
     const modelSettings = getSettingsForModel(selectedModel);
@@ -276,15 +290,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       
       // Save model-specific settings separately
       const modelSpecificSettings = ['inferenceSteps', 'sampler', 'scheduler', 'promptGuidance', 'guidance', 'numImages'];
-      // Custom prompt settings should ALWAYS persist to localStorage (not sessionStorage)
-      // so they survive page reloads regardless of auth state
-      const alwaysPersistSettings = ['positivePrompt', 'customSceneName', 'selectedStyle'];
+      // Custom prompt settings should NOT be saved when not authenticated
+      // to prevent conflicts when a logged-in user refreshes the page
+      const customPromptSettings = ['positivePrompt', 'customSceneName'];
       if (modelSpecificSettings.includes(key)) {
         console.log(`📦 Saving model-specific setting ${String(key)}`);
         saveModelSpecificSettings(newSettings.selectedModel, { [key]: value });
-      } else if (alwaysPersistSettings.includes(key)) {
-        // Always save to localStorage for custom prompt settings
-        saveSettingsToCookies({ [key]: value }, true);
+      } else if (customPromptSettings.includes(key)) {
+        // Only save custom prompt settings when authenticated
+        // Non-authenticated users' custom prompts are kept in memory only
+        if (isAuthenticated) {
+          saveSettingsToCookies({ [key]: value }, true);
+        }
       } else {
         // Save to localStorage if authenticated, sessionStorage if not
         saveSettingsToCookies({ [key]: value }, isAuthenticated);

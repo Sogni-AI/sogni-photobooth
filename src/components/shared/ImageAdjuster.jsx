@@ -43,7 +43,7 @@ const ImageAdjuster = ({
 
   
   const { settings, updateSetting, switchToModel } = useApp();
-  const { aspectRatio, tezdevTheme, selectedModel, inferenceSteps, promptGuidance, scheduler, numImages: contextNumImages, selectedStyle, portraitType } = settings;
+  const { aspectRatio, tezdevTheme, selectedModel, inferenceSteps, promptGuidance, scheduler, numImages: contextNumImages, selectedStyle, portraitType, positivePrompt, customSceneName } = settings;
   const { isAuthenticated } = useSogniAuth();
   const { tokenType } = useWallet();
   const tokenLabel = getTokenLabel(tokenType);
@@ -1022,6 +1022,12 @@ const ImageAdjuster = ({
             }}
             portraitType={portraitType}
             onNavigateToVibeExplorer={onNavigateToVibeExplorer}
+            onCustomPromptChange={(prompt, sceneName) => {
+              updateSetting('positivePrompt', prompt);
+              updateSetting('customSceneName', sceneName || '');
+            }}
+            currentCustomPrompt={positivePrompt}
+            currentCustomSceneName={customSceneName}
             slideInPanel={true}
           />
         )}

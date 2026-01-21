@@ -10346,6 +10346,14 @@ const App = () => {
               setShowPhotoGrid(true);
               setShowCameraStyleDropdown(false);
             }}
+            onThemeChange={handleThemeChange}
+            currentThemes={currentThemeState}
+            onCustomPromptChange={(prompt, sceneName) => {
+              updateSetting('positivePrompt', prompt);
+              updateSetting('customSceneName', sceneName || '');
+            }}
+            currentCustomPrompt={positivePrompt}
+            currentCustomSceneName={customSceneName}
             slideInPanel={true}
           />
         )}

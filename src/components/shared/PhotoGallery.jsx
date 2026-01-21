@@ -12944,7 +12944,7 @@ const PhotoGallery = ({
                       ),
                       left: '50%',
                       transform: 'translateX(-50%)',
-                      background: '#ffeb3b',
+                      background: selectedPhoto.generatingVideo ? 'rgba(30, 30, 30, 0.98)' : '#ffeb3b',
                       borderRadius: '8px',
                       padding: '8px',
                       border: 'none',
@@ -12959,46 +12959,49 @@ const PhotoGallery = ({
                   >
                     {/* Top right buttons container - Settings and Close */}
                     <div style={{ position: 'relative' }}>
-                      {/* Settings cog icon - left of close button */}
-                      <button
-                        onClick={handleOpenVideoSettings}
-                        title="Video Settings"
-                        style={{
-                          position: 'absolute',
-                          top: '0px',
-                          right: '36px',
-                          width: '24px',
-                          height: '24px',
-                          borderRadius: '50%',
-                          border: 'none',
-                          background: 'rgba(0, 0, 0, 0.1)',
-                          color: 'rgba(0, 0, 0, 0.5)',
-                          fontSize: '12px',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          transition: 'all 0.2s ease',
-                          zIndex: 1
-                        }}
-                        onMouseOver={e => {
-                          e.currentTarget.style.background = 'rgba(0, 0, 0, 0.15)';
-                          e.currentTarget.style.color = 'rgba(0, 0, 0, 0.8)';
-                        }}
-                        onMouseOut={e => {
-                          e.currentTarget.style.background = 'rgba(0, 0, 0, 0.1)';
-                          e.currentTarget.style.color = 'rgba(0, 0, 0, 0.5)';
-                        }}
-                      >
-                        ⚙️
-                      </button>
+                      {/* Settings cog icon - left of close button (hidden during generation) */}
+                      {!selectedPhoto.generatingVideo && (
+                        <button
+                          onClick={handleOpenVideoSettings}
+                          title="Video Settings"
+                          style={{
+                            position: 'absolute',
+                            top: '0px',
+                            right: '36px',
+                            width: '24px',
+                            height: '24px',
+                            borderRadius: '50%',
+                            border: 'none',
+                            background: 'rgba(0, 0, 0, 0.1)',
+                            color: 'rgba(0, 0, 0, 0.5)',
+                            fontSize: '12px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            transition: 'all 0.2s ease',
+                            zIndex: 1
+                          }}
+                          onMouseOver={e => {
+                            e.currentTarget.style.background = 'rgba(0, 0, 0, 0.15)';
+                            e.currentTarget.style.color = 'rgba(0, 0, 0, 0.8)';
+                          }}
+                          onMouseOut={e => {
+                            e.currentTarget.style.background = 'rgba(0, 0, 0, 0.1)';
+                            e.currentTarget.style.color = 'rgba(0, 0, 0, 0.5)';
+                          }}
+                        >
+                          ⚙️
+                        </button>
+                      )}
                       
                       {/* Close button - far right */}
                       <button
-                        onClick={() => { 
-                          setShowVideoDropdown(false); 
+                        onClick={() => {
+                          setShowVideoDropdown(false);
                           setSelectedMotionCategory(null);
-                          if (!isVideoSelectionBatch) {
+                          // Don't open VideoSelectionPopup if we're canceling a generation
+                          if (!isVideoSelectionBatch && !selectedPhoto.generatingVideo) {
                             setShowVideoSelectionPopup(true);
                           }
                         }}
@@ -13011,7 +13014,7 @@ const PhotoGallery = ({
                           height: '28px',
                           borderRadius: '50%',
                           border: 'none',
-                          background: 'rgba(0, 0, 0, 0.6)',
+                          background: selectedPhoto.generatingVideo ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.6)',
                           color: '#fff',
                           fontSize: '18px',
                           cursor: 'pointer',
@@ -13024,11 +13027,11 @@ const PhotoGallery = ({
                           fontWeight: '300'
                         }}
                         onMouseOver={e => {
-                          e.currentTarget.style.background = 'rgba(0, 0, 0, 0.8)';
+                          e.currentTarget.style.background = selectedPhoto.generatingVideo ? 'rgba(255, 255, 255, 0.25)' : 'rgba(0, 0, 0, 0.8)';
                           e.currentTarget.style.transform = 'scale(1.1)';
                         }}
                         onMouseOut={e => {
-                          e.currentTarget.style.background = 'rgba(0, 0, 0, 0.6)';
+                          e.currentTarget.style.background = selectedPhoto.generatingVideo ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.6)';
                           e.currentTarget.style.transform = 'scale(1)';
                         }}
                       >
@@ -13042,14 +13045,17 @@ const PhotoGallery = ({
                         <div style={{
                           padding: '12px 16px',
                           fontSize: '13px',
-                          color: 'rgba(0, 0, 0, 0.6)',
-                          borderBottom: '1px solid rgba(0, 0, 0, 0.1)',
+                          color: 'rgba(255, 255, 255, 0.7)',
+                          borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
                           textAlign: 'center'
                         }}>
                           Video generating...
                         </div>
                         <button
-                          onClick={handleCancelVideo}
+                          onClick={() => {
+                            handleCancelVideo();
+                            setShowVideoDropdown(false);
+                          }}
                           style={{
                             width: '100%',
                             padding: '12px 16px',
@@ -13062,7 +13068,7 @@ const PhotoGallery = ({
                             borderRadius: '8px',
                             transition: 'background 0.2s ease'
                           }}
-                          onMouseOver={e => e.currentTarget.style.background = 'rgba(255, 107, 107, 0.1)'}
+                          onMouseOver={e => e.currentTarget.style.background = 'rgba(255, 107, 107, 0.15)'}
                           onMouseOut={e => e.currentTarget.style.background = 'transparent'}
                         >
                           ❌ Cancel Generation
@@ -15555,13 +15561,17 @@ const PhotoGallery = ({
                         pointerEvents: 'none'
                       }} />
 
-                      {/* Compact header */}
+                      {/* Progress/Status with icon */}
                       <div style={{
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        gap: '4px',
-                        marginBottom: '3px',
+                        gap: '6px',
+                        fontSize: '16px',
+                        fontWeight: '700',
+                        color: '#fff',
+                        marginBottom: '2px',
+                        textShadow: '0 1px 3px rgba(0,0,0,0.5)',
                         position: 'relative'
                       }}>
                         <span style={{
@@ -15570,24 +15580,6 @@ const PhotoGallery = ({
                         }}>
                           📐
                         </span>
-                        <span style={{
-                          fontSize: '11px',
-                          fontWeight: '600',
-                          color: '#ff5252',
-                          letterSpacing: '0.3px'
-                        }}>
-                          Generating
-                        </span>
-                      </div>
-
-                      {/* Progress/Status */}
-                      <div style={{
-                        fontSize: '16px',
-                        fontWeight: '700',
-                        color: '#fff',
-                        marginBottom: '2px',
-                        textShadow: '0 1px 3px rgba(0,0,0,0.5)'
-                      }}>
                         {photo.cameraAngleProgress !== undefined && photo.cameraAngleProgress > 0 ? (
                           <span>{photo.cameraAngleProgress}%</span>
                         ) : photo.cameraAngleStatus?.startsWith('Queue') || photo.cameraAngleStatus?.startsWith('Next') ? (
