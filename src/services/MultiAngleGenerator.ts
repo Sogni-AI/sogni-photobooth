@@ -301,16 +301,10 @@ export async function generateMultipleAngles(
     }
   };
 
-  // Generate all angles concurrently (skip isOriginal slots - they use the source image)
-  const promises = angles.map((slot, index) => {
-    // Skip isOriginal slots - they represent the original image and don't need generation
-    // The original image is separately handled via keepOriginal in the review popup
-    if (slot.isOriginal) {
-      // Don't generate, leave this slot as 'pending' so it won't be included in 'ready' results
-      return Promise.resolve();
-    }
-
-    return generateSingleAngle(sogniClient, imageBuffer, slot, params, enhancedCallbacks, index)
+  // Generate all angles concurrently
+  // Note: isOriginal slots are filtered out by createAngleGenerationItems before reaching here
+  const promises = angles.map((slot, index) =>
+    generateSingleAngle(sogniClient, imageBuffer, slot, params, enhancedCallbacks, index)
       .then(url => {
         urls[index] = url;
         results.push({ index, success: true, url });
@@ -319,8 +313,8 @@ export async function generateMultipleAngles(
         const errorMsg = err instanceof Error ? err.message : 'Unknown error';
         errors.set(index, errorMsg);
         results.push({ index, success: false, error: errorMsg });
-      });
-  });
+      })
+  );
 
   // Wait for all to complete
   await Promise.all(promises);
@@ -350,7 +344,11 @@ export function createAngleGenerationItems(
   angles: AngleSlot[],
   sourceImageUrl: string
 ): AngleGenerationItem[] {
-  return angles.map((slot, index) => ({
+  // Filter out isOriginal slots - they use the source image directly and are
+  // displayed separately in the review popup as the "original" card
+  const generatableAngles = angles.filter(slot => !slot.isOriginal);
+
+  return generatableAngles.map((slot, index) => ({
     index,
     slotId: slot.id,
     sourceImageUrl,
