@@ -67,6 +67,8 @@ import VideoReviewPopup from './VideoReviewPopup';
 import VideoSettingsFooter from './VideoSettingsFooter';
 import CameraAnglePopup from './CameraAnglePopup';
 import CameraAngleReviewPopup from './CameraAngleReviewPopup';
+import SaveToLocalProjectPopup, { generateDefaultProjectName } from './SaveToLocalProjectPopup';
+import { useLocalProjects } from '../../hooks/useLocalProjects';
 import { extractLastFrame, extractFirstFrame } from '../../utils/videoFrameExtraction';
 import { generateCameraAngle } from '../../services/CameraAngleGenerator.ts';
 import {
@@ -956,6 +958,9 @@ const PhotoGallery = ({
   const { tokenType } = useWallet();
   const tokenLabel = getTokenLabel(tokenType);
 
+  // Local projects hook for saving images to local storage
+  const { createProject: createLocalProject, addImages: addLocalImages, isSupported: isLocalProjectsSupported } = useLocalProjects();
+
   // Helper function to format cost - shows token cost with USD in parentheses
   const formatCost = (tokenCost, usdCost) => {
     // Handle null, undefined, or dash placeholder
@@ -1067,6 +1072,10 @@ const PhotoGallery = ({
   const [autoTriggerBaldForBaseAfterGeneration, setAutoTriggerBaldForBaseAfterGeneration] = useState(false); // Auto-trigger Bald for Base after photo generation
   const [hasSeenGenerationStart, setHasSeenGenerationStart] = useState(false); // Track if we've seen generation start
   const previousPhotoCountRef = useRef(0); // Track previous photo count to detect when new photos are added
+
+  // Save to Local Project Popup state
+  const [showSaveToLocalProjectPopup, setShowSaveToLocalProjectPopup] = useState(false);
+  const [isSavingToLocalProject, setIsSavingToLocalProject] = useState(false);
 
   // Stitch Options Popup state (for Infinite Loop feature)
   const [showStitchOptionsPopup, setShowStitchOptionsPopup] = useState(false);
@@ -5143,6 +5152,126 @@ const PhotoGallery = ({
       return;
     }
 
+    // SINGLE PHOTO: Use the multi-angle review popup flow (same as handleMultiAngleConfirm)
+    // This ensures the review popup appears for single-photo batches
+    if (loadedPhotos.length === 1) {
+      const photo = loadedPhotos[0];
+      const imageUrl = photo.enhancedImageUrl || photo.images?.[0] || photo.originalDataUrl;
+
+      if (!imageUrl) {
+        showToast({
+          title: 'No Image',
+          message: 'No image available for multi-angle generation.',
+          type: 'error'
+        });
+        return;
+      }
+
+      // Get image dimensions
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+
+      try {
+        await new Promise((resolve, reject) => {
+          img.onload = resolve;
+          img.onerror = reject;
+          img.src = imageUrl;
+        });
+      } catch {
+        showToast({
+          title: 'Image Load Error',
+          message: 'Could not load the source image.',
+          type: 'error'
+        });
+        return;
+      }
+
+      const width = img.naturalWidth;
+      const height = img.naturalHeight;
+
+      // Initialize items and open review popup
+      const items = createAngleGenerationItems(angles, imageUrl);
+      setMultiAngleItems(items);
+      setMultiAngleSourcePhoto(photo);
+      setMultiAngleKeepOriginal(true);
+      setMultiAngleSourceUrl(imageUrl);
+      multiAngleAbortRef.current = false;
+      setShowMultiAngleReview(true);
+
+      showToast({
+        title: '📐 Generating Angles',
+        message: `Creating ${angles.length} camera angles...`,
+        type: 'info',
+        timeout: 3000
+      });
+
+      // Start generation with callbacks
+      await generateMultipleAngles(
+        sogniClient,
+        {
+          sourceImageUrl: imageUrl,
+          sourcePhotoId: photo.id,
+          angles,
+          tokenType,
+          imageWidth: width,
+          imageHeight: height
+        },
+        {
+          onItemStart: (index, slotId) => {
+            if (multiAngleAbortRef.current) return;
+            setMultiAngleItems(prev => markItemStarted(prev, index));
+          },
+          onItemProgress: (index, progress, eta, workerName) => {
+            if (multiAngleAbortRef.current) return;
+            setMultiAngleItems(prev => updateItemProgress(prev, index, progress, eta, workerName));
+          },
+          onItemComplete: (index, resultUrl) => {
+            if (multiAngleAbortRef.current) return;
+            setMultiAngleItems(prev => markItemComplete(prev, index, resultUrl));
+          },
+          onItemError: (index, error) => {
+            if (multiAngleAbortRef.current) return;
+            setMultiAngleItems(prev => markItemFailed(prev, index, error));
+          },
+          onOutOfCredits: () => {
+            showToast({
+              title: 'Out of Credits',
+              message: 'Please add more credits to continue.',
+              type: 'error'
+            });
+            onOutOfCredits?.();
+          },
+          onAllComplete: (results) => {
+            if (multiAngleAbortRef.current) return;
+            const successCount = results.filter(r => r.success).length;
+            const failCount = results.filter(r => !r.success).length;
+
+            if (failCount === 0) {
+              showToast({
+                title: '📐 All Angles Ready!',
+                message: `${successCount} angle${successCount > 1 ? 's' : ''} generated. Click "Apply to Gallery" to add them.`,
+                type: 'success'
+              });
+            } else if (successCount > 0) {
+              showToast({
+                title: '📐 Some Angles Ready',
+                message: `${successCount} ready, ${failCount} failed. You can regenerate failed ones.`,
+                type: 'warning'
+              });
+            } else {
+              showToast({
+                title: 'Generation Failed',
+                message: 'All angle generations failed. Please try again.',
+                type: 'error'
+              });
+            }
+          }
+        }
+      );
+      return;
+    }
+
+    // MULTIPLE PHOTOS: Continue with batch processing (no review popup)
     showToast({
       title: '📐 Batch Camera Angle',
       message: `Generating ${generatingCount} angle${generatingCount !== 1 ? 's' : ''} from ${loadedPhotos.length} image${loadedPhotos.length !== 1 ? 's' : ''}...`,
@@ -10645,6 +10774,137 @@ const PhotoGallery = ({
     }
   }, [isBulkDownloading, isPromptSelectorMode, filteredPhotos, photos, selectedSubIndex, getStyleDisplayText, outputFormat, settings, tezdevTheme, aspectRatio, isThemeSupported]);
 
+  // Handle saving images to a local project
+  const handleSaveToLocalProject = useCallback(async (projectName) => {
+    if (!isLocalProjectsSupported) {
+      showToast({
+        type: 'error',
+        message: 'Local projects are not supported in this browser'
+      });
+      return;
+    }
+
+    try {
+      setIsSavingToLocalProject(true);
+
+      // Get the correct photos array based on mode
+      const currentPhotosArray = isPromptSelectorMode ? filteredPhotos : photos;
+
+      // Get loaded photos (excluding hidden/discarded ones)
+      const loadedPhotos = currentPhotosArray.filter(
+        photo => !photo.hidden && !photo.loading && !photo.generating && !photo.error && photo.images && photo.images.length > 0
+      );
+
+      if (loadedPhotos.length === 0) {
+        showToast({
+          type: 'error',
+          message: 'No images to save'
+        });
+        setIsSavingToLocalProject(false);
+        return;
+      }
+
+      // Create the new project
+      const project = await createLocalProject(projectName);
+      if (!project) {
+        showToast({
+          type: 'error',
+          message: 'Failed to create project'
+        });
+        setIsSavingToLocalProject(false);
+        return;
+      }
+
+      // Convert image URLs to File objects
+      const files = [];
+      for (let i = 0; i < loadedPhotos.length; i++) {
+        const photo = loadedPhotos[i];
+        // Get raw image URL (first image, or enhanced if available)
+        const imageUrl = photo.enhancedImageUrl || (photo.images && photo.images[0]);
+        if (!imageUrl) continue;
+
+        try {
+          // Fetch the image as blob
+          const response = await fetch(imageUrl);
+          if (!response.ok) {
+            console.warn(`Failed to fetch image ${i + 1}:`, response.statusText);
+            continue;
+          }
+
+          const blob = await response.blob();
+
+          // Determine filename and extension
+          const mimeType = blob.type || 'image/png';
+          const extension = mimeType.includes('jpeg') || mimeType.includes('jpg') ? 'jpg' : 'png';
+
+          // Generate filename using style name if available
+          let styleName = 'image';
+          if (photo.customSceneName) {
+            styleName = photo.customSceneName.replace(/[^a-zA-Z0-9\s-]/g, '').replace(/\s+/g, '-').toLowerCase();
+          } else if (photo.promptKey && photo.promptKey !== 'custom' && photo.promptKey !== 'random') {
+            styleName = styleIdToDisplay(photo.promptKey).replace(/[^a-zA-Z0-9\s-]/g, '').replace(/\s+/g, '-').toLowerCase();
+          }
+
+          const filename = `${styleName}-${i + 1}.${extension}`;
+
+          // Create File object
+          const file = new File([blob], filename, { type: mimeType });
+          files.push(file);
+        } catch (error) {
+          console.error(`Error processing image ${i + 1}:`, error);
+        }
+      }
+
+      if (files.length === 0) {
+        showToast({
+          type: 'error',
+          message: 'Failed to process images'
+        });
+        setIsSavingToLocalProject(false);
+        return;
+      }
+
+      // Add images to the project
+      const result = await addLocalImages(project.id, files);
+
+      if (result.added > 0) {
+        showToast({
+          type: 'success',
+          message: `Saved ${result.added} image${result.added !== 1 ? 's' : ''} to "${projectName}"`
+        });
+        setShowSaveToLocalProjectPopup(false);
+      } else {
+        showToast({
+          type: 'error',
+          message: result.error || 'Failed to save images'
+        });
+      }
+
+    } catch (error) {
+      console.error('Error saving to local project:', error);
+      showToast({
+        type: 'error',
+        message: 'Failed to save images to project'
+      });
+    } finally {
+      setIsSavingToLocalProject(false);
+    }
+  }, [isLocalProjectsSupported, isPromptSelectorMode, filteredPhotos, photos, createLocalProject, addLocalImages, showToast]);
+
+  // Generate default project name for save popup
+  const defaultLocalProjectName = useMemo(() => {
+    const currentPhotosArray = isPromptSelectorMode ? filteredPhotos : photos;
+    return generateDefaultProjectName(currentPhotosArray, styleIdToDisplay);
+  }, [isPromptSelectorMode, filteredPhotos, photos]);
+
+  // Count of completed photos for save popup
+  const completedPhotosCount = useMemo(() => {
+    const currentPhotosArray = isPromptSelectorMode ? filteredPhotos : photos;
+    return currentPhotosArray.filter(
+      photo => !photo.hidden && !photo.loading && !photo.generating && !photo.error && photo.images && photo.images.length > 0
+    ).length;
+  }, [isPromptSelectorMode, filteredPhotos, photos]);
+
   // Close dropdown when clicking outside (but allow clicks inside the portal dropdown)
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -12040,6 +12300,34 @@ const PhotoGallery = ({
                   >
                     <span>🖼️</span> Download Images Framed
                   </button>
+                  {isLocalProjectsSupported && (
+                    <button
+                      className="more-dropdown-option"
+                      onClick={() => {
+                        setShowMoreDropdown(false);
+                        setShowSaveToLocalProjectPopup(true);
+                      }}
+                      style={{
+                        width: '100%',
+                        padding: '12px 16px',
+                        border: 'none',
+                        background: 'transparent',
+                        color: '#333',
+                        fontSize: '14px',
+                        fontWeight: 'normal',
+                        textAlign: 'left',
+                        cursor: 'pointer',
+                        transition: 'background 0.2s ease',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
+                      }}
+                      onMouseOver={(e) => e.currentTarget.style.background = 'rgba(16, 185, 129, 0.1)'}
+                      onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
+                    >
+                      <span>💾</span> Save To Local Project
+                    </button>
+                  )}
                   {(() => {
                     // Check if any photos have videos
                     const currentPhotosArray = isPromptSelectorMode ? filteredPhotos : photos;
@@ -17338,6 +17626,16 @@ const PhotoGallery = ({
         visible={showVideoIntroPopup}
         onDismiss={handleVideoIntroDismiss}
         onProceed={handleVideoIntroProceed}
+      />
+
+      {/* Save to Local Project Popup */}
+      <SaveToLocalProjectPopup
+        isOpen={showSaveToLocalProjectPopup}
+        onClose={() => setShowSaveToLocalProjectPopup(false)}
+        onSave={handleSaveToLocalProject}
+        defaultName={defaultLocalProjectName}
+        imageCount={completedPhotosCount}
+        isSaving={isSavingToLocalProject}
       />
 
       {/* Stitch Options Popup - Choose between Simple Stitch and Infinite Loop */}
