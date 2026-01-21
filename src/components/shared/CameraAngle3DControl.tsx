@@ -33,16 +33,19 @@ interface CameraAngle3DControlProps {
   compact?: boolean;
 }
 
-// Starface-inspired color palette
+// Refined color palette - softer, more pleasant
 const COLORS = {
-  yellow: '#FDFF00',
+  accent: '#FDFF00',           // Keep yellow for primary actions only
+  accentSoft: '#d4d700',       // Softer yellow for subtle highlights
   black: '#000000',
   white: '#FFFFFF',
-  darkGray: 'rgba(30, 30, 30, 0.95)',
-  mediumGray: 'rgba(60, 60, 60, 0.8)',
-  lightGray: 'rgba(255, 255, 255, 0.15)',
-  yellowTransparent: 'rgba(253, 255, 0, 0.3)',
-  yellowGlow: 'rgba(253, 255, 0, 0.5)'
+  textPrimary: 'rgba(255, 255, 255, 0.9)',
+  textSecondary: 'rgba(255, 255, 255, 0.55)',
+  textMuted: 'rgba(255, 255, 255, 0.35)',
+  darkGray: 'rgba(40, 40, 42, 0.98)',
+  surfaceLight: 'rgba(255, 255, 255, 0.06)',
+  border: 'rgba(255, 255, 255, 0.1)',
+  accentGlow: 'rgba(253, 255, 0, 0.4)'
 };
 
 const CameraAngle3DControl: React.FC<CameraAngle3DControlProps> = ({
@@ -186,7 +189,7 @@ const CameraAngle3DControl: React.FC<CameraAngle3DControlProps> = ({
     onAzimuthChange(AZIMUTHS[newIndex].key);
   }, [azimuth, onAzimuthChange]);
 
-  const orbitalSize = compact ? 220 : 280;
+  const orbitalSize = compact ? 180 : 200;
   const elevationsReversed = [...ELEVATIONS].reverse();
 
   // Render azimuth dot - all dots rendered once with dynamic styling based on depth
@@ -207,22 +210,20 @@ const CameraAngle3DControl: React.FC<CameraAngle3DControlProps> = ({
           left: `${pos.x}%`,
           top: `${pos.y}%`,
           transform: 'translate(-50%, -50%)',
-          width: isSelected ? '18px' : behind ? '10px' : '12px',
-          height: isSelected ? '18px' : behind ? '10px' : '12px',
+          width: isSelected ? '14px' : behind ? '8px' : '10px',
+          height: isSelected ? '14px' : behind ? '8px' : '10px',
           borderRadius: '50%',
           background: isSelected
-            ? COLORS.yellow
-            : behind ? 'rgba(180, 180, 180, 0.5)' : 'rgba(255, 255, 255, 0.8)',
-          border: isSelected
-            ? `2px solid ${COLORS.black}`
-            : behind ? '1px solid rgba(255, 255, 255, 0.2)' : '1px solid rgba(255, 255, 255, 0.5)',
+            ? COLORS.accent
+            : behind ? 'rgba(255, 255, 255, 0.25)' : 'rgba(255, 255, 255, 0.5)',
+          border: 'none',
           cursor: 'pointer',
           transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
           boxShadow: isSelected
-            ? `0 0 16px ${COLORS.yellowGlow}`
+            ? `0 0 12px ${COLORS.accentGlow}`
             : 'none',
           padding: 0,
-          opacity: behind ? 0.4 : 1,
+          opacity: behind ? 0.5 : 1,
           zIndex: behind ? 1 : 6
         }}
         title={az.label}
@@ -255,7 +256,7 @@ const CameraAngle3DControl: React.FC<CameraAngle3DControlProps> = ({
             position: 'absolute',
             top: '50%',
             left: '50%',
-            transform: `translate(calc(-50% + 3px), calc(-50% + 2px)) rotate(${Math.atan2(50 - cameraPosition.y, 50 - cameraPosition.x) * (180 / Math.PI) - 90}deg)`,
+            transform: `translate(-50%, -50%) rotate(${Math.atan2(50 - cameraPosition.y, 50 - cameraPosition.x) * (180 / Math.PI) - 90}deg)`,
             transformOrigin: '50px 60px',
             pointerEvents: 'none',
             zIndex: 20,
@@ -276,20 +277,20 @@ const CameraAngle3DControl: React.FC<CameraAngle3DControlProps> = ({
         </svg>
         {/* Camera icon with circular background */}
         <div style={{
-          width: '36px',
-          height: '36px',
+          width: '32px',
+          height: '32px',
           borderRadius: '50%',
-          background: COLORS.yellow,
-          border: `2px solid ${COLORS.black}`,
+          background: COLORS.accent,
+          border: 'none',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           position: 'relative',
           zIndex: 10,
-          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.4)',
-          filter: isBehindSphere ? 'grayscale(30%)' : 'none'
+          boxShadow: `0 2px 12px ${COLORS.accentGlow}`,
+          filter: isBehindSphere ? 'brightness(0.7)' : 'none'
         }}>
-          <span style={{ fontSize: '18px', marginLeft: '1px' }}>📷</span>
+          <span style={{ fontSize: '16px' }}>📷</span>
         </div>
       </div>
     );
@@ -300,30 +301,30 @@ const CameraAngle3DControl: React.FC<CameraAngle3DControlProps> = ({
       display: 'flex',
       flexDirection: 'column',
       gap: compact ? '12px' : '16px',
-      padding: compact ? '8px' : '12px',
+      padding: compact ? '12px' : '16px',
       background: COLORS.darkGray,
       borderRadius: '16px',
-      border: `3px solid ${COLORS.yellow}`
+      border: `1px solid ${COLORS.border}`,
+      overflow: 'hidden'
     }}>
       {/* Main Control Area */}
       <div style={{
         display: 'flex',
-        alignItems: 'stretch',
-        gap: '12px'
+        alignItems: 'center',
+        gap: '8px'
       }}>
         {/* Vertical Height Slider */}
         <div style={{
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '8px 0'
+          justifyContent: 'center'
         }}>
           <div style={{
             fontSize: '10px',
-            fontWeight: '700',
-            color: COLORS.yellow,
-            marginBottom: '8px',
+            fontWeight: '600',
+            color: COLORS.textSecondary,
+            marginBottom: '6px',
             textTransform: 'lowercase',
             letterSpacing: '0.5px'
           }}>
@@ -332,11 +333,10 @@ const CameraAngle3DControl: React.FC<CameraAngle3DControlProps> = ({
           <div style={{
             display: 'flex',
             flexDirection: 'column',
-            background: 'rgba(0, 0, 0, 0.4)',
-            borderRadius: '8px',
+            background: COLORS.surfaceLight,
+            borderRadius: '10px',
             padding: '4px',
-            gap: '2px',
-            flex: 1
+            gap: '2px'
           }}>
             {elevationsReversed.map((el) => {
               const isSelected = el.key === elevation;
@@ -348,16 +348,15 @@ const CameraAngle3DControl: React.FC<CameraAngle3DControlProps> = ({
                   key={el.key}
                   onClick={() => onElevationChange(el.key)}
                   style={{
-                    padding: '10px 8px',
-                    borderRadius: '6px',
-                    border: isSelected ? `2px solid ${COLORS.black}` : '2px solid transparent',
-                    background: isSelected ? COLORS.yellow : 'transparent',
-                    color: isSelected ? COLORS.black : COLORS.white,
+                    padding: '8px 10px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    background: isSelected ? 'rgba(255, 255, 255, 0.15)' : 'transparent',
+                    color: isSelected ? COLORS.textPrimary : COLORS.textMuted,
                     cursor: 'pointer',
                     fontSize: '11px',
-                    fontWeight: '700',
+                    fontWeight: isSelected ? '600' : '500',
                     transition: 'all 0.15s ease',
-                    opacity: isSelected ? 1 : 0.7,
                     minWidth: '44px',
                     textTransform: 'lowercase'
                   }}
@@ -370,15 +369,46 @@ const CameraAngle3DControl: React.FC<CameraAngle3DControlProps> = ({
           </div>
         </div>
 
-        {/* Orbital View with Rotate Buttons - positioned absolutely */}
+        {/* Rotate Left Button */}
+        <button
+          onClick={(e) => { e.stopPropagation(); rotateCamera('cw'); }}
+          style={{
+            width: '28px',
+            height: '28px',
+            borderRadius: '50%',
+            border: `1px solid ${COLORS.border}`,
+            background: 'rgba(30, 30, 30, 0.9)',
+            color: COLORS.textSecondary,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '14px',
+            transition: 'all 0.2s ease',
+            fontWeight: '500',
+            flexShrink: 0
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+            e.currentTarget.style.color = COLORS.textPrimary;
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'rgba(30, 30, 30, 0.9)';
+            e.currentTarget.style.color = COLORS.textSecondary;
+          }}
+          title="Rotate camera left"
+        >
+          ↻
+        </button>
+
+        {/* Orbital View */}
         <div style={{
           position: 'relative',
-          flex: 1,
           display: 'flex',
           justifyContent: 'center',
           alignItems: 'center',
-          minHeight: `${orbitalSize}px`,
-          padding: '0 24px'
+          flex: 1,
+          minWidth: 0
         }}>
           {/* Orbital Diagram */}
           <div
@@ -388,77 +418,9 @@ const CameraAngle3DControl: React.FC<CameraAngle3DControlProps> = ({
               width: `${orbitalSize}px`,
               height: `${orbitalSize}px`,
               position: 'relative',
-              cursor: 'pointer',
-              flexShrink: 0
+              cursor: 'pointer'
             }}
           >
-            {/* Rotate Left Button - positioned inside orbital area */}
-            <button
-              onClick={(e) => { e.stopPropagation(); rotateCamera('cw'); }}
-              style={{
-                position: 'absolute',
-                left: '-20px',
-                top: '50%',
-                transform: 'translateY(-50%)',
-                width: '32px',
-                height: '32px',
-                borderRadius: '50%',
-                border: `2px solid ${COLORS.yellow}`,
-                background: 'rgba(0, 0, 0, 0.7)',
-                color: COLORS.yellow,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '16px',
-                transition: 'all 0.2s ease',
-                fontWeight: '700',
-                zIndex: 20
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'rgba(253, 255, 0, 0.3)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'rgba(0, 0, 0, 0.7)';
-              }}
-              title="Rotate camera left"
-            >
-              ↻
-            </button>
-
-            {/* Rotate Right Button - positioned inside orbital area */}
-            <button
-              onClick={(e) => { e.stopPropagation(); rotateCamera('ccw'); }}
-              style={{
-                position: 'absolute',
-                right: '-20px',
-                top: '50%',
-                transform: 'translateY(-50%)',
-                width: '32px',
-                height: '32px',
-                borderRadius: '50%',
-                border: `2px solid ${COLORS.yellow}`,
-                background: 'rgba(0, 0, 0, 0.7)',
-                color: COLORS.yellow,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '16px',
-                transition: 'all 0.2s ease',
-                fontWeight: '700',
-                zIndex: 20
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'rgba(253, 255, 0, 0.3)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'rgba(0, 0, 0, 0.7)';
-              }}
-              title="Rotate camera right"
-            >
-              ↺
-            </button>
 
             {/* All azimuth dots - rendered with dynamic z-index based on depth */}
             {AZIMUTHS.map((az) => renderAzimuthDot(az))}
@@ -471,16 +433,15 @@ const CameraAngle3DControl: React.FC<CameraAngle3DControlProps> = ({
               background: `
                 radial-gradient(
                   ellipse 70% 70% at 35% 35%,
-                  rgba(80, 80, 80, 0.5) 0%,
-                  rgba(40, 40, 40, 0.55) 40%,
-                  rgba(20, 20, 20, 0.6) 70%,
-                  rgba(10, 10, 10, 0.65) 100%
+                  rgba(70, 70, 75, 0.6) 0%,
+                  rgba(45, 45, 50, 0.65) 40%,
+                  rgba(25, 25, 30, 0.7) 70%,
+                  rgba(15, 15, 18, 0.75) 100%
                 )
               `,
               boxShadow: `
-                inset 0 0 30px rgba(0, 0, 0, 0.3),
-                0 4px 20px rgba(0, 0, 0, 0.3),
-                0 0 0 2px rgba(253, 255, 0, 0.2)
+                inset 0 0 40px rgba(0, 0, 0, 0.4),
+                0 8px 32px rgba(0, 0, 0, 0.4)
               `,
               zIndex: 3,
               pointerEvents: 'none'
@@ -490,7 +451,7 @@ const CameraAngle3DControl: React.FC<CameraAngle3DControlProps> = ({
             <div style={{
               position: 'absolute',
               inset: '8%',
-              border: `2px solid rgba(253, 255, 0, 0.25)`,
+              border: `1px dashed rgba(255, 255, 255, 0.15)`,
               borderRadius: '50%',
               transform: 'rotateX(60deg)',
               transformStyle: 'preserve-3d',
@@ -518,13 +479,13 @@ const CameraAngle3DControl: React.FC<CameraAngle3DControlProps> = ({
             {/* Current angle label */}
             <div style={{
               position: 'absolute',
-              bottom: '-8px',
+              bottom: '-4px',
               left: '50%',
               transform: 'translateX(-50%)',
               fontSize: '12px',
-              fontWeight: '700',
-              color: COLORS.yellow,
-              textShadow: '0 1px 3px rgba(0, 0, 0, 0.8)',
+              fontWeight: '600',
+              color: COLORS.textPrimary,
+              textShadow: '0 1px 4px rgba(0, 0, 0, 0.6)',
               whiteSpace: 'nowrap',
               textTransform: 'lowercase',
               zIndex: 10
@@ -533,6 +494,38 @@ const CameraAngle3DControl: React.FC<CameraAngle3DControlProps> = ({
             </div>
           </div>
         </div>
+
+        {/* Rotate Right Button */}
+        <button
+          onClick={(e) => { e.stopPropagation(); rotateCamera('ccw'); }}
+          style={{
+            width: '28px',
+            height: '28px',
+            borderRadius: '50%',
+            border: `1px solid ${COLORS.border}`,
+            background: 'rgba(30, 30, 30, 0.9)',
+            color: COLORS.textSecondary,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '14px',
+            transition: 'all 0.2s ease',
+            fontWeight: '500',
+            flexShrink: 0
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+            e.currentTarget.style.color = COLORS.textPrimary;
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'rgba(30, 30, 30, 0.9)';
+            e.currentTarget.style.color = COLORS.textSecondary;
+          }}
+          title="Rotate camera right"
+        >
+          ↺
+        </button>
       </div>
 
       {/* Distance Slider */}
@@ -540,12 +533,12 @@ const CameraAngle3DControl: React.FC<CameraAngle3DControlProps> = ({
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        gap: '6px'
+        gap: '8px'
       }}>
         <div style={{
           fontSize: '10px',
-          fontWeight: '700',
-          color: COLORS.yellow,
+          fontWeight: '600',
+          color: COLORS.textSecondary,
           textTransform: 'lowercase',
           letterSpacing: '0.5px'
         }}>
@@ -553,8 +546,8 @@ const CameraAngle3DControl: React.FC<CameraAngle3DControlProps> = ({
         </div>
         <div style={{
           display: 'flex',
-          background: 'rgba(0, 0, 0, 0.4)',
-          borderRadius: '8px',
+          background: COLORS.surfaceLight,
+          borderRadius: '10px',
           padding: '4px',
           gap: '2px',
           width: 'fit-content'
@@ -568,16 +561,15 @@ const CameraAngle3DControl: React.FC<CameraAngle3DControlProps> = ({
                 key={dist.key}
                 onClick={() => onDistanceChange(dist.key)}
                 style={{
-                  padding: '8px 16px',
-                  borderRadius: '6px',
-                  border: isSelected ? `2px solid ${COLORS.black}` : '2px solid transparent',
-                  background: isSelected ? COLORS.yellow : 'transparent',
-                  color: isSelected ? COLORS.black : COLORS.white,
+                  padding: '8px 20px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  background: isSelected ? 'rgba(255, 255, 255, 0.15)' : 'transparent',
+                  color: isSelected ? COLORS.textPrimary : COLORS.textMuted,
                   cursor: 'pointer',
                   fontSize: '11px',
-                  fontWeight: '700',
+                  fontWeight: isSelected ? '600' : '500',
                   transition: 'all 0.15s ease',
-                  opacity: isSelected ? 1 : 0.7,
                   minWidth: '60px',
                   textTransform: 'lowercase'
                 }}
@@ -593,16 +585,16 @@ const CameraAngle3DControl: React.FC<CameraAngle3DControlProps> = ({
       {/* Selection Summary */}
       <div style={{
         textAlign: 'center',
-        padding: '8px 12px',
-        background: COLORS.yellowTransparent,
-        borderRadius: '8px',
+        padding: '10px 16px',
+        background: COLORS.surfaceLight,
+        borderRadius: '10px',
         fontSize: '12px',
-        fontWeight: '700',
-        color: COLORS.yellow,
+        fontWeight: '500',
+        color: COLORS.textSecondary,
         textTransform: 'lowercase',
-        border: `1px solid rgba(253, 255, 0, 0.3)`
+        letterSpacing: '0.3px'
       }}>
-        {currentAzimuth.label.toLowerCase()} • {currentElevation.label.toLowerCase()} • {currentDistance.label.toLowerCase()}
+        {currentAzimuth.label.toLowerCase()} · {currentElevation.label.toLowerCase()} · {currentDistance.label.toLowerCase()}
       </div>
     </div>
   );

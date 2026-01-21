@@ -7,6 +7,8 @@
  * - Interactive 3D camera control
  * - Cost estimation display
  * - Batch support
+ *
+ * Styled with Starface-inspired aesthetic: bold yellow/black, rounded elements, lowercase text
  */
 
 import React, { useState, useCallback, useEffect } from 'react';
@@ -43,6 +45,21 @@ export interface CameraAngleGenerationParams {
   distancePrompt: string;
   loraStrength: number;
 }
+
+// Refined color palette - elegant dark theme
+const COLORS = {
+  accent: '#FDFF00',
+  accentSoft: 'rgba(253, 255, 0, 0.15)',
+  black: '#000000',
+  white: '#FFFFFF',
+  textPrimary: 'rgba(255, 255, 255, 0.9)',
+  textSecondary: 'rgba(255, 255, 255, 0.6)',
+  textMuted: 'rgba(255, 255, 255, 0.4)',
+  surface: '#1c1c1e',
+  surfaceLight: 'rgba(255, 255, 255, 0.06)',
+  border: 'rgba(255, 255, 255, 0.1)',
+  borderLight: 'rgba(255, 255, 255, 0.06)'
+};
 
 const CameraAnglePopup: React.FC<CameraAnglePopupProps> = ({
   visible,
@@ -112,7 +129,7 @@ const CameraAnglePopup: React.FC<CameraAnglePopupProps> = ({
       style={{
         position: 'fixed',
         inset: 0,
-        background: 'rgba(0, 0, 0, 0.7)',
+        background: 'rgba(0, 0, 0, 0.85)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -125,41 +142,58 @@ const CameraAnglePopup: React.FC<CameraAnglePopupProps> = ({
         className="camera-angle-popup"
         onClick={(e) => e.stopPropagation()}
         style={{
-          background: 'linear-gradient(135deg, #ff5252 0%, #e53935 100%)',
-          borderRadius: '16px',
+          background: COLORS.surface,
+          borderRadius: '20px',
+          border: `1px solid ${COLORS.border}`,
           width: '100%',
-          maxWidth: '520px',
+          maxWidth: '420px',
           maxHeight: 'calc(100vh - 32px)',
           overflow: 'auto',
-          boxShadow: '0 20px 60px rgba(0, 0, 0, 0.4)',
-          animation: 'cameraAngleSlideUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)'
+          boxShadow: '0 24px 80px rgba(0, 0, 0, 0.6), 0 0 1px rgba(255, 255, 255, 0.1)',
+          animation: 'cameraAngleSlideUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
+          fontFamily: '"SF Mono", "Monaco", "Inconsolata", "Fira Mono", monospace'
         }}
       >
         {/* Header */}
         <div style={{
-          padding: '16px 20px',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+          padding: '18px 20px',
+          borderBottom: `1px solid ${COLORS.borderLight}`,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span style={{ fontSize: '24px' }}>📐</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{
+              width: '36px',
+              height: '36px',
+              borderRadius: '10px',
+              background: COLORS.surfaceLight,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '18px'
+            }}>
+              📷
+            </div>
             <div>
               <h2 style={{
                 margin: 0,
-                fontSize: '18px',
-                fontWeight: '700',
-                color: '#fff'
+                fontSize: '15px',
+                fontWeight: '600',
+                color: COLORS.textPrimary,
+                textTransform: 'lowercase',
+                letterSpacing: '-0.3px'
               }}>
-                3D Camera Angle
+                3d camera angle
               </h2>
               <p style={{
                 margin: '2px 0 0',
-                fontSize: '12px',
-                color: 'rgba(255, 255, 255, 0.7)'
+                fontSize: '11px',
+                color: COLORS.textMuted,
+                textTransform: 'lowercase',
+                fontWeight: '500'
               }}>
-                {isBatch ? `Re-render ${itemCount} images` : 'Re-render from a new angle'}
+                {isBatch ? `re-render ${itemCount} images` : 're-render from a new angle'}
               </p>
             </div>
           </div>
@@ -170,22 +204,25 @@ const CameraAnglePopup: React.FC<CameraAnglePopupProps> = ({
             style={{
               width: '32px',
               height: '32px',
-              borderRadius: '8px',
+              borderRadius: '50%',
               border: 'none',
-              background: 'rgba(255, 255, 255, 0.1)',
-              color: '#fff',
+              background: COLORS.surfaceLight,
+              color: COLORS.textSecondary,
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontSize: '18px',
-              transition: 'background 0.15s ease'
+              fontSize: '14px',
+              fontWeight: '400',
+              transition: 'all 0.15s ease'
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
+              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.12)';
+              e.currentTarget.style.color = COLORS.textPrimary;
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+              e.currentTarget.style.background = COLORS.surfaceLight;
+              e.currentTarget.style.color = COLORS.textSecondary;
             }}
           >
             ✕
@@ -208,41 +245,53 @@ const CameraAnglePopup: React.FC<CameraAnglePopupProps> = ({
         {/* Footer with Cost and Actions */}
         <div style={{
           padding: '16px 20px',
-          borderTop: '1px solid rgba(255, 255, 255, 0.1)',
-          background: 'rgba(0, 0, 0, 0.1)'
+          borderTop: `1px solid ${COLORS.borderLight}`,
+          background: COLORS.surfaceLight
         }}>
           {/* Cost Display */}
           <div style={{
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            marginBottom: '12px'
+            marginBottom: '14px'
           }}>
-            <span style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.7)' }}>
-              📸 {isBatch ? itemCount : 1} image{isBatch && itemCount > 1 ? 's' : ''}
+            <span style={{
+              fontSize: '12px',
+              color: COLORS.textMuted,
+              textTransform: 'lowercase',
+              fontWeight: '500'
+            }}>
+              {isBatch ? itemCount : 1} image{isBatch && itemCount > 1 ? 's' : ''}
             </span>
             <div style={{ textAlign: 'right' }}>
               {costLoading ? (
-                <span style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.5)' }}>
-                  Estimating...
+                <span style={{
+                  fontSize: '12px',
+                  color: COLORS.textMuted,
+                  textTransform: 'lowercase'
+                }}>
+                  estimating...
                 </span>
               ) : cost !== null ? (
-                <div>
-                  <span style={{ fontSize: '14px', fontWeight: '700', color: '#fff' }}>
-                    {cost.toFixed(2)} {getTokenLabel(tokenType)}
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
+                  <span style={{
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    color: COLORS.textPrimary
+                  }}>
+                    {cost.toFixed(2)} {getTokenLabel(tokenType).toLowerCase()}
                   </span>
                   {costInUSD !== null && (
                     <span style={{
-                      marginLeft: '6px',
                       fontSize: '11px',
-                      color: 'rgba(255, 255, 255, 0.5)'
+                      color: COLORS.textMuted
                     }}>
                       ≈ ${costInUSD.toFixed(2)}
                     </span>
                   )}
                 </div>
               ) : (
-                <span style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.5)' }}>
+                <span style={{ fontSize: '12px', color: COLORS.textMuted }}>
                   —
                 </span>
               )}
@@ -258,51 +307,58 @@ const CameraAnglePopup: React.FC<CameraAnglePopupProps> = ({
               onClick={onClose}
               style={{
                 flex: 1,
-                padding: '12px',
-                borderRadius: '10px',
-                border: '1px solid rgba(255, 255, 255, 0.3)',
+                padding: '12px 16px',
+                borderRadius: '12px',
+                border: `1px solid ${COLORS.border}`,
                 background: 'transparent',
-                color: '#fff',
+                color: COLORS.textSecondary,
                 cursor: 'pointer',
-                fontSize: '14px',
-                fontWeight: '600',
-                transition: 'all 0.15s ease'
+                fontSize: '13px',
+                fontWeight: '500',
+                textTransform: 'lowercase',
+                letterSpacing: '0.3px',
+                transition: 'all 0.15s ease',
+                fontFamily: 'inherit'
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+                e.currentTarget.style.color = COLORS.textPrimary;
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.background = 'transparent';
+                e.currentTarget.style.color = COLORS.textSecondary;
               }}
             >
-              Cancel
+              cancel
             </button>
 
             <button
               onClick={handleConfirm}
               style={{
                 flex: 2,
-                padding: '12px',
-                borderRadius: '10px',
+                padding: '12px 16px',
+                borderRadius: '12px',
                 border: 'none',
-                background: 'linear-gradient(135deg, #4A90D9, #357ABD)',
-                color: '#fff',
+                background: COLORS.accent,
+                color: COLORS.black,
                 cursor: 'pointer',
-                fontSize: '14px',
-                fontWeight: '700',
-                boxShadow: '0 4px 12px rgba(74, 144, 217, 0.4)',
-                transition: 'all 0.15s ease'
+                fontSize: '13px',
+                fontWeight: '600',
+                textTransform: 'lowercase',
+                letterSpacing: '0.3px',
+                transition: 'all 0.15s ease',
+                fontFamily: 'inherit'
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.transform = 'translateY(-1px)';
-                e.currentTarget.style.boxShadow = '0 6px 16px rgba(74, 144, 217, 0.5)';
+                e.currentTarget.style.boxShadow = '0 4px 16px rgba(253, 255, 0, 0.25)';
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = '0 4px 12px rgba(74, 144, 217, 0.4)';
+                e.currentTarget.style.boxShadow = 'none';
               }}
             >
-              📐 Generate {isBatch ? 'All' : ''}
+              generate {isBatch ? 'all' : ''}
             </button>
           </div>
         </div>

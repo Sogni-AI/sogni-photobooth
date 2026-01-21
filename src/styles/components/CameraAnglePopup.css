@@ -2,16 +2,18 @@
  * CameraAnglePopup.css
  *
  * Styles for the Camera Angle popup and 3D control components.
+ * Starface-inspired aesthetic: bold yellow/black, rounded elements, lowercase text
  */
 
 /* Popup Backdrop */
 .camera-angle-popup-backdrop {
-  backdrop-filter: blur(4px);
+  backdrop-filter: blur(8px);
 }
 
 /* Popup Container */
 .camera-angle-popup {
   -webkit-overflow-scrolling: touch;
+  font-family: "SF Mono", "Monaco", "Inconsolata", "Fira Mono", monospace;
 }
 
 /* Custom range slider styling */
@@ -20,7 +22,7 @@
   appearance: none;
   height: 6px;
   border-radius: 3px;
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.15);
   outline: none;
 }
 
@@ -30,10 +32,10 @@
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: #4A90D9;
+  background: rgba(255, 255, 255, 0.9);
   cursor: pointer;
-  border: 2px solid #fff;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  border: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   transition: transform 0.15s ease;
 }
 
@@ -45,10 +47,10 @@
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: #4A90D9;
+  background: rgba(255, 255, 255, 0.9);
   cursor: pointer;
-  border: 2px solid #fff;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  border: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 /* Azimuth strip scrollbar */
@@ -57,12 +59,12 @@
 }
 
 .camera-angle-3d-control .azimuth-strip::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.06);
   border-radius: 2px;
 }
 
 .camera-angle-3d-control .azimuth-strip::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.2);
   border-radius: 2px;
 }
 
@@ -71,6 +73,7 @@
   .camera-angle-popup {
     max-height: calc(100vh - 16px) !important;
     margin: 8px;
+    border-width: 2px !important;
   }
 
   .camera-angle-popup h2 {
@@ -78,8 +81,8 @@
   }
 
   .camera-angle-3d-control button {
-    font-size: 11px !important;
-    padding: 6px !important;
+    font-size: 10px !important;
+    padding: 8px !important;
   }
 }
 
@@ -118,6 +121,8 @@
 /* Preset button styles */
 .camera-angle-preset-btn {
   transition: all 0.15s ease;
+  text-transform: lowercase;
+  font-family: inherit;
 }
 
 .camera-angle-preset-btn:active {
@@ -126,28 +131,32 @@
 
 /* Generate button pulse on hover */
 .camera-angle-generate-btn:hover {
-  animation: cameraAnglePulse 1s ease infinite;
+  animation: cameraAnglePulse 2s ease infinite;
 }
 
 @keyframes cameraAnglePulse {
   0%, 100% {
-    box-shadow: 0 4px 12px rgba(74, 144, 217, 0.4);
+    box-shadow: 0 0 0 rgba(253, 255, 0, 0.2);
   }
   50% {
-    box-shadow: 0 4px 20px rgba(74, 144, 217, 0.6);
+    box-shadow: 0 0 16px rgba(253, 255, 0, 0.3);
   }
 }
 
 /* 3D Angle button in gallery */
 .camera-angle-btn {
-  background: linear-gradient(135deg, #6B5B95, #5A4A84) !important;
+  background: #FDFF00 !important;
+  color: #000 !important;
+  border: none !important;
+  border-radius: 10px !important;
+  text-transform: lowercase !important;
+  font-weight: 600 !important;
   transition: all 0.2s ease !important;
 }
 
 .camera-angle-btn:hover:not(:disabled) {
-  background: linear-gradient(135deg, #7B6BA5, #6A5A94) !important;
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(107, 91, 149, 0.4);
+  box-shadow: 0 4px 12px rgba(253, 255, 0, 0.25);
 }
 
 .camera-angle-btn:active:not(:disabled) {
@@ -155,21 +164,25 @@
 }
 
 .camera-angle-btn:disabled {
-  opacity: 0.5;
+  opacity: 0.4;
   cursor: not-allowed;
 }
 
 /* Batch button styles */
 .batch-camera-angle-btn {
-  background: linear-gradient(135deg, #6B5B95, #5A4A84);
-  border-radius: 8px;
+  background: #FDFF00;
+  color: #000;
+  border: none;
+  border-radius: 10px;
+  text-transform: lowercase;
+  font-weight: 600;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   transition: all 0.2s ease;
 }
 
 .batch-camera-angle-btn:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(253, 255, 0, 0.25);
 }
 
 /* Loading state for camera angle generation */
@@ -185,7 +198,7 @@
   background: linear-gradient(
     90deg,
     transparent,
-    rgba(107, 91, 149, 0.3),
+    rgba(255, 255, 255, 0.15),
     transparent
   );
   animation: cameraAngleShimmer 1.5s infinite;
@@ -197,5 +210,21 @@
   }
   100% {
     transform: translateX(100%);
+  }
+}
+
+/* Focus effect for active elements */
+.camera-angle-popup button:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.4);
+  outline-offset: 2px;
+}
+
+/* Subtle border animation */
+@keyframes yellowBorderPulse {
+  0%, 100% {
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+  50% {
+    border-color: rgba(255, 255, 255, 0.2);
   }
 }

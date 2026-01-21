@@ -3,7 +3,17 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
-An "AI photobooth" web app that allows users to snap a selfie or upload a photo via desktop or mobile, then quickly generate a series of stylised portraits without having to download AI models or have a powerful GPU. This is a demo application powered by the whitelabel Sogni Client SDK and open-sourced to give developers a solid example to fork or reference for their own Sogni Supernet powered applications.
+A full-featured **AI media generation suite** for stylized portraits, video creation, and image editing. Snap a selfie or upload a photo, then generate stunning stylized portraits, animate them into videos, edit with AI-powered transformations, and re-render from any camera angle—all without downloading models or needing a GPU.
+
+**Key Capabilities:**
+- 🎨 **12 AI Models** including SDXL, Qwen Image Edit 2511, and Flux.2
+- 🎬 **Video Generation** with Wan 2.2 (I2V, sound-to-video, dance memes, character replacement)
+- 📐 **3D Camera Angles** via Multiple Angles LoRA (96 angle combinations)
+- 🖌️ **AI Image Editing** with 30+ transformation presets
+- ⚡ **150+ Style Prompts** across 18 categories
+- 🔄 **Batch Processing** up to 256 concurrent generations
+
+This is a demo application powered by the whitelabel Sogni Client SDK, open-sourced for developers to fork or reference for their own Sogni Supernet powered applications.
 
 If you build something cool with the Sogni Client SDK let us know and we'll add it to the growing list of "Sogni Superapps": https://www.sogni.ai/super-apps
 
@@ -18,14 +28,129 @@ Live demo → **https://photobooth.sogni.ai**
 ---
 
 ## ✨ Features
-- **State-of-the-art Character Transfer / Identity-Preserving Stylized Synthesis** – keeps your face while transforming the style.
-- **Mobile & Desktop** – webcam support, camera-roll upload, drag-and-drop.
-- **One-Click Local Dev** – Vite + Nodemon + script runner.
-- **Style Presets & Customization** - Pick between 150+ style prompts or write your own. Pick different models and customize model guidance settings.
-- **DePIN Powered** – no model downloads or local GPU needed; up to 64 concurrent jobs on the Sogni Supernet.
-- **Secure Backend** – credentials live only in the Node server; the browser never sees them.
-- **Live Progress** – real-time SSE and per-image progress bars.
-- **💳 Stripe Payment Integration** – Purchase Spark Points directly in the app with credit card payments (authenticated users only).
+
+### 🎨 Image Generation
+
+**12 AI Models** for diverse generation styles:
+
+| Model | Type | Best For |
+|-------|------|----------|
+| **Sogni.XLT α1** | SDXL Turbo | Fast generation, general purpose |
+| **DreamShaper v2.1** | SDXL Turbo | Artistic styles |
+| **JuggernautXL 9** | SDXL Lightning | Photorealistic portraits |
+| **RealVisXL v4** | SDXL Lightning | Ultra-realistic output |
+| **Qwen Image Edit 2511** | Context-aware | Image transformations & editing |
+| **Qwen Image Edit 2511 Lightning** | Context-aware | Fast image transformations |
+| **Flux.1 Kontext** | Flux | Advanced context-aware generation |
+| **Flux.2 [dev]** | Flux | Highest quality output |
+
+**150+ Style Prompts** across 18 categories:
+- 🎄 Christmas/Winter (35+ styles) - defrostMode, snowLeopardFur, winterElf, etc.
+- 🎌 Anime/Manga/Chibi - 1990s anime, Ghibli meadow, Jojo stand aura, pixel chibi
+- 🎨 Classical/Vintage - Art Nouveau, Klimt gilded, Van Gogh swirl, Warhol pop
+- 📚 Comics/Caricature - Cel shade 3D, holo trading card, sketch caricature
+- 🚀 Fantasy/Sci-Fi - Cyber glow, mythic mermaid, neon cyberpunk
+- 💄 Glamour - Barbie, satin studio, avant-garde, fashion mag
+- 🎭 Kitsch/Gags - Llama photobomb, clown pastel, kitty swarm
+- 🖼️ Materials/Printmaking - Watercolor bleed, woodcut ink, embroidery stitch
+- 🌈 Neon/Vapor/Glitch - Synthwave grid, vaporwave, prism kaleidoscope
+- 👾 Pixel/NFT/Retro Game - CryptoPunk, Bored Ape, pixel art, arcade vector
+- 📸 Pro/Editorial - Magazine cover, vintage Hollywood, professional headshot
+- 🎉 Raver/Costume - Candy raver, festival color powder, y2k raver kid
+- 🎵 Roleplay - DJ, MC, F1 driver, basketball star, figure skater
+- 🥊 Fighters - Boxer, wrestler, kung fu master, samurai ronin
+- 🎨 Street/Graffiti - Banksy stencil, pop graffiti, punk poster
+- 📖 Storybook/Kidlit - Dragon, astronaut, mermaid cat, viking
+- 🎃 Halloween - Wednesday Addams, dark fairy, pumpkin queen
+- 👻 Horror - Vampire lord, haunted bride, cosmic grim reaper
+
+---
+
+### 🎬 Video Generation (Wan 2.2 14B)
+
+**Image-to-Video (I2V)**
+- Transform still images into dynamic 1-8 second videos
+- Quality presets: Fast (4 steps), Balanced (8 steps), High Quality (20 steps), Pro (30 steps)
+- Resolutions: 480p, 580p, 720p
+- LightX2V variant for 4x faster generation
+
+**Sound-to-Video (S2V)**
+- Generate videos synchronized to audio input
+- Precise audio timing controls (start time, duration)
+- Lip-sync and beat-matching capabilities
+
+**Animate-Move**
+- Reference motion from existing videos
+- Preserve subject identity while animating movement
+- Perfect for dance meme videos and choreography transfer
+
+**Animate-Replace (Character Replacement)**
+- Replace subjects in existing videos using SAM2 coordinate selection
+- Batch video character replacement for montage sequences
+- Maintains video continuity with new subject
+
+**Batch-Transition (Montage Mode)**
+- Generate seamless transitions between multiple images
+- Create montage videos with coordinated segments
+- Sequential image linking for continuous narratives
+
+---
+
+### 📐 Camera Angle Generation (Multiple Angles LoRA)
+
+**3D Position Remapping** using Qwen Image Edit 2511 + Multiple Angles LoRA:
+
+**96 Camera Angle Combinations:**
+- **8 Azimuths**: Front, Front-Right, Right, Back-Right, Back, Back-Left, Left, Front-Left
+- **4 Elevations**: Low-angle (-30°), Eye-level (0°), Elevated (30°), High-angle (60°)
+- **3 Distances**: Close-up, Medium, Wide
+
+**6 Quick Presets:**
+- 3/4 Portrait - Classic flattering angle
+- Profile - Side view
+- Hero Shot - Low-angle dramatic
+- Overhead - Top-down perspective
+- Close-up - Detailed face shot
+- Over Shoulder - Dynamic composition
+
+---
+
+### 🖌️ Image Enhancement & Editing
+
+**Qwen-Powered Transformations** (30+ presets):
+- Style transfers: Lego, Pixar, Simpsons, Minecraft, Fortnite, WoW
+- Art styles: Pop art, Ukiyo-e, tattoo flash, doodle art
+- Effects: Neon glow, claymation, bobblehead, angry expression
+- Additions: Add cats, hats & glasses, clone yourself
+
+**Photo Enhancement**
+- Full image upscaling and enhancement
+- Face-preserving transformations
+- Multiple undo/redo with original baseline preservation
+
+---
+
+### 📱 Core Features
+
+- **Identity-Preserving Synthesis** – keeps your face while transforming the style
+- **Mobile & Desktop** – webcam support, camera-roll upload, drag-and-drop
+- **Aspect Ratios** – Ultra Narrow to Ultra Wide (7 presets including 2:3, 3:4, 1:1, 16:9)
+- **DePIN Powered** – no model downloads; up to 256 concurrent jobs on Sogni Supernet
+- **Real-time Progress** – SSE streaming with per-image progress bars
+- **QR Watermarking** – configurable size, position, and custom URLs
+- **Batch Processing** – up to 256 concurrent images (16 on mobile)
+- **Local Project Storage** – IndexedDB with cloud sync
+- **Stripe Payments** – purchase Spark Points with credit card
+
+---
+
+### 🛠️ Developer Features
+
+- **One-Click Local Dev** – Vite + Nodemon + script runner
+- **Secure Backend** – credentials isolated in Node server
+- **Visual Regression Testing** – Playwright-based screenshot comparison
+- **useEffect Validation** – automated React hook linting
+- **Event Theming** – Halloween, Winter, custom event contexts
 
 > You'll need a free [Sogni account](https://www.sogni.ai) + tokens for inference jobs.
 
@@ -427,8 +552,13 @@ Licensed under the **MIT License**.  See [`LICENSE`](LICENSE) for the full text.
 ## 🙏 Acknowledgements
 - **Sogni AI** – for the SDK & Supernet that powers this application. [More "Superapps"](https://www.sogni.ai/super-apps)
 - **Stable Diffusion SDXL** – <https://huggingface.co/docs/diffusers/en/using-diffusers/sdxl>
+- **Wan 2.2** – video generation model for I2V, S2V, and animation workflows
+- **Qwen Image Edit 2511** – context-aware image editing and transformation
+- **Flux** – advanced image generation models (Kontext & Flux.2)
+- **Multiple Angles LoRA** – 3D camera position remapping
 - **ControlNet** – <https://github.com/lllyasviel/ControlNet>
 - **Instant ID** – <https://github.com/instantX-research/InstantID>
+- **SAM2** – segment anything for video subject selection
 - **Cursor AI** – the AI pair-programmer used to vibe-code this sample repo.
 
 For questions, feedback, or support feel free to reach us at **dream@sogni.ai** 
