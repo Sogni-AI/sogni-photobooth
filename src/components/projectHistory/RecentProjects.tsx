@@ -7,7 +7,7 @@ import JobItem from './JobItem';
 import MediaSlideshow, { type LocalImage } from './MediaSlideshow';
 import type { ArchiveProject } from '../../types/projectHistory';
 import type { LocalProject } from '../../types/localProjects';
-import { LOCAL_PROJECT_MAX_IMAGES, LOCAL_PROJECT_SUPPORTED_EXTENSIONS } from '../../types/localProjects';
+import { LOCAL_PROJECT_MAX_IMAGES, LOCAL_PROJECT_SUPPORTED_EXTENSIONS, LOCAL_PROJECT_SUPPORTED_TYPES } from '../../types/localProjects';
 import { pluralize, timeAgo } from '../../utils/string';
 import { downloadImagesAsZip, downloadVideosAsZip } from '../../utils/bulkDownload';
 import './RecentProjects.css';
@@ -296,6 +296,9 @@ function RecentProjects({
   const [draggedImageId, setDraggedImageId] = useState<string | null>(null);
   const [dragOverImageId, setDragOverImageId] = useState<string | null>(null);
 
+  // File drag-and-drop state (for dropping files from desktop)
+  const [fileDragOverProjectId, setFileDragOverProjectId] = useState<string | null>(null);
+
   // Cloud project download state
   const [downloadingProject, setDownloadingProject] = useState<string | null>(null);
   const [downloadProgress, setDownloadProgress] = useState<{ current: number; total: number; message: string } | null>(null);
@@ -551,6 +554,95 @@ function RecentProjects({
     setDraggedImageId(null);
     setDragOverImageId(null);
   }, []);
+
+  // File drag-and-drop handlers (for dropping files from desktop)
+  const isFileDrag = useCallback((e: React.DragEvent): boolean => {
+    // Check if the drag event contains files from outside the browser
+    return e.dataTransfer.types.includes('Files') && !draggedImageId;
+  }, [draggedImageId]);
+
+  const handleFileDragEnter = useCallback((e: React.DragEvent, projectId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (isFileDrag(e)) {
+      setFileDragOverProjectId(projectId);
+    }
+  }, [isFileDrag]);
+
+  const handleFileDragOver = useCallback((e: React.DragEvent, projectId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (isFileDrag(e)) {
+      e.dataTransfer.dropEffect = 'copy';
+      setFileDragOverProjectId(projectId);
+    }
+  }, [isFileDrag]);
+
+  const handleFileDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // Only clear if we're leaving the drop zone entirely (not entering a child)
+    const relatedTarget = e.relatedTarget as Node | null;
+    const currentTarget = e.currentTarget as Node;
+    if (!relatedTarget || !currentTarget.contains(relatedTarget)) {
+      setFileDragOverProjectId(null);
+    }
+  }, []);
+
+  const handleFileDrop = useCallback(async (e: React.DragEvent, projectId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setFileDragOverProjectId(null);
+
+    // Don't process if this is an internal drag (reordering)
+    if (draggedImageId) return;
+
+    const files = Array.from(e.dataTransfer.files);
+    if (files.length === 0) return;
+
+    // Filter to only supported image types
+    const validFiles = files.filter(file =>
+      LOCAL_PROJECT_SUPPORTED_TYPES.includes(file.type.toLowerCase())
+    );
+
+    if (validFiles.length === 0) {
+      console.warn('No valid image files in drop');
+      return;
+    }
+
+    // Clear any pending timeout from previous upload to avoid race condition
+    if (uploadTimeoutRef.current) {
+      clearTimeout(uploadTimeoutRef.current);
+      uploadTimeoutRef.current = null;
+    }
+
+    setUploadingToProject(projectId);
+    setUploadProgress({ added: 0, total: validFiles.length });
+
+    try {
+      const result = await addLocalImages(projectId, validFiles);
+      setUploadProgress({ added: result.added, total: validFiles.length });
+
+      // Refresh images if this project has images loaded
+      if (expandedProjectImages[projectId] || expandedProjectId === projectId) {
+        const refreshedImages = await getLocalProjectImageUrls(projectId);
+        setExpandedProjectImages(prev => ({
+          ...prev,
+          [projectId]: refreshedImages
+        }));
+      }
+
+      // Show result briefly then clear
+      uploadTimeoutRef.current = setTimeout(() => {
+        setUploadProgress(null);
+        setUploadingToProject(null);
+        uploadTimeoutRef.current = null;
+      }, 2000);
+    } catch {
+      setUploadProgress(null);
+      setUploadingToProject(null);
+    }
+  }, [draggedImageId, addLocalImages, expandedProjectImages, expandedProjectId, getLocalProjectImageUrls]);
 
   const {
     visibleProjects,
@@ -1339,20 +1431,32 @@ function RecentProjects({
                   {/* Local project content - inline expanded view or collapsed */}
                   {project.imageIds.length === 0 ? (
                     <div
-                      className="recent-project-local-empty"
+                      className={`recent-project-local-empty${fileDragOverProjectId === project.id ? ' file-drag-over' : ''}`}
                       onClick={() => handleUploadClick(project.id)}
+                      onDragEnter={(e) => handleFileDragEnter(e, project.id)}
+                      onDragOver={(e) => handleFileDragOver(e, project.id)}
+                      onDragLeave={handleFileDragLeave}
+                      onDrop={(e) => handleFileDrop(e, project.id)}
                     >
                       <span className="recent-project-local-empty-icon">📤</span>
-                      <span>Click to upload images or a folder</span>
+                      <span>{fileDragOverProjectId === project.id ? 'Drop images here' : 'Click or drag images here'}</span>
                       <span className="recent-project-local-empty-hint">
                         Supports JPG, PNG, WebP, GIF
                       </span>
                     </div>
                   ) : expandedProjectId === project.id ? (
                     /* Inline expanded view - show all images */
-                    <div className="local-project-inline-expanded">
+                    <div
+                      className={`local-project-inline-expanded${fileDragOverProjectId === project.id ? ' file-drag-over' : ''}`}
+                      onDragEnter={(e) => handleFileDragEnter(e, project.id)}
+                      onDragOver={(e) => handleFileDragOver(e, project.id)}
+                      onDragLeave={handleFileDragLeave}
+                      onDrop={(e) => handleFileDrop(e, project.id)}
+                    >
                       <div className="local-project-inline-hint">
-                        Drag to reorder • Click 🗑️ to delete • {expandedProjectImages[project.id]?.length || 0} images
+                        {fileDragOverProjectId === project.id
+                          ? 'Drop images to add them'
+                          : `Drag to reorder • Drop files to add • ${expandedProjectImages[project.id]?.length || 0} images`}
                       </div>
                       <div className="local-project-inline-grid">
                         {expandedProjectImages[project.id]?.map((image, index) => (
