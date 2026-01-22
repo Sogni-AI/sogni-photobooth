@@ -136,6 +136,8 @@ export interface MultiAngleGenerationParams {
   imageHeight: number;
   /** LoRA strength (default: 0.9) */
   loraStrength?: number;
+  /** Output image format (default: 'jpg') */
+  outputFormat?: 'png' | 'jpg';
 }
 
 /**

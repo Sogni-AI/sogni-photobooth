@@ -5215,7 +5215,8 @@ const PhotoGallery = ({
           angles,
           tokenType,
           imageWidth: width,
-          imageHeight: height
+          imageHeight: height,
+          outputFormat: settings.outputFormat
         },
         {
           onItemStart: (index, slotId) => {
@@ -5410,7 +5411,8 @@ const PhotoGallery = ({
         angles,
         tokenType,
         imageWidth: width,
-        imageHeight: height
+        imageHeight: height,
+        outputFormat: settings.outputFormat
       },
       {
         onItemStart: (index, slotId) => {
@@ -5518,7 +5520,8 @@ const PhotoGallery = ({
         }],
         tokenType,
         imageWidth: width,
-        imageHeight: height
+        imageHeight: height,
+        outputFormat: settings.outputFormat
       },
       {
         onItemStart: () => {

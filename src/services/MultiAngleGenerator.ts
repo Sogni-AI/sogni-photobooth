@@ -38,7 +38,7 @@ type SogniClient = {
  * Load an image URL as a Uint8Array buffer
  * Handles both blob URLs and HTTPS URLs
  */
-async function loadImageAsBuffer(url: string): Promise<Uint8Array> {
+async function loadImageAsBuffer(url: string, outputFormat: 'png' | 'jpg' = 'jpg'): Promise<Uint8Array> {
   // For blob URLs, fetch directly
   if (url.startsWith('blob:') || url.startsWith('data:')) {
     const response = await fetch(url);
@@ -51,6 +51,7 @@ async function loadImageAsBuffer(url: string): Promise<Uint8Array> {
   }
 
   // For HTTPS URLs, use Image + Canvas to handle CORS
+  const mimeType = outputFormat === 'png' ? 'image/png' : 'image/jpeg';
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.crossOrigin = 'anonymous';
@@ -74,7 +75,7 @@ async function loadImageAsBuffer(url: string): Promise<Uint8Array> {
         blob.arrayBuffer().then(arrayBuffer => {
           resolve(new Uint8Array(arrayBuffer));
         }).catch(reject);
-      }, 'image/png');
+      }, mimeType);
     };
 
     img.onerror = () => {
@@ -159,7 +160,8 @@ async function generateSingleAngle(
       loras: CAMERA_ANGLE_LORA.loras,
       loraStrengths: [params.loraStrength || CAMERA_ANGLE_LORA.defaultStrength],
       sampler: 'euler',
-      scheduler: 'simple'
+      scheduler: 'simple',
+      outputFormat: params.outputFormat || 'jpg'
     };
 
     console.log(`[MultiAngleGenerator] Project config:`, {
@@ -296,9 +298,10 @@ export async function generateMultipleAngles(
   const generatableAngles = angles.filter(slot => !slot.isOriginal);
 
   // Load source image once
+  const outputFormat = params.outputFormat || 'jpg';
   let imageBuffer: Uint8Array;
   try {
-    imageBuffer = await loadImageAsBuffer(sourceImageUrl);
+    imageBuffer = await loadImageAsBuffer(sourceImageUrl, outputFormat);
   } catch (error) {
     // Fail all items if we can't load the source
     const errorMsg = error instanceof Error ? error.message : 'Failed to load source image';

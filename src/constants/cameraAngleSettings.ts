@@ -29,8 +29,7 @@ export const CAMERA_ANGLE_DEFAULTS = {
   steps: 5,
   guidance: 1,
   sampler: 'euler',
-  scheduler: 'simple',
-  outputFormat: 'png'
+  scheduler: 'simple'
 } as const;
 
 // Azimuth options (8 horizontal camera positions)
