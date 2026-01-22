@@ -240,6 +240,7 @@ function RecentProjects({
 
   // Track scroll container ref for preserving scroll position
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const uploadTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // File input ref for local project image uploads
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -373,6 +374,12 @@ function RecentProjects({
       return;
     }
 
+    // Clear any pending timeout from previous upload to avoid race condition
+    if (uploadTimeoutRef.current) {
+      clearTimeout(uploadTimeoutRef.current);
+      uploadTimeoutRef.current = null;
+    }
+
     const projectId = uploadingToProject;
     const fileArray = Array.from(files);
     setUploadProgress({ added: 0, total: fileArray.length });
@@ -391,9 +398,10 @@ function RecentProjects({
       }
 
       // Show result briefly then clear
-      setTimeout(() => {
+      uploadTimeoutRef.current = setTimeout(() => {
         setUploadProgress(null);
         setUploadingToProject(null);
+        uploadTimeoutRef.current = null;
       }, 2000);
     } catch {
       setUploadProgress(null);
@@ -406,6 +414,11 @@ function RecentProjects({
 
   // Handle clicking upload button on a local project
   const handleUploadClick = useCallback((projectId: string) => {
+    // Clear any pending timeout from previous upload to avoid race condition
+    if (uploadTimeoutRef.current) {
+      clearTimeout(uploadTimeoutRef.current);
+      uploadTimeoutRef.current = null;
+    }
     setUploadingToProject(projectId);
     fileInputRef.current?.click();
   }, []);
@@ -1379,6 +1392,11 @@ function RecentProjects({
                         <button
                           className="local-project-inline-btn"
                           onClick={() => {
+                            // Clear any pending timeout from previous upload to avoid race condition
+                            if (uploadTimeoutRef.current) {
+                              clearTimeout(uploadTimeoutRef.current);
+                              uploadTimeoutRef.current = null;
+                            }
                             setUploadingToProject(project.id);
                             fileInputRef.current?.click();
                           }}
