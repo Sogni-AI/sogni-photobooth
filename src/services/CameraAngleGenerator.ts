@@ -340,33 +340,26 @@ export async function generateCameraAngle(options: GenerateCameraAngleOptions): 
         };
 
         preloadImage.onerror = () => {
+          console.error(`[CameraAngle] Failed to load result image: ${job.resultUrl}`);
+
           setPhotos(prev => {
             const updated = [...prev];
             if (!updated[photoIndex]) return prev;
             if (!updated[photoIndex].generatingCameraAngle) return prev;
 
-            const existingImages = updated[photoIndex].images || [];
-            // Replace the image at the current subIndex (like enhancement does)
-            const updatedImages = [...existingImages];
-            if (subIndex < updatedImages.length) {
-              updatedImages[subIndex] = job.resultUrl;
-            } else {
-              updatedImages.push(job.resultUrl);
-            }
-
+            // Don't add the broken URL to images - set error state instead
             updated[photoIndex] = {
               ...updated[photoIndex],
               generatingCameraAngle: false,
-              cameraAngleProgress: 100,
+              cameraAngleProgress: undefined,
               cameraAngleStatus: undefined,
               cameraAngleETA: undefined,
-              cameraAngleError: undefined,
-              images: updatedImages
+              cameraAngleError: 'Image failed to load'
             };
             return updated;
           });
 
-          onComplete?.(job.resultUrl);
+          onError?.(new Error('Camera angle image failed to load'));
         };
 
         preloadImage.src = job.resultUrl;

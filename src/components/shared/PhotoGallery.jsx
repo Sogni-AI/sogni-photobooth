@@ -5109,6 +5109,12 @@ const PhotoGallery = ({
         },
         onError: (error) => {
           console.error(`[BatchCameraAngle] Error for photo ${photo.id}:`, error);
+          showToast({
+            title: '📐 Angle Failed',
+            message: error.message || 'Camera angle generation failed',
+            type: 'error',
+            timeout: 3000
+          });
         },
         onOutOfCredits
       });
@@ -5338,6 +5344,12 @@ const PhotoGallery = ({
         },
         onError: (error) => {
           console.error(`[BatchPerImageAngle] Error for photo ${photo.id}:`, error);
+          showToast({
+            title: '📐 Angle Failed',
+            message: error.message || 'Camera angle generation failed',
+            type: 'error',
+            timeout: 3000
+          });
         },
         onOutOfCredits
       });
@@ -13649,8 +13661,8 @@ const PhotoGallery = ({
 
               {/* Video Error message */}
               {selectedPhoto.videoError && (
-                <div 
-                  className="video-error" 
+                <div
+                  className="video-error"
                   style={{
                     position: 'absolute',
                     bottom: '100%',
@@ -13683,6 +13695,45 @@ const PhotoGallery = ({
                   title="Click to dismiss"
                 >
                   {selectedPhoto.videoError}
+                </div>
+              )}
+
+              {/* Camera Angle Error message */}
+              {selectedPhoto.cameraAngleError && (
+                <div
+                  className="camera-angle-error"
+                  style={{
+                    position: 'absolute',
+                    bottom: '100%',
+                    left: '0',
+                    right: '0',
+                    marginBottom: selectedPhoto.videoError ? '32px' : '4px',
+                    background: 'rgba(255, 107, 0, 0.9)',
+                    color: 'white',
+                    padding: '4px 8px',
+                    borderRadius: '4px',
+                    fontSize: '11px',
+                    textAlign: 'center',
+                    zIndex: 10,
+                    maxWidth: '200px',
+                    wordWrap: 'break-word',
+                    cursor: 'pointer'
+                  }}
+                  onClick={() => {
+                    setPhotos(prev => {
+                      const updated = [...prev];
+                      if (updated[selectedPhotoIndex]) {
+                        updated[selectedPhotoIndex] = {
+                          ...updated[selectedPhotoIndex],
+                          cameraAngleError: null
+                        };
+                      }
+                      return updated;
+                    });
+                  }}
+                  title="Click to dismiss"
+                >
+                  📐 {selectedPhoto.cameraAngleError}
                 </div>
               )}
 
