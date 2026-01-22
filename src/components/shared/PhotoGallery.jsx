@@ -5473,6 +5473,16 @@ const PhotoGallery = ({
     const item = multiAngleItems[index];
     if (!item || item.status === 'generating') return;
 
+    // Debug logging for regeneration
+    console.log(`[PhotoGallery] Regenerating angle at index ${index}`);
+    console.log(`[PhotoGallery] Item being regenerated:`, {
+      slotId: item.slotId,
+      angleConfig: item.angleConfig,
+      previousResultUrl: item.resultUrl,
+      versionCount: item.versionHistory.length
+    });
+    console.log(`[PhotoGallery] Source URL: ${multiAngleSourceUrl}`);
+
     // Reset item for regeneration
     setMultiAngleItems(prev => resetItemForRegeneration(prev, index));
 
@@ -18518,7 +18528,7 @@ const PhotoGallery = ({
                     }}>
                       <span>0:00</span>
                       <span style={{ color: '#c62828', fontWeight: '700' }}>
-                        Start: {Math.floor(musicStartOffset / 60)}:{(musicStartOffset % 60).toFixed(1).padStart(4, '0')}
+                        Start: {Math.floor(musicStartOffset / 60)}:{(musicStartOffset % 60).toFixed(1).padStart(4, '0')} • Duration: {(loadedPhotosCount * (settings.videoDuration || 5)).toFixed(1)}s
                       </span>
                       <span>
                         {Math.floor(audioDuration / 60)}:{Math.floor(audioDuration % 60).toString().padStart(2, '0')}

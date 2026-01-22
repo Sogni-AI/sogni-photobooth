@@ -77,6 +77,18 @@ const AngleResultCard: React.FC<AngleResultCardProps> = ({
   versionCount = 1,
   currentVersion = 1
 }) => {
+  // Track when result image has finished loading to prevent flicker
+  const [resultImageLoaded, setResultImageLoaded] = useState(false);
+  const prevResultUrl = React.useRef<string | undefined>(undefined);
+
+  // Reset loaded state when result URL changes
+  React.useEffect(() => {
+    if (item.resultUrl !== prevResultUrl.current) {
+      setResultImageLoaded(false);
+      prevResultUrl.current = item.resultUrl;
+    }
+  }, [item.resultUrl]);
+
   const azConfig = getAzimuthConfig(item.angleConfig.azimuth);
   const elConfig = getElevationConfig(item.angleConfig.elevation);
   const distConfig = getDistanceConfig(item.angleConfig.distance);
@@ -101,7 +113,12 @@ const AngleResultCard: React.FC<AngleResultCardProps> = ({
   };
 
   const badge = getStatusBadge();
-  const displayUrl = item.resultUrl || item.sourceImageUrl;
+
+  // Determine what to show:
+  // - For original items or items without a result, show source
+  // - For items with a result, show result only after it's loaded
+  const showSourceImage = isOriginal || !item.resultUrl || !resultImageLoaded;
+  const showResultImage = !isOriginal && item.resultUrl;
 
   return (
     <div
@@ -200,16 +217,34 @@ const AngleResultCard: React.FC<AngleResultCardProps> = ({
         aspectRatio: '1',
         background: COLORS.surfaceLight
       }}>
-        {/* Main Image */}
-        {displayUrl && (
+        {/* Source Image - shown during pending/generating or as fallback */}
+        {showSourceImage && item.sourceImageUrl && (
           <img
-            src={displayUrl}
-            alt={isOriginal ? 'Original' : `Angle ${item.index + 1}`}
+            src={item.sourceImageUrl}
+            alt={isOriginal ? 'Original' : `Angle ${item.index + 1} (source)`}
             style={{
+              position: 'absolute',
               width: '100%',
               height: '100%',
               objectFit: 'cover',
               opacity: item.status === 'generating' ? 0.5 : 1,
+              transition: 'opacity 0.3s ease'
+            }}
+          />
+        )}
+
+        {/* Result Image - preloads and shows only after loaded to prevent flicker */}
+        {showResultImage && (
+          <img
+            src={item.resultUrl}
+            alt={`Angle ${item.index + 1}`}
+            onLoad={() => setResultImageLoaded(true)}
+            style={{
+              position: 'absolute',
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              opacity: resultImageLoaded ? 1 : 0,
               transition: 'opacity 0.3s ease'
             }}
           />

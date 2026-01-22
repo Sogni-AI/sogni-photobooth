@@ -104,6 +104,19 @@ async function generateSingleAngle(
   // Build the full prompt with activation keyword
   const fullPrompt = `<sks> ${azimuthConfig.prompt} ${elevationConfig.prompt} ${distanceConfig.prompt}`;
 
+  // Debug logging to verify prompt is correct
+  console.log(`[MultiAngleGenerator] Generating angle ${index} (slot: ${slot.id})`);
+  console.log(`[MultiAngleGenerator] Angle config:`, {
+    azimuth: slot.azimuth,
+    elevation: slot.elevation,
+    distance: slot.distance,
+    azimuthPrompt: azimuthConfig.prompt,
+    elevationPrompt: elevationConfig.prompt,
+    distancePrompt: distanceConfig.prompt
+  });
+  console.log(`[MultiAngleGenerator] Full prompt: "${fullPrompt}"`);
+  console.log(`[MultiAngleGenerator] Image dimensions: ${params.imageWidth}x${params.imageHeight}`);
+
   // Notify start
   callbacks.onItemStart?.(index, slot.id);
 
@@ -148,6 +161,20 @@ async function generateSingleAngle(
       sampler: 'euler',
       scheduler: 'simple'
     };
+
+    console.log(`[MultiAngleGenerator] Project config:`, {
+      modelId: projectConfig.modelId,
+      positivePrompt: projectConfig.positivePrompt,
+      steps: projectConfig.steps,
+      guidance: projectConfig.guidance,
+      seed: projectConfig.seed,
+      width: projectConfig.width,
+      height: projectConfig.height,
+      loraId: projectConfig.loraId,
+      loras: projectConfig.loras,
+      loraStrengths: projectConfig.loraStrengths,
+      contextImageSize: imageBuffer.length
+    });
 
     sogniClient.projects.create(projectConfig)
       .then((project: any) => {
@@ -197,6 +224,8 @@ async function generateSingleAngle(
 
           if (job.resultUrl) {
             cleanup();
+            console.log(`[MultiAngleGenerator] Angle ${index} (slot: ${slot.id}) completed!`);
+            console.log(`[MultiAngleGenerator] Result URL: ${job.resultUrl}`);
             callbacks.onItemComplete?.(index, job.resultUrl);
             resolve(job.resultUrl);
           }
