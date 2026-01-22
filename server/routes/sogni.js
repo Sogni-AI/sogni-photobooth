@@ -1279,9 +1279,8 @@ router.post('/generate-angle', ensureSessionId, async (req, res) => {
       outputFormat: 'png',
       sampler: 'euler',
       scheduler: 'simple',
-      // LoRA configuration for Multiple Angles
-      loraId: 'multiple_angles',
-      loras: ['qwen-image-edit-2511-multiple-angles-lora.safetensors'],
+      // LoRA configuration for Multiple Angles (using LoRA IDs, resolved by worker)
+      loras: ['multiple_angles'],
       loraStrengths: [loraStrength],
       clientAppId
     };

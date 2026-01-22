@@ -17,10 +17,9 @@ import type { MultiAnglePreset } from '../types/cameraAngle';
 // Model configuration for camera angle generation
 export const CAMERA_ANGLE_MODEL = 'qwen_image_edit_2511_fp8_lightning';
 
-// LoRA configuration
+// LoRA configuration - using LoRA IDs (resolved to filenames by worker via config API)
 export const CAMERA_ANGLE_LORA = {
-  loraId: 'multiple_angles',
-  loras: ['qwen-image-edit-2511-multiple-angles-lora.safetensors'],
+  loras: ['multiple_angles'],  // LoRA IDs, not filenames
   defaultStrength: 0.9
 } as const;
 

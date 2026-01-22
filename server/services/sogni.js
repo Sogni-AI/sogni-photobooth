@@ -503,9 +503,7 @@ export async function generateImage(client, params, progressCallback, localProje
     }
 
     // Add LoRA configuration if provided (for Multiple Angles LoRA and others)
-    if (params.loraId) {
-      projectOptions.loraId = params.loraId;
-    }
+    // loras[] now contains LoRA IDs (resolved to filenames by worker via config API)
     if (params.loras && Array.isArray(params.loras)) {
       projectOptions.loras = params.loras;
     }

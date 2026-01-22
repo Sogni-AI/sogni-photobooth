@@ -156,8 +156,7 @@ async function generateSingleAngle(
       height: params.imageHeight,
       contextImages: [imageBuffer],
       tokenType: params.tokenType,
-      loraId: CAMERA_ANGLE_LORA.loraId,
-      loras: CAMERA_ANGLE_LORA.loras,
+      loras: CAMERA_ANGLE_LORA.loras,  // LoRA IDs (resolved to filenames by worker)
       loraStrengths: [params.loraStrength || CAMERA_ANGLE_LORA.defaultStrength],
       sampler: 'euler',
       scheduler: 'simple',
@@ -172,7 +171,6 @@ async function generateSingleAngle(
       seed: projectConfig.seed,
       width: projectConfig.width,
       height: projectConfig.height,
-      loraId: projectConfig.loraId,
       loras: projectConfig.loras,
       loraStrengths: projectConfig.loraStrengths,
       contextImageSize: imageBuffer.length

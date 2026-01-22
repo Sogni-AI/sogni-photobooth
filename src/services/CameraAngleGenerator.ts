@@ -170,8 +170,7 @@ export async function generateCameraAngle(options: GenerateCameraAngleOptions): 
       height: imageHeight,
       contextImages: [new Uint8Array(arrayBuffer)],
       tokenType: tokenType,
-      loraId: CAMERA_ANGLE_LORA.loraId,
-      loras: CAMERA_ANGLE_LORA.loras,
+      loras: CAMERA_ANGLE_LORA.loras,  // LoRA IDs (resolved to filenames by worker)
       loraStrengths: [loraStrength],
       sampler: 'euler',
       scheduler: 'simple'
