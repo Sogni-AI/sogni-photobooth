@@ -237,6 +237,8 @@ const SoundToVideoPopup = ({
   const waveformCanvasRef = useRef(null);
   const audioContextRef = useRef(null);
   const playbackAnimationRef = useRef(null);
+  const audioStartOffsetRef = useRef(0); // Track current offset for animation frame access
+  const videoDurationRef = useRef(0); // Track current video duration for animation frame access
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
 
   useEffect(() => {
@@ -387,6 +389,15 @@ const SoundToVideoPopup = ({
       return () => cancelAnimationFrame(frame);
     }
   }, [drawWaveform, visible, audioWaveform, audioStartOffset, isPlaying, previewPlayhead, videoDuration, pendingStartOffset, pendingDuration]);
+
+  // Keep refs in sync for animation frame access (prevents stale closure when values change)
+  useEffect(() => {
+    audioStartOffsetRef.current = audioStartOffset;
+  }, [audioStartOffset]);
+
+  useEffect(() => {
+    videoDurationRef.current = videoDuration;
+  }, [videoDuration]);
 
   // Helper to get mouse/touch X coordinate
   const getClientX = (e) => {
@@ -676,8 +687,11 @@ const SoundToVideoPopup = ({
         if (audioPreviewRef.current && !audioPreviewRef.current.paused) {
           setPreviewPlayhead(audioPreviewRef.current.currentTime);
           // Loop back to start when reaching end of selection
-          if (audioPreviewRef.current.currentTime >= audioStartOffset + videoDuration) {
-            audioPreviewRef.current.currentTime = audioStartOffset;
+          // Use refs to read current values (prevents stale closure when duration changes)
+          const currentOffset = audioStartOffsetRef.current;
+          const currentDuration = videoDurationRef.current;
+          if (audioPreviewRef.current.currentTime >= currentOffset + currentDuration) {
+            audioPreviewRef.current.currentTime = currentOffset;
             audioPreviewRef.current.play().catch(() => setIsPlaying(false));
           }
           playbackAnimationRef.current = requestAnimationFrame(updatePlayhead);

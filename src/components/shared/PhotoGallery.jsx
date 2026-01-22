@@ -1610,6 +1610,7 @@ const PhotoGallery = ({
   const audioContextRef = useRef(null);
   const playbackAnimationRef = useRef(null);
   const musicStartOffsetRef = useRef(0); // Track current offset for animation frame access
+  const videoDurationRef = useRef(0); // Track current video duration for animation frame access
   const musicFileRef = useRef(null); // Track current music file for transition video generation
   const inlineAudioRef = useRef(null); // For playing music with transition videos
   
@@ -10164,6 +10165,11 @@ const PhotoGallery = ({
     musicFileRef.current = musicFile;
   }, [musicFile]);
 
+  // Keep videoDurationRef in sync for animation frame access (prevents stale closure)
+  useEffect(() => {
+    videoDurationRef.current = getVideoDuration();
+  }, [getVideoDuration]);
+
   // Toggle audio preview playback
   const toggleAudioPreview = useCallback(async () => {
     const audio = audioPreviewRef.current;
@@ -10203,9 +10209,9 @@ const PhotoGallery = ({
             return;
           }
           
-          // Read current offset from ref (updated when user drags selection)
+          // Read current values from refs (prevents stale closure when duration changes)
           const currentOffset = musicStartOffsetRef.current;
-          const videoDuration = getVideoDuration();
+          const videoDuration = videoDurationRef.current;
           const selectionEnd = currentOffset + videoDuration;
           
           // Check if we've passed the selection end - loop back to start

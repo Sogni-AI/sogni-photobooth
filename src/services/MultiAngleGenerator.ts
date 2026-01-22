@@ -262,6 +262,10 @@ export async function generateMultipleAngles(
 ): Promise<MultiAngleGenerationResult> {
   const { angles, sourceImageUrl } = params;
 
+  // Filter out isOriginal slots - they use the source image directly and don't need AI generation.
+  // This must match the filtering in createAngleGenerationItems to ensure indices align.
+  const generatableAngles = angles.filter(slot => !slot.isOriginal);
+
   // Load source image once
   let imageBuffer: Uint8Array;
   try {
@@ -269,28 +273,28 @@ export async function generateMultipleAngles(
   } catch (error) {
     // Fail all items if we can't load the source
     const errorMsg = error instanceof Error ? error.message : 'Failed to load source image';
-    for (let i = 0; i < angles.length; i++) {
+    for (let i = 0; i < generatableAngles.length; i++) {
       callbacks.onItemError?.(i, errorMsg);
     }
 
     const errorMap = new Map<number, string>();
-    angles.forEach((_, i) => errorMap.set(i, errorMsg));
+    generatableAngles.forEach((_, i) => errorMap.set(i, errorMsg));
 
     callbacks.onAllComplete?.(
-      angles.map((_, i) => ({ index: i, success: false, error: errorMsg }))
+      generatableAngles.map((_, i) => ({ index: i, success: false, error: errorMsg }))
     );
 
     return {
       success: false,
       urls: [],
-      failedIndices: angles.map((_, i) => i),
+      failedIndices: generatableAngles.map((_, i) => i),
       errors: errorMap
     };
   }
 
   // Track results
   const results: Array<{ index: number; success: boolean; url?: string; error?: string }> = [];
-  const urls: string[] = new Array(angles.length).fill('');
+  const urls: string[] = new Array(generatableAngles.length).fill('');
   const errors = new Map<number, string>();
 
   // Enhanced callbacks that forward to user callbacks
@@ -301,9 +305,8 @@ export async function generateMultipleAngles(
     }
   };
 
-  // Generate all angles concurrently
-  // Note: isOriginal slots are filtered out by createAngleGenerationItems before reaching here
-  const promises = angles.map((slot, index) =>
+  // Generate all angles concurrently (only non-original slots)
+  const promises = generatableAngles.map((slot, index) =>
     generateSingleAngle(sogniClient, imageBuffer, slot, params, enhancedCallbacks, index)
       .then(url => {
         urls[index] = url;

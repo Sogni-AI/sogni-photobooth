@@ -211,6 +211,8 @@ const AnimateReplacePopup = ({
   const timelineContainerRef = useRef(null);
   const simpleTimelineRef = useRef(null);
   const playbackAnimationRef = useRef(null);
+  const videoStartOffsetRef = useRef(0); // Track current offset for animation frame access
+  const videoDurationRef = useRef(0); // Track current video duration for animation frame access
   const sampleVideoRefs = useRef({}); // Track sample video elements to pause others
   const thumbnailImagesRef = useRef([]); // Cache loaded thumbnail images to prevent flicker
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
@@ -624,6 +626,15 @@ const AnimateReplacePopup = ({
     }
   }, [drawTimeline, visible, videoThumbnails, videoStartOffset, isPlaying, previewPlayhead, videoDuration, pendingStartOffset, pendingDuration]);
 
+  // Keep refs in sync for animation frame access (prevents stale closure when values change)
+  useEffect(() => {
+    videoStartOffsetRef.current = videoStartOffset;
+  }, [videoStartOffset]);
+
+  useEffect(() => {
+    videoDurationRef.current = videoDuration;
+  }, [videoDuration]);
+
   // Get visual values (pending during drag, actual otherwise)
   const visualStartOffset = pendingStartOffset !== null ? pendingStartOffset : videoStartOffset;
   const visualDuration = pendingDuration !== null ? pendingDuration : videoDuration;
@@ -881,13 +892,16 @@ const AnimateReplacePopup = ({
       const updatePlayhead = () => {
         if (videoPreviewRef.current && !videoPreviewRef.current.paused) {
           const currentTime = videoPreviewRef.current.currentTime;
-          const loopEndTime = videoStartOffset + videoDuration;
+          // Use refs to read current values (prevents stale closure when duration changes)
+          const currentOffset = videoStartOffsetRef.current;
+          const currentDuration = videoDurationRef.current;
+          const loopEndTime = currentOffset + currentDuration;
 
           setPreviewPlayhead(currentTime);
 
           // Loop back to start if we've reached or passed the end
           if (currentTime >= loopEndTime) {
-            videoPreviewRef.current.currentTime = videoStartOffset;
+            videoPreviewRef.current.currentTime = currentOffset;
           }
 
           playbackAnimationRef.current = requestAnimationFrame(updatePlayhead);
@@ -1056,7 +1070,8 @@ const AnimateReplacePopup = ({
         const updatePlayhead = () => {
           if (videoPreviewRef.current && !videoPreviewRef.current.paused) {
             const currentTime = videoPreviewRef.current.currentTime;
-            const loopEndTime = videoDuration; // Use the video duration set by generateThumbnails
+            // Use ref to read current duration (prevents stale closure when duration changes)
+            const loopEndTime = videoDurationRef.current;
 
             setPreviewPlayhead(currentTime);
 
