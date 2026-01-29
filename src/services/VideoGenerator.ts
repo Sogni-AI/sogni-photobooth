@@ -83,6 +83,8 @@ interface GenerateVideoOptions {
   videoStart?: number; // For animate-move and animate-replace - start offset in seconds
   sam2Coordinates?: string; // For animate-replace - JSON string of [{x, y}]
   modelVariant?: 'speed' | 'quality'; // Model variant for new workflows (lightx2v vs full)
+  // Frame trimming for seamless video stitching (removes duplicate frame at segment boundary)
+  trimEndFrame?: boolean; // Trim last frame from video (removes duplicate end frame)
   onComplete?: (videoUrl: string) => void;
   onError?: (error: Error) => void;
   onCancel?: () => void;
@@ -182,6 +184,7 @@ export async function generateVideo(options: GenerateVideoOptions): Promise<void
     videoStart,
     sam2Coordinates,
     modelVariant, // Model variant for new workflows (speed/quality)
+    trimEndFrame,
     onComplete,
     onError,
     onOutOfCredits,
@@ -385,6 +388,12 @@ export async function generateVideo(options: GenerateVideoOptions): Promise<void
       fps: fps,
       tokenType: tokenType
     };
+
+    // Add frame trimming parameter (for seamless video stitching)
+    // Applied by the worker after video generation using FFmpeg
+    if (trimEndFrame) {
+      createParams.trimEndFrame = true;
+    }
 
     // Add workflow-specific parameters
     if (workflowType === 'i2v' || workflowType === 'batch-transition') {
