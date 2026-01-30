@@ -76,6 +76,9 @@ const ImageAdjuster = ({
   const [selectedBatchCount, setSelectedBatchCount] = useState(numImages || contextNumImages);
   const [isBatchDropdownOpen, setIsBatchDropdownOpen] = useState(false);
 
+  // Use original image checkbox state
+  const [useOriginalImage, setUseOriginalImage] = useState(false);
+
   // Estimate cost for this generation
   // ImageAdjuster uses InstantID ControlNet, not Qwen Image Edit
   const { loading: costLoading, cost, costInUSD } = useCostEstimation({
@@ -729,25 +732,30 @@ const ImageAdjuster = ({
     if (isProcessing) {
       return;
     }
-    
+
     // Set processing state to prevent unmounting
     setIsProcessing(true);
-    
+
     try {
       const finalBlob = await processImageWithAdjustments();
-      
+
       // Log final file size being transmitted
       const finalSizeMB = (finalBlob.size / 1024 / 1024).toFixed(2);
       console.log(`📤 ImageAdjuster transmission size: ${finalSizeMB}MB`);
-      
-      // Call onConfirm with the processed blob
-      onConfirm(finalBlob, { position, scale, batchCount: selectedBatchCount });
+
+      // If "use original image" is checked, skip AI generation
+      if (useOriginalImage && onUseRawImage) {
+        onUseRawImage(finalBlob);
+      } else {
+        // Call onConfirm with the processed blob for AI generation
+        onConfirm(finalBlob, { position, scale, batchCount: selectedBatchCount });
+      }
     } catch (error) {
       console.error('[IMAGE_ADJUSTER] handleConfirm error:', error);
       setIsProcessing(false);
       alert(error.message || 'Failed to process image. Please try again.');
     }
-  }, [isProcessing, processImageWithAdjustments, position, scale, selectedBatchCount, onConfirm]);
+  }, [isProcessing, processImageWithAdjustments, position, scale, selectedBatchCount, onConfirm, useOriginalImage, onUseRawImage]);
   
   
   return (
@@ -936,72 +944,92 @@ const ImageAdjuster = ({
             </button>
           )}
 
-          <div className="batch-dropdown-container" ref={dropdownRef}>
-            <button 
-              className="confirm-button confirm-button-main" 
-              onClick={handleConfirm}
-              disabled={isProcessing || !imageLoaded}
-              style={{
-                ...(headerText === 'Adjust Your Style Reference' ? { borderRadius: '12px' } : {}),
-                ...(isProcessing || !imageLoaded ? { opacity: 0.6, cursor: 'not-allowed' } : {})
-              }}
-            >
-              {headerText === 'Adjust Your Style Reference' ? (
-                'Continue'
-              ) : (
-                <div className="confirm-button-content">
-                  <div className="confirm-button-label">
-                    {isProcessing ? '⏳ Processing...' : !imageLoaded ? '⏳ Loading image...' : `Imagine ${selectedBatchCount}x`}
-                  </div>
-                  <div className="confirm-button-details">
-                    {!isProcessing && isAuthenticated && !costLoading && cost !== null && (
-                      <>
-                        <span className="price-token">{cost.toFixed(2)} {tokenLabel.split(' ')[0]}</span>
-                        {costInUSD !== null && (
-                          <span className="price-usd">≈ ${(Math.round(costInUSD * 100) / 100).toFixed(2)}</span>
-                        )}
-                      </>
-                    )}
-                  </div>
-                </div>
-              )}
-            </button>
-            {headerText !== 'Adjust Your Style Reference' && (
+
+          <div className="imagine-button-wrapper">
+            <div className="batch-dropdown-container" ref={dropdownRef}>
               <button
-                className="confirm-button confirm-button-dropdown"
-                onClick={() => setIsBatchDropdownOpen(!isBatchDropdownOpen)}
-                disabled={isProcessing}
-                aria-label="Select batch count"
+                className="confirm-button confirm-button-main"
+                onClick={handleConfirm}
+                disabled={isProcessing || !imageLoaded}
                 style={{
-                  ...(isProcessing ? { opacity: 0.6, cursor: 'not-allowed' } : {}),
-                  borderLeft: '1px solid rgba(255, 255, 255, 0.15)'
+                  ...(headerText === 'Adjust Your Style Reference' ? { borderRadius: '12px' } : {}),
+                  ...(isProcessing || !imageLoaded ? { opacity: 0.6, cursor: 'not-allowed' } : {})
                 }}
               >
-                <span className="dropdown-caret">▼</span>
+                {headerText === 'Adjust Your Style Reference' ? (
+                  'Continue'
+                ) : (
+                  <div className="confirm-button-content">
+                    <div className="confirm-button-label">
+                      {isProcessing ? '⏳ Processing...' : !imageLoaded ? '⏳ Loading image...' : useOriginalImage ? `Use Original ${selectedBatchCount}x` : `Imagine ${selectedBatchCount}x`}
+                    </div>
+                    <div className="confirm-button-details">
+                      {!isProcessing && !useOriginalImage && isAuthenticated && !costLoading && cost !== null && (
+                        <>
+                          <span className="price-token">{cost.toFixed(2)} {tokenLabel.split(' ')[0]}</span>
+                          {costInUSD !== null && (
+                            <span className="price-usd">≈ ${(Math.round(costInUSD * 100) / 100).toFixed(2)}</span>
+                          )}
+                        </>
+                      )}
+                      {useOriginalImage && !isProcessing && (
+                        <span className="price-free">Free</span>
+                      )}
+                    </div>
+                  </div>
+                )}
               </button>
-            )}
-            {isBatchDropdownOpen && (
-              <div className="batch-dropdown-menu">
-                {batchOptions.map(count => (
-                  <button
-                    key={count}
-                    className={`batch-dropdown-item ${count === selectedBatchCount ? 'selected' : ''}`}
-                    onClick={() => {
-                      console.log(`🔢 Batch count changed to ${count}`);
-                      setSelectedBatchCount(count);
-                      updateSetting('numImages', count); // Save to settings immediately
-                      setIsBatchDropdownOpen(false);
-                    }}
-                  >
-                    {count}x
-                    {count === selectedBatchCount && <span className="checkmark">✓</span>}
-                  </button>
-                ))}
-              </div>
+              {headerText !== 'Adjust Your Style Reference' && (
+                <button
+                  className="confirm-button confirm-button-dropdown"
+                  onClick={() => setIsBatchDropdownOpen(!isBatchDropdownOpen)}
+                  disabled={isProcessing}
+                  aria-label="Select batch count"
+                  style={{
+                    ...(isProcessing ? { opacity: 0.6, cursor: 'not-allowed' } : {}),
+                    borderLeft: '1px solid rgba(255, 255, 255, 0.15)'
+                  }}
+                >
+                  <span className="dropdown-caret">▼</span>
+                </button>
+              )}
+              {isBatchDropdownOpen && (
+                <div className="batch-dropdown-menu">
+                  {batchOptions.map(count => (
+                    <button
+                      key={count}
+                      className={`batch-dropdown-item ${count === selectedBatchCount ? 'selected' : ''}`}
+                      onClick={() => {
+                        console.log(`🔢 Batch count changed to ${count}`);
+                        setSelectedBatchCount(count);
+                        updateSetting('numImages', count); // Save to settings immediately
+                        setIsBatchDropdownOpen(false);
+                      }}
+                    >
+                      {count}x
+                      {count === selectedBatchCount && <span className="checkmark">✓</span>}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            {/* Use Original checkbox - right under the Imagine button */}
+            {onUseRawImage && headerText !== 'Adjust Your Style Reference' && (
+              <label
+                className="use-raw-image-checkbox"
+                title="Skip AI generation and use your cropped/adjusted image as-is"
+              >
+                <input
+                  type="checkbox"
+                  checked={useOriginalImage}
+                  onChange={(e) => setUseOriginalImage(e.target.checked)}
+                />
+                skip AI generation
+              </label>
             )}
           </div>
         </div>
-        
+
         {/* Style Dropdown */}
         {showStyleDropdown && (
           <StyleDropdown
@@ -1032,26 +1060,6 @@ const ImageAdjuster = ({
           />
         )}
         
-        {/* Use Raw Image - subtle advanced option */}
-        {onUseRawImage && headerText !== 'Adjust Your Style Reference' && (
-          <button
-            className="use-raw-image-link"
-            onClick={async () => {
-              try {
-                // Process the image with user's adjustments (crop, scale, position)
-                const processedBlob = await processImageWithAdjustments();
-                // Pass the processed blob to the handler
-                onUseRawImage(processedBlob);
-              } catch (err) {
-                console.error('Failed to process raw image:', err);
-                alert(err.message || 'Failed to process image. Please try again.');
-              }
-            }}
-            title="Skip AI generation and use your cropped/adjusted image as-is"
-          >
-            use unmodified image
-          </button>
-        )}
         </div>
       </div>
     </div>

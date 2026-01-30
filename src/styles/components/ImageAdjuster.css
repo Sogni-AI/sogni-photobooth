@@ -340,7 +340,7 @@
   gap: 15px;
   margin-top: 10px;
   justify-content: center;
-  align-items: center;
+  align-items: flex-start;
   width: 100%;
 }
 
@@ -438,6 +438,12 @@
   font-weight: 400;
   opacity: 0.75;
   font-size: 10px;
+}
+
+.price-free {
+  font-weight: 500;
+  opacity: 0.85;
+  font-size: 11px;
 }
 
 .confirm-button .cost-estimate {
@@ -766,25 +772,35 @@
   }
 }
 
-/* Use Raw Image - subtle advanced option */
-.use-raw-image-link {
-  position: absolute;
-  bottom: 8px;
-  right: 12px;
-  background: none;
-  border: none;
-  color: rgba(255, 255, 255, 0.25);
-  font-size: 10px;
-  cursor: pointer;
-  padding: 4px 6px;
-  transition: color 0.2s ease;
-  font-family: inherit;
-  text-decoration: none;
+/* Wrapper to stack Imagine button and checkbox */
+.imagine-button-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
-.use-raw-image-link:hover {
-  color: rgba(255, 255, 255, 0.5);
-  text-decoration: underline;
+/* Use Original checkbox - simple text right under the Imagine button */
+.use-raw-image-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 3px;
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 11px;
+  cursor: pointer;
+  transition: color 0.2s ease;
+  user-select: none;
+}
+
+.use-raw-image-checkbox:hover {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.use-raw-image-checkbox input[type="checkbox"] {
+  width: 11px;
+  height: 11px;
+  margin: 0;
+  cursor: pointer;
 }
 
 /* Handle iOS Safari viewport height issues */
