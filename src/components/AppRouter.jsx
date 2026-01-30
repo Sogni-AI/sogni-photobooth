@@ -11,7 +11,6 @@ import { WinterMusicPlayerProvider } from '../context/WinterMusicPlayerContext';
 import GlobalMusicPlayer from './shared/GlobalMusicPlayer';
 import GlobalWinterMusicPlayer from './shared/GlobalWinterMusicPlayer';
 import PageMetadata from './shared/PageMetadata';
-import WinterEventNotification from './notifications/WinterEventNotification';
 
 // Create navigation context
 const NavigationContext = createContext();
@@ -122,10 +121,6 @@ const AppRouter = () => {
         <GlobalMusicPlayer />
           <GlobalWinterMusicPlayer />
 
-        {/* Winter event notification - only show on main page */}
-        {currentRoute === 'main' && (
-          <WinterEventNotification onNavigate={navigateToWinter} />
-        )}
 
         {currentRoute === 'analytics' ? (
           <AnalyticsDashboard />
