@@ -1624,4 +1624,61 @@ router.get('/disconnect', ensureSessionId, async (req, res) => {
   }
 });
 
+// Image proxy to bypass CORS for S3 downloads
+router.get('/proxy-image', async (req, res) => {
+  const imageUrl = req.query.url;
+
+  if (!imageUrl) {
+    return res.status(400).json({ error: 'URL parameter is required' });
+  }
+
+  // Only allow proxying from trusted S3 domains
+  const allowedDomains = [
+    'complete-images-production.s3-accelerate.amazonaws.com',
+    'complete-images-staging.s3-accelerate.amazonaws.com',
+    'complete-images-production.s3.amazonaws.com',
+    'complete-images-staging.s3.amazonaws.com',
+    's3.amazonaws.com',
+    's3-accelerate.amazonaws.com'
+  ];
+
+  try {
+    const url = new URL(imageUrl);
+    const isAllowed = allowedDomains.some(domain =>
+      url.hostname === domain || url.hostname.endsWith(`.${domain}`)
+    );
+
+    if (!isAllowed) {
+      console.warn(`[Image Proxy] Blocked request to untrusted domain: ${url.hostname}`);
+      return res.status(403).json({ error: 'Domain not allowed' });
+    }
+
+    console.log(`[Image Proxy] Fetching: ${imageUrl.slice(0, 100)}...`);
+
+    const response = await fetch(imageUrl);
+
+    if (!response.ok) {
+      console.error(`[Image Proxy] Upstream error: ${response.status} ${response.statusText}`);
+      return res.status(response.status).json({
+        error: 'Failed to fetch image',
+        status: response.status
+      });
+    }
+
+    // Get content type from response
+    const contentType = response.headers.get('content-type') || 'application/octet-stream';
+
+    // Stream the response to the client
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Cache-Control', 'private, max-age=3600');
+
+    const arrayBuffer = await response.arrayBuffer();
+    res.send(Buffer.from(arrayBuffer));
+
+  } catch (error) {
+    console.error('[Image Proxy] Error:', error);
+    res.status(500).json({ error: 'Failed to proxy image', message: error.message });
+  }
+});
+
 export default router; 

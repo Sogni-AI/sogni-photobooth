@@ -4,6 +4,7 @@ import QRCode from 'qrcode';
 
 import PropTypes from 'prop-types';
 import urls from '../../config/urls';
+import { fetchS3AsBlob, fetchS3WithFallback } from '../../utils/s3FetchWithFallback';
 import '../../styles/film-strip.css'; // Using film-strip.css which contains the gallery styles
 import '../../styles/components/PhotoGallery.css';
 import { createPolaroidImage } from '../../utils/imageProcessing';
@@ -10675,7 +10676,10 @@ const PhotoGallery = ({
           try {
             // Detect actual format from image - SAME AS INDIVIDUAL
             if (imageUrl.startsWith('blob:') || imageUrl.startsWith('http')) {
-              const response = await fetch(imageUrl);
+              // Use S3 fetch with CORS fallback for HTTP URLs (blob URLs don't need it)
+              const response = imageUrl.startsWith('blob:')
+                ? await fetch(imageUrl)
+                : await fetchS3WithFallback(imageUrl);
               const contentType = response.headers.get('content-type');
               if (contentType) {
                 if (contentType.includes('image/png')) {
@@ -10863,14 +10867,8 @@ const PhotoGallery = ({
         if (!imageUrl) continue;
 
         try {
-          // Fetch the image as blob
-          const response = await fetch(imageUrl);
-          if (!response.ok) {
-            console.warn(`Failed to fetch image ${i + 1}:`, response.statusText);
-            continue;
-          }
-
-          const blob = await response.blob();
+          // Fetch the image as blob with S3 CORS fallback
+          const blob = await fetchS3AsBlob(imageUrl);
 
           // Determine filename and extension
           const mimeType = blob.type || 'image/png';
@@ -11522,9 +11520,8 @@ const PhotoGallery = ({
         // Only fallback if mobile download explicitly failed (returned false)
       }
       
-      // Standard desktop download
-      const response = await fetch(imageUrl);
-      const blob = await response.blob();
+      // Standard desktop download with S3 CORS fallback
+      const blob = await fetchS3AsBlob(imageUrl);
       const blobUrl = URL.createObjectURL(blob);
       
       // Create a temporary link element
@@ -11837,7 +11834,10 @@ const PhotoGallery = ({
       try {
         // If this is a blob URL, we can fetch it to check the MIME type
         if (imageUrl.startsWith('blob:') || imageUrl.startsWith('http')) {
-          const response = await fetch(imageUrl);
+          // Use S3 fetch with CORS fallback for HTTP URLs (blob URLs don't need it)
+          const response = imageUrl.startsWith('blob:')
+            ? await fetch(imageUrl)
+            : await fetchS3WithFallback(imageUrl);
           const contentType = response.headers.get('content-type');
           if (contentType) {
             if (contentType.includes('image/png')) {

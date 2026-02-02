@@ -23,6 +23,7 @@ import {
   type DistanceKey
 } from '../constants/cameraAngleSettings';
 import { Photo } from '../types/index';
+import { fetchS3AsBlob } from '../utils/s3FetchWithFallback';
 
 type SogniClient = {
   projects: {
@@ -100,11 +101,8 @@ export async function generateCameraAngle(options: GenerateCameraAngleOptions): 
       throw new Error('No image URL found');
     }
 
-    const response = await fetch(imageUrl);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch image: ${response.status}`);
-    }
-    const imageBlob = await response.blob();
+    // Use S3 fetch with CORS fallback for reliable image loading
+    const imageBlob = await fetchS3AsBlob(imageUrl);
     const arrayBuffer = await imageBlob.arrayBuffer();
 
     // Set initial state - mark as generating and store original source if not already stored

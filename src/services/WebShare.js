@@ -3,6 +3,7 @@
  * Service for handling Web Share API functionality
  */
 import { createPolaroidImage } from '../utils/imageProcessing';
+import { fetchS3AsBlob } from '../utils/s3FetchWithFallback';
 
 /**
  * Generic share using Web Share API
@@ -57,10 +58,9 @@ export const shareViaWebShare = async ({
     // If we have a video, share it directly
     if (isVideo) {
       console.log('Preparing video for Web Share');
-      
-      // Fetch the video and convert to blob
-      const response = await fetch(mediaUrl);
-      const blob = await response.blob();
+
+      // Fetch the video with S3 CORS fallback and convert to blob
+      const blob = await fetchS3AsBlob(mediaUrl);
       
       // Create a file from the blob
       const filename = `sogni-video-${Date.now()}.mp4`;

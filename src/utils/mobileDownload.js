@@ -6,6 +6,7 @@
 import { isIOS, isMobile } from './index';
 import { TWITTER_SHARE_CONFIG } from '../constants/settings';
 import { trackDownloadWithStyle } from '../services/analyticsService';
+import { fetchS3AsBlob } from './s3FetchWithFallback';
 
 /**
  * Detect if device is Android
@@ -56,8 +57,8 @@ export const downloadImageMobile = async (imageUrl, filename, analyticsOptions =
       // Method 1: Try native Web Share API first (works on modern iOS and Android)
       if (navigator.share && navigator.canShare) {
         try {
-          const response = await fetch(imageUrl);
-          const blob = await response.blob();
+          // Use S3 fetch with CORS fallback for reliable image loading
+          const blob = await fetchS3AsBlob(imageUrl);
           const file = new File([blob], filename, { type: blob.type });
           
           if (navigator.canShare({ files: [file] })) {
@@ -248,8 +249,8 @@ const downloadImageIOS = async (imageUrl, filename) => {
  */
 const downloadImageAndroid = async (imageUrl, filename) => {
   try {
-    const response = await fetch(imageUrl);
-    const blob = await response.blob();
+    // Use S3 fetch with CORS fallback for reliable image loading
+    const blob = await fetchS3AsBlob(imageUrl);
     
     // Ensure proper MIME type for photo recognition
     const imageBlob = new Blob([blob], { type: 'image/png' });
@@ -285,8 +286,8 @@ const downloadImageAndroid = async (imageUrl, filename) => {
  */
 const downloadImageStandard = async (imageUrl, filename) => {
   try {
-    const response = await fetch(imageUrl);
-    const blob = await response.blob();
+    // Use S3 fetch with CORS fallback for reliable image loading
+    const blob = await fetchS3AsBlob(imageUrl);
     const blobUrl = URL.createObjectURL(blob);
     
     const link = document.createElement('a');

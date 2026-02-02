@@ -6,6 +6,7 @@ import { useApp } from '../../context/AppContext';
 import VideoRecorderPopup from './VideoRecorderPopup';
 import { saveRecording } from '../../utils/recordingsDB';
 import VideoSettingsFooter from './VideoSettingsFooter';
+import { fetchS3WithFallback } from '../../utils/s3FetchWithFallback';
 
 // Sample replacement videos for Animate Replace
 const SAMPLE_REPLACEMENT_VIDEOS = [
@@ -295,8 +296,8 @@ const AnimateReplacePopup = ({
 
     try {
       if (!isBlobUrl) {
-        // Fetch the video as a blob to bypass CORS for canvas operations
-        const response = await fetch(videoUrl, { mode: 'cors' });
+        // Fetch the video as a blob with S3 CORS fallback for canvas operations
+        const response = await fetchS3WithFallback(videoUrl);
         if (!response.ok) throw new Error('Failed to fetch video');
         const blob = await response.blob();
         blobUrl = URL.createObjectURL(blob);

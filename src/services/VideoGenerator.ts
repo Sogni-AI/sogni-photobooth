@@ -37,6 +37,7 @@ export type VideoWorkflowType = 'i2v' | 's2v' | 'animate-move' | 'animate-replac
 import { Photo } from '../types/index';
 import { trackVideoGeneration } from './frontendAnalytics';
 import { fetchWithRetry } from '../utils/index';
+import { fetchS3AsBlob } from '../utils/s3FetchWithFallback';
 
 type SogniClient = {
   projects: {
@@ -259,11 +260,8 @@ export async function generateVideo(options: GenerateVideoOptions): Promise<void
       throw new Error('No image URL found');
     }
 
-    const response = await fetch(imageUrl);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch image: ${response.status}`);
-    }
-    const imageBlob = await response.blob();
+    // Use S3 fetch with CORS fallback for reliable image loading
+    const imageBlob = await fetchS3AsBlob(imageUrl);
     const arrayBuffer = await imageBlob.arrayBuffer();
       imageBuffer = new Uint8Array(arrayBuffer);
     }

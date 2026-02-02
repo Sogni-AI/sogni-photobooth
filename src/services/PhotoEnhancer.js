@@ -1,6 +1,7 @@
 /**
  * Handles photo enhancement using Sogni API
  */
+import { fetchS3AsBlob } from '../utils/s3FetchWithFallback';
 
 /**
  * Enhances a photo using Sogni API
@@ -92,11 +93,8 @@ export const enhancePhoto = async (options) => {
       throw new Error(`No image URL found for enhancement. Photo #${photoIndex}, subIndex: ${subIndex}`);
     }
     
-    const response = await fetch(imageUrl);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch image: ${response.status} ${response.statusText}`);
-    }
-    const imageBlob = await response.blob();
+    // Use S3 fetch with CORS fallback for reliable image loading
+    const imageBlob = await fetchS3AsBlob(imageUrl);
     console.log(`[ENHANCE] Image blob size: ${imageBlob.size} bytes`);
     
     // Set loading state

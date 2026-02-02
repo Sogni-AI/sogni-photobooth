@@ -5,6 +5,7 @@
 import { styleIdToDisplay, normalizeSampler, normalizeScheduler } from '../utils';
 import { EDIT_MODEL_NEGATIVE_PROMPT_PREFIX } from '../constants/editPrompts';
 import { isQwenImageEditLightningModel } from '../constants/settings';
+import { fetchS3AsBlob, fetchS3WithFallback } from '../utils/s3FetchWithFallback';
 
 /**
  * Refreshes a photo using Sogni API
@@ -161,12 +162,8 @@ export const refreshPhoto = async (options) => {
       return updated;
     });
     
-    // Get source image blob
-    const response = await fetch(originalDataUrl);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch image: ${response.status} ${response.statusText}`);
-    }
-    const imageBlob = await response.blob();
+    // Get source image blob with S3 CORS fallback
+    const imageBlob = await fetchS3AsBlob(originalDataUrl);
     console.log(`[REFRESH] Image blob size: ${imageBlob.size} bytes`);
     
     // Get the actual dimensions from the original source image
@@ -460,7 +457,8 @@ export const refreshPhoto = async (options) => {
         // Convert S3 URL to blob URL to avoid CORS issues with video generation
         const convertToBlobUrl = async (url) => {
           try {
-            const response = await fetch(url);
+            // Use S3 fetch with CORS fallback for reliable conversion
+            const response = await fetchS3WithFallback(url);
             if (response.ok) {
               const blob = await response.blob();
               return URL.createObjectURL(blob);
