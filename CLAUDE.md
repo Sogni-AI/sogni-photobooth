@@ -47,11 +47,18 @@ Reason: CORS, cookies (.sogni.ai domain), OAuth redirects all require proper sub
 ## Architecture
 
 ### System Flow
-```
-Frontend/Extension → Backend API → Sogni Client SDK → Sogni Socket Service
-```
 
+**For Logged-Out Users:**
+```
+Frontend → Backend API → Sogni Client SDK → Sogni Socket Service
+```
 The backend acts as a secure proxy to the Sogni SDK, keeping credentials server-side only.
+
+**For Logged-In Users (IMPORTANT):**
+```
+Frontend → FrontendSogniClientAdapter → Sogni Client SDK (direct) → Sogni Socket Service
+```
+When users are authenticated, the frontend uses the SDK directly via `FrontendSogniClientAdapter` (`src/services/frontendSogniAdapter.ts`). This bypasses the backend for image and video generation, providing lower latency and direct WebSocket communication. The adapter wraps the real Sogni SDK to emit events compatible with the existing UI.
 
 ### Key Directories
 - `src/` - React frontend
@@ -130,6 +137,39 @@ See `cursor.rules.md` for complete examples and rationale.
 | `.env.local` | Frontend local dev (VITE_* vars) |
 | `.env.production` | Frontend production config |
 | `scripts/nginx/local.conf` | Nginx reverse proxy configuration |
+
+## Video Generation
+
+### Video Model Architecture
+
+The SDK supports two families of video models with **fundamentally different FPS and frame count behavior**. See `../sogni-client/CLAUDE.md` for authoritative SDK documentation.
+
+### Standard Behavior (LTX-2 and future models)
+
+**LTX-2 Models (`ltx2-*`)** represent the standard behavior going forward:
+- **Generate at the actual specified FPS** (1-60 fps range)
+- No post-render interpolation - fps directly affects generation
+- **Frame calculation**: `duration * fps + 1`
+- **Frame step constraint**: Frame count must follow pattern `1 + n*8` (i.e., 1, 9, 17, 25, 33, ...)
+- Example: 5 seconds at 24fps = 121 frames (snapped to 1 + 15*8 = 121)
+
+### Legacy Behavior (WAN 2.2 only)
+
+**WAN 2.2 Models (`wan_v2.2-*`)** are the outlier with legacy behavior:
+- **Always generate at 16fps internally**, regardless of the user's fps setting
+- The `fps` parameter (16 or 32) controls **post-render frame interpolation only**
+- `fps=16`: No interpolation, output matches generation (16fps)
+- `fps=32`: Frames are doubled via interpolation after generation
+- **Frame calculation**: `duration * 16 + 1` (always uses 16, ignores fps)
+- Example: 5 seconds at 32fps = 81 frames generated → interpolated to 161 output frames
+
+### Key Files
+- `src/services/VideoGenerator.ts` - Main video generation service
+- `src/constants/videoSettings.ts` - Video settings, quality presets, and `calculateVideoFrames()` (currently WAN 2.2 specific)
+- `src/constants/settings.ts` - App settings including `DEFAULT_SETTINGS.videoFramerate` (32)
+
+### Important Note
+The current `calculateVideoFrames()` function in `videoSettings.ts` uses the WAN 2.2 formula (`duration * 16 + 1`). When adding LTX-2 or other models, this logic must be made model-aware. The SDK (`sogni-client`) already handles this internally via `calculateVideoFrames()` in `src/Projects/utils/index.ts`.
 
 ## Debugging Concurrent Issues
 

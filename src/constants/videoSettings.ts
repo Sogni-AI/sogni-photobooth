@@ -176,27 +176,33 @@ export const VIDEO_RESOLUTIONS = {
 export type VideoResolution = keyof typeof VIDEO_RESOLUTIONS;
 
 // Default video settings
+// NOTE: These defaults are WAN 2.2 specific. LTX-2 and future models have different constraints.
+// WAN 2.2: fps controls post-render interpolation (16→32), generation always at 16fps
+// LTX-2: fps is the actual generation framerate (1-60 range), no interpolation
 export const DEFAULT_VIDEO_SETTINGS = {
   resolution: '480p' as VideoResolution,
   quality: 'fast' as VideoQualityPreset,
-  frames: 81, // 5 seconds at 16fps
-  fps: 16,
+  frames: 81, // 5 seconds at 16fps (WAN 2.2 formula: duration * 16 + 1)
+  fps: 32, // 32fps for smoother playback (WAN 2.2 interpolation)
   duration: 5 // 5 seconds
 };
 
 // Video generation config
+// NOTE: These are WAN 2.2 specific constraints. LTX-2 and future models differ:
+// - LTX-2: fps range 1-60, frame step constraint 1 + n*8, no interpolation
+// - WAN 2.2: fps 16 or 32 (interpolation only), always generates at 16fps
 export const VIDEO_CONFIG = {
-  // Default frames for 5-second video at 16fps
+  // Default frames for 5-second video (WAN 2.2 formula: duration * 16 + 1)
   defaultFrames: 81,
-  // Frames per second options
+  // WAN 2.2 FPS options (controls post-render interpolation, not generation rate)
   fpsOptions: [16, 32] as const,
-  defaultFps: 16,
+  defaultFps: 32, // Default to 32fps for smoother playback (WAN 2.2 interpolation)
   // Duration range in seconds (1-8 in 0.5 increments)
   minDuration: 1,
   maxDuration: 8,
   durationStep: 0.5,
   defaultDuration: 5,
-  // Frame range limits (1s = 17 frames, 8s = 129 frames at BASE_FPS 16)
+  // WAN 2.2 frame range limits (1s = 17 frames, 8s = 129 frames at 16fps base)
   minFrames: 17,
   maxFrames: 129,
   // Dimension must be divisible by this value
@@ -254,14 +260,20 @@ export function calculateVideoDuration(frames: number = VIDEO_CONFIG.defaultFram
 }
 
 /**
- * Calculate frames based on duration (fps is NOT used - it's for playback interpolation only)
- * Formula: 16 * duration + 1 (16fps is the base generation rate)
- * The fps parameter passed to the API only affects playback smoothness, not frame count
+ * Calculate frames based on duration for WAN 2.2 models.
+ *
+ * IMPORTANT: This is WAN 2.2 SPECIFIC behavior - do NOT apply to other models!
+ * - WAN 2.2: Formula is `duration * 16 + 1` (always 16fps generation, fps param is for interpolation)
+ * - LTX-2: Formula is `duration * fps + 1` with frame step constraint `1 + n*8`
+ *
+ * For LTX-2 and future models, use the SDK's calculateVideoFrames() which is model-aware.
+ * See ../sogni-client/src/Projects/utils/index.ts for the authoritative implementation.
  */
 export function calculateVideoFrames(duration: number = VIDEO_CONFIG.defaultDuration): number {
-  // Use constant 16fps base for frame calculation regardless of playback fps setting
-  const BASE_FPS = 16;
-  return BASE_FPS * duration + 1;
+  // WAN 2.2 specific: always uses 16fps base for frame calculation
+  // The fps parameter (16 or 32) only controls post-render frame interpolation
+  const WAN22_BASE_FPS = 16;
+  return WAN22_BASE_FPS * duration + 1;
 }
 
 /**

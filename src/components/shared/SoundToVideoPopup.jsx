@@ -313,7 +313,7 @@ const SoundToVideoPopup = ({
       setAudioDuration(audioBuffer.duration);
 
       // Set default duration to min of audio duration and base max (20s)
-      // Round down to nearest 0.25s to ensure frame count is divisible at 16fps
+      // WAN 2.2: Round down to nearest 0.25s to ensure clean frame count (16fps base)
       // (montage mode constraints will be applied via useEffect if needed)
       const defaultDuration = Math.min(audioBuffer.duration, BASE_MAX_DURATION);
       const roundedDuration = Math.floor(defaultDuration * 4) / 4;
@@ -520,7 +520,7 @@ const SoundToVideoPopup = ({
     const finalStart = pendingStartOffset !== null ? pendingStartOffset : audioStartOffset;
     const rawDuration = pendingDuration !== null ? pendingDuration : videoDuration;
 
-    // Round duration to step increments to ensure frame count is divisible at 16fps
+    // WAN 2.2: Round duration to step increments to ensure clean frame count (16fps base)
     const finalDuration = Math.round(rawDuration / DURATION_STEP) * DURATION_STEP;
 
     // Commit changes
@@ -797,7 +797,7 @@ const SoundToVideoPopup = ({
     : sourceType === 'upload'
       ? uploadedAudioUrl
       : selectedSample?.url;
-  // Round max duration down to nearest 0.25s to ensure frame count is divisible at 16fps
+  // WAN 2.2: Round max duration down to nearest 0.25s to ensure clean frame count (16fps base)
   const maxDuration = audioDuration > 0 ? Math.floor(Math.min(audioDuration, MAX_DURATION) * 4) / 4 : MAX_DURATION;
   
   // Get visual values (pending during drag, actual otherwise)

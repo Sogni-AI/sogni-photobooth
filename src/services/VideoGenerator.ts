@@ -1,7 +1,24 @@
 /**
  * Video Generator Service
- * 
+ *
  * Follows SDK example: sogni-client/examples/video_image_to_video.mjs
+ *
+ * IMPORTANT: Video Model Architecture
+ *
+ * This service currently supports WAN 2.2 models primarily. When adding LTX-2 or
+ * future models, be aware of fundamental differences in FPS/frame handling:
+ *
+ * WAN 2.2 (current):
+ *   - Always generates at 16fps internally
+ *   - fps param (16/32) controls post-render frame interpolation only
+ *   - Frame calculation: duration * 16 + 1
+ *
+ * LTX-2 (future):
+ *   - Generates at the actual specified FPS (1-60 range)
+ *   - No post-render interpolation
+ *   - Frame calculation: duration * fps + 1, with step constraint 1 + n*8
+ *
+ * See ../sogni-client/CLAUDE.md for authoritative documentation.
  */
 
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
@@ -167,7 +184,7 @@ export async function generateVideo(options: GenerateVideoOptions): Promise<void
     setPhotos,
     resolution = '480p',
     quality = 'fast',
-    fps = 16,
+    fps: fpsInput = 16,
     duration = 5,
     frames: explicitFrames, // Explicit frame count (takes precedence over duration)
     positivePrompt = '',
@@ -196,6 +213,21 @@ export async function generateVideo(options: GenerateVideoOptions): Promise<void
     segmentIndex,
     nextPhotoId
   } = options;
+
+  // CRITICAL FIX: Ensure fps is a valid number (16 or 32)
+  // This handles potential type coercion issues from settings storage (string "32" vs number 32)
+  let fps: 16 | 32;
+  const fpsNumeric = typeof fpsInput === 'string' ? parseInt(fpsInput, 10) : Number(fpsInput);
+  if (fpsNumeric === 32) {
+    fps = 32;
+  } else {
+    // Default to 16 for any invalid or unexpected value
+    fps = 16;
+    if (fpsInput !== 16 && fpsInput !== undefined) {
+      console.warn(`[VIDEO] ⚠️ Invalid fps value received: ${fpsInput} (type: ${typeof fpsInput}), defaulting to 16`);
+    }
+  }
+  console.log(`[VIDEO] 🎯 FPS validation: input=${fpsInput} (type: ${typeof fpsInput}) → validated=${fps}`);
 
   if (typeof photoIndex !== 'number' || photoIndex < 0 || !photo) {
     onError?.(new Error('Invalid photo or index'));
@@ -359,14 +391,20 @@ export async function generateVideo(options: GenerateVideoOptions): Promise<void
     console.log('🎬 VIDEO SETTINGS RECEIVED:');
     if (explicitFrames !== undefined) {
       console.log(`   Explicit frames: ${frames}`);
-      console.log(`   Calculated duration: ${((frames - 1) / 16).toFixed(2)}s (at BASE_FPS 16)`);
+      console.log(`   Calculated duration: ${((frames - 1) / 16).toFixed(2)}s (WAN 2.2: base 16fps)`);
     } else {
       console.log(`   Duration setting: ${duration}s`);
-      console.log(`   Calculated frames: ${frames} (BASE_FPS 16 * ${duration}s + 1)`);
+      console.log(`   Calculated frames: ${frames} (WAN 2.2: 16 * ${duration}s + 1)`);
     }
-    console.log(`   FPS setting: ${fps}`);
+    console.log(`   FPS setting: ${fps} (type: ${typeof fps})`);
     console.log(`   Resolution: ${resolution}`);
     console.log(`   Quality: ${quality}`);
+    // WAN 2.2 specific: fps controls post-render interpolation (16→32), not generation rate
+    if (fps !== 32) {
+      console.log(`   WAN 2.2: fps=16 - no interpolation, output at 16fps`);
+    } else {
+      console.log(`   WAN 2.2: fps=32 - frames will be interpolated for 32fps playback`);
+    }
     
     // Build base createParams
     const createParams: Record<string, unknown> = {

@@ -7344,7 +7344,8 @@ const PhotoGallery = ({
       let transitionDuration;
       try {
         const videoDuration = await getVideoDuration(firstPhoto.videoUrl);
-        // Calculate exact frames: duration * 16 + 1 (at base fps 16)
+        // WAN 2.2 specific: Calculate exact frames using duration * 16 + 1
+        // (WAN 2.2 always generates at 16fps internally, regardless of fps setting)
         // Round the entire calculation to handle floating point precision issues
         const calculatedFrames = Math.round(videoDuration * 16 + 1);
         

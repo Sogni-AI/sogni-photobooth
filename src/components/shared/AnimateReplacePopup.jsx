@@ -1221,7 +1221,7 @@ const AnimateReplacePopup = ({
   if (!visible) return null;
 
   const hasValidSource = (sourceType === 'sample' && selectedSample) || (sourceType === 'upload' && uploadedVideo) || (sourceType === 'record' && recordedVideo);
-  // Round max duration down to nearest 0.25s to ensure frame count is divisible at 16fps
+  // WAN 2.2: Round max duration down to nearest 0.25s to ensure clean frame count (16fps base)
   const maxDuration = sourceVideoDuration > 0 ? Math.floor(Math.min(sourceVideoDuration, MAX_DURATION) * 4) / 4 : MAX_DURATION;
 
   return createPortal(
