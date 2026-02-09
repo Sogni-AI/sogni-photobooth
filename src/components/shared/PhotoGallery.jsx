@@ -8239,7 +8239,8 @@ const PhotoGallery = ({
   }, [pendingTransitions, setPhotos, showToast, requestCancel]);
 
   // Handle regenerating a single segment in montage review
-  const handleRegenerateSegment = useCallback(async (segmentIndex) => {
+  // customPrompts is optional: { positivePrompt, negativePrompt }
+  const handleRegenerateSegment = useCallback(async (segmentIndex, customPrompts) => {
     if (!segmentReviewData || !pendingSegments[segmentIndex]) {
       console.error('[Segment Review] No data for regeneration');
       return;
@@ -8291,6 +8292,7 @@ const PhotoGallery = ({
     }
 
     // Clear any error states and generating state from the photo before regenerating
+    // Also update prompts if custom prompts were provided
     setPhotos(prev => {
       const updated = [...prev];
       if (updated[photoIndex]) {
@@ -8301,7 +8303,11 @@ const PhotoGallery = ({
           generatingVideo: false,
           videoETA: undefined,
           videoProjectId: undefined,
-          videoStatus: undefined
+          videoStatus: undefined,
+          ...(customPrompts ? {
+            videoMotionPrompt: customPrompts.positivePrompt,
+            videoNegativePrompt: customPrompts.negativePrompt
+          } : {})
         };
       }
       return updated;
@@ -17833,6 +17839,13 @@ const PhotoGallery = ({
         onCancelItem={handleCancelSegmentItem}
         onPlayItem={handlePlaySegment}
         items={pendingSegments}
+        itemPrompts={(pendingSegments || []).map(segment => {
+          const photo = photos.find(p => p.id === segment.photoId);
+          return {
+            positivePrompt: photo?.videoMotionPrompt || '',
+            negativePrompt: photo?.videoNegativePrompt || ''
+          };
+        })}
         workflowType={segmentReviewData?.workflowType || 's2v'}
         regeneratingIndices={regeneratingSegmentIndices}
         regenerationProgresses={segmentRegenerationProgresses}

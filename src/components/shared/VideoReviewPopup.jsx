@@ -116,6 +116,8 @@ const VideoReviewPopup = ({
   onPlayItem, // Play a finished item in fullscreen
   items = [],
   workflowType = 's2v',
+  // Per-item prompt data for prompt editor
+  itemPrompts = [], // Array of { positivePrompt, negativePrompt } per item
   // Legacy single-segment props (for backward compatibility with transitions)
   regeneratingIndex = null,
   regenerationProgress = null,
@@ -219,6 +221,10 @@ const VideoReviewPopup = ({
   const [showStitchWarning, setShowStitchWarning] = useState(false);
   const [showRedoConfirmation, setShowRedoConfirmation] = useState(false);
   const [redoConfirmationIndex, setRedoConfirmationIndex] = useState(null);
+  const [showPromptEditor, setShowPromptEditor] = useState(false);
+  const [promptEditorIndex, setPromptEditorIndex] = useState(null);
+  const [editPositivePrompt, setEditPositivePrompt] = useState('');
+  const [editNegativePrompt, setEditNegativePrompt] = useState('');
   const [isMuted, setIsMuted] = useState(true); // Start muted for mobile autoplay
   const previewVideoRef = useRef(null);
 
@@ -339,6 +345,8 @@ const VideoReviewPopup = ({
       setShowStitchWarning(false);
       setShowRedoConfirmation(false);
       setRedoConfirmationIndex(null);
+      setShowPromptEditor(false);
+      setPromptEditorIndex(null);
       setIsMuted(true); // Reset to muted when opening
       setContentOrientation('landscape'); // Reset orientation detection
     }
@@ -367,32 +375,60 @@ const VideoReviewPopup = ({
     }
   }, [items, onPlayItem]);
 
+  // Open the prompt editor pre-filled with the item's current prompts
+  const openPromptEditor = useCallback((index) => {
+    const prompts = itemPrompts[index] || {};
+    setEditPositivePrompt(prompts.positivePrompt || '');
+    setEditNegativePrompt(prompts.negativePrompt || '');
+    setPromptEditorIndex(index);
+    setShowPromptEditor(true);
+  }, [itemPrompts]);
+
   const handleRegenerateClick = useCallback((index, e) => {
     e.stopPropagation();
     const item = items[index];
-    // If item is currently generating/regenerating, show confirmation
+    // If item is currently generating/regenerating, show confirmation first
     if (item?.status === 'regenerating' || item?.status === 'generating') {
       setRedoConfirmationIndex(index);
       setShowRedoConfirmation(true);
       return;
     }
-    // Otherwise, proceed with regeneration
-    onRegenerateItem?.(index);
-  }, [items, onRegenerateItem]);
+    // Otherwise, open prompt editor before regenerating
+    openPromptEditor(index);
+  }, [items, openPromptEditor]);
 
-  // Confirm redo (cancel current generation and start over)
+  // Confirm redo (cancel current generation and open prompt editor)
   const handleConfirmRedo = useCallback(() => {
     if (redoConfirmationIndex !== null) {
       // First cancel the current item
       onCancelItem?.(redoConfirmationIndex);
-      // Then wait a bit and regenerate
+      // Then open the prompt editor after a short delay for cancellation
+      const indexToEdit = redoConfirmationIndex;
       setTimeout(() => {
-        onRegenerateItem?.(redoConfirmationIndex);
+        openPromptEditor(indexToEdit);
       }, 500);
     }
     setShowRedoConfirmation(false);
     setRedoConfirmationIndex(null);
-  }, [redoConfirmationIndex, onCancelItem, onRegenerateItem]);
+  }, [redoConfirmationIndex, onCancelItem, openPromptEditor]);
+
+  // Handle prompt editor confirm - regenerate with edited prompts
+  const handlePromptEditorConfirm = useCallback(() => {
+    if (promptEditorIndex !== null) {
+      onRegenerateItem?.(promptEditorIndex, {
+        positivePrompt: editPositivePrompt,
+        negativePrompt: editNegativePrompt
+      });
+    }
+    setShowPromptEditor(false);
+    setPromptEditorIndex(null);
+  }, [promptEditorIndex, editPositivePrompt, editNegativePrompt, onRegenerateItem]);
+
+  // Handle prompt editor close - dismiss without regenerating
+  const handlePromptEditorClose = useCallback(() => {
+    setShowPromptEditor(false);
+    setPromptEditorIndex(null);
+  }, []);
 
   // Handle per-item cancel (for stuck/slow items)
   const handleCancelItemClick = useCallback((index, e) => {
@@ -2484,6 +2520,208 @@ const VideoReviewPopup = ({
         </div>
       )}
 
+      {/* Prompt Editor Modal - shown before regenerating to let user edit prompts */}
+      {showPromptEditor && promptEditorIndex !== null && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 100002
+          }}
+          onClick={handlePromptEditorClose}
+        >
+          <div
+            style={{
+              backgroundColor: '#ffffff',
+              borderRadius: '24px',
+              padding: '32px',
+              maxWidth: '520px',
+              width: '90%',
+              boxShadow: '6px 6px 0 #1a1a1a',
+              border: '4px solid #1a1a1a',
+              animation: 'videoReviewPopupFadeIn 0.2s ease-out'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+              <span style={{ fontSize: '56px' }}>✏️</span>
+            </div>
+
+            <h3 style={{
+              margin: '0 0 16px 0',
+              color: '#1a1a1a',
+              fontSize: '24px',
+              fontWeight: '700',
+              fontFamily: '"Permanent Marker", cursive',
+              textAlign: 'center'
+            }}>
+              Edit Prompt
+            </h3>
+
+            <p style={{
+              margin: '0 0 20px 0',
+              color: '#666',
+              fontSize: '14px',
+              textAlign: 'center',
+              lineHeight: '1.5',
+              fontWeight: '600'
+            }}>
+              Tweak the motion prompt before regenerating {config.itemLabel.toLowerCase()} {promptEditorIndex + 1}
+            </p>
+
+            {/* Positive prompt (motion prompt) */}
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{
+                display: 'block',
+                marginBottom: '6px',
+                color: '#1a1a1a',
+                fontSize: '13px',
+                fontWeight: '700',
+                textTransform: 'lowercase'
+              }}>
+                motion prompt
+              </label>
+              <textarea
+                value={editPositivePrompt}
+                onChange={(e) => setEditPositivePrompt(e.target.value)}
+                placeholder="Describe the motion you want..."
+                style={{
+                  width: '100%',
+                  minHeight: '80px',
+                  padding: '12px',
+                  borderRadius: '12px',
+                  border: '3px solid #1a1a1a',
+                  fontSize: '14px',
+                  fontFamily: 'inherit',
+                  resize: 'vertical',
+                  boxSizing: 'border-box',
+                  outline: 'none',
+                  transition: 'border-color 0.2s ease',
+                  color: '#1a1a1a',
+                  backgroundColor: '#ffffff'
+                }}
+                onFocus={(e) => { e.currentTarget.style.borderColor = config.accentColor || '#a855f7'; }}
+                onBlur={(e) => { e.currentTarget.style.borderColor = '#1a1a1a'; }}
+              />
+            </div>
+
+            {/* Negative prompt (avoid) */}
+            <div style={{ marginBottom: '24px' }}>
+              <label style={{
+                display: 'block',
+                marginBottom: '6px',
+                color: '#1a1a1a',
+                fontSize: '13px',
+                fontWeight: '700',
+                textTransform: 'lowercase'
+              }}>
+                avoid (negative prompt)
+              </label>
+              <textarea
+                value={editNegativePrompt}
+                onChange={(e) => setEditNegativePrompt(e.target.value)}
+                placeholder="Things to avoid..."
+                style={{
+                  width: '100%',
+                  minHeight: '60px',
+                  padding: '12px',
+                  borderRadius: '12px',
+                  border: '3px solid #1a1a1a',
+                  fontSize: '14px',
+                  fontFamily: 'inherit',
+                  resize: 'vertical',
+                  boxSizing: 'border-box',
+                  outline: 'none',
+                  transition: 'border-color 0.2s ease',
+                  color: '#1a1a1a',
+                  backgroundColor: '#ffffff'
+                }}
+                onFocus={(e) => { e.currentTarget.style.borderColor = config.accentColor || '#a855f7'; }}
+                onBlur={(e) => { e.currentTarget.style.borderColor = '#1a1a1a'; }}
+              />
+            </div>
+
+            <div style={{
+              display: 'flex',
+              gap: '12px',
+              justifyContent: 'center'
+            }}>
+              <button
+                onClick={handlePromptEditorClose}
+                style={{
+                  flex: 1,
+                  padding: '14px 24px',
+                  background: '#ffffff',
+                  border: '3px solid #1a1a1a',
+                  borderRadius: '50px',
+                  color: '#1a1a1a',
+                  fontSize: '14px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  boxShadow: '3px 3px 0 #1a1a1a',
+                  textTransform: 'lowercase'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.background = '#FFED4E';
+                  e.currentTarget.style.transform = 'translate(-2px, -2px)';
+                  e.currentTarget.style.boxShadow = '5px 5px 0 #1a1a1a';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.background = '#ffffff';
+                  e.currentTarget.style.transform = 'translate(0, 0)';
+                  e.currentTarget.style.boxShadow = '3px 3px 0 #1a1a1a';
+                }}
+                onMouseDown={(e) => {
+                  e.currentTarget.style.transform = 'translate(1px, 1px)';
+                  e.currentTarget.style.boxShadow = '2px 2px 0 #1a1a1a';
+                }}
+              >
+                cancel
+              </button>
+              <button
+                onClick={handlePromptEditorConfirm}
+                style={{
+                  flex: 1,
+                  padding: '14px 24px',
+                  background: config.accentColor || '#a855f7',
+                  border: '3px solid #1a1a1a',
+                  borderRadius: '50px',
+                  color: '#fff',
+                  fontSize: '14px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  boxShadow: '4px 4px 0 #1a1a1a',
+                  textTransform: 'lowercase'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.transform = 'translate(-2px, -2px)';
+                  e.currentTarget.style.boxShadow = '6px 6px 0 #1a1a1a';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.transform = 'translate(0, 0)';
+                  e.currentTarget.style.boxShadow = '4px 4px 0 #1a1a1a';
+                }}
+                onMouseDown={(e) => {
+                  e.currentTarget.style.transform = 'translate(2px, 2px)';
+                  e.currentTarget.style.boxShadow = '2px 2px 0 #1a1a1a';
+                }}
+              >
+                🔄 regenerate
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* CSS Animations */}
       <style>{`
         @keyframes videoReviewPopupFadeIn {
@@ -2587,6 +2825,11 @@ VideoReviewPopup.propTypes = {
     photoId: PropTypes.string
   })),
   workflowType: PropTypes.oneOf(['infinite-loop', 'batch-transition', 's2v', 'animate-move', 'animate-replace']),
+  // Per-item prompt data for prompt editor
+  itemPrompts: PropTypes.arrayOf(PropTypes.shape({
+    positivePrompt: PropTypes.string,
+    negativePrompt: PropTypes.string
+  })),
   // Legacy single-segment props (for backward compatibility)
   regeneratingIndex: PropTypes.number,
   regenerationProgress: PropTypes.shape({
