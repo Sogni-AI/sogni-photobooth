@@ -58,6 +58,12 @@ const SAMPLE_REPLACEMENT_VIDEOS = [
     description: '',
     url: 'https://cdn.sogni.ai/video-samples/snaptik_7584458675423677703_v2.mp4'
   },
+  {
+    id: 'bad-bunny-superbowl',
+    title: 'Bad Bunny Superbowl',
+    description: '',
+    url: 'https://cdn.sogni.ai/video-samples/bad-bunny-superbowl.mp4'
+  }
 ];
 
 const BASE_MAX_DURATION = 20; // Max 20 seconds per image

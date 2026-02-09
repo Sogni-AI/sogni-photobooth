@@ -136,7 +136,56 @@ const VideoSelectionPopup = ({
 
   // Memoize videoOptions to prevent unnecessary re-renders
   const videoOptions = useMemo(() => {
+    // Example video URLs
+    const animateMoveVideo = 'https://cdn.sogni.ai/videos/transitions/wan-animate-move-medly.mp4';
+    const animateReplaceVideo = 'https://cdn.sogni.ai/videos/transitions/wan-animate-replace-medly.mp4';
+    const soundToVideoVideo = 'https://cdn.sogni.ai/videos/sogni-photobooth-video-demo_832x1216.mp4';
+    const transitionVideo = 'https://cdn.sogni.ai/videos/transitions/jen.mp4';
+
     const options = [
+      // Motion Transfer first
+      {
+        id: isBatch ? 'batch-animate-move' : 'animate-move',
+        icon: '🎬',
+        title: 'Motion Transfer',
+        description: 'Transfer character movement from a source video to your image.',
+        gradient: 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)',
+        exampleVideo: animateMoveVideo,
+        isNew: true
+      },
+      // Replace Subject second
+      {
+        id: isBatch ? 'batch-animate-replace' : 'animate-replace',
+        icon: '🔄',
+        title: 'Replace Subject',
+        description: 'Replace the main subject in a video with your character.',
+        gradient: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
+        exampleVideo: animateReplaceVideo,
+        isNew: true
+      },
+      // Sound to Video third
+      {
+        id: isBatch ? 'batch-s2v' : 's2v',
+        icon: '🎤',
+        title: 'Sound to Video',
+        description: 'Generate lip-synced video from audio. Perfect for making your image speak or sing.',
+        gradient: 'linear-gradient(135deg, #ec4899 0%, #db2777 100%)',
+        exampleVideo: soundToVideoVideo,
+        isNew: true
+      },
+      // Batch Transition fourth
+      {
+        id: isBatch ? 'batch-transition' : 'transition',
+        icon: '🔀',
+        title: isBatch ? 'Batch Transition' : 'Transition Video',
+        description: isBatch
+          ? 'Create looping videos that connect multiple images together with seamless transitions.'
+          : 'Create looping videos that connect multiple images together with seamless transitions. Requires 2 or more images.',
+        gradient: 'linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)',
+        exampleVideo: transitionVideo,
+        disabled: !isBatch && photoCount < 2
+      },
+      // Prompt Video
       {
         id: 'prompt',
         icon: '✨',
@@ -148,6 +197,7 @@ const VideoSelectionPopup = ({
         videoIndex: promptVideoIndex,
         setVideoIndex: setPromptVideoIndex
       },
+      // Emoji Video
       {
         id: 'emoji',
         icon: '🎥',
@@ -158,75 +208,20 @@ const VideoSelectionPopup = ({
         exampleVideos: emojiVideos,
         videoIndex: emojiVideoIndex,
         setVideoIndex: setEmojiVideoIndex
+      },
+      // Bald for Base last
+      {
+        id: 'bald-for-base',
+        icon: '🟦',
+        title: 'Bald for Base',
+        description: 'Create videos for the Bald for Base challenge. Make Brian Armstrong proud with your clever antics.',
+        gradient: 'linear-gradient(135deg, #0052FF 0%, #0039CC 100%)',
+        exampleVideo: baldForBaseVideos[baldForBaseVideoIndex],
+        exampleVideos: baldForBaseVideos,
+        videoIndex: baldForBaseVideoIndex,
+        setVideoIndex: setBaldForBaseVideoIndex
       }
     ];
-
-    // Transition Video example (2:3 aspect ratio)
-    const transitionVideo = 'https://cdn.sogni.ai/videos/transitions/jen.mp4';
-
-    // Add Transition Video option (always show, but disable if < 2 images in single mode)
-    options.push({
-      id: isBatch ? 'batch-transition' : 'transition',
-      icon: '🔀',
-      title: isBatch ? 'Batch Transition' : 'Transition Video',
-      description: isBatch
-        ? 'Create looping videos that connect multiple images together with seamless transitions.'
-        : 'Create looping videos that connect multiple images together with seamless transitions. Requires 2 or more images.',
-      gradient: 'linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)',
-      exampleVideo: transitionVideo,
-      disabled: !isBatch && photoCount < 2
-    });
-
-    // Example video URLs for Video Move and Video Replace workflows
-    const animateMoveVideo = 'https://cdn.sogni.ai/videos/transitions/wan-animate-move-medly.mp4';
-    const animateReplaceVideo = 'https://cdn.sogni.ai/videos/transitions/wan-animate-replace-medly.mp4';
-    const soundToVideoVideo = 'https://cdn.sogni.ai/videos/sogni-photobooth-video-demo_832x1216.mp4';
-
-    // Add Motion Transfer option
-    options.push({
-      id: isBatch ? 'batch-animate-move' : 'animate-move',
-      icon: '🎬',
-      title: 'Motion Transfer',
-      description: 'Transfer character movement from a source video to your image.',
-      gradient: 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)',
-      exampleVideo: animateMoveVideo,
-      isNew: true
-    });
-
-    // Add Replace Subject option
-    options.push({
-      id: isBatch ? 'batch-animate-replace' : 'animate-replace',
-      icon: '🔄',
-      title: 'Replace Subject',
-      description: 'Replace the main subject in a video with your character.',
-      gradient: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
-      exampleVideo: animateReplaceVideo,
-      isNew: true
-    });
-
-    // Add Sound to Video (S2V) option
-    options.push({
-      id: isBatch ? 'batch-s2v' : 's2v',
-      icon: '🎤',
-      title: 'Sound to Video',
-      description: 'Generate lip-synced video from audio. Perfect for making your image speak or sing.',
-      gradient: 'linear-gradient(135deg, #ec4899 0%, #db2777 100%)',
-      exampleVideo: soundToVideoVideo,
-      isNew: true
-    });
-
-    // Add Bald for Base option last
-    options.push({
-      id: 'bald-for-base',
-      icon: '🟦',
-      title: 'Bald for Base',
-      description: 'Create videos for the Bald for Base challenge. Make Brian Armstrong proud with your clever antics.',
-      gradient: 'linear-gradient(135deg, #0052FF 0%, #0039CC 100%)',
-      exampleVideo: baldForBaseVideos[baldForBaseVideoIndex],
-      exampleVideos: baldForBaseVideos,
-      videoIndex: baldForBaseVideoIndex,
-      setVideoIndex: setBaldForBaseVideoIndex
-    });
 
     return options;
   }, [promptVideoIndex, emojiVideoIndex, baldForBaseVideoIndex, isBatch, photoCount]);
