@@ -14,49 +14,49 @@ const SAMPLE_REPLACEMENT_VIDEOS = [
     id: 'lil-yacty',
     title: '🚶 Yachty Walkout',
     description: '',
-    url: 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/video-samples/lil-yacty-walkout.mp4'
+    url: 'https://cdn.sogni.ai/video-samples/lil-yacty-walkout.mp4'
   },
   {
     id: 'm-to-the-beat',
     title: '🎵 M to the Beat',
     description: '',
-    url: 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/video-samples/m-to-the-beat.mp4'
+    url: 'https://cdn.sogni.ai/video-samples/m-to-the-beat.mp4'
   },
   {
     id: 'ra-ra',
     title: '💃 Rasputin',
     description: '',
-    url: 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/video-samples/rasputin.mp4'
+    url: 'https://cdn.sogni.ai/video-samples/rasputin.mp4'
   },
   {
     id: 'techno-viking',
     title: '⚔️ Techno Viking',
     description: '',
-    url: 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/video-samples/techno-viking.mp4'
+    url: 'https://cdn.sogni.ai/video-samples/techno-viking.mp4'
   },
   {
     id: 'dance-leave-the-party',
     title: 'Leave the party',
     description: '',
-    url: 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/video-samples/leave-the-party.mp4'
+    url: 'https://cdn.sogni.ai/video-samples/leave-the-party.mp4'
   },
   {
     id: 'dance-keep-it-gangsta',
     title: '🕺 Keep it gangsta',
     description: '',
-    url: 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/video-samples/dance-keep-it-gangsta.mp4'
+    url: 'https://cdn.sogni.ai/video-samples/dance-keep-it-gangsta.mp4'
   },
   {
     id: 'this-is-america',
     title: 'This is America',
     description: '',
-    url: 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/video-samples/this-is-america.mp4'
+    url: 'https://cdn.sogni.ai/video-samples/this-is-america.mp4'
   },
   {
     id: 'not-enough',
     title: 'not enough',
     description: '',
-    url: 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/video-samples/snaptik_7584458675423677703_v2.mp4'
+    url: 'https://cdn.sogni.ai/video-samples/snaptik_7584458675423677703_v2.mp4'
   },
 ];
 

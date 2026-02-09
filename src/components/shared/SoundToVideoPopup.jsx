@@ -12,97 +12,97 @@ const SAMPLE_AUDIO_TRACKS = [
     id: '6-feet',
     title: '6 Feet',
     emoji: '🎵',
-    url: 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/audio-samples/6-feet.m4a'
+    url: 'https://cdn.sogni.ai/audio-samples/6-feet.m4a'
   },
   {
     id: '8-ball',
     title: '8 Ball',
     emoji: '🎱',
-    url: 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/audio-samples/8-ball.m4a'
+    url: 'https://cdn.sogni.ai/audio-samples/8-ball.m4a'
   },
   {
     id: 'fast-as-f',
     title: 'Fast as F',
     emoji: '⚡',
-    url: 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/audio-samples/fast-as-f.m4a'
+    url: 'https://cdn.sogni.ai/audio-samples/fast-as-f.m4a'
   },
   {
     id: 'hoist-the-colors',
     title: 'Hoist the Colors',
     emoji: '🏴‍☠️',
-    url: 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/audio-samples/hoist-the-colors.m4a'
+    url: 'https://cdn.sogni.ai/audio-samples/hoist-the-colors.m4a'
   },
   {
     id: 'hurricane-katrina',
     title: 'Hurricane Katrina',
     emoji: '🌀',
-    url: 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/audio-samples/hurrican-katrina.m4a'
+    url: 'https://cdn.sogni.ai/audio-samples/hurrican-katrina.m4a'
   },
   {
     id: 'kitty-bed',
     title: 'Kitty Bed',
     emoji: '🐱',
-    url: 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/audio-samples/kitty-bed.m4a'
+    url: 'https://cdn.sogni.ai/audio-samples/kitty-bed.m4a'
   },
   {
     id: 'listen-to-me-now',
     title: 'Listen to Me Now',
     emoji: '👂',
-    url: 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/audio-samples/listen-to-me-now.m4a'
+    url: 'https://cdn.sogni.ai/audio-samples/listen-to-me-now.m4a'
   },
   {
     id: 'n-95',
     title: 'N-95',
     emoji: '😷',
-    url: 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/audio-samples/n-95.m4a'
+    url: 'https://cdn.sogni.ai/audio-samples/n-95.m4a'
   },
   {
     id: 'noone-is-going-to-know',
     title: 'No One is Going to Know',
     emoji: '🤫',
-    url: 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/audio-samples/noone-is-going-to-know.m4a'
+    url: 'https://cdn.sogni.ai/audio-samples/noone-is-going-to-know.m4a'
   },
   {
     id: 'o-fortuna',
     title: 'O Fortuna',
     emoji: '🎭',
-    url: 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/audio-samples/o-fortuna.m4a'
+    url: 'https://cdn.sogni.ai/audio-samples/o-fortuna.m4a'
   },
   {
     id: 'peter-axel-f',
     title: 'Peter Axel F',
     emoji: '🎹',
-    url: 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/audio-samples/peter-axel-f.m4a'
+    url: 'https://cdn.sogni.ai/audio-samples/peter-axel-f.m4a'
   },
   {
     id: 'priceless',
     title: 'Priceless',
     emoji: '💎',
-    url: 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/audio-samples/priceless.m4a'
+    url: 'https://cdn.sogni.ai/audio-samples/priceless.m4a'
   },
   {
     id: 'runnin-through-the-6',
     title: 'Runnin Through the 6',
     emoji: '🏃',
-    url: 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/audio-samples/runnin-through-the-6.m4a'
+    url: 'https://cdn.sogni.ai/audio-samples/runnin-through-the-6.m4a'
   },
   {
     id: 'runnin-up-that-hill',
     title: 'Runnin Up That Hill',
     emoji: '⛰️',
-    url: 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/audio-samples/runnin-up-that-hill.m4a'
+    url: 'https://cdn.sogni.ai/audio-samples/runnin-up-that-hill.m4a'
   },
   {
     id: 'spider-man-2099',
     title: 'Spider-Man 2099',
     emoji: '🕷️',
-    url: 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/audio-samples/spider-man-2099.m4a'
+    url: 'https://cdn.sogni.ai/audio-samples/spider-man-2099.m4a'
   },
   {
     id: 'surround-sound',
     title: 'Surround Sound',
     emoji: '🔊',
-    url: 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/audio-samples/surrond-sound.m4a'
+    url: 'https://cdn.sogni.ai/audio-samples/surrond-sound.m4a'
   }
 ];
 

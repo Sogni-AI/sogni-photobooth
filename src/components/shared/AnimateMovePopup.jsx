@@ -14,98 +14,98 @@ const SAMPLE_MOTION_VIDEOS = [
     id: 'lil-yacty',
     title: '🚶 Yachty Walkout',
     description: '',
-    url: 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/video-samples/lil-yacty-walkout.mp4'
+    url: 'https://cdn.sogni.ai/video-samples/lil-yacty-walkout.mp4'
   },
   {
     id: 'm-to-the-beat',
     title: '🎵 M to the Beat',
     description: '',
-    url: 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/video-samples/m-to-the-beat.mp4'
+    url: 'https://cdn.sogni.ai/video-samples/m-to-the-beat.mp4'
   },
   {
     id: 'ra-ra',
     title: '💃 Rasputin',
     description: '',
-    url: 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/video-samples/rasputin.mp4'
+    url: 'https://cdn.sogni.ai/video-samples/rasputin.mp4'
   },
   {
     id: 'techno-viking',
     title: '⚔️ Techno Viking',
     description: '',
-    url: 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/video-samples/techno-viking.mp4'
+    url: 'https://cdn.sogni.ai/video-samples/techno-viking.mp4'
   },
   {
     id: 'dance-dance-dance',
     title: '🕺 Dance Dance Dance',
     description: '',
-    url: 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/video-samples/viral-dance.mp4'
+    url: 'https://cdn.sogni.ai/video-samples/viral-dance.mp4'
   },
   {
     id: 'dance-chanel',
     title: '💃 Chanel',
     description: '',
-    url: 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/video-samples/chanel.mp4'
+    url: 'https://cdn.sogni.ai/video-samples/chanel.mp4'
   },
   {
     id: 'dance-leave-the-party',
     title: '🕺 Leave the party',
     description: '',
-    url: 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/video-samples/leave-the-party.mp4'
+    url: 'https://cdn.sogni.ai/video-samples/leave-the-party.mp4'
   },
   {
     id: 'dance-spongebob',
     title: '🕺 SpongeBob dance',
     description: '',
-    url: 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/video-samples/spongebob-dance.mp4'
+    url: 'https://cdn.sogni.ai/video-samples/spongebob-dance.mp4'
   },
   {
     id: 'dance-keep-it-gangsta',
     title: '🕺 Keep it gangsta',
     description: '',
-    url: 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/video-samples/dance-keep-it-gangsta.mp4'
+    url: 'https://cdn.sogni.ai/video-samples/dance-keep-it-gangsta.mp4'
   },
  
   {
     id: 'dance-big-guy',
     title: '💃 Big guy',
     description: '',
-    url: 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/video-samples/big-guy-dance.mp4'
+    url: 'https://cdn.sogni.ai/video-samples/big-guy-dance.mp4'
   },
   {
     id: 'this-is-america',
     title: 'This is America',
     description: '',
-    url: 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/video-samples/this-is-america.mp4'
+    url: 'https://cdn.sogni.ai/video-samples/this-is-america.mp4'
   },
   {
     id: 'yeah',
     title: 'yeah',
     description: '',
-    url: 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/video-samples/yeah.mp4'
+    url: 'https://cdn.sogni.ai/video-samples/yeah.mp4'
   },
   {
     id: 'sky-guy-dance',
     title: 'Sky guy dance',
     description: '',
-    url: 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/video-samples/sky-guy-dance.mp4'
+    url: 'https://cdn.sogni.ai/video-samples/sky-guy-dance.mp4'
   },
   {
     id: 'you-want-to-argue',
     title: 'You want to argue',
     description: '',
-    url: 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/video-samples/you-want-to-argue.mp4'
+    url: 'https://cdn.sogni.ai/video-samples/you-want-to-argue.mp4'
   },
   {
     id: 'weabu',
     title: 'Weabu',
     description: '',
-    url: 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/video-samples/weabu.mp4'
+    url: 'https://cdn.sogni.ai/video-samples/weabu.mp4'
   },
   {
     id: 'not-enough',
     title: 'not enough',
     description: '',
-    url: 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/video-samples/snaptik_7584458675423677703_v2.mp4'
+    url: 'https://cdn.sogni.ai/video-samples/snaptik_7584458675423677703_v2.mp4'
   },
 ];
 

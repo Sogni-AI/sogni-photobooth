@@ -30,9 +30,9 @@ const VideoSelectionPopup = ({
 
   // Emoji Video example videos (2:3 aspect ratio)
   const emojiVideos = [
-    'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/videos/emojis/einstein-money-bougie-black-video_5s_480p_32fps.mp4',
-    'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/videos/emojis/einstein-money-dapper-victorian-video_5s_480p_32fps.mp4',
-    'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/videos/emojis/einstein-money-bride-of-frankenstein-video_5s_480p_32fps.mp4'
+    'https://cdn.sogni.ai/videos/emojis/einstein-money-bougie-black-video_5s_480p_32fps.mp4',
+    'https://cdn.sogni.ai/videos/emojis/einstein-money-dapper-victorian-video_5s_480p_32fps.mp4',
+    'https://cdn.sogni.ai/videos/emojis/einstein-money-bride-of-frankenstein-video_5s_480p_32fps.mp4'
   ];
 
   const [promptVideoIndex, setPromptVideoIndex] = useState(0);
@@ -162,7 +162,7 @@ const VideoSelectionPopup = ({
     ];
 
     // Transition Video example (2:3 aspect ratio)
-    const transitionVideo = 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/videos/transitions/jen.mp4';
+    const transitionVideo = 'https://cdn.sogni.ai/videos/transitions/jen.mp4';
 
     // Add Transition Video option (always show, but disable if < 2 images in single mode)
     options.push({
@@ -178,9 +178,9 @@ const VideoSelectionPopup = ({
     });
 
     // Example video URLs for Video Move and Video Replace workflows
-    const animateMoveVideo = 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/videos/transitions/wan-animate-move-medly.mp4';
-    const animateReplaceVideo = 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/videos/transitions/wan-animate-replace-medly.mp4';
-    const soundToVideoVideo = 'https://pub-5bc58981af9f42659ff8ada57bfea92c.r2.dev/videos/sogni-photobooth-video-demo_832x1216.mp4';
+    const animateMoveVideo = 'https://cdn.sogni.ai/videos/transitions/wan-animate-move-medly.mp4';
+    const animateReplaceVideo = 'https://cdn.sogni.ai/videos/transitions/wan-animate-replace-medly.mp4';
+    const soundToVideoVideo = 'https://cdn.sogni.ai/videos/sogni-photobooth-video-demo_832x1216.mp4';
 
     // Add Motion Transfer option
     options.push({
