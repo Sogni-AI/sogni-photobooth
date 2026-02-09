@@ -1,3 +1,25 @@
+import { getProxiedUrl } from './s3FetchWithFallback';
+
+// Domains where the backend proxy can help bypass CORS cache poisoning
+const PROXYABLE_DOMAINS = [
+  's3-accelerate.amazonaws.com',
+  's3.amazonaws.com',
+  'cdn.sogni.ai',
+];
+
+function isProxyableUrl(url: string): boolean {
+  try {
+    const hostname = new URL(url).hostname;
+    return PROXYABLE_DOMAINS.some(d => hostname.includes(d));
+  } catch {
+    return false;
+  }
+}
+
+function getProxyUrl(url: string): string {
+  return getProxiedUrl(url);
+}
+
 /**
  * Helper: resize dataURL so original matches the Sogni dimension
  * for easy side-by-side comparison (no skew).
@@ -87,9 +109,10 @@ export interface FetchWithRetryOptions {
 }
 
 /**
- * Fetch with automatic retry for transient CORS/network errors
+ * Fetch with automatic retry for transient CORS/network errors.
  * S3 presigned URLs can occasionally fail with CORS errors even when valid.
- * Retrying after a short delay typically resolves these transient issues.
+ * After the first direct retry fails, falls back to the backend proxy
+ * to bypass browser CORS cache poisoning from <video> elements.
  *
  * @param url - The URL to fetch
  * @param options - Fetch options (same as native fetch)
@@ -113,7 +136,12 @@ export async function fetchWithRetry(
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
-      const response = await fetch(url, options);
+      // After first direct failure, try the backend proxy for S3/CDN URLs
+      const fetchUrl = (attempt > 0 && isProxyableUrl(url))
+        ? getProxyUrl(url)
+        : url;
+
+      const response = await fetch(fetchUrl, options);
       // If we got a response (even non-2xx), return it - let caller handle HTTP errors
       return response;
     } catch (error) {
@@ -135,7 +163,7 @@ export async function fetchWithRetry(
       // Log retry attempt
       console.log(
         `[${context}] Attempt ${attempt + 1} failed (${lastError.message}), ` +
-        `retrying in ${currentDelay}ms...`
+        `retrying via ${isProxyableUrl(url) ? 'proxy' : 'direct'} in ${currentDelay}ms...`
       );
 
       await delay(currentDelay);
