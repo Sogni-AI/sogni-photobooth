@@ -5889,7 +5889,7 @@ const PhotoGallery = ({
             // Pass nextPhotoId so it gets stored again for subsequent regenerations
             nextPhotoId,
             // Trim last frame for seamless stitching with next segment
-            trimEndFrame: true
+            trimEndFrame: settings.videoTrimEndFrame ?? false
           });
         } else {
           // Default I2V workflow
@@ -6423,7 +6423,7 @@ const PhotoGallery = ({
           referenceImage: currentImage.buffer,
           referenceImageEnd: nextImage.buffer,
           // Trim last frame for seamless stitching with next segment
-          trimEndFrame: true,
+          trimEndFrame: settings.videoTrimEndFrame ?? false,
           // Regeneration metadata for redo functionality
           nextPhotoId,
           isMontageSegment: true,
@@ -7625,7 +7625,7 @@ const PhotoGallery = ({
             referenceImage: startFrame.buffer,
             referenceImageEnd: endImage.buffer,
             // Trim last frame for seamless stitching with next segment
-            trimEndFrame: true,
+            trimEndFrame: settings.videoTrimEndFrame ?? false,
             onComplete: (videoUrl) => {
               console.log(`[Infinite Loop] Transition ${i + 1} complete: ${videoUrl}`);
               generatedTransitionUrls[i] = videoUrl;
@@ -7900,7 +7900,7 @@ const PhotoGallery = ({
           referenceImage: startFrame.buffer,
           referenceImageEnd: endImage.buffer,
           // Trim last frame for seamless stitching with next segment
-          trimEndFrame: true,
+          trimEndFrame: settings.videoTrimEndFrame ?? false,
           onComplete: (videoUrl) => {
             console.log(`[Transition Review] Transition ${transitionIndex + 1} regenerated: ${videoUrl}`);
             resolve(videoUrl);

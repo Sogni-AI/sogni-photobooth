@@ -401,6 +401,7 @@ const createDefaultSettings = (): Settings => {
     videoPositivePrompt: '{@a small playful gesture: a tiny wave or a brief peace sign, then returns to the original pose|fast 360 camera pan as the subject dances|the subject looks around and then winks|the subject steps out of the frame nonchalantly and then returns}', // Optional motion guidance (e.g., "smooth camera pan")
     videoNegativePrompt: 'slow motion, talking, blurry, low quality, static, deformed overexposed, blurred details, worst quality, low quality, JPEG compression, ugly, still picture, walking backwards', // Default negative prompt for video motion
     videoTransitionPrompt: 'Cinematic transition shot between starting image person and environment to the ending image person and environment. Preserve the same subject identity and facial structure. Use a premium artistic transition or transformation, dynamic action that passes close to the lens to create brief natural occlusion, then reveal cleanly into the ending scene. Creative practical transition near lens. During the occlusion, allow wardrobe and environment to morph smoothly', // Prompt for transition videos
+    videoTrimEndFrame: false, // Disabled pending investigation into stitching issues
   };
 };
 

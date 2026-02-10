@@ -177,4 +177,5 @@ export interface Settings {
   videoPositivePrompt?: string;
   videoNegativePrompt?: string;
   videoTransitionPrompt?: string;
+  videoTrimEndFrame?: boolean; // Trim last frame from video segments for seamless stitching (disabled pending investigation)
 } 
