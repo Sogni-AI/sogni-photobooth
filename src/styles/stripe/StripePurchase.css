@@ -1,3 +1,5 @@
+/* Stripe Purchase Modal - Liquid Glass Dark Theme */
+
 .stripe-modal-overlay {
   position: fixed;
   top: 0;
@@ -5,33 +7,44 @@
   right: 0;
   bottom: 0;
   background: rgba(0, 0, 0, 0);
+  backdrop-filter: blur(0);
+  -webkit-backdrop-filter: blur(0);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 10000;
-  transition: background 0.3s ease;
+  transition: all 0.3s ease;
   opacity: 0;
   pointer-events: none;
+  padding: 20px;
 }
 
 .stripe-modal-overlay.open {
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   opacity: 1;
   pointer-events: all;
 }
 
 .stripe-modal {
-  background: white;
-  border-radius: 16px;
-  max-width: 800px;
-  width: 90%;
+  /* Apple Liquid Glass - dark modal with blurred overlay behind */
+  background: linear-gradient(
+    135deg,
+    rgba(17, 24, 39, 0.98) 0%,
+    rgba(3, 7, 18, 0.98) 100%
+  );
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 24px;
+  max-width: 900px;
+  width: 100%;
   max-height: 85vh;
-  overflow-y: auto;
+  overflow: hidden;
   position: relative;
-  transform: scale(0.9) translateY(20px);
+  transform: scale(0.95) translateY(20px);
   transition: transform 0.3s ease, opacity 0.3s ease;
   opacity: 0;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
 }
 
 .stripe-modal.open {
@@ -40,75 +53,91 @@
 }
 
 .stripe-modal-small {
-  max-width: 500px;
+  max-width: 480px;
 }
 
 .stripe-modal-inner {
   padding: 2.5rem;
+  padding-bottom: 2rem;
   position: relative;
+  overflow-y: auto;
+  overflow-x: hidden;
+  max-height: 85vh;
 }
 
 .stripe-close-button {
   position: absolute;
-  top: 1rem;
-  right: 1rem;
-  background: rgba(0, 0, 0, 0.1);
-  border: none;
-  width: 32px;
-  height: 32px;
+  top: 1.25rem;
+  right: 1.25rem;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
   font-size: 1.25rem;
-  color: #666;
+  color: rgba(255, 255, 255, 0.7);
   z-index: 10;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
 }
 
 .stripe-close-button:hover {
-  background: rgba(0, 0, 0, 0.2);
-  transform: scale(1.1);
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.25);
+  color: rgba(255, 255, 255, 1);
+  transform: scale(1.05);
 }
 
 @media (max-width: 768px) {
+  .stripe-modal-overlay {
+    padding: 0;
+  }
+
   .stripe-modal {
-    width: 95%;
-    max-height: 90vh;
-    border-radius: 12px;
+    width: 100%;
+    max-width: 100%;
+    max-height: 100vh;
+    height: 100%;
+    border-radius: 0;
+    margin: 0;
   }
 
   .stripe-modal-inner {
     padding: 1.5rem;
+    padding-top: calc(1.5rem + env(safe-area-inset-top, 0px));
+    padding-bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px));
+    max-height: 100vh;
   }
 
   .stripe-close-button {
-    top: 0.75rem;
-    right: 0.75rem;
-    width: 28px;
-    height: 28px;
+    top: calc(1rem + env(safe-area-inset-top, 0px));
+    right: 1rem;
+    width: 36px;
+    height: 36px;
     font-size: 1rem;
   }
 }
 
-/* Scrollbar styling */
-.stripe-modal::-webkit-scrollbar {
-  width: 8px;
+/* Custom scrollbar for dark theme */
+.stripe-modal-inner::-webkit-scrollbar {
+  width: 6px;
 }
 
-.stripe-modal::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.05);
+.stripe-modal-inner::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.02);
   border-radius: 10px;
 }
 
-.stripe-modal::-webkit-scrollbar-thumb {
+.stripe-modal-inner::-webkit-scrollbar-thumb {
+  background: rgba(102, 126, 234, 0.3);
+  border-radius: 10px;
+}
+
+.stripe-modal-inner::-webkit-scrollbar-thumb:hover {
   background: rgba(102, 126, 234, 0.5);
-  border-radius: 10px;
 }
-
-.stripe-modal::-webkit-scrollbar-thumb:hover {
-  background: rgba(102, 126, 234, 0.7);
-}
-
-

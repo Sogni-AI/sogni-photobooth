@@ -1,15 +1,9 @@
-import { CSSProperties, useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import '../../styles/stripe/StripePurchase.css';
 import ProductList from './ProductList.tsx';
 import PurchaseProgress from './PurchaseProgress.tsx';
 import useSparkPurchase from '../../hooks/useSparkPurchase.ts';
 import { trackViewItem } from '../../utils/analytics.js';
-
-const BACKGROUND_IMAGES = [
-  'https://images.unsplash.com/photo-1557683316-973673baf926?w=800',
-  'https://images.unsplash.com/photo-1557682250-33bd709cbe85?w=800',
-  'https://images.unsplash.com/photo-1557682224-5b8590cd9ec5?w=800',
-];
 
 interface Props {
   onClose: () => void;
@@ -18,14 +12,6 @@ interface Props {
 }
 
 function StripePurchase({ onClose, currentBalance, showAlert }: Props) {
-  const modalStyle = useMemo<CSSProperties>(() => {
-    const index = Math.floor(Math.random() * BACKGROUND_IMAGES.length);
-    return {
-      backgroundImage: `linear-gradient(rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.95)), url(${BACKGROUND_IMAGES[index]})`,
-      backgroundSize: 'cover',
-      backgroundPosition: 'center',
-    };
-  }, []);
 
   const [open, setOpen] = useState(true);
   const { products, purchaseIntent, purchaseStatus, loading, makePurchase, reset, refreshStatus } =
@@ -115,7 +101,6 @@ function StripePurchase({ onClose, currentBalance, showAlert }: Props) {
     <div className={`stripe-modal-overlay ${open ? 'open' : ''}`} onClick={handleClose}>
       <div
         className={`stripe-modal ${purchaseId ? 'stripe-modal-small' : ''} ${open ? 'open' : ''}`}
-        style={modalStyle}
         onClick={(e) => e.stopPropagation()}
       >
         <button className="stripe-close-button" onClick={handleClose}>
@@ -130,5 +115,3 @@ function StripePurchase({ onClose, currentBalance, showAlert }: Props) {
 }
 
 export default StripePurchase;
-
-

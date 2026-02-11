@@ -1,3 +1,5 @@
+/* Product List - Liquid Glass Dark Theme with Horizontal Carousel */
+
 .stripe-header {
   text-align: center;
   margin-bottom: 2rem;
@@ -6,18 +8,28 @@
 .stripe-sparkle-icon {
   font-size: 2.5rem;
   margin-bottom: 1rem;
+  display: flex;
+  justify-content: center;
+}
+
+.stripe-sparkle-icon svg {
+  width: 48px;
+  height: 48px;
+  filter: drop-shadow(0 4px 12px rgba(102, 126, 234, 0.3));
 }
 
 .stripe-header h2 {
   font-size: 1.75rem;
+  font-weight: 600;
   margin-bottom: 0.75rem;
-  color: #1a1a1a;
+  color: #ffffff;
+  letter-spacing: -0.3px;
 }
 
 .stripe-header p {
   font-size: 0.95rem;
-  color: #666;
-  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.6);
+  line-height: 1.6;
   max-width: 500px;
   margin: 0 auto;
 }
@@ -29,112 +41,203 @@
 }
 
 .stripe-account-summary {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.12) 0%, rgba(118, 75, 162, 0.12) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
   padding: 1.5rem;
   color: white;
   text-align: center;
 }
 
 .stripe-balance-label {
-  font-size: 0.85rem;
-  opacity: 0.9;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.6);
   margin-bottom: 0.5rem;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 1.5px;
+  font-weight: 500;
 }
 
 .stripe-balance-value {
-  font-size: 2rem;
-  font-weight: bold;
+  font-size: 2.25rem;
+  font-weight: 700;
+  color: #ffffff;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -1px;
 }
 
 .stripe-products-wrapper {
   flex: 1;
+  /* Allow carousel to extend beyond modal padding */
+  margin-left: -2.5rem;
+  margin-right: -2.5rem;
+  padding-left: 2.5rem;
+  padding-right: 2.5rem;
 }
 
-.stripe-products {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 1.25rem;
+/* Carousel Container */
+.stripe-carousel-container {
+  position: relative;
+  width: 100%;
 }
 
+/* Horizontal Carousel */
+.stripe-products-carousel {
+  display: flex;
+  gap: 1rem;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  padding: 0.75rem 0;
+  /* Extend to edges for full scroll */
+  margin-left: -2.5rem;
+  margin-right: -2.5rem;
+  padding-left: 2.5rem;
+  /* Extra padding on right for last card visibility */
+  padding-right: 2.5rem;
+}
+
+.stripe-products-carousel::-webkit-scrollbar {
+  display: none;
+}
+
+/* Carousel Navigation Arrows */
+.stripe-carousel-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  transition: all 0.2s ease;
+}
+
+.stripe-carousel-arrow:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.25);
+  transform: translateY(-50%) scale(1.05);
+}
+
+.stripe-carousel-arrow-left {
+  left: 0.5rem;
+}
+
+.stripe-carousel-arrow-right {
+  right: 0.5rem;
+}
+
+/* Product Cards */
 .stripe-product {
-  background: white;
-  border: 2px solid #e0e0e0;
-  border-radius: 12px;
+  flex: 0 0 auto;
+  width: 280px;
+  min-width: 280px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
   padding: 1.5rem;
-  transition: all 0.3s ease;
+  transition: all 0.25s ease;
   display: flex;
   flex-direction: column;
+  scroll-snap-align: start;
+}
+
+.stripe-product:first-child {
+  margin-left: 0;
+}
+
+.stripe-product:last-child {
+  margin-right: 0;
 }
 
 .stripe-product:hover {
-  border-color: #667eea;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.15);
+  transform: translateY(-4px);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.2);
 }
 
 .stripe-product h3 {
-  font-size: 1.25rem;
+  font-size: 1.15rem;
+  font-weight: 600;
   margin-bottom: 0.75rem;
-  color: #1a1a1a;
+  color: #ffffff;
   display: flex;
   align-items: center;
   gap: 0.5rem;
 }
 
 .stripe-product p {
-  font-size: 0.9rem;
-  color: #666;
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.55);
   margin-bottom: 1.25rem;
   flex: 1;
+  line-height: 1.5;
 }
 
 .stripe-product-actions {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 1rem;
+  flex-direction: column;
+  gap: 0.875rem;
 }
 
 .stripe-product-price {
   font-size: 1.5rem;
-  font-weight: bold;
-  color: #667eea;
+  font-weight: 700;
+  background: linear-gradient(135deg, #667eea 0%, #a78bfa 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-align: center;
 }
 
 .stripe-buy-button {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   border: none;
-  border-radius: 8px;
-  padding: 0.75rem 1.5rem;
+  border-radius: 12px;
+  padding: 0.875rem 1.5rem;
   font-size: 0.95rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
   white-space: nowrap;
+  letter-spacing: 0.3px;
+  width: 100%;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
 }
 
 .stripe-buy-button:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.45);
+}
+
+.stripe-buy-button:active:not(:disabled) {
+  transform: translateY(0);
 }
 
 .stripe-buy-button:disabled {
-  opacity: 0.6;
+  opacity: 0.5;
   cursor: not-allowed;
 }
 
 .stripe-placeholder {
   text-align: center;
   padding: 3rem;
-  color: #666;
+  color: rgba(255, 255, 255, 0.5);
 }
 
 .stripe-spinner {
-  border: 3px solid #f3f3f3;
+  border: 3px solid rgba(255, 255, 255, 0.1);
   border-top: 3px solid #667eea;
   border-radius: 50%;
   width: 40px;
@@ -154,30 +257,133 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(255, 255, 255, 0.9);
+  background: rgba(15, 20, 30, 0.9);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  border-radius: 16px;
+  border-radius: 24px;
+  gap: 1rem;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.95rem;
 }
 
+/* Mobile responsiveness */
 @media (max-width: 768px) {
-  .stripe-products {
-    grid-template-columns: 1fr;
+  .stripe-header {
+    margin-bottom: 1.25rem;
+  }
+
+  .stripe-sparkle-icon {
+    margin-bottom: 0.75rem;
+  }
+
+  .stripe-sparkle-icon svg {
+    width: 36px;
+    height: 36px;
   }
 
   .stripe-header h2 {
-    font-size: 1.5rem;
+    font-size: 1.35rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .stripe-header p {
+    font-size: 0.85rem;
+    line-height: 1.5;
+  }
+
+  .stripe-content {
+    gap: 1rem;
+  }
+
+  .stripe-products-wrapper {
+    margin-left: 0;
+    margin-right: 0;
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .stripe-products-carousel {
+    flex-direction: column;
+    overflow-x: visible;
+    overflow-y: visible;
+    scroll-snap-type: none;
+    margin-left: 0;
+    margin-right: 0;
+    padding-left: 0;
+    padding-right: 0;
+    gap: 0.75rem;
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+
+  .stripe-product {
+    width: 100%;
+    min-width: 0;
+    padding: 1rem 1.25rem;
+    border-radius: 16px;
+  }
+
+  .stripe-product:hover {
+    transform: none;
+  }
+
+  .stripe-product h3 {
+    font-size: 1rem;
+    margin-bottom: 0.25rem;
+  }
+
+  .stripe-product p {
+    font-size: 0.8rem;
+    margin-bottom: 0.75rem;
+    line-height: 1.4;
   }
 
   .stripe-product-actions {
-    flex-direction: column;
-    align-items: stretch;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.75rem;
   }
 
   .stripe-product-price {
-    text-align: center;
+    font-size: 1.2rem;
+    white-space: nowrap;
+    text-align: left;
+  }
+
+  .stripe-buy-button {
+    padding: 0.625rem 1.5rem;
+    font-size: 0.875rem;
+    border-radius: 10px;
+    width: auto;
+    flex-shrink: 0;
+  }
+
+  .stripe-carousel-arrow {
+    display: none;
+  }
+
+  .stripe-account-summary {
+    padding: 1rem;
+    border-radius: 16px;
+  }
+
+  .stripe-balance-value {
+    font-size: 1.75rem;
+  }
+
+  .stripe-balance-label {
+    font-size: 0.7rem;
+    margin-bottom: 0.25rem;
   }
 }
 
-
+/* Touch device - hide arrows */
+@media (hover: none) {
+  .stripe-carousel-arrow {
+    display: none;
+  }
+}
