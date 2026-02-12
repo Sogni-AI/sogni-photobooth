@@ -11012,13 +11012,6 @@ const App = () => {
         <ApiProvider value={sogniClient}>
           <StripePurchase
             onClose={() => setShowStripePurchase(false)}
-            showAlert={({ variant, title, text }) => {
-              console.log(`${variant}: ${title} - ${text}`);
-              // You can integrate with existing toast/notification system if available
-              if (showToast) {
-                showToast(text, variant === 'error' ? 'error' : 'success');
-              }
-            }}
           />
         </ApiProvider>
       )}

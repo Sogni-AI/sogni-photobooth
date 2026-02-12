@@ -3,11 +3,11 @@ import { SogniClient, TokenType } from '@sogni-ai/sogni-client';
 export interface ProductResponse {
   status: string;
   data: {
-    products: Product[];
+    products: ProductRaw[];
   };
 }
 
-export interface Product {
+export interface ProductRaw {
   id: string;
   object: string;
   active: boolean;
@@ -34,10 +34,48 @@ export interface Metadata {
   sparkValue: string;
 }
 
-export async function getStripeProducts(api: SogniClient) {
-  // Call Sogni API directly (same as sogni-web)
+export interface Product {
+  id: string;
+  name: string;
+  fullName: string;
+  description: string;
+  price: number;
+  discount: number;
+  isDefault: boolean;
+}
+
+const nameFormatter = new Intl.NumberFormat('en-US', {
+  style: 'decimal',
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 1
+});
+
+export async function getStripeProducts(api: SogniClient): Promise<Product[]> {
   const response = await api.apiClient.rest.get<ProductResponse>('/v1/iap/stripe/products');
-  return response.data.products;
+  const maxTokenPrice = response.data.products.reduce((current, p) => {
+    const tokenAmount = Number(p.metadata.sparkValue);
+    const tokenPrice = p.unit_amount / tokenAmount;
+    return Math.max(current, tokenPrice);
+  }, 0);
+  response.data.products.sort((a, b) => {
+    return a.unit_amount - b.unit_amount;
+  });
+  return response.data.products.map((p): Product => {
+    const tokenAmount = Number(p.metadata.sparkValue);
+    const tokenPrice = p.unit_amount / tokenAmount;
+    const discount = Math.round(((maxTokenPrice - tokenPrice) / maxTokenPrice) * 100);
+    const name =
+      tokenAmount < 1000 ? tokenAmount.toString() : `${nameFormatter.format(tokenAmount / 1000)}K`;
+    return {
+      id: p.product,
+      name: name,
+      fullName: p.nickname,
+      description: p.metadata.localDescription,
+      price: p.unit_amount / 100,
+      discount: discount,
+      isDefault: tokenAmount === 2000
+    };
+  });
 }
 
 interface PurchaseResponse {
@@ -56,7 +94,6 @@ export interface PurchaseIntent extends Purchase {
 }
 
 export async function startPurchase(api: SogniClient, productId: string): Promise<PurchaseIntent> {
-  // Call Sogni API directly (same as sogni-web)
   const response = await api.apiClient.rest.post<PurchaseResponse>('/v1/iap/stripe/purchase', {
     productId,
     redirectType: 'photobooth',
@@ -82,10 +119,18 @@ export interface PurchaseStatus {
 }
 
 export async function getPurchase(api: SogniClient, purchaseId: string) {
-  // Call Sogni API directly (same as sogni-web)
   const response = await api.apiClient.rest.get<PurchaseStatusResponse>(
     `/v1/iap/status/${purchaseId}`
   );
   return response.data;
 }
 
+export function formatUSD(value: number): string {
+  return new Intl.NumberFormat(navigator.language, {
+    style: 'currency',
+    currency: 'USD',
+    currencyDisplay: 'symbol',
+    maximumFractionDigits: 2,
+    minimumFractionDigits: 2
+  }).format(value);
+}

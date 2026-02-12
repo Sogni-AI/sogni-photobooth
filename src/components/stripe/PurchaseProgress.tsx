@@ -1,51 +1,15 @@
-import { PurchaseStatus } from '../../services/stripe.ts';
+import { PurchaseStatus } from '../../services/stripe';
 import '../../styles/stripe/PurchaseProgress.css';
 import { useEffect, useRef } from 'react';
-import { trackEvent, trackPurchase } from '../../utils/analytics';
+import { playSogniSignatureIfEnabled } from '../../utils/sonicLogos';
+import { trackPurchase, trackEvent } from '../../utils/analytics';
 import { getCampaignSource } from '../../utils/campaignAttribution';
 import { getReferralSource } from '../../utils/referralTracking';
-import { playSogniSignatureIfEnabled } from '../../utils/sonicLogos';
 import { useApp } from '../../context/AppContext';
 
-// Professional SVG icons
-const SparkIcon = ({ size = 24 }: { size?: number }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-    <path
-      d="M12 2L14.5 9.5L22 12L14.5 14.5L12 22L9.5 14.5L2 12L9.5 9.5L12 2Z"
-      fill="url(#spark-progress-gradient)"
-    />
-    <defs>
-      <linearGradient id="spark-progress-gradient" x1="2" y1="2" x2="22" y2="22">
-        <stop stopColor="#667eea" />
-        <stop offset="1" stopColor="#a78bfa" />
-      </linearGradient>
-    </defs>
-  </svg>
-);
-
-const CheckIcon = ({ size = 24 }: { size?: number }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-    <circle cx="12" cy="12" r="10" fill="url(#check-progress-gradient)" />
-    <path d="M8 12L11 15L16 9" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    <defs>
-      <linearGradient id="check-progress-gradient" x1="2" y1="2" x2="22" y2="22">
-        <stop stopColor="#10b981" />
-        <stop offset="1" stopColor="#059669" />
-      </linearGradient>
-    </defs>
-  </svg>
-);
-
-const ClockIcon = ({ size = 24 }: { size?: number }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-    <circle cx="12" cy="12" r="10" stroke="url(#clock-gradient)" strokeWidth="2" />
-    <path d="M12 6V12L16 14" stroke="url(#clock-gradient)" strokeWidth="2" strokeLinecap="round" />
-    <defs>
-      <linearGradient id="clock-gradient" x1="2" y1="2" x2="22" y2="22">
-        <stop stopColor="#667eea" />
-        <stop offset="1" stopColor="#a78bfa" />
-      </linearGradient>
-    </defs>
+const SparkPointIcon = ({ size = 17 }: { size?: number }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 17 16" width={size} height={size} fill="currentColor">
+    <path d="M9.92301 1.1764C10.6242 0.251095 12.0169 0.251096 12.0445 1.1764L12.1576 4.97111C12.1663 5.26202 12.3269 5.49138 12.5973 5.59903L16.1244 7.0032C16.9845 7.34559 16.5082 8.65433 15.3989 8.99672L10.8495 10.4009C10.5008 10.5085 10.1732 10.7379 9.95276 11.0288L7.07732 14.8235C6.37616 15.7488 4.98344 15.7488 4.95585 14.8235L4.84273 11.0288C4.83406 10.7379 4.67346 10.5085 4.40305 10.4009L0.875887 8.99672C0.015819 8.65433 0.492163 7.34559 1.60147 7.0032L6.15079 5.59903C6.49955 5.49138 6.82712 5.26202 7.04756 4.97111L9.92301 1.1764Z" />
   </svg>
 );
 
@@ -55,10 +19,9 @@ interface Props {
   onReset: () => void;
   onRefresh: () => void;
   onClose: () => void;
-  currentBalance?: number;
 }
 
-function PurchaseProgress({ purchase, loading, onReset, onRefresh, onClose, currentBalance }: Props) {
+function PurchaseProgress({ purchase, loading, onReset, onRefresh, onClose }: Props) {
   const { settings } = useApp();
   const isCompleted = purchase?.status === 'completed' || purchase?.status === 'processing';
   const productId = purchase?.productId;
@@ -74,7 +37,6 @@ function PurchaseProgress({ purchase, loading, onReset, onRefresh, onClose, curr
         const stored = sessionStorage.getItem('sogni_pending_purchase');
         if (stored) {
           productInfo = JSON.parse(stored);
-          // Clear it after use
           sessionStorage.removeItem('sogni_pending_purchase');
         }
       } catch (error) {
@@ -120,59 +82,44 @@ function PurchaseProgress({ purchase, loading, onReset, onRefresh, onClose, curr
         trackEvent('Referral', 'conversion_purchase', `Referred by: ${referralSource}, Product: ${productId}`);
       }
 
-      // Play sonic logo for successful purchase (respects sound settings)
       playSogniSignatureIfEnabled(settings.soundEnabled);
     }
   }, [isCompleted, productId, purchase, settings.soundEnabled]);
 
-  let statusIcon;
   let heading;
   let status;
-  let statusClass = '';
-
   switch (purchase?.status) {
     case 'processing':
     case 'completed':
-      statusIcon = <CheckIcon size={64} />;
       heading = 'Thank you';
-      status = 'Your purchase was successful, and your Spark Points have been added to your balance.';
-      statusClass = 'stripe-progress-success';
+      status =
+        'Your purchase was successful, and your Spark Points have been added to your balance.';
       break;
     default:
-      statusIcon = <ClockIcon size={64} />;
       heading = 'Waiting for Stripe';
-      status = 'Please complete the purchase checkout in the Stripe tab. Once completed, your Spark Points will be added to your account and you will return here.';
-      statusClass = 'stripe-progress-pending';
+      status =
+        'Please complete the purchase checkout in the Stripe tab. Once completed, your Spark Points will be added to your account and you will return here.';
   }
 
   return (
-    <div className={statusClass}>
+    <>
       <div className="stripe-header">
-        <div className="stripe-progress-icon">
-          {statusIcon}
+        <div className="stripe-spark-label">
+          <SparkPointIcon size={18} />
+          Premium Spark
         </div>
-        <h2 className="stripe-progress-title">{heading}</h2>
-        <p className="stripe-progress-message">{status}</p>
+        <h2>{heading}</h2>
       </div>
       <div className="stripe-content">
-        {currentBalance !== undefined && (
-          <div className="stripe-account-summary">
-            <div className="stripe-balance-label">Current Balance</div>
-            <div className="stripe-balance-value">{currentBalance.toFixed(2)}</div>
-          </div>
-        )}
+        <p className="stripe-progress-message">{status}</p>
         <div className="stripe-progress-buttons">
           {isCompleted ? (
-            <button className="stripe-buy-more-button" onClick={onReset}>
-              <SparkIcon size={18} />
+            <button className="stripe-cta-button" onClick={onReset}>
+              <SparkPointIcon size={14} />
               Buy more Spark Points
             </button>
           ) : (
-            <button
-              className="stripe-check-status-button"
-              onClick={onRefresh}
-              disabled={loading}
-            >
+            <button className="stripe-cta-button stripe-cta-button-spark" onClick={onRefresh} disabled={loading}>
               {loading ? (
                 <>
                   <span className="stripe-spinner-small"></span> Checking...
@@ -187,7 +134,7 @@ function PurchaseProgress({ purchase, loading, onReset, onRefresh, onClose, curr
           </button>
         </div>
       </div>
-    </div>
+    </>
   );
 }
 

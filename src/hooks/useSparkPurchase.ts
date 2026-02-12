@@ -1,19 +1,10 @@
-import useApiAction from './useApiAction.ts';
-import { getPurchase, getStripeProducts, startPurchase } from '../services/stripe.ts';
+import useApiAction from './useApiAction';
+import { getPurchase, getStripeProducts, startPurchase } from '../services/stripe';
 import { useCallback, useEffect } from 'react';
 import { SogniClient } from '@sogni-ai/sogni-client';
-import useApiQuery from './useApiQuery.ts';
+import useApiQuery from './useApiQuery';
 
-/**
- * Hook for managing Spark Point purchases via Stripe
- * 
- * Note: Balance updates are handled automatically via WebSocket through the useWallet hook.
- * The SDK's DataEntity emits 'updated' events when balance changes, which are caught by
- * useEntity and trigger React state updates. No polling needed!
- * 
- * This hook only manages the purchase flow state (products, checkout, status checking).
- */
-function useSparkPurchase(showAlert?: (alert: { variant: string; title: string; text: string }) => void) {
+function useSparkPurchase() {
   const { data: products, error: productsError } = useApiQuery(getStripeProducts);
   const {
     data: purchaseIntent,
@@ -44,36 +35,24 @@ function useSparkPurchase(showAlert?: (alert: { variant: string; title: string; 
   }, [resetIntent, resetStatus]);
 
   useEffect(() => {
-    if (productsError && showAlert) {
-      showAlert({
-        variant: 'error',
-        title: 'Failed to load products',
-        text: 'Failed to load products. Please try again later.'
-      });
+    if (productsError) {
+      console.error('Failed to load products:', productsError);
     }
-  }, [productsError, showAlert]);
+  }, [productsError]);
 
   useEffect(() => {
-    if (intentError && showAlert) {
-      showAlert({
-        variant: 'error',
-        title: 'Purchase failed',
-        text: 'Failed to start purchase. Please try again later.'
-      });
+    if (intentError) {
+      console.error('Purchase failed:', intentError);
       resetIntent();
     }
-  }, [intentError, showAlert, resetIntent]);
+  }, [intentError, resetIntent]);
 
   useEffect(() => {
-    if (statusError && showAlert) {
-      showAlert({
-        variant: 'error',
-        title: 'Purchase may have failed',
-        text: 'Failed to get purchase status. Please try again later.'
-      });
+    if (statusError) {
+      console.error('Purchase status check failed:', statusError);
       resetStatus();
     }
-  }, [statusError, showAlert, resetStatus]);
+  }, [statusError, resetStatus]);
 
   return {
     products,
@@ -87,5 +66,3 @@ function useSparkPurchase(showAlert?: (alert: { variant: string; title: string; 
 }
 
 export default useSparkPurchase;
-
-

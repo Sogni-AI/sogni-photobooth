@@ -50,6 +50,7 @@
     "react-helmet-async": "^2.0.5",
     "react-tag-input": "^6.10.6",
     "react-turnstile": "^1.1.4",
+    "swiper": "^11.2.10",
     "uuid": "^11.1.0"
   },
   "devDependencies": {
