@@ -59,7 +59,8 @@ export async function startPurchase(api: SogniClient, productId: string): Promis
   // Call Sogni API directly (same as sogni-web)
   const response = await api.apiClient.rest.post<PurchaseResponse>('/v1/iap/stripe/purchase', {
     productId,
-    redirectType: 'photobooth'
+    redirectType: 'photobooth',
+    appSource: 'sogni-photobooth'
   });
   return { ...response.data, productId };
 }
