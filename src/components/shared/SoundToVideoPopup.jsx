@@ -69,6 +69,132 @@ const SAMPLE_AUDIO_TRACKS = [
     url: 'https://cdn.sogni.ai/audio-samples/beez-in-the-trap.m4a'
   },
   {
+    id: 'about-you',
+    title: 'About You',
+    emoji: '💕',
+    url: 'https://cdn.sogni.ai/audio-samples/about-you.m4a'
+  },
+  {
+    id: 'all-eyes-on-me',
+    title: 'All Eyes on Me',
+    emoji: '👀',
+    url: 'https://cdn.sogni.ai/audio-samples/all-eyes-on-me.m4a'
+  },
+  {
+    id: 'eclipse-philosophy',
+    title: 'Eclipse Philosophy',
+    emoji: '🌑',
+    url: 'https://cdn.sogni.ai/audio-samples/eclipse-philosophy.m4a'
+  },
+  {
+    id: 'big-bad-john',
+    title: 'Big Bad John',
+    emoji: '💪',
+    url: 'https://cdn.sogni.ai/audio-samples/big-bad-john.m4a'
+  },
+  {
+    id: 'brutus',
+    title: 'Brutus',
+    emoji: '🗡️',
+    url: 'https://cdn.sogni.ai/audio-samples/brutus.m4a'
+  },
+  {
+    id: 'mic-check',
+    title: 'Mic Check',
+    emoji: '🎤',
+    url: 'https://cdn.sogni.ai/audio-samples/mic-check.m4a'
+  },
+  {
+    id: 'down-with-the-sickness',
+    title: 'Down with the Sickness',
+    emoji: '🤘',
+    url: 'https://cdn.sogni.ai/audio-samples/down-with-the-sickness.m4a'
+  },
+  {
+    id: 'dtmf',
+    title: 'DTMF',
+    emoji: '📞',
+    url: 'https://cdn.sogni.ai/audio-samples/dtmf.m4a'
+  },
+  {
+    id: 'good-places',
+    title: 'Good Places',
+    emoji: '🌴',
+    url: 'https://cdn.sogni.ai/audio-samples/good-places.m4a'
+  },
+  {
+    id: 'hitchhiker-11',
+    title: 'Hitchhiker 11',
+    emoji: '👽',
+    url: 'https://cdn.sogni.ai/audio-samples/hitchhiker-11.m4a'
+  },
+  {
+    id: 'kill-jill',
+    title: 'Kill Jill',
+    emoji: '🔥',
+    url: 'https://cdn.sogni.ai/audio-samples/kill-jill.m4a'
+  },
+  {
+    id: 'once-in-a-lifetime',
+    title: 'Once in a Lifetime',
+    emoji: '🌊',
+    url: 'https://cdn.sogni.ai/audio-samples/once-in-a-lifetime.m4a'
+  },
+  {
+    id: 'panda',
+    title: 'Panda',
+    emoji: '🐼',
+    url: 'https://cdn.sogni.ai/audio-samples/panda.m4a'
+  },
+  {
+    id: 'peter-pan',
+    title: 'Peter Pan',
+    emoji: '🧚',
+    url: 'https://cdn.sogni.ai/audio-samples/peter-pan.m4a'
+  },
+  {
+    id: 'suff-gucci',
+    title: 'Suff Gucci',
+    emoji: '💰',
+    url: 'https://cdn.sogni.ai/audio-samples/suff-gucci.m4a'
+  },
+  {
+    id: 'terrorize-my-heart',
+    title: 'Terrorize My Heart',
+    emoji: '💔',
+    url: 'https://cdn.sogni.ai/audio-samples/terrorize-my-heart.m4a'
+  },
+  {
+    id: 'thats-all-right',
+    title: "That's All Right",
+    emoji: '👍',
+    url: 'https://cdn.sogni.ai/audio-samples/thats-all-right.m4a'
+  },
+  {
+    id: 'trouble',
+    title: 'Trouble',
+    emoji: '😈',
+    url: 'https://cdn.sogni.ai/audio-samples/trouble.m4a'
+  },
+  {
+    id: 'turn-it-down-for-what',
+    title: 'Turn It Down for What',
+    emoji: '🔊',
+    url: 'https://cdn.sogni.ai/audio-samples/turn-it-down-for-what.m4a'
+  },
+  {
+    id: 'welcome-to-derry',
+    title: 'Welcome to Derry',
+    emoji: '🎈',
+    url: 'https://cdn.sogni.ai/audio-samples/welcome-to-derry.m4a'
+  },
+  {
+    id: 'who-put-the-bomb',
+    title: 'Who Put the Bomb',
+    emoji: '💣',
+    url: 'https://cdn.sogni.ai/audio-samples/who-put-the-bomb.m4a'
+  },
+  {
     id: '6-feet',
     title: '6 Feet',
     emoji: '🎵',
