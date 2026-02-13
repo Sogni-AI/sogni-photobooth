@@ -6,332 +6,63 @@ import AudioRecorderPopup from './AudioRecorderPopup';
 import { saveRecording } from '../../utils/recordingsDB';
 import VideoSettingsFooter from './VideoSettingsFooter';
 
-// Sample audio tracks for S2V
+// Sample audio tracks for S2V (sorted alphabetically by title)
+const SAMPLE_AUDIO_CDN = 'https://cdn.sogni.ai/audio-samples';
 const SAMPLE_AUDIO_TRACKS = [
-  {
-    id: 'grandpa-on-retro',
-    title: 'Grandpa on Retro',
-    emoji: '🎸',
-    url: 'https://cdn.sogni.ai/audio-samples/grandpa-on-retro.m4a'
-  },
-  {
-    id: 'hank-hill-hotdog',
-    title: 'Hank Hill Hotdog',
-    emoji: '🌭',
-    url: 'https://cdn.sogni.ai/audio-samples/hank-hill-hotdog.m4a'
-  },
-  {
-    id: 'ylvis-the-fox',
-    title: 'Ylvis The Fox',
-    emoji: '🦊',
-    url: 'https://cdn.sogni.ai/audio-samples/ylvis-the-fox.m4a'
-  },
-  {
-    id: 'look-at-that-cat',
-    title: 'Look at That Cat',
-    emoji: '🐱',
-    url: 'https://cdn.sogni.ai/audio-samples/look-at-that-cat.m4a'
-  },
-  {
-    id: 'im-a-snake',
-    title: "I'm a Snake",
-    emoji: '🐍',
-    url: 'https://cdn.sogni.ai/audio-samples/im-a-snake.m4a'
-  },
-  {
-    id: 'mii-theme-trap-remix',
-    title: 'Mii Theme Trap Remix',
-    emoji: '🎮',
-    url: 'https://cdn.sogni.ai/audio-samples/mii-theme-trap-remix.m4a'
-  },
-  {
-    id: 'have-you-ever-had-a-dream',
-    title: 'Have You Ever Had a Dream',
-    emoji: '💭',
-    url: 'https://cdn.sogni.ai/audio-samples/have-you-ever-had-a-dream.m4a'
-  },
-  {
-    id: 'louis-theroux-jiggle-giggle',
-    title: 'Louis Theroux Jiggle Giggle',
-    emoji: '🕺',
-    url: 'https://cdn.sogni.ai/audio-samples/louis-theroux-jiggle-giggle.m4a'
-  },
-  {
-    id: 'jet-2-holiday-jingle',
-    title: 'Jet 2 Holiday Jingle',
-    emoji: '✈️',
-    url: 'https://cdn.sogni.ai/audio-samples/jet-2-holiday-jingle.m4a'
-  },
-  {
-    id: 'beez-in-the-trap',
-    title: 'Beez in the Trap',
-    emoji: '🐝',
-    url: 'https://cdn.sogni.ai/audio-samples/beez-in-the-trap.m4a'
-  },
-  {
-    id: 'about-you',
-    title: 'About You',
-    emoji: '💕',
-    url: 'https://cdn.sogni.ai/audio-samples/about-you.m4a'
-  },
-  {
-    id: 'all-eyes-on-me',
-    title: 'All Eyes on Me',
-    emoji: '👀',
-    url: 'https://cdn.sogni.ai/audio-samples/all-eyes-on-me.m4a'
-  },
-  {
-    id: 'eclipse-philosophy',
-    title: 'Eclipse Philosophy',
-    emoji: '🌑',
-    url: 'https://cdn.sogni.ai/audio-samples/eclipse-philosophy.m4a'
-  },
-  {
-    id: 'big-bad-john',
-    title: 'Big Bad John',
-    emoji: '💪',
-    url: 'https://cdn.sogni.ai/audio-samples/big-bad-john.m4a'
-  },
-  {
-    id: 'brutus',
-    title: 'Brutus',
-    emoji: '🗡️',
-    url: 'https://cdn.sogni.ai/audio-samples/brutus.m4a'
-  },
-  {
-    id: 'mic-check',
-    title: 'Mic Check',
-    emoji: '🎤',
-    url: 'https://cdn.sogni.ai/audio-samples/mic-check.m4a'
-  },
-  {
-    id: 'down-with-the-sickness',
-    title: 'Down with the Sickness',
-    emoji: '🤘',
-    url: 'https://cdn.sogni.ai/audio-samples/down-with-the-sickness.m4a'
-  },
-  {
-    id: 'dtmf',
-    title: 'DTMF',
-    emoji: '📞',
-    url: 'https://cdn.sogni.ai/audio-samples/dtmf.m4a'
-  },
-  {
-    id: 'good-places',
-    title: 'Good Places',
-    emoji: '🌴',
-    url: 'https://cdn.sogni.ai/audio-samples/good-places.m4a'
-  },
-  {
-    id: 'hitchhiker-11',
-    title: 'Hitchhiker 11',
-    emoji: '👽',
-    url: 'https://cdn.sogni.ai/audio-samples/hitchhiker-11.m4a'
-  },
-  {
-    id: 'kill-jill',
-    title: 'Kill Jill',
-    emoji: '🔥',
-    url: 'https://cdn.sogni.ai/audio-samples/kill-jill.m4a'
-  },
-  {
-    id: 'once-in-a-lifetime',
-    title: 'Once in a Lifetime',
-    emoji: '🌊',
-    url: 'https://cdn.sogni.ai/audio-samples/once-in-a-lifetime.m4a'
-  },
-  {
-    id: 'panda',
-    title: 'Panda',
-    emoji: '🐼',
-    url: 'https://cdn.sogni.ai/audio-samples/panda.m4a'
-  },
-  {
-    id: 'peter-pan',
-    title: 'Peter Pan',
-    emoji: '🧚',
-    url: 'https://cdn.sogni.ai/audio-samples/peter-pan.m4a'
-  },
-  {
-    id: 'suff-gucci',
-    title: 'Suff Gucci',
-    emoji: '💰',
-    url: 'https://cdn.sogni.ai/audio-samples/suff-gucci.m4a'
-  },
-  {
-    id: 'terrorize-my-heart',
-    title: 'Terrorize My Heart',
-    emoji: '💔',
-    url: 'https://cdn.sogni.ai/audio-samples/terrorize-my-heart.m4a'
-  },
-  {
-    id: 'thats-all-right',
-    title: "That's All Right",
-    emoji: '👍',
-    url: 'https://cdn.sogni.ai/audio-samples/thats-all-right.m4a'
-  },
-  {
-    id: 'trouble',
-    title: 'Trouble',
-    emoji: '😈',
-    url: 'https://cdn.sogni.ai/audio-samples/trouble.m4a'
-  },
-  {
-    id: 'turn-it-down-for-what',
-    title: 'Turn It Down for What',
-    emoji: '🔊',
-    url: 'https://cdn.sogni.ai/audio-samples/turn-it-down-for-what.m4a'
-  },
-  {
-    id: 'welcome-to-derry',
-    title: 'Welcome to Derry',
-    emoji: '🎈',
-    url: 'https://cdn.sogni.ai/audio-samples/welcome-to-derry.m4a'
-  },
-  {
-    id: 'who-put-the-bomb',
-    title: 'Who Put the Bomb',
-    emoji: '💣',
-    url: 'https://cdn.sogni.ai/audio-samples/who-put-the-bomb.m4a'
-  },
-  {
-    id: 'tokyo-drift',
-    title: 'Tokyo Drift',
-    emoji: '🏎️',
-    url: 'https://cdn.sogni.ai/audio-samples/tokyo-drift.m4a'
-  },
-  {
-    id: 'pimp',
-    title: 'Pimp',
-    emoji: '🎩',
-    url: 'https://cdn.sogni.ai/audio-samples/pimp.m4a'
-  },
-  {
-    id: 'confidence-man-holiday',
-    title: 'Confidence Man Holiday',
-    emoji: '🌞',
-    url: 'https://cdn.sogni.ai/audio-samples/confidence-man-holiday.m4a'
-  },
-  {
-    id: 'bless-the-telephone',
-    title: 'Bless the Telephone',
-    emoji: '☎️',
-    url: 'https://cdn.sogni.ai/audio-samples/bless-the-telephone.m4a'
-  },
-  {
-    id: 'chan-chan',
-    title: 'Chan Chan',
-    emoji: '🎺',
-    url: 'https://cdn.sogni.ai/audio-samples/chan-chan.m4a'
-  },
-  {
-    id: 'when-i-was-done-dying',
-    title: 'When I Was Done Dying',
-    emoji: '🌀',
-    url: 'https://cdn.sogni.ai/audio-samples/when-i-was-done-dying.m4a'
-  },
-  {
-    id: 'slice-of-heaven',
-    title: 'Slice of Heaven',
-    emoji: '☀️',
-    url: 'https://cdn.sogni.ai/audio-samples/slice-of-heaven.m4a'
-  },
-  {
-    id: '6-feet',
-    title: '6 Feet',
-    emoji: '🎵',
-    url: 'https://cdn.sogni.ai/audio-samples/6-feet.m4a'
-  },
-  {
-    id: '8-ball',
-    title: '8 Ball',
-    emoji: '🎱',
-    url: 'https://cdn.sogni.ai/audio-samples/8-ball.m4a'
-  },
-  {
-    id: 'fast-as-f',
-    title: 'Fast as F',
-    emoji: '⚡',
-    url: 'https://cdn.sogni.ai/audio-samples/fast-as-f.m4a'
-  },
-  {
-    id: 'hoist-the-colors',
-    title: 'Hoist the Colors',
-    emoji: '🏴‍☠️',
-    url: 'https://cdn.sogni.ai/audio-samples/hoist-the-colors.m4a'
-  },
-  {
-    id: 'hurricane-katrina',
-    title: 'Hurricane Katrina',
-    emoji: '🌀',
-    url: 'https://cdn.sogni.ai/audio-samples/hurrican-katrina.m4a'
-  },
-  {
-    id: 'kitty-bed',
-    title: 'Kitty Bed',
-    emoji: '🐱',
-    url: 'https://cdn.sogni.ai/audio-samples/kitty-bed.m4a'
-  },
-  {
-    id: 'listen-to-me-now',
-    title: 'Listen to Me Now',
-    emoji: '👂',
-    url: 'https://cdn.sogni.ai/audio-samples/listen-to-me-now.m4a'
-  },
-  {
-    id: 'n-95',
-    title: 'N-95',
-    emoji: '😷',
-    url: 'https://cdn.sogni.ai/audio-samples/n-95.m4a'
-  },
-  {
-    id: 'noone-is-going-to-know',
-    title: 'No One is Going to Know',
-    emoji: '🤫',
-    url: 'https://cdn.sogni.ai/audio-samples/noone-is-going-to-know.m4a'
-  },
-  {
-    id: 'o-fortuna',
-    title: 'O Fortuna',
-    emoji: '🎭',
-    url: 'https://cdn.sogni.ai/audio-samples/o-fortuna.m4a'
-  },
-  {
-    id: 'peter-axel-f',
-    title: 'Peter Axel F',
-    emoji: '🎹',
-    url: 'https://cdn.sogni.ai/audio-samples/peter-axel-f.m4a'
-  },
-  {
-    id: 'priceless',
-    title: 'Priceless',
-    emoji: '💎',
-    url: 'https://cdn.sogni.ai/audio-samples/priceless.m4a'
-  },
-  {
-    id: 'runnin-through-the-6',
-    title: 'Runnin Through the 6',
-    emoji: '🏃',
-    url: 'https://cdn.sogni.ai/audio-samples/runnin-through-the-6.m4a'
-  },
-  {
-    id: 'runnin-up-that-hill',
-    title: 'Runnin Up That Hill',
-    emoji: '⛰️',
-    url: 'https://cdn.sogni.ai/audio-samples/runnin-up-that-hill.m4a'
-  },
-  {
-    id: 'spider-man-2099',
-    title: 'Spider-Man 2099',
-    emoji: '🕷️',
-    url: 'https://cdn.sogni.ai/audio-samples/spider-man-2099.m4a'
-  },
-  {
-    id: 'surround-sound',
-    title: 'Surround Sound',
-    emoji: '🔊',
-    url: 'https://cdn.sogni.ai/audio-samples/surrond-sound.m4a'
-  }
+  { id: '6-feet', title: '6 Feet', emoji: '🎵', duration: '0:28', url: `${SAMPLE_AUDIO_CDN}/6-feet.m4a` },
+  { id: '8-ball', title: '8 Ball', emoji: '🎱', duration: '0:21', url: `${SAMPLE_AUDIO_CDN}/8-ball.m4a` },
+  { id: 'about-you', title: 'About You', emoji: '💕', duration: '1:17', url: `${SAMPLE_AUDIO_CDN}/about-you.m4a` },
+  { id: 'all-eyes-on-me', title: 'All Eyes on Me', emoji: '👀', duration: '0:32', url: `${SAMPLE_AUDIO_CDN}/all-eyes-on-me.m4a` },
+  { id: 'beez-in-the-trap', title: 'Beez in the Trap', emoji: '🐝', duration: '0:22', url: `${SAMPLE_AUDIO_CDN}/beez-in-the-trap.m4a` },
+  { id: 'big-bad-john', title: 'Big Bad John', emoji: '💪', duration: '0:58', url: `${SAMPLE_AUDIO_CDN}/big-bad-john.m4a` },
+  { id: 'bless-the-telephone', title: 'Bless the Telephone', emoji: '☎️', duration: '1:08', url: `${SAMPLE_AUDIO_CDN}/bless-the-telephone.m4a` },
+  { id: 'brutus', title: 'Brutus', emoji: '🗡️', duration: '1:07', url: `${SAMPLE_AUDIO_CDN}/brutus.m4a` },
+  { id: 'chan-chan', title: 'Chan Chan', emoji: '🎺', duration: '1:31', url: `${SAMPLE_AUDIO_CDN}/chan-chan.m4a` },
+  { id: 'confidence-man-holiday', title: 'Confidence Man Holiday', emoji: '🌞', duration: '1:34', url: `${SAMPLE_AUDIO_CDN}/confidence-man-holiday.m4a` },
+  { id: 'down-with-the-sickness', title: 'Down with the Sickness', emoji: '🤘', duration: '0:59', url: `${SAMPLE_AUDIO_CDN}/down-with-the-sickness.m4a` },
+  { id: 'dtmf', title: 'DTMF', emoji: '📞', duration: '0:33', url: `${SAMPLE_AUDIO_CDN}/dtmf.m4a` },
+  { id: 'eclipse-philosophy', title: 'Eclipse Philosophy', emoji: '🌑', duration: '0:45', url: `${SAMPLE_AUDIO_CDN}/eclipse-philosophy.m4a` },
+  { id: 'fast-as-f', title: 'Fast as F', emoji: '⚡', duration: '0:16', url: `${SAMPLE_AUDIO_CDN}/fast-as-f.m4a` },
+  { id: 'good-places', title: 'Good Places', emoji: '🌴', duration: '0:59', url: `${SAMPLE_AUDIO_CDN}/good-places.m4a` },
+  { id: 'grandpa-on-retro', title: 'Grandpa on Retro', emoji: '🎸', duration: '0:35', url: `${SAMPLE_AUDIO_CDN}/grandpa-on-retro.m4a` },
+  { id: 'hank-hill-hotdog', title: 'Hank Hill Hotdog', emoji: '🌭', duration: '0:42', url: `${SAMPLE_AUDIO_CDN}/hank-hill-hotdog.m4a` },
+  { id: 'have-you-ever-had-a-dream', title: 'Have You Ever Had a Dream', emoji: '💭', duration: '0:19', url: `${SAMPLE_AUDIO_CDN}/have-you-ever-had-a-dream.m4a` },
+  { id: 'hitchhiker-11', title: 'Hitchhiker 11', emoji: '👽', duration: '1:02', url: `${SAMPLE_AUDIO_CDN}/hitchhiker-11.m4a` },
+  { id: 'hoist-the-colors', title: 'Hoist the Colors', emoji: '🏴‍☠️', duration: '0:29', url: `${SAMPLE_AUDIO_CDN}/hoist-the-colors.m4a` },
+  { id: 'hurricane-katrina', title: 'Hurricane Katrina', emoji: '🌀', duration: '0:24', url: `${SAMPLE_AUDIO_CDN}/hurrican-katrina.m4a` },
+  { id: 'im-a-snake', title: "I'm a Snake", emoji: '🐍', duration: '1:03', url: `${SAMPLE_AUDIO_CDN}/im-a-snake.m4a` },
+  { id: 'jet-2-holiday-jingle', title: 'Jet 2 Holiday Jingle', emoji: '✈️', duration: '0:13', url: `${SAMPLE_AUDIO_CDN}/jet-2-holiday-jingle.m4a` },
+  { id: 'kill-jill', title: 'Kill Jill', emoji: '🔥', duration: '0:28', url: `${SAMPLE_AUDIO_CDN}/kill-jill.m4a` },
+  { id: 'kitty-bed', title: 'Kitty Bed', emoji: '🐱', duration: '0:18', url: `${SAMPLE_AUDIO_CDN}/kitty-bed.m4a` },
+  { id: 'listen-to-me-now', title: 'Listen to Me Now', emoji: '👂', duration: '0:10', url: `${SAMPLE_AUDIO_CDN}/listen-to-me-now.m4a` },
+  { id: 'look-at-that-cat', title: 'Look at That Cat', emoji: '🐱', duration: '0:45', url: `${SAMPLE_AUDIO_CDN}/look-at-that-cat.m4a` },
+  { id: 'louis-theroux-jiggle-giggle', title: 'Louis Theroux Jiggle Giggle', emoji: '🕺', duration: '0:22', url: `${SAMPLE_AUDIO_CDN}/louis-theroux-jiggle-giggle.m4a` },
+  { id: 'mic-check', title: 'Mic Check', emoji: '🎤', duration: '1:01', url: `${SAMPLE_AUDIO_CDN}/mic-check.m4a` },
+  { id: 'mii-theme-trap-remix', title: 'Mii Theme Trap Remix', emoji: '🎮', duration: '0:31', url: `${SAMPLE_AUDIO_CDN}/mii-theme-trap-remix.m4a` },
+  { id: 'n-95', title: 'N-95', emoji: '😷', duration: '0:17', url: `${SAMPLE_AUDIO_CDN}/n-95.m4a` },
+  { id: 'noone-is-going-to-know', title: 'No One is Going to Know', emoji: '🤫', duration: '0:24', url: `${SAMPLE_AUDIO_CDN}/noone-is-going-to-know.m4a` },
+  { id: 'o-fortuna', title: 'O Fortuna', emoji: '🎭', duration: '0:31', url: `${SAMPLE_AUDIO_CDN}/o-fortuna.m4a` },
+  { id: 'once-in-a-lifetime', title: 'Once in a Lifetime', emoji: '🌊', duration: '0:41', url: `${SAMPLE_AUDIO_CDN}/once-in-a-lifetime.m4a` },
+  { id: 'panda', title: 'Panda', emoji: '🐼', duration: '0:44', url: `${SAMPLE_AUDIO_CDN}/panda.m4a` },
+  { id: 'peter-axel-f', title: 'Peter Axel F', emoji: '🎹', duration: '0:09', url: `${SAMPLE_AUDIO_CDN}/peter-axel-f.m4a` },
+  { id: 'peter-pan', title: 'Peter Pan', emoji: '🧚', duration: '0:51', url: `${SAMPLE_AUDIO_CDN}/peter-pan.m4a` },
+  { id: 'pimp', title: 'Pimp', emoji: '🎩', duration: '1:35', url: `${SAMPLE_AUDIO_CDN}/pimp.m4a` },
+  { id: 'priceless', title: 'Priceless', emoji: '💎', duration: '0:14', url: `${SAMPLE_AUDIO_CDN}/priceless.m4a` },
+  { id: 'runnin-through-the-6', title: 'Runnin Through the 6', emoji: '🏃', duration: '0:16', url: `${SAMPLE_AUDIO_CDN}/runnin-through-the-6.m4a` },
+  { id: 'runnin-up-that-hill', title: 'Runnin Up That Hill', emoji: '⛰️', duration: '1:10', url: `${SAMPLE_AUDIO_CDN}/runnin-up-that-hill.m4a` },
+  { id: 'slice-of-heaven', title: 'Slice of Heaven', emoji: '☀️', duration: '0:48', url: `${SAMPLE_AUDIO_CDN}/slice-of-heaven.m4a` },
+  { id: 'spider-man-2099', title: 'Spider-Man 2099', emoji: '🕷️', duration: '0:29', url: `${SAMPLE_AUDIO_CDN}/spider-man-2099.m4a` },
+  { id: 'suff-gucci', title: 'Suff Gucci', emoji: '💰', duration: '0:23', url: `${SAMPLE_AUDIO_CDN}/suff-gucci.m4a` },
+  { id: 'surround-sound', title: 'Surround Sound', emoji: '🔊', duration: '0:24', url: `${SAMPLE_AUDIO_CDN}/surrond-sound.m4a` },
+  { id: 'terrorize-my-heart', title: 'Terrorize My Heart', emoji: '💔', duration: '1:06', url: `${SAMPLE_AUDIO_CDN}/terrorize-my-heart.m4a` },
+  { id: 'thats-all-right', title: "That's All Right", emoji: '👍', duration: '0:48', url: `${SAMPLE_AUDIO_CDN}/thats-all-right.m4a` },
+  { id: 'tokyo-drift', title: 'Tokyo Drift', emoji: '🏎️', duration: '0:42', url: `${SAMPLE_AUDIO_CDN}/tokyo-drift.m4a` },
+  { id: 'trouble', title: 'Trouble', emoji: '😈', duration: '0:45', url: `${SAMPLE_AUDIO_CDN}/trouble.m4a` },
+  { id: 'turn-it-down-for-what', title: 'Turn It Down for What', emoji: '🔊', duration: '0:39', url: `${SAMPLE_AUDIO_CDN}/turn-it-down-for-what.m4a` },
+  { id: 'welcome-to-derry', title: 'Welcome to Derry', emoji: '🎈', duration: '1:05', url: `${SAMPLE_AUDIO_CDN}/welcome-to-derry.m4a` },
+  { id: 'when-i-was-done-dying', title: 'When I Was Done Dying', emoji: '🌀', duration: '1:58', url: `${SAMPLE_AUDIO_CDN}/when-i-was-done-dying.m4a` },
+  { id: 'who-put-the-bomb', title: 'Who Put the Bomb', emoji: '💣', duration: '0:48', url: `${SAMPLE_AUDIO_CDN}/who-put-the-bomb.m4a` },
+  { id: 'ylvis-the-fox', title: 'Ylvis The Fox', emoji: '🦊', duration: '0:32', url: `${SAMPLE_AUDIO_CDN}/ylvis-the-fox.m4a` },
 ];
 
 const BASE_MAX_DURATION = 20; // Max 20 seconds per image
@@ -1237,7 +968,7 @@ const SoundToVideoPopup = ({
                     value={sample.id}
                     style={{ background: '#1a1a1a', color: 'white', padding: '8px' }}
                   >
-                    {sample.emoji} {sample.title}
+                    {sample.emoji} {sample.title} ({sample.duration})
                   </option>
                 ))}
               </select>

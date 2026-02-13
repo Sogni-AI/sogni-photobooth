@@ -18494,7 +18494,7 @@ const PhotoGallery = ({
                   </option>
                   {TRANSITION_MUSIC_PRESETS.map((preset) => (
                     <option key={preset.id} value={preset.id}>
-                      {preset.title} • {preset.duration}
+                      {preset.emoji} {preset.title} ({preset.duration})
                     </option>
                   ))}
                 </select>
