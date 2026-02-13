@@ -35,6 +35,7 @@ const S2V_TRACKS = [
   { id: 'turn-it-down-for-what', title: 'Turn It Down for What', duration: '0:39' },
   { id: 'welcome-to-derry', title: 'Welcome to Derry', duration: '1:05' },
   { id: 'who-put-the-bomb', title: 'Who Put the Bomb', duration: '0:48' },
+  { id: 'tokyo-drift', title: 'Tokyo Drift', duration: '0:42' },
   { id: '6-feet', title: '6 Feet', duration: '0:28' },
   { id: '8-ball', title: '8 Ball', duration: '0:21' },
   { id: 'fast-as-f', title: 'Fast as F', duration: '0:16' },

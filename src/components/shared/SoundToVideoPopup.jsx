@@ -195,6 +195,12 @@ const SAMPLE_AUDIO_TRACKS = [
     url: 'https://cdn.sogni.ai/audio-samples/who-put-the-bomb.m4a'
   },
   {
+    id: 'tokyo-drift',
+    title: 'Tokyo Drift',
+    emoji: '🏎️',
+    url: 'https://cdn.sogni.ai/audio-samples/tokyo-drift.m4a'
+  },
+  {
     id: '6-feet',
     title: '6 Feet',
     emoji: '🎵',
