@@ -9,6 +9,18 @@ import VideoSettingsFooter from './VideoSettingsFooter';
 // Sample audio tracks for S2V
 const SAMPLE_AUDIO_TRACKS = [
   {
+    id: 'grandpa-on-retro',
+    title: 'Grandpa on Retro',
+    emoji: '🎸',
+    url: 'https://cdn.sogni.ai/audio-samples/grandpa-on-retro.m4a'
+  },
+  {
+    id: 'hank-hill-hotdog',
+    title: 'Hank Hill Hotdog',
+    emoji: '🌭',
+    url: 'https://cdn.sogni.ai/audio-samples/hank-hill-hotdog.m4a'
+  },
+  {
     id: '6-feet',
     title: '6 Feet',
     emoji: '🎵',
