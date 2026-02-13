@@ -201,6 +201,42 @@ const SAMPLE_AUDIO_TRACKS = [
     url: 'https://cdn.sogni.ai/audio-samples/tokyo-drift.m4a'
   },
   {
+    id: 'pimp',
+    title: 'Pimp',
+    emoji: '🎩',
+    url: 'https://cdn.sogni.ai/audio-samples/pimp.m4a'
+  },
+  {
+    id: 'confidence-man-holiday',
+    title: 'Confidence Man Holiday',
+    emoji: '🌞',
+    url: 'https://cdn.sogni.ai/audio-samples/confidence-man-holiday.m4a'
+  },
+  {
+    id: 'bless-the-telephone',
+    title: 'Bless the Telephone',
+    emoji: '☎️',
+    url: 'https://cdn.sogni.ai/audio-samples/bless-the-telephone.m4a'
+  },
+  {
+    id: 'chan-chan',
+    title: 'Chan Chan',
+    emoji: '🎺',
+    url: 'https://cdn.sogni.ai/audio-samples/chan-chan.m4a'
+  },
+  {
+    id: 'when-i-was-done-dying',
+    title: 'When I Was Done Dying',
+    emoji: '🌀',
+    url: 'https://cdn.sogni.ai/audio-samples/when-i-was-done-dying.m4a'
+  },
+  {
+    id: 'slice-of-heaven',
+    title: 'Slice of Heaven',
+    emoji: '☀️',
+    url: 'https://cdn.sogni.ai/audio-samples/slice-of-heaven.m4a'
+  },
+  {
     id: '6-feet',
     title: '6 Feet',
     emoji: '🎵',
