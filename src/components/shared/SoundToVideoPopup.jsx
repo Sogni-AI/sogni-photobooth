@@ -21,6 +21,54 @@ const SAMPLE_AUDIO_TRACKS = [
     url: 'https://cdn.sogni.ai/audio-samples/hank-hill-hotdog.m4a'
   },
   {
+    id: 'ylvis-the-fox',
+    title: 'Ylvis The Fox',
+    emoji: '🦊',
+    url: 'https://cdn.sogni.ai/audio-samples/ylvis-the-fox.m4a'
+  },
+  {
+    id: 'look-at-that-cat',
+    title: 'Look at That Cat',
+    emoji: '🐱',
+    url: 'https://cdn.sogni.ai/audio-samples/look-at-that-cat.m4a'
+  },
+  {
+    id: 'im-a-snake',
+    title: "I'm a Snake",
+    emoji: '🐍',
+    url: 'https://cdn.sogni.ai/audio-samples/im-a-snake.m4a'
+  },
+  {
+    id: 'mii-theme-trap-remix',
+    title: 'Mii Theme Trap Remix',
+    emoji: '🎮',
+    url: 'https://cdn.sogni.ai/audio-samples/mii-theme-trap-remix.m4a'
+  },
+  {
+    id: 'have-you-ever-had-a-dream',
+    title: 'Have You Ever Had a Dream',
+    emoji: '💭',
+    url: 'https://cdn.sogni.ai/audio-samples/have-you-ever-had-a-dream.m4a'
+  },
+  {
+    id: 'louis-theroux-jiggle-giggle',
+    title: 'Louis Theroux Jiggle Giggle',
+    emoji: '🕺',
+    url: 'https://cdn.sogni.ai/audio-samples/louis-theroux-jiggle-giggle.m4a'
+  },
+  {
+    id: 'jet-2-holiday-jingle',
+    title: 'Jet 2 Holiday Jingle',
+    emoji: '✈️',
+    url: 'https://cdn.sogni.ai/audio-samples/jet-2-holiday-jingle.m4a'
+  },
+  {
+    id: 'beez-in-the-trap',
+    title: 'Beez in the Trap',
+    emoji: '🐝',
+    url: 'https://cdn.sogni.ai/audio-samples/beez-in-the-trap.m4a'
+  },
+  {
     id: '6-feet',
     title: '6 Feet',
     emoji: '🎵',
