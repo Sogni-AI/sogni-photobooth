@@ -92,7 +92,7 @@ export interface JobTimings {
 
 export interface ArchiveProject {
   id: string;
-  type: 'image' | 'video';
+  type: 'image' | 'video' | 'audio';
   numberOfMedia: number;
   jobs: ArchiveJob[];
   status: ProjectStatus;
@@ -114,7 +114,7 @@ export interface ArchiveJob {
   isNSFW: boolean;
   projectId: string;
   status: JobStatus;
-  type: 'image' | 'video';
+  type: 'image' | 'video' | 'audio';
   hidden?: boolean;
 }
 
@@ -133,7 +133,7 @@ export interface MediaURL {
   expiresAt: number;
   projectId: string;
   jobId: string;
-  type: 'image' | 'video';
+  type: 'image' | 'video' | 'audio';
   refreshing: boolean;
   error?: string;
 }

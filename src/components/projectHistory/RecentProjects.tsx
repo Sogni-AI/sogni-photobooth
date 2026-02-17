@@ -10,6 +10,7 @@ import type { LocalProject } from '../../types/localProjects';
 import { LOCAL_PROJECT_MAX_IMAGES, LOCAL_PROJECT_SUPPORTED_EXTENSIONS, LOCAL_PROJECT_SUPPORTED_TYPES } from '../../types/localProjects';
 import { pluralize, timeAgo } from '../../utils/string';
 import { downloadImagesAsZip, downloadVideosAsZip } from '../../utils/bulkDownload';
+import { getExtensionFromUrl } from '../../utils/url';
 import './RecentProjects.css';
 
 interface RecentProjectsProps {
@@ -132,7 +133,7 @@ async function fetchProjectById(projectId: string): Promise<ArchiveProject | nul
         id: j.imgID,
         isNSFW: j.reason === 'sensitiveContent',
         projectId: project.id,
-        type: (project.jobType === 'video' ? 'video' : 'image') as 'video' | 'image',
+        type: (project.jobType === 'video' ? 'video' : project.jobType === 'audio' ? 'audio' : 'image') as 'video' | 'audio' | 'image',
         status: j.status === 'jobCompleted' ? 'completed' as const :
                 j.reason === 'artistCanceled' ? 'canceled' as const :
                 j.status === 'jobError' ? 'failed' as const : 'pending' as const,
@@ -142,7 +143,7 @@ async function fetchProjectById(projectId: string): Promise<ArchiveProject | nul
 
     return {
       id: project.id,
-      type: project.jobType === 'video' ? 'video' : 'image',
+      type: project.jobType === 'video' ? 'video' : project.jobType === 'audio' ? 'audio' : 'image',
       status: 'completed',
       numberOfMedia: project.imageCount,
       jobs,
@@ -223,10 +224,11 @@ function RecentProjects({
   const [mediaFilter, setMediaFilter] = useState<'all' | 'image' | 'video'>('all');
 
   // Project counts fetched from lightweight API
-  const [projectCounts, setProjectCounts] = useState<{ all: number; image: number; video: number }>({
+  const [projectCounts, setProjectCounts] = useState<{ all: number; image: number; video: number; audio: number }>({
     all: 0,
     image: 0,
-    video: 0
+    video: 0,
+    audio: 0
   });
   const [countsLoading, setCountsLoading] = useState(true);
 
@@ -691,11 +693,14 @@ function RecentProjects({
         // Filter to 24-hour window and count by type
         let imageCount = 0;
         let videoCount = 0;
+        let audioCount = 0;
 
         for (const project of projects) {
           if (project.endTime > minTimestamp) {
             if (project.jobType === 'video') {
               videoCount++;
+            } else if (project.jobType === 'audio') {
+              audioCount++;
             } else {
               imageCount++;
             }
@@ -703,9 +708,10 @@ function RecentProjects({
         }
 
         setProjectCounts({
-          all: imageCount + videoCount,
+          all: imageCount + videoCount + audioCount,
           image: imageCount,
-          video: videoCount
+          video: videoCount,
+          audio: audioCount
         });
       } catch (err) {
         console.error('Failed to fetch project counts:', err);
@@ -1023,7 +1029,7 @@ function RecentProjects({
 
       // Helper to get download URL using SDK (same as useMediaUrl hook)
       const getMediaUrl = async (job: typeof completedJobs[0]): Promise<string> => {
-        if (project.type === 'video') {
+        if (project.type === 'video' || project.type === 'audio') {
           return await sogniClient.projects.mediaDownloadUrl({
             jobId: project.id,
             id: job.id,
@@ -1044,7 +1050,7 @@ function RecentProjects({
         setDownloadProgress({ current: 0, total: 1, message: 'Fetching download URL...' });
 
         const mediaUrl = await getMediaUrl(job);
-        const extension = project.type === 'video' ? 'mp4' : 'png';
+        const extension = getExtensionFromUrl(mediaUrl, project.type === 'video' ? 'mp4' : 'png');
         const filename = `sogni-${project.model.name.toLowerCase().replace(/\s+/g, '-')}-${job.id.slice(0, 8)}.${extension}`;
 
         setDownloadProgress({ current: 0, total: 1, message: 'Downloading...' });
@@ -1069,7 +1075,6 @@ function RecentProjects({
       } else {
         // Multiple jobs - get all URLs first, then download as ZIP
         const mediaItems: Array<{ url: string; filename: string }> = [];
-        const extension = project.type === 'video' ? 'mp4' : 'png';
 
         setDownloadProgress({ current: 0, total: completedJobs.length, message: 'Fetching download URLs...' });
 
@@ -1077,6 +1082,7 @@ function RecentProjects({
           const job = completedJobs[i];
           try {
             const mediaUrl = await getMediaUrl(job);
+            const extension = getExtensionFromUrl(mediaUrl, project.type === 'video' ? 'mp4' : 'png');
             const filename = `sogni-${project.model.name.toLowerCase().replace(/\s+/g, '-')}-${i + 1}.${extension}`;
             mediaItems.push({ url: mediaUrl, filename });
             setDownloadProgress({ current: i + 1, total: completedJobs.length, message: `Fetching URL ${i + 1} of ${completedJobs.length}...` });
@@ -1097,11 +1103,11 @@ function RecentProjects({
 
         // Generate ZIP filename with timestamp
         const timestamp = new Date().toISOString().split('T')[0];
-        const mediaType = project.type === 'video' ? 'videos' : 'images';
+        const mediaType = project.type === 'video' ? 'videos' : project.type === 'audio' ? 'audio' : 'images';
         const zipFilename = `sogni-${project.model.name.toLowerCase().replace(/\s+/g, '-')}-${mediaType}-${timestamp}.zip`;
 
         // Download using the appropriate function
-        const downloadFn = project.type === 'video' ? downloadVideosAsZip : downloadImagesAsZip;
+        const downloadFn = (project.type === 'video' || project.type === 'audio') ? downloadVideosAsZip : downloadImagesAsZip;
         const success = await downloadFn(
           mediaItems,
           zipFilename,
@@ -1619,7 +1625,7 @@ function RecentProjects({
                     {isPinned && <span className="recent-project-pin-badge">📌</span>}
                     {project.model.name}{' '}
                     <span>
-                      ({project.numberOfMedia} {pluralize(project.numberOfMedia, project.type === 'video' ? 'video' : 'image')})
+                      ({project.numberOfMedia} {pluralize(project.numberOfMedia, project.type === 'video' ? 'video' : project.type === 'audio' ? 'track' : 'image')})
                     </span>
                   </div>
                   <div className="recent-project-date">
@@ -1641,12 +1647,12 @@ function RecentProjects({
                     title={
                       downloadingProject === project.id
                         ? downloadProgress?.message || 'Downloading...'
-                        : `Download all ${project.type === 'video' ? 'videos' : 'images'}`
+                        : `Download all ${project.type === 'video' ? 'videos' : project.type === 'audio' ? 'audio files' : 'images'}`
                     }
                   >
                     {downloadingProject === project.id ? '⏳' : '↓'}
                   </button>
-                  {project.type === 'image' && (
+                  {project.type !== 'video' && project.type !== 'audio' && (
                     <button
                       className="recent-project-reuse-btn"
                       onClick={() => handleReuseProject(project.id)}

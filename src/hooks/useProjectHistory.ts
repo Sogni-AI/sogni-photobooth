@@ -66,7 +66,7 @@ function mapProjectToArchive(item: JobHistoryItemRaw): ArchiveProject {
   }
   return {
     id: item.parentRequest.id,
-    type: item.parentRequest.jobType === 'video' ? 'video' : 'image',
+    type: item.parentRequest.jobType === 'video' ? 'video' : item.parentRequest.jobType === 'audio' ? 'audio' : 'image',
     status: projectStatus,
     numberOfMedia: item.parentRequest.imageCount,
     jobs: [],
@@ -85,7 +85,7 @@ function mapJobToArchive(item: JobHistoryItemRaw): ArchiveJob {
     id: item.imgID,
     isNSFW: item.reason === 'sensitiveContent',
     projectId: item.parentRequest.id,
-    type: item.parentRequest.jobType === 'video' ? 'video' : 'image',
+    type: item.parentRequest.jobType === 'video' ? 'video' : item.parentRequest.jobType === 'audio' ? 'audio' : 'image',
     status: mapJobStatus(item),
     createdAt: item.createTime,
     endTime: item.endTime

@@ -205,6 +205,32 @@
   fill: currentColor;
 }
 
+/* Audio wrapper */
+.slideshow-audio-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 320px;
+  min-height: 280px;
+  padding: 48px 32px;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+  border-radius: 8px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+}
+
+.slideshow-audio-icon {
+  width: 96px;
+  height: 96px;
+  fill: rgba(255, 255, 255, 0.15);
+  margin-bottom: 32px;
+}
+
+.slideshow-audio {
+  width: 100%;
+  max-width: 400px;
+}
+
 /* Navigation Buttons - Always visible */
 .slideshow-nav-btn {
   position: absolute;

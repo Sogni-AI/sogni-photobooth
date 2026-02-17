@@ -15,7 +15,7 @@ const hiddenJobs = new Set<string>();
 interface UseMediaUrlOptions {
   projectId: string;
   jobId: string;
-  type: 'image' | 'video';
+  type: 'image' | 'video' | 'audio';
   sogniClient: SogniClient | null;
   enabled?: boolean;
   onHideJob?: (projectId: string, jobId: string) => void;
@@ -70,7 +70,7 @@ export function useMediaUrl({
 
       // Use the SDK projects API to get download URLs
       // Note: projectId is the parent request ID (job batch), jobId is the individual image/video ID
-      if (type === 'video') {
+      if (type === 'video' || type === 'audio') {
         mediaUrl = await sogniClient.projects.mediaDownloadUrl({
           jobId: projectId,
           id: jobId,

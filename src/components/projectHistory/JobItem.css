@@ -113,6 +113,34 @@
   fill: currentColor;
 }
 
+/* Audio-specific wrapper */
+.job-item-audio-wrapper {
+  position: relative;
+  width: 100%;
+  height: 320px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+  animation: jobItemFadeIn 0.3s ease;
+}
+
+.job-item-audio-icon {
+  width: 64px;
+  height: 64px;
+  fill: rgba(255, 255, 255, 0.15);
+  margin-bottom: 24px;
+}
+
+.job-item-audio {
+  width: calc(100% - 24px);
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  right: 12px;
+}
+
 /* Loading Placeholder */
 .job-item-placeholder {
   display: flex;

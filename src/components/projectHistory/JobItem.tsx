@@ -188,6 +188,23 @@ function JobItem({ job, aspect, sogniClient, onView, onHideJob, modelName }: Job
 
     // Show actual content once visible and URL is ready
     if (job.status === 'completed' && url) {
+      if (job.type === 'audio') {
+        return (
+          <div className="job-item-audio-wrapper">
+            <svg className="job-item-audio-icon" viewBox="0 0 24 24">
+              <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55C7.79 13 6 14.79 6 17s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
+            </svg>
+            <audio
+              className="job-item-audio"
+              src={url}
+              controls
+              preload="metadata"
+              onClick={(e) => e.stopPropagation()}
+            />
+          </div>
+        );
+      }
+
       return job.type === 'video' ? (
         <div className="job-item-video-wrapper">
           <video

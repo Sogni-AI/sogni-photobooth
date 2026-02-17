@@ -2,6 +2,7 @@ import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import type { SogniClient } from '@sogni-ai/sogni-client';
 import type { ArchiveProject, ArchiveJob } from '../../types/projectHistory';
 import { useMediaUrl } from '../../hooks/useMediaUrl';
+import { getExtensionFromUrl } from '../../utils/url';
 import './MediaSlideshow.css';
 
 // Local image type for local projects
@@ -156,6 +157,23 @@ function SlideshowContent({ job, sogniClient, active, modelName }: SlideshowCont
     );
   }
 
+  if (job.type === 'audio') {
+    return (
+      <div className="slideshow-audio-wrapper">
+        <svg className="slideshow-audio-icon" viewBox="0 0 24 24">
+          <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55C7.79 13 6 14.79 6 17s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
+        </svg>
+        <audio
+          className="slideshow-audio"
+          src={url}
+          controls
+          autoPlay={active}
+          preload="metadata"
+        />
+      </div>
+    );
+  }
+
   if (job.type === 'video') {
     return (
       <div className="slideshow-video-wrapper">
@@ -237,7 +255,7 @@ function DownloadButton({ job, sogniClient }: DownloadButtonProps) {
       const response = await fetch(url);
       const blob = await response.blob();
 
-      const extension = job.type === 'video' ? 'mp4' : 'png';
+      const extension = getExtensionFromUrl(url, job.type === 'video' ? 'mp4' : 'png');
       const filename = `sogni-${job.id}.${extension}`;
 
       const link = document.createElement('a');
@@ -543,7 +561,7 @@ function CloudRemixButton({ job, sogniClient, onRemix }: CloudRemixButtonProps) 
     }
   }, [url, onRemix]);
 
-  // Only show remix for images
+  // Only show remix for images (not video or audio)
   if (job.type !== 'image') return null;
 
   return (
