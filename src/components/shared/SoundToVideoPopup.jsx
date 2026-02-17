@@ -838,7 +838,7 @@ const SoundToVideoPopup = ({
         style={{
           background: 'linear-gradient(135deg, #ec4899 0%, #db2777 100%)',
           borderRadius: isMobile ? '16px' : '20px',
-          padding: isMobile ? '20px' : '30px',
+          padding: isMobile ? '16px' : '24px',
           maxWidth: isMobile ? '550px' : '750px',
           width: '100%',
           maxHeight: isMobile ? '95vh' : '90vh',
@@ -893,19 +893,19 @@ const SoundToVideoPopup = ({
         </button>
 
         {/* Header */}
-        <div style={{ marginBottom: '20px', textAlign: 'center' }}>
+        <div style={{ marginBottom: '16px', textAlign: 'center' }}>
           <div style={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             gap: '8px',
-            marginBottom: '8px'
+            marginBottom: '4px'
           }}>
-            <span style={{ fontSize: isMobile ? '32px' : '40px' }}>🎤</span>
+            <span style={{ fontSize: isMobile ? '28px' : '32px' }}>🎤</span>
             <h2 style={{
               margin: 0,
               color: 'white',
-              fontSize: isMobile ? '22px' : '28px',
+              fontSize: isMobile ? '20px' : '24px',
               fontWeight: '700',
               fontFamily: '"Permanent Marker", cursive'
             }}>
@@ -914,8 +914,8 @@ const SoundToVideoPopup = ({
           </div>
           <p style={{
             margin: 0,
-            color: 'rgba(255, 255, 255, 0.85)',
-            fontSize: isMobile ? '12px' : '14px'
+            color: 'rgba(255, 255, 255, 0.7)',
+            fontSize: isMobile ? '11px' : '12px'
           }}>
             Generate lip-synced video from audio
           </p>
@@ -926,7 +926,7 @@ const SoundToVideoPopup = ({
           background: 'rgba(0, 0, 0, 0.2)',
           borderRadius: '12px',
           padding: isMobile ? '12px' : '16px',
-          marginBottom: '16px'
+          marginBottom: '12px'
         }}>
           {/* Tab Headers */}
           <div style={{
@@ -1418,12 +1418,17 @@ const SoundToVideoPopup = ({
 
         {/* Waveform Visualization */}
         {hasValidSource && audioWaveform && (
-          <div style={{ marginTop: '14px' }}>
+          <div style={{
+            background: 'rgba(0, 0, 0, 0.2)',
+            borderRadius: '12px',
+            padding: isMobile ? '12px' : '16px',
+            marginBottom: '12px'
+          }}>
             <div style={{
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
-              marginBottom: '8px'
+              marginBottom: '10px'
             }}>
               <label style={{
                 color: 'rgba(255, 255, 255, 0.9)',
@@ -1434,216 +1439,214 @@ const SoundToVideoPopup = ({
               </label>
               <button
                 onClick={toggleAudioPreview}
-                  style={{
-                    padding: '6px 14px',
-                    backgroundColor: isPlaying ? '#ef4444' : 'rgba(255, 255, 255, 0.9)',
-                    border: 'none',
-                    borderRadius: '6px',
-                    color: isPlaying ? 'white' : '#db2777',
-                    cursor: 'pointer',
-                    fontSize: '12px',
-                    fontWeight: '600',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px'
-                  }}
-                >
-                  {isPlaying ? '⏸ Pause' : '▶ Preview'}
-                </button>
-              </div>
+                style={{
+                  padding: '5px 12px',
+                  backgroundColor: isPlaying ? '#ef4444' : 'rgba(255, 255, 255, 0.9)',
+                  border: 'none',
+                  borderRadius: '6px',
+                  color: isPlaying ? 'white' : '#db2777',
+                  cursor: 'pointer',
+                  fontSize: '11px',
+                  fontWeight: '600',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
+              >
+                {isPlaying ? '⏸ Pause' : '▶ Preview'}
+              </button>
+            </div>
 
-              {/* Canvas for waveform */}
+            {/* Canvas for waveform */}
+            <div
+              style={{
+                position: 'relative',
+                backgroundColor: 'rgba(0, 0, 0, 0.3)',
+                borderRadius: '8px',
+                overflow: 'visible',
+                cursor: isDraggingWaveform ? 'grabbing' : 'pointer',
+                userSelect: 'none',
+                border: '1px solid rgba(255, 255, 255, 0.15)'
+              }}
+              onMouseDown={handleWaveformMouseDown}
+              onTouchStart={handleWaveformMouseDown}
+            >
+              <canvas
+                ref={waveformCanvasRef}
+                width={352}
+                height={60}
+                style={{
+                  display: 'block',
+                  width: '100%',
+                  height: '60px',
+                  pointerEvents: 'none'
+                }}
+              />
+              {/* Left resize handle overlay */}
               <div
                 style={{
-                  position: 'relative',
-                  backgroundColor: 'rgba(0, 0, 0, 0.4)',
-                  borderRadius: '8px',
-                  overflow: 'visible',
-                  cursor: isDraggingWaveform ? 'grabbing' : 'pointer',
-                  userSelect: 'none',
-                  border: '1px solid rgba(255, 255, 255, 0.2)'
-                }}
-                onMouseDown={handleWaveformMouseDown}
-                onTouchStart={handleWaveformMouseDown}
-              >
-                <canvas
-                  ref={waveformCanvasRef}
-                  width={352}
-                  height={60}
-                  style={{
-                    display: 'block',
-                    width: '100%',
-                    height: '60px',
-                    pointerEvents: 'none'
-                  }}
-                />
-                {/* Left resize handle overlay */}
-                <div
-                  style={{
-                    position: 'absolute',
-                    top: '0',
-                    bottom: '0',
-                    left: `calc(${(visualStartOffset / audioDuration) * 100}% - 6px)`,
-                    width: '12px',
-                    cursor: 'ew-resize',
-                    zIndex: 5,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                  }}
-                  onMouseDown={(e) => { e.stopPropagation(); handleWaveformMouseDown(e, 'start'); }}
-                  onTouchStart={(e) => { e.stopPropagation(); handleWaveformMouseDown(e, 'start'); }}
-                >
-                  <div style={{
-                    width: '4px',
-                    height: '28px',
-                    backgroundColor: '#ec4899',
-                    borderRadius: '2px',
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.5)'
-                  }} />
-                </div>
-                {/* Right resize handle overlay */}
-                <div
-                  style={{
-                    position: 'absolute',
-                    top: '0',
-                    bottom: '0',
-                    left: `calc(${((visualStartOffset + visualDuration) / audioDuration) * 100}% - 6px)`,
-                    width: '12px',
-                    cursor: 'ew-resize',
-                    zIndex: 5,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                  }}
-                  onMouseDown={(e) => { e.stopPropagation(); handleWaveformMouseDown(e, 'end'); }}
-                  onTouchStart={(e) => { e.stopPropagation(); handleWaveformMouseDown(e, 'end'); }}
-                >
-                  <div style={{
-                    width: '4px',
-                    height: '28px',
-                    backgroundColor: '#ec4899',
-                    borderRadius: '2px',
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.5)'
-                  }} />
-                </div>
-                {/* Duration label overlay */}
-                <div style={{
                   position: 'absolute',
-                  top: '50%',
-                  left: `${((visualStartOffset + visualDuration / 2) / audioDuration) * 100}%`,
-                  transform: 'translate(-50%, -50%)',
-                  fontSize: '11px',
-                  fontWeight: '700',
-                  color: 'white',
-                  textShadow: '0 1px 3px rgba(0,0,0,0.8)',
-                  pointerEvents: 'none',
-                  zIndex: 3
-                }}>
-                  {visualDuration.toFixed(2)}s
-                </div>
-              </div>
-
-              {/* Time indicators */}
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                marginTop: '6px',
-                fontSize: '10px',
-                color: 'rgba(255, 255, 255, 0.8)',
-                fontWeight: '500'
-              }}>
-                <span>0:00</span>
-                <span style={{ color: '#fff', fontWeight: '700' }}>
-                  Start: {formatTime(visualStartOffset)} • Duration: {visualDuration.toFixed(2)}s
-                </span>
-                <span>{formatTime(audioDuration)}</span>
-              </div>
-
-              <p style={{
-                margin: '6px 0 0 0',
-                color: 'rgba(255, 255, 255, 0.6)',
-                fontSize: '10px',
-                textAlign: 'center'
-              }}>
-                Click to seek • Drag handles to resize • Drag pink area to move
-              </p>
-
-              {/* Montage Mode Checkbox - only in batch mode */}
-              {isBatch && itemCount > 1 && (
+                  top: '0',
+                  bottom: '0',
+                  left: `calc(${(visualStartOffset / audioDuration) * 100}% - 6px)`,
+                  width: '12px',
+                  cursor: 'ew-resize',
+                  zIndex: 5,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+                onMouseDown={(e) => { e.stopPropagation(); handleWaveformMouseDown(e, 'start'); }}
+                onTouchStart={(e) => { e.stopPropagation(); handleWaveformMouseDown(e, 'start'); }}
+              >
                 <div style={{
-                  marginTop: '12px',
-                  padding: '10px 12px',
-                  background: isMontageMode ? 'rgba(236, 72, 153, 0.2)' : 'rgba(255, 255, 255, 0.1)',
-                  borderRadius: '8px',
-                  border: isMontageMode ? '1px solid rgba(236, 72, 153, 0.4)' : '1px solid rgba(255, 255, 255, 0.2)'
-                }}>
-                  <label style={{
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                    gap: '10px',
-                    cursor: canUseMontageMode ? 'pointer' : 'not-allowed',
-                    opacity: canUseMontageMode ? 1 : 0.6
-                  }}>
-                    <input
-                      type="checkbox"
-                      checked={montageEnabled && canUseMontageMode}
-                      onChange={(e) => canUseMontageMode && setMontageEnabled(e.target.checked)}
-                      disabled={!canUseMontageMode}
-                      style={{
-                        width: '18px',
-                        height: '18px',
-                        marginTop: '2px',
-                        accentColor: '#ec4899',
-                        cursor: canUseMontageMode ? 'pointer' : 'not-allowed'
-                      }}
-                    />
-                    <div style={{ flex: 1 }}>
-                      <span style={{
-                        color: 'white',
-                        fontSize: '12px',
-                        fontWeight: '600'
-                      }}>
-                        🎬 Montage Mode
-                      </span>
-                      {canUseMontageMode ? (
-                        <p style={{
-                          margin: '4px 0 0 0',
-                          color: 'rgba(255, 255, 255, 0.7)',
-                          fontSize: '10px',
-                          lineHeight: '1.4'
-                        }}>
-                          {isMontageMode
-                            ? `Each image will get ${(videoDuration / itemCount).toFixed(2)}s of audio, creating a single montage video.`
-                            : 'Each image will get the full audio segment to generate seprate full videos each.'}
-                        </p>
-                      ) : (
-                        <p style={{
-                          margin: '4px 0 0 0',
-                          color: 'rgba(239, 68, 68, 0.9)',
-                          fontSize: '10px',
-                          lineHeight: '1.4'
-                        }}>
-                          ⚠️ Audio is too short. Need at least {itemCount}s for {itemCount} images.
-                        </p>
-                      )}
-                    </div>
-                  </label>
-                </div>
-              )}
+                  width: '4px',
+                  height: '28px',
+                  backgroundColor: '#ec4899',
+                  borderRadius: '2px',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.5)'
+                }} />
+              </div>
+              {/* Right resize handle overlay */}
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '0',
+                  bottom: '0',
+                  left: `calc(${((visualStartOffset + visualDuration) / audioDuration) * 100}% - 6px)`,
+                  width: '12px',
+                  cursor: 'ew-resize',
+                  zIndex: 5,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+                onMouseDown={(e) => { e.stopPropagation(); handleWaveformMouseDown(e, 'end'); }}
+                onTouchStart={(e) => { e.stopPropagation(); handleWaveformMouseDown(e, 'end'); }}
+              >
+                <div style={{
+                  width: '4px',
+                  height: '28px',
+                  backgroundColor: '#ec4899',
+                  borderRadius: '2px',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.5)'
+                }} />
+              </div>
+              {/* Duration label overlay */}
+              <div style={{
+                position: 'absolute',
+                top: '50%',
+                left: `${((visualStartOffset + visualDuration / 2) / audioDuration) * 100}%`,
+                transform: 'translate(-50%, -50%)',
+                fontSize: '11px',
+                fontWeight: '700',
+                color: 'white',
+                textShadow: '0 1px 3px rgba(0,0,0,0.8)',
+                pointerEvents: 'none',
+                zIndex: 3
+              }}>
+                {visualDuration.toFixed(2)}s
+              </div>
             </div>
-          )}
 
-          {/* Prompt Section */}
-        <div style={{ marginBottom: '16px' }}>
+            {/* Time indicators */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              marginTop: '6px',
+              fontSize: '10px',
+              color: 'rgba(255, 255, 255, 0.7)',
+              fontWeight: '500'
+            }}>
+              <span>0:00</span>
+              <span style={{ color: 'rgba(255, 255, 255, 0.9)', fontWeight: '600' }}>
+                Start: {formatTime(visualStartOffset)} • Duration: {visualDuration.toFixed(2)}s
+              </span>
+              <span>{formatTime(audioDuration)}</span>
+            </div>
+
+            <p style={{
+              margin: '4px 0 0 0',
+              color: 'rgba(255, 255, 255, 0.45)',
+              fontSize: '10px',
+              textAlign: 'center'
+            }}>
+              Click to seek • Drag handles to resize • Drag pink area to move
+            </p>
+
+            {/* Montage Mode Checkbox - only in batch mode */}
+            {isBatch && itemCount > 1 && (
+              <div style={{
+                marginTop: '10px',
+                paddingTop: '10px',
+                borderTop: '1px solid rgba(255, 255, 255, 0.1)'
+              }}>
+                <label style={{
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: '10px',
+                  cursor: canUseMontageMode ? 'pointer' : 'not-allowed',
+                  opacity: canUseMontageMode ? 1 : 0.5
+                }}>
+                  <input
+                    type="checkbox"
+                    checked={montageEnabled && canUseMontageMode}
+                    onChange={(e) => canUseMontageMode && setMontageEnabled(e.target.checked)}
+                    disabled={!canUseMontageMode}
+                    style={{
+                      width: '16px',
+                      height: '16px',
+                      marginTop: '1px',
+                      accentColor: '#ec4899',
+                      cursor: canUseMontageMode ? 'pointer' : 'not-allowed'
+                    }}
+                  />
+                  <div style={{ flex: 1 }}>
+                    <span style={{
+                      color: 'white',
+                      fontSize: '12px',
+                      fontWeight: '600'
+                    }}>
+                      Montage Mode
+                    </span>
+                    {canUseMontageMode ? (
+                      <p style={{
+                        margin: '2px 0 0 0',
+                        color: 'rgba(255, 255, 255, 0.55)',
+                        fontSize: '10px',
+                        lineHeight: '1.4'
+                      }}>
+                        {isMontageMode
+                          ? `Each image will get ${(videoDuration / itemCount).toFixed(2)}s of audio, creating a single montage video.`
+                          : 'Each image will get the full audio segment to generate separate full videos each.'}
+                      </p>
+                    ) : (
+                      <p style={{
+                        margin: '2px 0 0 0',
+                        color: 'rgba(239, 68, 68, 0.9)',
+                        fontSize: '10px',
+                        lineHeight: '1.4'
+                      }}>
+                        Audio is too short. Need at least {itemCount}s for {itemCount} images.
+                      </p>
+                    )}
+                  </div>
+                </label>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Prompt Section */}
+        <div style={{ marginBottom: '12px' }}>
           <label style={{
             display: 'block',
             color: 'rgba(255, 255, 255, 0.9)',
-            fontSize: '13px',
+            fontSize: '12px',
             fontWeight: '600',
             marginBottom: '6px'
           }}>
-            ✨ Description (Optional)
+            Description (Optional)
           </label>
           <textarea
             value={positivePrompt}
@@ -1654,8 +1657,8 @@ const SoundToVideoPopup = ({
               width: '100%',
               padding: '10px 12px',
               borderRadius: '8px',
-              border: '2px solid rgba(255, 255, 255, 0.2)',
-              background: 'rgba(255, 255, 255, 0.1)',
+              border: '1px solid rgba(255, 255, 255, 0.15)',
+              background: 'rgba(0, 0, 0, 0.2)',
               color: 'white',
               fontSize: '13px',
               fontFamily: 'inherit',
@@ -1666,54 +1669,13 @@ const SoundToVideoPopup = ({
           />
         </div>
 
-        {/* Model Variant Selector */}
-        <div style={{ marginBottom: '16px' }}>
-          <label style={{
-            display: 'block',
-            color: 'rgba(255, 255, 255, 0.9)',
-            fontSize: '13px',
-            fontWeight: '600',
-            marginBottom: '6px'
-          }}>
-            ⚙️ Model Version
-          </label>
-          <select
-            value={modelVariant}
-            onChange={(e) => setModelVariant(e.target.value)}
-            style={{
-              width: '100%',
-              padding: '10px 12px',
-              borderRadius: '8px',
-              border: '2px solid rgba(255, 255, 255, 0.2)',
-              background: 'rgba(255, 255, 255, 0.1)',
-              color: 'white',
-              fontSize: '13px',
-              fontWeight: '500',
-              cursor: 'pointer',
-              outline: 'none',
-              appearance: 'none',
-              backgroundImage: `url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`,
-              backgroundRepeat: 'no-repeat',
-              backgroundPosition: 'right 12px center',
-              paddingRight: '36px'
-            }}
-          >
-            <option value="speed" style={{ background: '#1a1a1a', color: 'white' }}>
-              ⚡ Fast (~{isMontageMode ? Math.ceil((videoDuration / itemCount) * 0.25) : Math.ceil(videoDuration * 0.25)}-{isMontageMode ? Math.ceil((videoDuration / itemCount) * 0.33) : Math.ceil(videoDuration * 0.33)} min)
-            </option>
-            <option value="quality" style={{ background: '#1a1a1a', color: 'white' }}>
-              💎 Best Quality (~{isMontageMode ? Math.ceil((videoDuration / itemCount) * 1.3) : Math.ceil(videoDuration * 1.3)}-{isMontageMode ? Math.ceil((videoDuration / itemCount) * 1.67) : Math.ceil(videoDuration * 1.67)} min)
-            </option>
-          </select>
-        </div>
-
         {/* Error Message */}
         {error && (
           <div style={{
             padding: '10px 12px',
             background: 'rgba(239, 68, 68, 0.3)',
             borderRadius: '8px',
-            marginBottom: '16px',
+            marginBottom: '12px',
             color: 'white',
             fontSize: '13px',
             fontWeight: '500',
@@ -1726,20 +1688,20 @@ const SoundToVideoPopup = ({
         {/* Action Buttons */}
         <div style={{
           display: 'flex',
-          gap: '12px',
-          marginBottom: '12px'
+          gap: '10px',
+          marginBottom: '10px'
         }}>
           <button
             type="button"
             onClick={handleClose}
             style={{
               flex: 1,
-              padding: isMobile ? '12px' : '14px',
-              borderRadius: '12px',
-              border: '2px solid rgba(255, 255, 255, 0.4)',
+              padding: isMobile ? '10px' : '12px',
+              borderRadius: '10px',
+              border: '2px solid rgba(255, 255, 255, 0.35)',
               background: 'transparent',
               color: 'white',
-              fontSize: '14px',
+              fontSize: '13px',
               fontWeight: '600',
               cursor: 'pointer',
               transition: 'all 0.2s ease'
@@ -1753,8 +1715,8 @@ const SoundToVideoPopup = ({
             disabled={loading || !hasValidSource}
             style={{
               flex: 2,
-              padding: isMobile ? '12px' : '14px',
-              borderRadius: '12px',
+              padding: isMobile ? '10px' : '12px',
+              borderRadius: '10px',
               border: 'none',
               background: loading || !hasValidSource
                 ? 'rgba(255, 255, 255, 0.3)'
@@ -1762,7 +1724,7 @@ const SoundToVideoPopup = ({
               color: loading || !hasValidSource
                 ? 'rgba(255, 255, 255, 0.7)'
                 : '#db2777',
-              fontSize: '14px',
+              fontSize: '13px',
               fontWeight: '700',
               cursor: loading || !hasValidSource ? 'not-allowed' : 'pointer',
               transition: 'all 0.2s ease',
@@ -1780,8 +1742,8 @@ const SoundToVideoPopup = ({
 
         {/* Video Settings Footer */}
         <div style={{
-          padding: '8px 16px',
-          borderTop: '1px solid rgba(255, 255, 255, 0.15)'
+          padding: '6px 12px 0',
+          borderTop: '1px solid rgba(255, 255, 255, 0.12)'
         }}>
           <VideoSettingsFooter
             videoCount={isBatch ? itemCount : 1}
