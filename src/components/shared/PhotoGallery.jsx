@@ -4815,6 +4815,8 @@ const PhotoGallery = ({
             updated[photoIndex] = {
               ...updated[photoIndex],
               videoWorkflowType: 's2v',
+              videoMotionPrompt: positivePrompt || '',
+              videoNegativePrompt: negativePrompt || '',
               videoRegenerateParams: {
                 referenceAudioUrl: audioUrl,
                 audioStart: imageAudioStartOffset || 0,
@@ -19389,6 +19391,8 @@ const PhotoGallery = ({
         onModelVariantChange={setS2vModelVariant}
         videoDuration={s2vDuration}
         onDurationChange={setS2vDuration}
+        sogniClient={sogniClient}
+        isAuthenticated={isAuthenticated}
       />
 
       {/* Sound to Video Popup (Batch) */}
@@ -19412,6 +19416,8 @@ const PhotoGallery = ({
         onModelVariantChange={setS2vModelVariant}
         videoDuration={s2vDuration}
         onDurationChange={setS2vDuration}
+        sogniClient={sogniClient}
+        isAuthenticated={isAuthenticated}
       />
 
       {/* Camera Angle Popup (Single) - with multi-angle support */}

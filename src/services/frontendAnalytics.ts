@@ -15,7 +15,7 @@ const API_BASE_URL = urls.apiUrl;
  */
 export async function trackFrontendGeneration(params: {
   numberImages: number;
-  sourceType?: 'camera' | 'upload';
+  sourceType?: 'camera' | 'upload' | 'audio-generation';
   selectedModel?: string;
 }): Promise<void> {
   try {

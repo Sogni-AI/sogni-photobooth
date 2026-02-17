@@ -1,10 +1,10 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import PropTypes from 'prop-types';
-import { getTokenLabel } from '../../services/walletService';
 import AudioRecorderPopup from './AudioRecorderPopup';
 import { saveRecording } from '../../utils/recordingsDB';
 import VideoSettingsFooter from './VideoSettingsFooter';
+import MusicGeneratorModal from './MusicGeneratorModal';
 
 // Sample audio tracks for S2V (sorted alphabetically by title)
 const SAMPLE_AUDIO_CDN = 'https://cdn.sogni.ai/audio-samples';
@@ -87,7 +87,9 @@ const SoundToVideoPopup = ({
   modelVariant: externalModelVariant,
   onModelVariantChange,
   videoDuration: externalVideoDuration,
-  onDurationChange
+  onDurationChange,
+  sogniClient = null,
+  isAuthenticated = false
 }) => {
   const [positivePrompt, setPositivePrompt] = useState('');
   const [negativePrompt, setNegativePrompt] = useState('');
@@ -104,6 +106,10 @@ const SoundToVideoPopup = ({
   const [previewingTrackId, setPreviewingTrackId] = useState(null);
   const [isPreviewPlaying, setIsPreviewPlaying] = useState(false);
   const [showSampleBrowser, setShowSampleBrowser] = useState(false);
+
+  // Music generation state (managed by MusicGeneratorModal)
+  const [selectedGeneratedTrack, setSelectedGeneratedTrack] = useState(null);
+  const [showMusicGenerator, setShowMusicGenerator] = useState(false);
 
   // Audio waveform and timeline state
   const [audioStartOffset, setAudioStartOffset] = useState(0);
@@ -711,12 +717,6 @@ const SoundToVideoPopup = ({
     }
   };
 
-  const formatCost = (tokenCost, usdCost) => {
-    if (!tokenCost || !usdCost) return null;
-    const formattedTokenCost = typeof tokenCost === 'number' ? tokenCost.toFixed(2) : parseFloat(tokenCost).toFixed(2);
-    return `${formattedTokenCost} (≈ $${usdCost.toFixed(2)} USD)`;
-  };
-
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
@@ -734,6 +734,10 @@ const SoundToVideoPopup = ({
     }
     if (sourceType === 'record' && !recordedAudio) {
       setError('please record some audio first! 🎤');
+      return;
+    }
+    if (sourceType === 'create' && !selectedGeneratedTrack) {
+      setError('generate some music first! ✨');
       return;
     }
 
@@ -758,6 +762,8 @@ const SoundToVideoPopup = ({
       saveRecording('audio', blob, audioDuration).catch((err) => {
         console.error('Failed to save audio recording for retry:', err);
       });
+    } else if (sourceType === 'create' && selectedGeneratedTrack) {
+      audioUrl = selectedGeneratedTrack.url;
     } else if (sourceType === 'sample' && selectedSample) {
       audioUrl = selectedSample.url;
     }
@@ -797,17 +803,20 @@ const SoundToVideoPopup = ({
     setAudioDuration(0);
     setAudioStartOffset(0);
     setVideoDuration(5);
+    setSelectedGeneratedTrack(null);
     onClose();
   };
 
   if (!visible) return null;
 
-  const hasValidSource = (sourceType === 'sample' && selectedSample) || (sourceType === 'upload' && uploadedAudio) || (sourceType === 'record' && recordedAudio);
-  const previewAudioUrl = sourceType === 'record'
-    ? recordedAudioUrl
-    : sourceType === 'upload'
-      ? uploadedAudioUrl
-      : selectedSample?.url;
+  const hasValidSource = (sourceType === 'sample' && selectedSample) || (sourceType === 'upload' && uploadedAudio) || (sourceType === 'record' && recordedAudio) || (sourceType === 'create' && selectedGeneratedTrack);
+  const previewAudioUrl = sourceType === 'create'
+    ? selectedGeneratedTrack?.url
+    : sourceType === 'record'
+      ? recordedAudioUrl
+      : sourceType === 'upload'
+        ? uploadedAudioUrl
+        : selectedSample?.url;
   // WAN 2.2: Round max duration down to nearest 0.25s to ensure clean frame count (16fps base)
   const maxDuration = audioDuration > 0 ? Math.floor(Math.min(audioDuration, MAX_DURATION) * 4) / 4 : MAX_DURATION;
   
@@ -940,7 +949,8 @@ const SoundToVideoPopup = ({
             {[
               { id: 'sample', label: '🎵 Samples', hasContent: !!selectedSample },
               { id: 'record', label: '🎤 Record', hasContent: !!recordedAudio },
-              { id: 'upload', label: '📁 Upload', hasContent: !!uploadedAudio }
+              { id: 'upload', label: '📁 Upload', hasContent: !!uploadedAudio },
+              { id: 'create', label: '✨ Create', hasContent: !!selectedGeneratedTrack }
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -1366,9 +1376,9 @@ const SoundToVideoPopup = ({
                     borderRadius: '8px'
                   }}>
                     <span style={{ fontSize: '20px' }}>📁</span>
-                    <span style={{ 
-                      color: 'white', 
-                      fontSize: '13px', 
+                    <span style={{
+                      color: 'white',
+                      fontSize: '13px',
                       fontWeight: '500',
                       maxWidth: '150px',
                       overflow: 'hidden',
@@ -1411,6 +1421,175 @@ const SoundToVideoPopup = ({
                     📁 Tap to Upload Audio
                   </button>
                 )}
+              </div>
+            )}
+
+            {/* Create Tab */}
+            {sourceType === 'create' && (
+              <div>
+                {!isAuthenticated ? (
+                  <div style={{
+                    textAlign: 'center',
+                    padding: '24px 16px',
+                    color: 'rgba(255, 255, 255, 0.7)',
+                    fontSize: '14px'
+                  }}>
+                    <div style={{ fontSize: '32px', marginBottom: '8px' }}>🔒</div>
+                    <div style={{ fontWeight: '600', color: 'white', marginBottom: '4px' }}>Sign in to create AI music</div>
+                    <div style={{ fontSize: '12px' }}>Log in with your Sogni account to generate custom music tracks</div>
+                  </div>
+                ) : selectedGeneratedTrack ? (
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '12px',
+                    padding: '16px',
+                    background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.08) 100%)',
+                    borderRadius: '12px',
+                    border: '1px solid rgba(255, 255, 255, 0.25)',
+                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
+                  }}>
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                      flex: 1,
+                      minWidth: 0
+                    }}>
+                      <div style={{
+                        width: '36px',
+                        height: '36px',
+                        borderRadius: '8px',
+                        background: 'rgba(255, 255, 255, 0.2)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '20px',
+                        flexShrink: 0
+                      }}>
+                        ✨
+                      </div>
+                      <div style={{
+                        textAlign: 'left',
+                        flex: 1,
+                        minWidth: 0
+                      }}>
+                        <div style={{
+                          color: 'white',
+                          fontSize: '14px',
+                          fontWeight: '600',
+                          marginBottom: '2px'
+                        }}>
+                          AI Generated Track
+                        </div>
+                        <div style={{
+                          color: 'rgba(255, 255, 255, 0.85)',
+                          fontSize: '12px',
+                          fontWeight: '500'
+                        }}>
+                          Ready for video generation
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setShowMusicGenerator(true)}
+                      style={{
+                        padding: '8px 16px',
+                        borderRadius: '8px',
+                        border: '1px solid rgba(255,255,255,0.4)',
+                        background: 'rgba(255, 255, 255, 0.15)',
+                        color: 'white',
+                        fontSize: '13px',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        flexShrink: 0
+                      }}
+                    >
+                      Change
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setShowMusicGenerator(true)}
+                    style={{
+                      width: '100%',
+                      padding: '24px 16px',
+                      borderRadius: '12px',
+                      border: '2px dashed rgba(255, 255, 255, 0.3)',
+                      background: 'linear-gradient(135deg, rgba(219, 39, 119, 0.08) 0%, rgba(219, 39, 119, 0.15) 100%)',
+                      color: 'white',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      transition: 'all 0.2s ease',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: '12px',
+                      position: 'relative',
+                      overflow: 'hidden'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = 'linear-gradient(135deg, rgba(219, 39, 119, 0.15) 0%, rgba(219, 39, 119, 0.22) 100%)';
+                      e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.5)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'linear-gradient(135deg, rgba(219, 39, 119, 0.08) 0%, rgba(219, 39, 119, 0.15) 100%)';
+                      e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.3)';
+                    }}
+                  >
+                    <div style={{
+                      width: '56px',
+                      height: '56px',
+                      borderRadius: '50%',
+                      background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.1) 100%)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '28px',
+                      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
+                    }}>
+                      ✨
+                    </div>
+                    <div style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '4px'
+                    }}>
+                      <span style={{ fontSize: '15px', fontWeight: '700' }}>
+                        Create AI Music
+                      </span>
+                      <span style={{
+                        fontSize: '12px',
+                        opacity: 0.75,
+                        fontWeight: '400'
+                      }}>
+                        Generate custom music tracks with AI
+                      </span>
+                    </div>
+                  </button>
+                )}
+
+                <MusicGeneratorModal
+                  visible={showMusicGenerator}
+                  onClose={() => setShowMusicGenerator(false)}
+                  onTrackSelect={(track) => {
+                    setSelectedGeneratedTrack(track);
+                    setSelectedSample(null);
+                    setUploadedAudio(null);
+                    setRecordedAudio(null);
+                    setError('');
+                    setIsPlaying(false);
+                    setAudioStartOffset(0);
+                    generateWaveform(track.url);
+                    setShowMusicGenerator(false);
+                  }}
+                  sogniClient={sogniClient}
+                  isAuthenticated={isAuthenticated}
+                  tokenType={tokenType}
+                />
               </div>
             )}
           </div>
@@ -1833,7 +2012,9 @@ SoundToVideoPopup.propTypes = {
   videoResolution: PropTypes.string,
   tokenType: PropTypes.oneOf(['spark', 'sogni']),
   isBatch: PropTypes.bool,
-  itemCount: PropTypes.number
+  itemCount: PropTypes.number,
+  sogniClient: PropTypes.object,
+  isAuthenticated: PropTypes.bool
 };
 
 export default SoundToVideoPopup;

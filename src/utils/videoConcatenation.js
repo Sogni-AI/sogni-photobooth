@@ -147,18 +147,41 @@ export async function concatenateVideos(videos, onProgress = null, audioOptions 
       console.log('[Concatenate] Skipping audio muxing - WebM format not supported for audio extraction. Use M4A/MP4 audio source for audio track.');
     } else {
       try {
+        // Check if the audio is MP3 (needs transcoding to M4A for MP4 muxing)
+        const isMP3 = (audioBufferForCheck[0] === 0xFF && (audioBufferForCheck[1] & 0xE0) === 0xE0) || // MPEG sync word
+                      (audioBufferForCheck[0] === 0x49 && audioBufferForCheck[1] === 0x44 && audioBufferForCheck[2] === 0x33); // ID3 header
+
+        let muxBuffer = audioOptions.buffer;
+
+        if (isMP3 && !audioOptions.isVideoSource) {
+          console.log('[Concatenate] MP3 detected — transcoding to M4A for MP4 muxing...');
+          if (onProgress) onProgress(videos.length, videos.length, 'Converting audio track...');
+          const formData = new FormData();
+          formData.append('audio', new Blob([muxBuffer], { type: 'audio/mpeg' }), 'audio.mp3');
+          const transcodeResponse = await fetch('/api/audio/mp3-to-m4a', {
+            method: 'POST',
+            body: formData
+          });
+          if (!transcodeResponse.ok) {
+            const errBody = await transcodeResponse.json().catch(() => ({ error: 'Unknown error' }));
+            throw new Error(`MP3 to M4A transcoding failed: ${errBody.details || errBody.error || transcodeResponse.statusText}`);
+          }
+          muxBuffer = await transcodeResponse.arrayBuffer();
+          console.log(`[Concatenate] MP3 transcoded to M4A: ${(muxBuffer.byteLength / 1024 / 1024).toFixed(2)}MB`);
+        }
+
         if (audioOptions.isVideoSource) {
           // Extract audio from video source file, then mux it
           console.log('[Concatenate] Extracting audio from video source file...');
-          const audioBuffer = audioOptions.buffer instanceof ArrayBuffer 
-            ? audioOptions.buffer 
-            : audioOptions.buffer.buffer || audioOptions.buffer;
+          const audioBuffer = muxBuffer instanceof ArrayBuffer
+            ? muxBuffer
+            : muxBuffer.buffer || muxBuffer;
           result = await muxAudioTrack(result, audioBuffer, audioOptions.startOffset || 0);
           console.log('[Concatenate] Parent audio (from video source) muxed successfully');
         } else {
           // Regular audio file (M4A)
           console.log('[Concatenate] Muxing M4A audio file...');
-          result = await muxAudioTrack(result, audioOptions.buffer, audioOptions.startOffset || 0);
+          result = await muxAudioTrack(result, muxBuffer, audioOptions.startOffset || 0);
           console.log('[Concatenate] Parent audio (M4A) muxed successfully');
         }
       } catch (error) {

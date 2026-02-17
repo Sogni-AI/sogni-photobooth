@@ -659,7 +659,16 @@ export class FrontendSogniClientAdapter {
         
         // Track analytics for frontend SDK generation (critical for logged-in users)
         // This ensures we capture metrics even when bypassing the backend /generate endpoint
-        if (projectType === 'video') {
+        if (projectType === 'audio') {
+          // Track audio generation
+          trackFrontendGeneration({
+            numberImages: params.numberOfMedia || 1,
+            sourceType: 'audio-generation',
+            selectedModel: params.modelId,
+          }).catch(err => {
+            console.error('[FrontendAdapter] Audio analytics tracking error:', err);
+          });
+        } else if (projectType === 'video') {
           // Track video generation separately
           trackVideoGeneration({
             resolution: params.resolution || 'unknown',
