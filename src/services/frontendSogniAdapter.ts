@@ -159,7 +159,7 @@ export class FrontendProjectAdapter extends BrowserEventEmitter implements Sogni
 
     // Map jobStarted events to job events with 'started' type
     this.realProject.on('jobStarted', (job: any) => {
-      
+
       // ENHANCED: Capture individual job prompt from multiple sources in the job object
       if (job.id) {
         let jobPrompt = '';

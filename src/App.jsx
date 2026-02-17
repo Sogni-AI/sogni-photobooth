@@ -5542,9 +5542,9 @@ const App = () => {
       
 
 
-      // Attach a single project-level job event handler with throttling
-      let progressUpdateTimeout = null;
-      let nonProgressUpdateTimeout = null;
+      // Attach a single project-level job event handler with per-job throttling
+      const progressUpdateTimeouts = new Map();
+      const nonProgressUpdateTimeouts = new Map();
       
       project.on('job', (event) => {
         const { type, jobId, workerName, queuePosition, jobIndex, positivePrompt, progress } = event;
@@ -5561,13 +5561,14 @@ const App = () => {
             return;
         }
 
-        // Throttle progress updates to reduce excessive re-renders
+        // Throttle progress updates to reduce excessive re-renders (per-job)
         if (type === 'progress') {
           // Update watchdog timer for progress events (but throttled)
-          if (progressUpdateTimeout) {
-            clearTimeout(progressUpdateTimeout);
+          if (progressUpdateTimeouts.has(jobId)) {
+            clearTimeout(progressUpdateTimeouts.get(jobId));
           }
-          progressUpdateTimeout = setTimeout(() => {
+          progressUpdateTimeouts.set(jobId, setTimeout(() => {
+            progressUpdateTimeouts.delete(jobId);
             // Update watchdog timer along with progress to batch the operations
             updateWatchdogTimer();
             
@@ -5614,7 +5615,7 @@ const App = () => {
             // Update BOTH state arrays
             setRegularPhotos(updateProgress);
             setPhotos(updateProgress);
-          }, 200); // Throttle to max 5 updates per second (reduced from 10 to minimize flickering on high-res displays)
+          }, 200)); // Throttle to max 5 updates per second (reduced from 10 to minimize flickering on high-res displays)
           return; // Don't process immediately
         }
 
@@ -5664,12 +5665,13 @@ const App = () => {
           return;
         }
 
-        // Throttle non-progress events to reduce cascade renders
+        // Throttle non-progress events to reduce cascade renders (per-job)
         if (['queued', 'initiating', 'started'].includes(type)) {
-          if (nonProgressUpdateTimeout) {
-            clearTimeout(nonProgressUpdateTimeout);
+          if (nonProgressUpdateTimeouts.has(jobId)) {
+            clearTimeout(nonProgressUpdateTimeouts.get(jobId));
           }
-          nonProgressUpdateTimeout = setTimeout(() => {
+          nonProgressUpdateTimeouts.set(jobId, setTimeout(() => {
+            nonProgressUpdateTimeouts.delete(jobId);
             const updateNonProgress = (prev) => {
               const updated = [...prev];
               if (photoIndex >= updated.length) return prev;
@@ -5745,7 +5747,7 @@ const App = () => {
             // Update BOTH state arrays
             setRegularPhotos(updateNonProgress);
             setPhotos(updateNonProgress);
-          }, 50); // Very short throttle for non-progress events
+          }, 50)); // Very short throttle for non-progress events
           return; // Don't process immediately
         }
 
@@ -6524,15 +6526,15 @@ const App = () => {
       });
 
       project.on('jobFailed', (job) => {
-        // CRITICAL: Clear ALL pending throttled progress updates for this job
+        // CRITICAL: Clear pending throttled progress updates for this job
         // Otherwise they'll re-set generating: true after we clear it
-        if (progressUpdateTimeout) {
-          clearTimeout(progressUpdateTimeout);
-          progressUpdateTimeout = null;
+        if (progressUpdateTimeouts.has(job.id)) {
+          clearTimeout(progressUpdateTimeouts.get(job.id));
+          progressUpdateTimeouts.delete(job.id);
         }
-        if (nonProgressUpdateTimeout) {
-          clearTimeout(nonProgressUpdateTimeout);
-          nonProgressUpdateTimeout = null;
+        if (nonProgressUpdateTimeouts.has(job.id)) {
+          clearTimeout(nonProgressUpdateTimeouts.get(job.id));
+          nonProgressUpdateTimeouts.delete(job.id);
         }
         
         // Clear job timeout when it fails
