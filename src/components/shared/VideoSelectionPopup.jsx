@@ -58,7 +58,6 @@ const VideoSelectionPopup = ({
   const promptVideoRefs = useRef({});
   const emojiVideoRefs = useRef({});
   const baldForBaseVideoRefs = useRef({});
-  const headerRef = useRef(null);
   const gridContainerRef = useRef(null);
   const videoContainerRefs = useRef({});
   const [visibleVideos, setVisibleVideos] = useState({});
@@ -213,7 +212,7 @@ const VideoSelectionPopup = ({
         id: 'prompt',
         icon: '✨',
         title: 'Prompt Video',
-        description: 'Create custom motion videos using your own text prompts describing what should happen in the video.',
+        description: 'Create videos using a text prompt describing what should happen in the video.',
         gradient: 'linear-gradient(135deg, #8B5CF6 0%, #6D28D9 100%)',
         exampleVideo: promptVideos[promptVideoIndex],
         exampleVideos: promptVideos,
@@ -225,7 +224,7 @@ const VideoSelectionPopup = ({
         id: 'bald-for-base',
         icon: '🟦',
         title: 'Bald for Base',
-        description: 'Create videos for the Bald for Base challenge. Make Brian Armstrong proud with your clever antics.',
+        description: 'Create videos for the Bald for Base challenge. Make Brian Armstrong proud.',
         gradient: 'linear-gradient(135deg, #0052FF 0%, #0039CC 100%)',
         exampleVideo: baldForBaseVideos[baldForBaseVideoIndex],
         exampleVideos: baldForBaseVideos,
@@ -326,70 +325,10 @@ const VideoSelectionPopup = ({
     };
   }, []);
 
-  const isMobile = windowWidth < 768;
-  const isTablet = windowWidth >= 768 && windowWidth < 1024;
+  // No mobile-specific overrides — tablet styles work well at all widths
+  const isMobile = false;
+  const isTablet = windowWidth < 1024;
   const isDesktop = windowWidth >= 1024;
-
-  // Calculate grid height explicitly for iOS scrolling
-  useEffect(() => {
-    if (visible && headerRef.current && gridContainerRef.current) {
-      const updateGridHeight = () => {
-        const container = gridContainerRef.current?.parentElement;
-        const header = headerRef.current;
-        if (container && header) {
-          // Get actual container height (already accounts for backdrop padding)
-          const containerHeight = container.clientHeight;
-          const headerHeight = header.offsetHeight;
-          // Container padding (top + bottom)
-          const containerPadding = isMobile ? 16 : isTablet ? 20 : 24;
-          const verticalPadding = containerPadding * 2;
-          // Calculate available height for grid
-          const availableHeight = containerHeight - headerHeight - verticalPadding;
-          if (gridContainerRef.current && availableHeight > 0) {
-            gridContainerRef.current.style.maxHeight = `${availableHeight}px`;
-            gridContainerRef.current.style.height = `${availableHeight}px`;
-          }
-        }
-      };
-      // Use requestAnimationFrame to ensure DOM is ready
-      requestAnimationFrame(() => {
-        updateGridHeight();
-      });
-      
-      const handleResize = () => {
-        updateGridHeight();
-      };
-      
-      const handleOrientationChange = () => {
-        // Delay to ensure viewport has settled after orientation change
-        setTimeout(() => {
-          setWindowHeight(window.innerHeight);
-          updateGridHeight();
-        }, 100);
-      };
-      
-      const handleVisualViewportResize = () => {
-        // Update window height when visual viewport changes (browser chrome)
-        setWindowHeight(window.innerHeight);
-        updateGridHeight();
-      };
-      
-      window.addEventListener('resize', handleResize);
-      window.addEventListener('orientationchange', handleOrientationChange);
-      // Also update on visual viewport changes (for mobile browser chrome)
-      if (window.visualViewport) {
-        window.visualViewport.addEventListener('resize', handleVisualViewportResize);
-      }
-      
-      return () => {
-        window.removeEventListener('resize', handleResize);
-        window.removeEventListener('orientationchange', handleOrientationChange);
-        if (window.visualViewport) {
-          window.visualViewport.removeEventListener('resize', handleVisualViewportResize);
-        }
-      };
-    }
-  }, [visible, isMobile, isTablet, windowWidth, windowHeight]);
 
   if (!visible) return null;
 
@@ -470,9 +409,8 @@ const VideoSelectionPopup = ({
         </button>
 
         {/* Header */}
-        <div 
-          ref={headerRef}
-          style={{ 
+        <div
+          style={{
           marginBottom: isMobile ? '16px' : '24px', 
           textAlign: 'center',
           flexShrink: 0,
@@ -518,7 +456,7 @@ const VideoSelectionPopup = ({
             overflowY: 'hidden',
             flex: 'none',
             padding: isMobile ? '4px 20px 8px 20px' : '8px 24px 8px 24px',
-            margin: 'auto 0',
+            margin: 0,
             minHeight: 0,
             width: '100%',
             boxSizing: 'border-box',
@@ -603,7 +541,6 @@ const VideoSelectionPopup = ({
                   style={{
                   width: '100%',
                   aspectRatio: '2 / 3',
-                  maxHeight: isMobile ? '450px' : isTablet ? '360px' : '420px',
                   borderRadius: isMobile ? '14px 14px 0 0' : '18px 18px 0 0',
                   background: isDisabled 
                     ? 'linear-gradient(135deg, #E5E7EB 0%, #D1D5DB 100%)'
