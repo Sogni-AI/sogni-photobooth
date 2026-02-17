@@ -16859,104 +16859,7 @@ const PhotoGallery = ({
                   );
                 })()}
                 
-                {/* QR Code Overlay for Kiosk Mode */}
-                {qrCodeData && qrCodeData.photoIndex === index && qrCodeDataUrl && isSelected && (
-                  <div 
-                    style={{
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      right: 0,
-                      bottom: 0,
-                      backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      zIndex: 9999,
-                      cursor: 'pointer'
-                    }}
-                    onClick={onCloseQR}
-                  >
-                    <div 
-                      style={{
-                        backgroundColor: isExtensionMode ? 'rgba(255, 255, 255, 0.95)' : 'white',
-                        padding: '20px',
-                        borderRadius: '12px',
-                        textAlign: 'center',
-                        boxShadow: '0 8px 24px rgba(0,0,0,0.3)'
-                      }}
-                      onClick={e => e.stopPropagation()}
-                    >
-                      <h3 style={{ 
-                        margin: '0 0 16px 0', 
-                        color: '#333',
-                        fontSize: '18px',
-                        fontWeight: '600'
-                      }}>
-                        Scan to Share on Your Phone
-                      </h3>
-                      
-                      {qrCodeDataUrl === 'loading' ? (
-                        <div style={{
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'center',
-                          margin: '0 auto 16px auto',
-                          width: '200px',
-                          height: '200px',
-                          border: '2px solid #eee',
-                          borderRadius: '8px',
-                          justifyContent: 'center',
-                          backgroundColor: '#f9f9f9'
-                        }}>
-                          <div style={{
-                            width: '40px',
-                            height: '40px',
-                            border: '4px solid #e3e3e3',
-                            borderTop: '4px solid #1DA1F2',
-                            borderRadius: '50%',
-                            animation: 'spin 1s linear infinite',
-                            marginBottom: '12px'
-                          }}></div>
-                          <div style={{
-                            color: '#666',
-                            fontSize: '14px',
-                            fontWeight: '500'
-                          }}>
-                            Generating QR Code...
-                          </div>
-                        </div>
-                      ) : (
-                        <img 
-                          src={qrCodeDataUrl} 
-                          alt="QR Code for sharing" 
-                          style={{ 
-                            display: 'block',
-                            margin: '0 auto 16px auto',
-                            border: '2px solid #eee',
-                            borderRadius: '8px'
-                          }} 
-                        />
-                      )}
-
-                      <button
-                        onClick={onCloseQR}
-                        style={{
-                          background: '#1DA1F2',
-                          color: 'white',
-                          border: 'none',
-                          padding: '8px 16px',
-                          borderRadius: '6px',
-                          cursor: 'pointer',
-                          fontSize: '14px',
-                          fontWeight: '500'
-                        }}
-                      >
-                        Close
-                      </button>
-                    </div>
-                  </div>
-                )}
+                {/* QR Code Overlay for Kiosk Mode - rendered via portal below */}
 
                 {/* Hide button, refresh button, and favorite button - only show on hover for grid photos (not popup) and when image is loaded */}
                 {!isSelected && isLoaded && !photo.isOriginal && !photo.isGalleryImage && (
@@ -19871,6 +19774,109 @@ const PhotoGallery = ({
                 </button>
               )}
             </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* QR Code Overlay for Kiosk Mode - rendered via portal to avoid .film-frame.selected img CSS conflicts */}
+      {qrCodeData && !qrCodeData.isStitchedVideo && qrCodeDataUrl && qrCodeData.photoIndex === selectedPhotoIndex && createPortal(
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.85)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10000002,
+            cursor: 'pointer'
+          }}
+          onClick={onCloseQR}
+        >
+          <div
+            style={{
+              backgroundColor: isExtensionMode ? 'rgba(255, 255, 255, 0.95)' : 'white',
+              padding: '24px',
+              borderRadius: '16px',
+              textAlign: 'center',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+              maxWidth: '90vw'
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            <h3 style={{
+              margin: '0 0 16px 0',
+              color: '#333',
+              fontSize: '20px',
+              fontWeight: '600'
+            }}>
+              Scan to Share on Your Phone
+            </h3>
+
+            {qrCodeDataUrl === 'loading' ? (
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                margin: '0 auto 20px auto',
+                width: '250px',
+                height: '250px',
+                border: '2px solid #eee',
+                borderRadius: '12px',
+                justifyContent: 'center',
+                backgroundColor: '#f9f9f9'
+              }}>
+                <div style={{
+                  width: '48px',
+                  height: '48px',
+                  border: '4px solid #e3e3e3',
+                  borderTop: '4px solid #1DA1F2',
+                  borderRadius: '50%',
+                  animation: 'spin 1s linear infinite',
+                  marginBottom: '16px'
+                }}></div>
+                <div style={{
+                  color: '#666',
+                  fontSize: '14px',
+                  fontWeight: '500'
+                }}>
+                  Generating QR Code...
+                </div>
+              </div>
+            ) : (
+              <img
+                src={qrCodeDataUrl}
+                alt="QR Code for sharing"
+                style={{
+                  display: 'block',
+                  margin: '0 auto 20px auto',
+                  border: '2px solid #eee',
+                  borderRadius: '12px',
+                  width: '250px',
+                  height: '250px'
+                }}
+              />
+            )}
+
+            <button
+              onClick={onCloseQR}
+              style={{
+                background: '#1DA1F2',
+                color: 'white',
+                border: 'none',
+                padding: '10px 24px',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: '16px',
+                fontWeight: '500'
+              }}
+            >
+              Close
+            </button>
           </div>
         </div>,
         document.body
