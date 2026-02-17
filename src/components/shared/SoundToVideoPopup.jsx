@@ -100,6 +100,10 @@ const SoundToVideoPopup = ({
   const [showAudioRecorder, setShowAudioRecorder] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [error, setError] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [previewingTrackId, setPreviewingTrackId] = useState(null);
+  const [isPreviewPlaying, setIsPreviewPlaying] = useState(false);
+  const [showSampleBrowser, setShowSampleBrowser] = useState(false);
 
   // Audio waveform and timeline state
   const [audioStartOffset, setAudioStartOffset] = useState(0);
@@ -195,6 +199,7 @@ const SoundToVideoPopup = ({
 
   const audioInputRef = useRef(null);
   const audioPreviewRef = useRef(null);
+  const trackPreviewAudioRef = useRef(null);
   const waveformCanvasRef = useRef(null);
   const audioContextRef = useRef(null);
   const playbackAnimationRef = useRef(null);
@@ -235,7 +240,15 @@ const SoundToVideoPopup = ({
         audioPreviewRef.current.pause();
         audioPreviewRef.current.currentTime = 0;
       }
+      if (trackPreviewAudioRef.current) {
+        trackPreviewAudioRef.current.pause();
+        trackPreviewAudioRef.current.currentTime = 0;
+      }
       setIsPlaying(false);
+      setPreviewingTrackId(null);
+      setIsPreviewPlaying(false);
+      setSearchQuery('');
+      setShowSampleBrowser(false);
       if (playbackAnimationRef.current) {
         cancelAnimationFrame(playbackAnimationRef.current);
       }
@@ -556,6 +569,39 @@ const SoundToVideoPopup = ({
     }
   }, [isDraggingWaveform, handleWaveformMouseUp, handleWaveformMouseMove]);
 
+  const stopTrackPreview = useCallback(() => {
+    if (trackPreviewAudioRef.current) {
+      trackPreviewAudioRef.current.pause();
+      trackPreviewAudioRef.current.currentTime = 0;
+    }
+    setPreviewingTrackId(null);
+    setIsPreviewPlaying(false);
+  }, []);
+
+  const handlePreviewToggle = useCallback((track) => {
+    const audio = trackPreviewAudioRef.current;
+    if (!audio) return;
+
+    if (previewingTrackId === track.id) {
+      // Same track — toggle play/pause
+      if (isPreviewPlaying) {
+        audio.pause();
+        setIsPreviewPlaying(false);
+      } else {
+        audio.play().catch(() => setIsPreviewPlaying(false));
+        setIsPreviewPlaying(true);
+      }
+    } else {
+      // Different track — switch source
+      audio.pause();
+      audio.src = track.url;
+      audio.load();
+      audio.play().catch(() => setIsPreviewPlaying(false));
+      setPreviewingTrackId(track.id);
+      setIsPreviewPlaying(true);
+    }
+  }, [previewingTrackId, isPreviewPlaying]);
+
   const handleAudioUpload = async (e) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -588,6 +634,9 @@ const SoundToVideoPopup = ({
   };
 
   const handleSampleSelect = async (sample) => {
+    stopTrackPreview();
+    setShowSampleBrowser(false);
+    setSearchQuery('');
     setSelectedSample(sample);
     setSourceType('sample');
     setUploadedAudio(null);
@@ -728,6 +777,7 @@ const SoundToVideoPopup = ({
   };
 
   const handleClose = () => {
+    stopTrackPreview();
     setSourceType('sample');
     setSelectedSample(null);
     setUploadedAudio(null);
@@ -934,46 +984,226 @@ const SoundToVideoPopup = ({
           <div style={{ minHeight: '60px' }}>
             {/* Samples Tab */}
             {sourceType === 'sample' && (
-              <select
-                value={selectedSample?.id || ''}
-                onChange={(e) => {
-                  const sample = SAMPLE_AUDIO_TRACKS.find(s => s.id === e.target.value);
-                  if (sample) {
-                    handleSampleSelect(sample);
-                  }
-                }}
-                style={{
-                  width: '100%',
-                  padding: '12px 16px',
-                  borderRadius: '8px',
-                  border: '2px solid rgba(255, 255, 255, 0.3)',
-                  background: 'rgba(255, 255, 255, 0.1)',
-                  color: 'white',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  outline: 'none',
-                  appearance: 'none',
-                  backgroundImage: `url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`,
-                  backgroundRepeat: 'no-repeat',
-                  backgroundPosition: 'right 16px center',
-                  paddingRight: '44px'
-                }}
-              >
-                <option value="" disabled style={{ background: '#1a1a1a', color: 'white' }}>
-                  Select a sample audio track...
-                </option>
-                {SAMPLE_AUDIO_TRACKS.map((sample) => (
-                  <option 
-                    key={sample.id} 
-                    value={sample.id}
-                    style={{ background: '#1a1a1a', color: 'white', padding: '8px' }}
-                  >
-                    {sample.emoji} {sample.title} ({sample.duration})
-                  </option>
-                ))}
-              </select>
+              <div>
+                {/* Hidden audio element for track preview */}
+                <audio
+                  ref={trackPreviewAudioRef}
+                  onEnded={() => { setPreviewingTrackId(null); setIsPreviewPlaying(false); }}
+                  onError={() => { setPreviewingTrackId(null); setIsPreviewPlaying(false); }}
+                  style={{ display: 'none' }}
+                />
+
+                {/* Toggle button — shows selected track or "Browse Tracks" */}
+                <button
+                  onClick={() => {
+                    if (showSampleBrowser) {
+                      stopTrackPreview();
+                    }
+                    setShowSampleBrowser(!showSampleBrowser);
+                    setSearchQuery('');
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '12px 16px',
+                    borderRadius: showSampleBrowser ? '8px 8px 0 0' : '8px',
+                    border: selectedSample
+                      ? '2px solid rgba(236, 72, 153, 0.5)'
+                      : '2px solid rgba(255, 255, 255, 0.3)',
+                    background: selectedSample
+                      ? 'rgba(236, 72, 153, 0.15)'
+                      : 'rgba(255, 255, 255, 0.1)',
+                    color: 'white',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    outline: 'none',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    textAlign: 'left'
+                  }}
+                >
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {selectedSample
+                      ? `${selectedSample.emoji} ${selectedSample.title}`
+                      : '🎵 Browse sample tracks...'}
+                  </span>
+                  <span style={{
+                    fontSize: '10px',
+                    transition: 'transform 0.2s ease',
+                    transform: showSampleBrowser ? 'rotate(180deg)' : 'rotate(0deg)',
+                    flexShrink: 0,
+                    marginLeft: '8px'
+                  }}>▼</span>
+                </button>
+
+                {/* Expandable track browser */}
+                {showSampleBrowser && (
+                  <div style={{
+                    border: '2px solid rgba(255, 255, 255, 0.3)',
+                    borderTop: 'none',
+                    borderBottomLeftRadius: '8px',
+                    borderBottomRightRadius: '8px',
+                    background: 'rgba(0, 0, 0, 0.2)',
+                    overflow: 'hidden'
+                  }}>
+                    {/* Search input */}
+                    <div style={{ padding: '8px 8px 4px' }}>
+                      <div style={{ position: 'relative' }}>
+                        <input
+                          type="text"
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          placeholder="Search tracks..."
+                          style={{
+                            width: '100%',
+                            padding: '8px 32px 8px 10px',
+                            borderRadius: '6px',
+                            border: '1px solid rgba(255, 255, 255, 0.2)',
+                            background: 'rgba(255, 255, 255, 0.08)',
+                            color: 'white',
+                            fontSize: '13px',
+                            outline: 'none',
+                            boxSizing: 'border-box'
+                          }}
+                        />
+                        {searchQuery && (
+                          <button
+                            onClick={() => setSearchQuery('')}
+                            style={{
+                              position: 'absolute',
+                              right: '6px',
+                              top: '50%',
+                              transform: 'translateY(-50%)',
+                              width: '20px',
+                              height: '20px',
+                              borderRadius: '50%',
+                              border: 'none',
+                              background: 'rgba(255, 255, 255, 0.2)',
+                              color: 'white',
+                              fontSize: '12px',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              padding: 0,
+                              lineHeight: 1
+                            }}
+                          >
+                            ×
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Scrollable track list */}
+                    <div style={{
+                      maxHeight: '260px',
+                      overflowY: 'auto',
+                      overscrollBehavior: 'contain'
+                    }}>
+                      {SAMPLE_AUDIO_TRACKS
+                        .filter(track => track.title.toLowerCase().includes(searchQuery.toLowerCase()))
+                        .map((track) => {
+                          const isSelected = selectedSample?.id === track.id;
+                          const isPreviewing = previewingTrackId === track.id;
+                          return (
+                            <div
+                              key={track.id}
+                              onClick={() => handleSampleSelect(track)}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '10px',
+                                padding: '10px 12px',
+                                minHeight: '48px',
+                                cursor: 'pointer',
+                                background: isSelected ? 'rgba(255, 255, 255, 0.15)' : 'transparent',
+                                borderLeft: isSelected ? '3px solid #ec4899' : '3px solid transparent',
+                                transition: 'background 0.15s ease',
+                                boxSizing: 'border-box'
+                              }}
+                              onMouseEnter={(e) => {
+                                if (!isSelected) e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
+                              }}
+                              onMouseLeave={(e) => {
+                                if (!isSelected) e.currentTarget.style.background = 'transparent';
+                              }}
+                            >
+                              {/* Play/Pause button */}
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handlePreviewToggle(track);
+                                }}
+                                style={{
+                                  width: '32px',
+                                  height: '32px',
+                                  borderRadius: '50%',
+                                  border: 'none',
+                                  background: isPreviewing && isPreviewPlaying
+                                    ? '#ec4899'
+                                    : 'rgba(255, 255, 255, 0.15)',
+                                  color: 'white',
+                                  fontSize: '13px',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  flexShrink: 0,
+                                  transition: 'background 0.15s ease',
+                                  padding: 0
+                                }}
+                              >
+                                {isPreviewing && isPreviewPlaying ? '⏸' : '▶'}
+                              </button>
+
+                              {/* Emoji */}
+                              <span style={{ fontSize: '18px', flexShrink: 0 }}>{track.emoji}</span>
+
+                              {/* Title */}
+                              <span style={{
+                                flex: 1,
+                                color: 'white',
+                                fontSize: '13px',
+                                fontWeight: isSelected ? '600' : '500',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap'
+                              }}>
+                                {track.title}
+                              </span>
+
+                              {/* Duration */}
+                              <span style={{
+                                color: 'rgba(255, 255, 255, 0.5)',
+                                fontSize: '12px',
+                                flexShrink: 0,
+                                fontVariantNumeric: 'tabular-nums'
+                              }}>
+                                {track.duration}
+                              </span>
+                            </div>
+                          );
+                        })
+                      }
+                      {SAMPLE_AUDIO_TRACKS.filter(track =>
+                        track.title.toLowerCase().includes(searchQuery.toLowerCase())
+                      ).length === 0 && (
+                        <div style={{
+                          padding: '20px',
+                          textAlign: 'center',
+                          color: 'rgba(255, 255, 255, 0.5)',
+                          fontSize: '13px'
+                        }}>
+                          No tracks match &ldquo;{searchQuery}&rdquo;
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
 
             {/* Record Tab */}

@@ -1605,6 +1605,12 @@ const PhotoGallery = ({
   // Preset music selection
   const [selectedPresetId, setSelectedPresetId] = useState(null);
   const [isLoadingPreset, setIsLoadingPreset] = useState(false);
+  // Track browser state (collapsible preset list with preview)
+  const [showTrackBrowser, setShowTrackBrowser] = useState(false);
+  const [trackSearchQuery, setTrackSearchQuery] = useState('');
+  const [trackPreviewingId, setTrackPreviewingId] = useState(null);
+  const [isTrackPreviewPlaying, setIsTrackPreviewPlaying] = useState(false);
+  const trackPreviewAudioRef = useRef(null);
   const musicFileInputRef = useRef(null);
   const waveformCanvasRef = useRef(null);
   const audioPreviewRef = useRef(null);
@@ -9970,11 +9976,46 @@ const PhotoGallery = ({
     }
   }, [isLoadingPreset, showToast]);
 
+  // Stop track browser preview audio
+  const stopTransitionTrackPreview = useCallback(() => {
+    if (trackPreviewAudioRef.current) {
+      trackPreviewAudioRef.current.pause();
+      trackPreviewAudioRef.current.currentTime = 0;
+    }
+    setTrackPreviewingId(null);
+    setIsTrackPreviewPlaying(false);
+  }, []);
+
+  // Toggle play/pause for a track in the browser
+  const handleTransitionPreviewToggle = useCallback((track) => {
+    const audio = trackPreviewAudioRef.current;
+    if (!audio) return;
+
+    if (trackPreviewingId === track.id) {
+      if (isTrackPreviewPlaying) {
+        audio.pause();
+        setIsTrackPreviewPlaying(false);
+      } else {
+        audio.play().catch(() => setIsTrackPreviewPlaying(false));
+        setIsTrackPreviewPlaying(true);
+      }
+    } else {
+      audio.pause();
+      audio.src = track.url;
+      audio.load();
+      audio.play().catch(() => setIsTrackPreviewPlaying(false));
+      setTrackPreviewingId(track.id);
+      setIsTrackPreviewPlaying(true);
+    }
+  }, [trackPreviewingId, isTrackPreviewPlaying]);
+
   // Clear preset selection when choosing custom file
   const handleCustomFileSelect = useCallback(async (e) => {
     setSelectedPresetId(null);
+    stopTransitionTrackPreview();
+    setShowTrackBrowser(false);
     await handleMusicFileSelect(e);
-  }, [handleMusicFileSelect]);
+  }, [handleMusicFileSelect, stopTransitionTrackPreview]);
 
   // Draw waveform on canvas
   const drawWaveform = useCallback(() => {
@@ -10276,7 +10317,15 @@ const PhotoGallery = ({
       if (audioPreviewRef.current) {
         audioPreviewRef.current.pause();
       }
+      if (trackPreviewAudioRef.current) {
+        trackPreviewAudioRef.current.pause();
+        trackPreviewAudioRef.current.currentTime = 0;
+      }
       setIsPlayingPreview(false);
+      setTrackPreviewingId(null);
+      setIsTrackPreviewPlaying(false);
+      setShowTrackBrowser(false);
+      setTrackSearchQuery('');
       if (playbackAnimationRef.current) {
         cancelAnimationFrame(playbackAnimationRef.current);
       }
@@ -18457,18 +18506,22 @@ const PhotoGallery = ({
                   }}>BETA</span>
                 </div>
 
-                {/* Preset Music Selection */}
-                <select
-                  value={selectedPresetId || ''}
-                  onChange={(e) => {
-                    const preset = TRANSITION_MUSIC_PRESETS.find(p => p.id === e.target.value);
-                    if (preset) {
-                      handlePresetSelect(preset);
-                    } else {
-                      setSelectedPresetId(null);
-                      setMusicFile(null);
-                      setAudioWaveform(null);
+                {/* Preset Music Selection — collapsible track browser */}
+                <audio
+                  ref={trackPreviewAudioRef}
+                  onEnded={() => { setTrackPreviewingId(null); setIsTrackPreviewPlaying(false); }}
+                  onError={() => { setTrackPreviewingId(null); setIsTrackPreviewPlaying(false); }}
+                  style={{ display: 'none' }}
+                />
+
+                {/* Toggle button — shows selected track or "Browse Tracks" */}
+                <button
+                  onClick={() => {
+                    if (showTrackBrowser) {
+                      stopTransitionTrackPreview();
                     }
+                    setShowTrackBrowser(!showTrackBrowser);
+                    setTrackSearchQuery('');
                   }}
                   disabled={isLoadingPreset}
                   style={{
@@ -18481,23 +18534,199 @@ const PhotoGallery = ({
                     cursor: isLoadingPreset ? 'wait' : 'pointer',
                     fontSize: '12px',
                     fontWeight: '500',
-                    appearance: 'none',
-                    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23000' d='M6 8L1 3h10z'/%3E%3C/svg%3E")`,
-                    backgroundRepeat: 'no-repeat',
-                    backgroundPosition: 'right 10px center',
-                    paddingRight: '32px',
-                    marginBottom: '6px'
+                    textAlign: 'left',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    marginBottom: showTrackBrowser ? '0' : '6px',
+                    borderBottomLeftRadius: showTrackBrowser ? '0' : '6px',
+                    borderBottomRightRadius: showTrackBrowser ? '0' : '6px'
                   }}
                 >
-                  <option value="">
-                    {isLoadingPreset ? '⏳ Loading...' : '🎵 Select a preset track...'}
-                  </option>
-                  {TRANSITION_MUSIC_PRESETS.map((preset) => (
-                    <option key={preset.id} value={preset.id}>
-                      {preset.emoji} {preset.title} ({preset.duration})
-                    </option>
-                  ))}
-                </select>
+                  <span>
+                    {isLoadingPreset
+                      ? '⏳ Loading...'
+                      : selectedPresetId
+                        ? `${TRANSITION_MUSIC_PRESETS.find(p => p.id === selectedPresetId)?.emoji || '🎵'} ${TRANSITION_MUSIC_PRESETS.find(p => p.id === selectedPresetId)?.title || 'Selected'}`
+                        : '🎵 Browse Preset Tracks...'}
+                  </span>
+                  <span style={{
+                    fontSize: '10px',
+                    transition: 'transform 0.2s ease',
+                    transform: showTrackBrowser ? 'rotate(180deg)' : 'rotate(0deg)'
+                  }}>▼</span>
+                </button>
+
+                {/* Expandable track browser */}
+                {showTrackBrowser && (
+                  <div style={{
+                    border: '1px solid rgba(0, 0, 0, 0.15)',
+                    borderTop: 'none',
+                    borderBottomLeftRadius: '6px',
+                    borderBottomRightRadius: '6px',
+                    background: 'rgba(255, 255, 255, 0.95)',
+                    marginBottom: '6px',
+                    overflow: 'hidden'
+                  }}>
+                    {/* Search input */}
+                    <div style={{ padding: '8px 8px 4px' }}>
+                      <div style={{ position: 'relative' }}>
+                        <input
+                          type="text"
+                          value={trackSearchQuery}
+                          onChange={(e) => setTrackSearchQuery(e.target.value)}
+                          placeholder="Search tracks..."
+                          style={{
+                            width: '100%',
+                            padding: '7px 30px 7px 10px',
+                            borderRadius: '5px',
+                            border: '1px solid rgba(0, 0, 0, 0.15)',
+                            background: 'rgba(0, 0, 0, 0.04)',
+                            color: '#000',
+                            fontSize: '12px',
+                            outline: 'none',
+                            boxSizing: 'border-box'
+                          }}
+                        />
+                        {trackSearchQuery && (
+                          <button
+                            onClick={() => setTrackSearchQuery('')}
+                            style={{
+                              position: 'absolute',
+                              right: '6px',
+                              top: '50%',
+                              transform: 'translateY(-50%)',
+                              width: '18px',
+                              height: '18px',
+                              borderRadius: '50%',
+                              border: 'none',
+                              background: 'rgba(0, 0, 0, 0.12)',
+                              color: '#333',
+                              fontSize: '12px',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              padding: 0,
+                              lineHeight: 1
+                            }}
+                          >
+                            ×
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Scrollable track list */}
+                    <div style={{
+                      maxHeight: '220px',
+                      overflowY: 'auto',
+                      overscrollBehavior: 'contain'
+                    }}>
+                      {TRANSITION_MUSIC_PRESETS
+                        .filter(track => track.title.toLowerCase().includes(trackSearchQuery.toLowerCase()))
+                        .map((track) => {
+                          const isSelected = selectedPresetId === track.id;
+                          const isPreviewing = trackPreviewingId === track.id;
+                          return (
+                            <div
+                              key={track.id}
+                              onClick={() => {
+                                stopTransitionTrackPreview();
+                                handlePresetSelect(track);
+                                setShowTrackBrowser(false);
+                              }}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                padding: '8px 10px',
+                                minHeight: '40px',
+                                cursor: 'pointer',
+                                background: isSelected ? 'rgba(76, 175, 80, 0.15)' : 'transparent',
+                                borderLeft: isSelected ? '3px solid #c62828' : '3px solid transparent',
+                                transition: 'background 0.15s ease',
+                                boxSizing: 'border-box'
+                              }}
+                              onMouseEnter={(e) => {
+                                if (!isSelected) e.currentTarget.style.background = 'rgba(0, 0, 0, 0.05)';
+                              }}
+                              onMouseLeave={(e) => {
+                                if (!isSelected) e.currentTarget.style.background = 'transparent';
+                              }}
+                            >
+                              {/* Play/Pause button */}
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleTransitionPreviewToggle(track);
+                                }}
+                                style={{
+                                  width: '28px',
+                                  height: '28px',
+                                  borderRadius: '50%',
+                                  border: 'none',
+                                  background: isPreviewing && isTrackPreviewPlaying
+                                    ? '#c62828'
+                                    : 'rgba(0, 0, 0, 0.08)',
+                                  color: isPreviewing && isTrackPreviewPlaying ? 'white' : '#333',
+                                  fontSize: '11px',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  flexShrink: 0,
+                                  transition: 'background 0.15s ease',
+                                  padding: 0
+                                }}
+                              >
+                                {isPreviewing && isTrackPreviewPlaying ? '⏸' : '▶'}
+                              </button>
+
+                              {/* Emoji */}
+                              <span style={{ fontSize: '16px', flexShrink: 0 }}>{track.emoji}</span>
+
+                              {/* Title */}
+                              <span style={{
+                                flex: 1,
+                                color: '#000',
+                                fontSize: '12px',
+                                fontWeight: isSelected ? '600' : '500',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap'
+                              }}>
+                                {track.title}
+                              </span>
+
+                              {/* Duration */}
+                              <span style={{
+                                color: 'rgba(0, 0, 0, 0.4)',
+                                fontSize: '11px',
+                                flexShrink: 0,
+                                fontVariantNumeric: 'tabular-nums'
+                              }}>
+                                {track.duration}
+                              </span>
+                            </div>
+                          );
+                        })
+                      }
+                      {TRANSITION_MUSIC_PRESETS.filter(track =>
+                        track.title.toLowerCase().includes(trackSearchQuery.toLowerCase())
+                      ).length === 0 && (
+                        <div style={{
+                          padding: '16px',
+                          textAlign: 'center',
+                          color: 'rgba(0, 0, 0, 0.4)',
+                          fontSize: '12px'
+                        }}>
+                          No tracks match &ldquo;{trackSearchQuery}&rdquo;
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 {/* Or upload divider */}
                 <div style={{
@@ -18517,6 +18746,8 @@ const PhotoGallery = ({
                 <button
                   onClick={() => {
                     setSelectedPresetId(null);
+                    stopTransitionTrackPreview();
+                    setShowTrackBrowser(false);
                     musicFileInputRef.current?.click();
                   }}
                   style={{
