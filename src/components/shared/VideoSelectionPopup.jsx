@@ -352,6 +352,42 @@ const VideoSelectionPopup = ({
         WebkitOverflowScrolling: 'touch'
       }}
     >
+      {/* Close button - positioned on the backdrop, outside the panel */}
+      <button
+        onClick={onClose}
+        style={{
+          position: 'absolute',
+          top: isTablet ? '10px' : '16px',
+          right: isTablet ? '10px' : '16px',
+          width: '40px',
+          height: '40px',
+          borderRadius: '50%',
+          border: 'none',
+          background: 'rgba(255, 255, 255, 0.2)',
+          color: '#fff',
+          fontSize: '24px',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          transition: 'all 0.2s ease',
+          lineHeight: '1',
+          fontWeight: '300',
+          zIndex: 10001,
+          backdropFilter: 'blur(10px)'
+        }}
+        onMouseOver={(e) => {
+          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.35)';
+          e.currentTarget.style.transform = 'scale(1.1) rotate(90deg)';
+        }}
+        onMouseOut={(e) => {
+          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
+          e.currentTarget.style.transform = 'scale(1) rotate(0deg)';
+        }}
+      >
+        ×
+      </button>
+
       <div
         style={{
           background: isMobile ? 'rgba(255, 255, 255, 0.98)' : 'linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(250, 250, 255, 0.98) 100%)',
@@ -372,56 +408,18 @@ const VideoSelectionPopup = ({
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Close button */}
-        <button
-          onClick={onClose}
-          style={{
-            position: 'absolute',
-            top: isMobile ? '12px' : '20px',
-            right: isMobile ? '16px' : '24px',
-            width: isMobile ? '32px' : '40px',
-            height: isMobile ? '32px' : '40px',
-            borderRadius: '50%',
-            border: 'none',
-            background: 'rgba(0, 0, 0, 0.08)',
-            color: '#333',
-            fontSize: isMobile ? '20px' : '24px',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            transition: 'all 0.2s ease',
-            lineHeight: '1',
-            fontWeight: '300',
-            zIndex: 10,
-            backdropFilter: 'blur(10px)'
-          }}
-          onMouseOver={(e) => {
-            e.currentTarget.style.background = 'rgba(0, 0, 0, 0.15)';
-            e.currentTarget.style.transform = 'scale(1.1) rotate(90deg)';
-          }}
-          onMouseOut={(e) => {
-            e.currentTarget.style.background = 'rgba(0, 0, 0, 0.08)';
-            e.currentTarget.style.transform = 'scale(1) rotate(0deg)';
-          }}
-        >
-          ×
-        </button>
-
         {/* Header */}
         <div
           style={{
-          marginBottom: isMobile ? '16px' : '24px', 
+          marginBottom: isMobile ? '16px' : '24px',
           textAlign: 'center',
           flexShrink: 0,
-          paddingTop: isMobile ? '0' : '0',
-          paddingLeft: isMobile ? '20px' : '24px',
-          paddingRight: isMobile ? '52px' : '24px'
+          padding: '0 24px'
         }}>
           <h2 style={{
             margin: '0 0 6px 0',
             color: '#1a1a1a',
-            fontSize: isMobile ? '22px' : '36px',
+            fontSize: 'clamp(22px, 5vw, 36px)',
             fontWeight: '800',
             fontFamily: '"Permanent Marker", cursive',
             letterSpacing: '-0.02em',
@@ -429,8 +427,7 @@ const VideoSelectionPopup = ({
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
             backgroundClip: 'text',
-            lineHeight: '1.2',
-            whiteSpace: 'nowrap'
+            lineHeight: '1.2'
           }}>
             Choose Your Video Style
           </h2>
@@ -455,7 +452,7 @@ const VideoSelectionPopup = ({
             overflowX: 'auto',
             overflowY: 'hidden',
             flex: 'none',
-            padding: isMobile ? '4px 20px 8px 20px' : '8px 24px 8px 24px',
+            padding: '8px 24px 24px 24px',
             margin: 0,
             minHeight: 0,
             width: '100%',
