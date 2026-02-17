@@ -2579,18 +2579,21 @@ const PhotoGallery = ({
 
   // Generate QR code when qrCodeData changes
   useEffect(() => {
+    if (!qrCodeData || !qrCodeData.shareUrl) {
+      setQrCodeDataUrl('');
+      return;
+    }
+
+    // Immediately show loading state to prevent stale QR codes from previous shares
+    setQrCodeDataUrl('loading');
+
+    if (qrCodeData.shareUrl === 'loading' || qrCodeData.isLoading) {
+      return; // Already set to loading above
+    }
+
+    let cancelled = false;
+
     const generateQRCode = async () => {
-      if (!qrCodeData || !qrCodeData.shareUrl) {
-        setQrCodeDataUrl('');
-        return;
-      }
-
-      // Handle loading state - don't generate QR for loading placeholder
-      if (qrCodeData.shareUrl === 'loading' || qrCodeData.isLoading) {
-        setQrCodeDataUrl('loading');
-        return;
-      }
-
       try {
         const qrDataUrl = await QRCode.toDataURL(qrCodeData.shareUrl, {
           width: 300,
@@ -2600,14 +2603,20 @@ const PhotoGallery = ({
             light: '#FFFFFF'
           }
         });
-        setQrCodeDataUrl(qrDataUrl);
+        if (!cancelled) {
+          setQrCodeDataUrl(qrDataUrl);
+        }
       } catch (error) {
         console.error('Error generating QR code:', error);
-        setQrCodeDataUrl('');
+        if (!cancelled) {
+          setQrCodeDataUrl('');
+        }
       }
     };
 
     generateQRCode();
+
+    return () => { cancelled = true; };
   }, [qrCodeData]);
 
   // Helper function to generate consistent frame keys that include QR settings
