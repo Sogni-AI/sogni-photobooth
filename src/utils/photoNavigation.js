@@ -18,9 +18,10 @@ export const getPreviousPhotoIndex = (photos, currentIndex) => {
     iterations++;
     
     const previousPhoto = photos[previousIndex];
-    if (previousPhoto && 
+    if (previousPhoto &&
         !previousPhoto.hidden &&
-        ((previousPhoto.images && previousPhoto.images.length > 0) || 
+        !previousPhoto.generating &&
+        ((previousPhoto.images && previousPhoto.images.length > 0) ||
           previousPhoto.isOriginal)) {
       // We found a valid photo
       return previousIndex;
@@ -47,9 +48,10 @@ export const getNextPhotoIndex = (photos, currentIndex) => {
     iterations++;
     
     const nextPhoto = photos[nextIndex];
-    if (nextPhoto && 
+    if (nextPhoto &&
         !nextPhoto.hidden &&
-        ((nextPhoto.images && nextPhoto.images.length > 0) || 
+        !nextPhoto.generating &&
+        ((nextPhoto.images && nextPhoto.images.length > 0) ||
           nextPhoto.isOriginal)) {
       // We found a valid photo
       return nextIndex;
@@ -81,9 +83,10 @@ export const goToPreviousPhoto = (photos, selectedPhotoIndex) => {
     
     // Skip photos that are still loading, have errors, or are hidden
     const previousPhoto = photos[previousIndex];
-    if (previousPhoto && 
+    if (previousPhoto &&
         !previousPhoto.hidden &&
-        ((previousPhoto.images && previousPhoto.images.length > 0) || 
+        !previousPhoto.generating &&
+        ((previousPhoto.images && previousPhoto.images.length > 0) ||
           previousPhoto.isOriginal)) {
       // We found a valid photo
       break;
@@ -119,9 +122,10 @@ export const goToNextPhoto = (photos, selectedPhotoIndex) => {
     
     // Skip photos that are still loading, have errors, or are hidden
     const nextPhoto = photos[nextIndex];
-    if (nextPhoto && 
+    if (nextPhoto &&
         !nextPhoto.hidden &&
-        ((nextPhoto.images && nextPhoto.images.length > 0) || 
+        !nextPhoto.generating &&
+        ((nextPhoto.images && nextPhoto.images.length > 0) ||
           nextPhoto.isOriginal)) {
       // We found a valid photo
       break;

@@ -10,6 +10,7 @@ import '../../styles/components/PhotoGallery.css';
 import { createPolaroidImage } from '../../utils/imageProcessing';
 import { downloadImageMobile, enableMobileImageDownload } from '../../utils/mobileDownload';
 import { isMobile, styleIdToDisplay } from '../../utils/index';
+import { getPreviousPhotoIndex, getNextPhotoIndex } from '../../utils/photoNavigation';
 import promptsDataRaw from '../../prompts.json';
 import { THEME_GROUPS, getDefaultThemeGroupState, getEnabledPrompts } from '../../constants/themeGroups';
 import { stripTransformationPrefix } from '../../constants/editPrompts';
@@ -13007,10 +13008,7 @@ const PhotoGallery = ({
             }
             // Use filtered photos in prompt selector mode, regular photos otherwise
             const currentPhotosArray = isPromptSelectorMode ? filteredPhotos : photos;
-            let prevIndex = selectedPhotoIndex - 1;
-            if (prevIndex < 0) {
-              prevIndex = currentPhotosArray.length - 1; // Loop to end
-            }
+            const prevIndex = getPreviousPhotoIndex(currentPhotosArray, selectedPhotoIndex);
             setSelectedPhotoIndex(prevIndex);
           }}>
             &#8249;
@@ -13025,10 +13023,7 @@ const PhotoGallery = ({
             }
             // Use filtered photos in prompt selector mode, regular photos otherwise
             const currentPhotosArray = isPromptSelectorMode ? filteredPhotos : photos;
-            let nextIndex = selectedPhotoIndex + 1;
-            if (nextIndex >= currentPhotosArray.length) {
-              nextIndex = 0; // Loop to beginning
-            }
+            const nextIndex = getNextPhotoIndex(currentPhotosArray, selectedPhotoIndex);
             setSelectedPhotoIndex(nextIndex);
           }}>
             &#8250;
@@ -15157,17 +15152,11 @@ const PhotoGallery = ({
                   
                   if (deltaX > 0) {
                     // Swipe right - go to previous photo
-                    let prevIndex = selectedPhotoIndex - 1;
-                    if (prevIndex < 0) {
-                      prevIndex = currentPhotosArray.length - 1; // Loop to end
-                    }
+                    const prevIndex = getPreviousPhotoIndex(currentPhotosArray, selectedPhotoIndex);
                     setSelectedPhotoIndex(prevIndex);
                   } else {
                     // Swipe left - go to next photo
-                    let nextIndex = selectedPhotoIndex + 1;
-                    if (nextIndex >= currentPhotosArray.length) {
-                      nextIndex = 0; // Loop to beginning
-                    }
+                    const nextIndex = getNextPhotoIndex(currentPhotosArray, selectedPhotoIndex);
                     setSelectedPhotoIndex(nextIndex);
                   }
                 }
@@ -15773,17 +15762,11 @@ const PhotoGallery = ({
                   
                   if (deltaX > 0) {
                     // Swipe right - go to previous photo
-                    let prevIndex = selectedPhotoIndex - 1;
-                    if (prevIndex < 0) {
-                      prevIndex = currentPhotosArray.length - 1; // Loop to end
-                    }
+                    const prevIndex = getPreviousPhotoIndex(currentPhotosArray, selectedPhotoIndex);
                     setSelectedPhotoIndex(prevIndex);
                   } else {
                     // Swipe left - go to next photo
-                    let nextIndex = selectedPhotoIndex + 1;
-                    if (nextIndex >= currentPhotosArray.length) {
-                      nextIndex = 0; // Loop to beginning
-                    }
+                    const nextIndex = getNextPhotoIndex(currentPhotosArray, selectedPhotoIndex);
                     setSelectedPhotoIndex(nextIndex);
                   }
                 }
