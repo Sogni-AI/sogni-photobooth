@@ -143,7 +143,19 @@ const VideoSelectionPopup = ({
     const transitionVideo = 'https://cdn.sogni.ai/videos/transitions/jen.mp4';
 
     const options = [
-      // Motion Transfer first
+      // Emoji Video first
+      {
+        id: 'emoji',
+        icon: '🎥',
+        title: 'Emoji Video',
+        description: 'Generate videos using one of 160 emoji-based motion styles. The example is 🤑',
+        gradient: 'linear-gradient(135deg, #ffeb3b 0%, #fbc02d 100%)',
+        exampleVideo: emojiVideos[emojiVideoIndex],
+        exampleVideos: emojiVideos,
+        videoIndex: emojiVideoIndex,
+        setVideoIndex: setEmojiVideoIndex
+      },
+      // Motion Transfer
       {
         id: isBatch ? 'batch-animate-move' : 'animate-move',
         icon: '🎬',
@@ -196,18 +208,6 @@ const VideoSelectionPopup = ({
         exampleVideos: promptVideos,
         videoIndex: promptVideoIndex,
         setVideoIndex: setPromptVideoIndex
-      },
-      // Emoji Video
-      {
-        id: 'emoji',
-        icon: '🎥',
-        title: 'Emoji Video',
-        description: 'Generate videos using one of 160 emoji-based motion styles. The example is 🤑',
-        gradient: 'linear-gradient(135deg, #ffeb3b 0%, #fbc02d 100%)',
-        exampleVideo: emojiVideos[emojiVideoIndex],
-        exampleVideos: emojiVideos,
-        videoIndex: emojiVideoIndex,
-        setVideoIndex: setEmojiVideoIndex
       },
       // Bald for Base last
       {
