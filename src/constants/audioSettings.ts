@@ -1,12 +1,29 @@
 /**
- * Audio generation constants for ACE-Step 1.5 SFT model
+ * Audio generation constants for ACE-Step 1.5 models
  *
  * AUDIO_CONSTRAINTS serves as a fallback when the API config hasn't loaded yet.
  * At runtime, the useAudioModelConfig hook fetches authoritative values from:
  *   GET /api/v1/models/tiers/{modelId}
  */
 
-export const AUDIO_MODEL_ID = 'ace_step_1.5_sft';
+export const AUDIO_MODEL_ID_TURBO = 'ace_step_1.5_turbo';
+export const AUDIO_MODEL_ID_SFT = 'ace_step_1.5_sft';
+
+/** @deprecated Use AUDIO_MODEL_ID_TURBO instead */
+export const AUDIO_MODEL_ID = AUDIO_MODEL_ID_TURBO;
+
+export const AUDIO_MODELS = [
+  {
+    id: AUDIO_MODEL_ID_TURBO,
+    label: 'Fast & Catchy',
+    description: 'Quick generation, best quality sound',
+  },
+  {
+    id: AUDIO_MODEL_ID_SFT,
+    label: 'More Control',
+    description: 'More accurate lyrics, less stable',
+  },
+] as const;
 
 export const AUDIO_CONSTRAINTS = {
   duration: { min: 10, max: 600, default: 30 },
@@ -48,13 +65,12 @@ export const AUDIO_CONSTRAINTS = {
       sv: 'Swedish', ro: 'Romanian', el: 'Greek', unknown: 'Auto-detect'
     }
   },
-  steps: { min: 10, max: 200, default: 50 },
-  guidance: { min: 1, max: 15, default: 5 },
+  steps: { min: 4, max: 16, default: 8 },
   composerMode: { default: true },
   promptStrength: { min: 0, max: 10, default: 2.0 },
   creativity: { min: 0, max: 2, default: 0.85 },
-  comfySampler: { default: 'er_sde' },
-  comfyScheduler: { default: 'linear_quadratic' },
+  comfySampler: { default: 'euler' },
+  comfyScheduler: { default: 'simple' },
   outputFormat: { allowed: ['mp3', 'wav', 'flac'], default: 'mp3' },
   numberOfMedia: { min: 1, max: 4, default: 1 }
 } as const;
@@ -66,8 +82,7 @@ export const AUDIO_DEFAULTS = {
   keyscale: 'C major',
   timesig: '4',
   language: 'en',
-  steps: 50,
-  guidance: 5,
+  steps: 8,
   composerMode: true,
   promptStrength: 2.0,
   creativity: 0.85

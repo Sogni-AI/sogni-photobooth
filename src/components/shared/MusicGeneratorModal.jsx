@@ -2,7 +2,7 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import PropTypes from 'prop-types';
 import { getTokenLabel } from '../../services/walletService';
-import { AUDIO_MODEL_ID, AUDIO_CONSTRAINTS, AUDIO_DEFAULTS } from '../../constants/audioSettings';
+import { AUDIO_MODEL_ID_TURBO, AUDIO_MODELS, AUDIO_CONSTRAINTS, AUDIO_DEFAULTS } from '../../constants/audioSettings';
 import { useAudioCostEstimation } from '../../hooks/useAudioCostEstimation';
 import { useAudioModelConfig } from '../../hooks/useAudioModelConfig';
 
@@ -23,9 +23,11 @@ const MusicGeneratorModal = ({
   onTrackSelect,
   sogniClient = null,
   isAuthenticated = false,
-  tokenType = 'spark'
+  tokenType = 'spark',
+  zIndex = 10001
 }) => {
   // Music generation state
+  const [selectedModelId, setSelectedModelId] = useState(AUDIO_MODEL_ID_TURBO);
   const [musicPrompt, setMusicPrompt] = useState('');
   const [musicDuration, setMusicDuration] = useState(AUDIO_DEFAULTS.duration);
   const [musicBpm, setMusicBpm] = useState(AUDIO_DEFAULTS.bpm);
@@ -37,7 +39,6 @@ const MusicGeneratorModal = ({
   const [musicVersionCount, setMusicVersionCount] = useState(1);
   const [showMusicAdvanced, setShowMusicAdvanced] = useState(false);
   const [musicSteps, setMusicSteps] = useState(AUDIO_DEFAULTS.steps);
-  const [musicGuidance, setMusicGuidance] = useState(AUDIO_DEFAULTS.guidance);
   const [musicComposerMode, setMusicComposerMode] = useState(AUDIO_DEFAULTS.composerMode);
   const [musicPromptStrength, setMusicPromptStrength] = useState(AUDIO_DEFAULTS.promptStrength);
   const [musicCreativity, setMusicCreativity] = useState(AUDIO_DEFAULTS.creativity);
@@ -63,18 +64,84 @@ const MusicGeneratorModal = ({
 
   const isMobile = windowWidth < 768;
 
-  // Fetch audio model config from API (cached after first load)
+  // Fetch audio model config from API (cached per model)
   const { config: audioConfig } = useAudioModelConfig({
-    modelId: AUDIO_MODEL_ID,
+    modelId: selectedModelId,
     enabled: visible
   });
 
   // Merge API config over fallback constraints
   const ac = audioConfig || AUDIO_CONSTRAINTS;
 
+  // Keep a ref so callbacks always read the latest config (avoids stale closures)
+  const acRef = useRef(ac);
+  acRef.current = ac;
+
+  // When model config changes, clamp user values to valid ranges for the new model
+  useEffect(() => {
+    if (!audioConfig) return;
+
+    // Clamp numeric values to new model's valid range, reset to default if out of range
+    if (audioConfig.steps) {
+      setMusicSteps(prev => {
+        if (prev < audioConfig.steps.min || prev > audioConfig.steps.max) {
+          return audioConfig.steps.default;
+        }
+        return prev;
+      });
+    }
+    if (audioConfig.duration) {
+      setMusicDuration(prev => {
+        if (prev < audioConfig.duration.min || prev > audioConfig.duration.max) {
+          return audioConfig.duration.default;
+        }
+        return prev;
+      });
+    }
+    if (audioConfig.bpm) {
+      setMusicBpm(prev => {
+        if (prev < audioConfig.bpm.min || prev > audioConfig.bpm.max) {
+          return audioConfig.bpm.default;
+        }
+        return prev;
+      });
+    }
+    if (audioConfig.promptStrength) {
+      setMusicPromptStrength(prev => {
+        if (prev < audioConfig.promptStrength.min || prev > audioConfig.promptStrength.max) {
+          return audioConfig.promptStrength.default;
+        }
+        return prev;
+      });
+    }
+    if (audioConfig.creativity) {
+      setMusicCreativity(prev => {
+        if (prev < audioConfig.creativity.min || prev > audioConfig.creativity.max) {
+          return audioConfig.creativity.default;
+        }
+        return prev;
+      });
+    }
+    if (audioConfig.keyscale?.allowed) {
+      setMusicKeyscale(prev =>
+        audioConfig.keyscale.allowed.includes(prev) ? prev : audioConfig.keyscale.default
+      );
+    }
+    if (audioConfig.timesignature?.allowed) {
+      setMusicTimesig(prev =>
+        audioConfig.timesignature.allowed.includes(prev) ? prev : audioConfig.timesignature.default
+      );
+    }
+    if (audioConfig.language?.allowed) {
+      setMusicLanguage(prev =>
+        audioConfig.language.allowed.includes(prev) ? prev : audioConfig.language.default
+      );
+    }
+  }, [selectedModelId, audioConfig]);
+
   // Audio generation cost estimation
   const { loading: musicCostLoading, cost: musicCostRaw } = useAudioCostEstimation({
-    modelId: AUDIO_MODEL_ID,
+    modelId: selectedModelId,
     duration: musicDuration,
     steps: musicSteps,
     audioCount: musicVersionCount,
@@ -124,7 +191,17 @@ const MusicGeneratorModal = ({
   // --- Download Handler (XHR blob pattern) ---
 
   const handleDownloadTrack = useCallback((track, idx) => {
-    const filename = `sogni-track-${idx + 1}.mp3`;
+    // Build a descriptive filename matching the pattern used by image/video downloads
+    // Format: sogni-photobooth-music-{prompt}-{duration}s-{bpm}bpm-v{N}.mp3
+    const cleanPrompt = musicPrompt.trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .substring(0, 40)
+      .replace(/-+$/, '');
+    const promptPart = cleanPrompt || 'untitled';
+    const modelLabel = AUDIO_MODELS.find(m => m.id === selectedModelId)?.label?.toLowerCase().replace(/\s+/g, '-') || selectedModelId;
+    const filename = `sogni-photobooth-music-${promptPart}-${musicDuration}s-${musicBpm}bpm-${modelLabel}-v${idx + 1}.mp3`;
 
     const xhr = new XMLHttpRequest();
     xhr.open('GET', track.url, true);
@@ -157,7 +234,7 @@ const MusicGeneratorModal = ({
     };
 
     xhr.send();
-  }, []);
+  }, [musicPrompt, musicDuration, musicBpm, selectedModelId]);
 
   // --- Music Generation ---
 
@@ -176,13 +253,14 @@ const MusicGeneratorModal = ({
     setMusicProgress({});
 
     try {
+      // Read latest config from ref to avoid stale closure values
+      const currentAc = acRef.current;
       const projectParams = {
         type: 'audio',
-        modelId: AUDIO_MODEL_ID,
+        modelId: selectedModelId,
         positivePrompt: musicPrompt.trim(),
         numberOfMedia: musicVersionCount,
         steps: musicSteps,
-        guidance: musicGuidance,
         duration: musicDuration,
         bpm: musicBpm,
         keyscale: musicKeyscale,
@@ -191,9 +269,9 @@ const MusicGeneratorModal = ({
         composerMode: musicComposerMode,
         promptStrength: musicPromptStrength,
         creativity: musicCreativity,
-        sampler: ac.comfySampler?.default || 'er_sde',
-        scheduler: ac.comfyScheduler?.default || 'linear_quadratic',
-        outputFormat: ac.outputFormat?.default || 'mp3',
+        sampler: currentAc.comfySampler?.default || 'euler',
+        scheduler: currentAc.comfyScheduler?.default || 'simple',
+        outputFormat: currentAc.outputFormat?.default || 'mp3',
         tokenType,
       };
 
@@ -321,7 +399,7 @@ const MusicGeneratorModal = ({
       setMusicGenerating(false);
       musicProjectRef.current = null;
     }
-  }, [musicPrompt, sogniClient, musicVersionCount, musicSteps, musicGuidance, musicDuration, musicBpm, musicKeyscale, musicTimesig, musicLanguage, musicComposerMode, musicPromptStrength, musicCreativity, musicLyricsEnabled, musicLyrics, tokenType]);
+  }, [musicPrompt, sogniClient, selectedModelId, musicVersionCount, musicSteps, musicDuration, musicBpm, musicKeyscale, musicTimesig, musicLanguage, musicComposerMode, musicPromptStrength, musicCreativity, musicLyricsEnabled, musicLyrics, tokenType]);
 
   const handleCancelMusicGeneration = useCallback(() => {
     if (musicProjectRef.current) {
@@ -371,7 +449,7 @@ const MusicGeneratorModal = ({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        zIndex: 10001,
+        zIndex,
         padding: isMobile ? '10px' : '20px',
         backdropFilter: 'blur(8px)',
         animation: 'fadeIn 0.2s ease',
@@ -477,6 +555,58 @@ const MusicGeneratorModal = ({
           </div>
         ) : (
           <>
+            {/* Model Selector */}
+            {!musicGenerating && (
+              <div style={{ marginBottom: '12px' }}>
+                <div style={{
+                  display: 'flex',
+                  borderRadius: '8px',
+                  overflow: 'hidden',
+                  border: '1px solid rgba(255, 255, 255, 0.15)',
+                  background: 'rgba(0, 0, 0, 0.2)'
+                }}>
+                  {AUDIO_MODELS.map((model) => {
+                    const isSelected = selectedModelId === model.id;
+                    return (
+                      <button
+                        key={model.id}
+                        onClick={() => setSelectedModelId(model.id)}
+                        style={{
+                          flex: 1,
+                          padding: isMobile ? '8px 6px' : '8px 12px',
+                          border: 'none',
+                          background: isSelected
+                            ? 'rgba(255, 255, 255, 0.9)'
+                            : 'transparent',
+                          color: isSelected ? '#db2777' : 'rgba(255, 255, 255, 0.7)',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          gap: '2px'
+                        }}
+                      >
+                        <span style={{
+                          fontSize: '12px',
+                          fontWeight: '700'
+                        }}>
+                          {model.label}
+                        </span>
+                        <span style={{
+                          fontSize: '9px',
+                          fontWeight: '400',
+                          opacity: isSelected ? 0.7 : 0.5
+                        }}>
+                          {model.description}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {/* Generated Tracks List */}
             {generatedTracks.length > 0 && (
               <div style={{
@@ -741,7 +871,7 @@ const MusicGeneratorModal = ({
                     type="range"
                     min={ac.duration.min}
                     max={ac.duration.max}
-                    step={5}
+                    step={1}
                     value={musicDuration}
                     onChange={(e) => setMusicDuration(parseInt(e.target.value, 10))}
                     style={{
@@ -1053,7 +1183,7 @@ const MusicGeneratorModal = ({
                           type="range"
                           min={ac.steps.min}
                           max={ac.steps.max}
-                          step={5}
+                          step={1}
                           value={musicSteps}
                           onChange={(e) => setMusicSteps(parseInt(e.target.value, 10))}
                           style={{
@@ -1061,47 +1191,6 @@ const MusicGeneratorModal = ({
                             height: '3px',
                             borderRadius: '2px',
                             background: `linear-gradient(to right, #ec4899 ${((musicSteps - ac.steps.min) / (ac.steps.max - ac.steps.min)) * 100}%, rgba(255,255,255,0.2) ${((musicSteps - ac.steps.min) / (ac.steps.max - ac.steps.min)) * 100}%)`,
-                            outline: 'none',
-                            WebkitAppearance: 'none',
-                            cursor: 'pointer'
-                          }}
-                        />
-                      </div>
-
-                      {/* Guidance */}
-                      <div>
-                        <div style={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          marginBottom: '2px'
-                        }}>
-                          <label style={{
-                            color: 'rgba(255, 255, 255, 0.7)',
-                            fontSize: '11px',
-                            fontWeight: '500'
-                          }}>
-                            Guidance
-                          </label>
-                          <span style={{
-                            color: 'white',
-                            fontSize: '11px',
-                            fontWeight: '600'
-                          }}>
-                            {musicGuidance}
-                          </span>
-                        </div>
-                        <input
-                          type="range"
-                          min={ac.guidance.min}
-                          max={ac.guidance.max}
-                          step={0.5}
-                          value={musicGuidance}
-                          onChange={(e) => setMusicGuidance(parseFloat(e.target.value))}
-                          style={{
-                            width: '100%',
-                            height: '3px',
-                            borderRadius: '2px',
-                            background: `linear-gradient(to right, #ec4899 ${((musicGuidance - ac.guidance.min) / (ac.guidance.max - ac.guidance.min)) * 100}%, rgba(255,255,255,0.2) ${((musicGuidance - ac.guidance.min) / (ac.guidance.max - ac.guidance.min)) * 100}%)`,
                             outline: 'none',
                             WebkitAppearance: 'none',
                             cursor: 'pointer'
@@ -1343,7 +1432,8 @@ MusicGeneratorModal.propTypes = {
   onTrackSelect: PropTypes.func.isRequired,
   sogniClient: PropTypes.object,
   isAuthenticated: PropTypes.bool,
-  tokenType: PropTypes.oneOf(['spark', 'sogni'])
+  tokenType: PropTypes.oneOf(['spark', 'sogni']),
+  zIndex: PropTypes.number
 };
 
 export default MusicGeneratorModal;

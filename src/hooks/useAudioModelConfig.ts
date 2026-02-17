@@ -16,7 +16,7 @@ export interface AudioModelConfig {
   language: { allowed: string[]; default: string; labels?: Record<string, string> };
   steps: { min: number; max: number; default: number };
   shift: { min: number; max: number; step: number; default: number };
-  guidance: { min: number; max: number; decimals?: number; default: number };
+  guidance?: { min: number; max: number; decimals?: number; default: number };
   composerMode: { default: boolean };
   promptStrength: { min: number; max: number; decimals?: number; default: number };
   creativity: { min: number; max: number; decimals?: number; default: number; description?: string };
@@ -38,10 +38,9 @@ interface UseAudioModelConfigResult {
   error: Error | null;
 }
 
-// Module-level cache — fetched once, shared across all component instances
-let cachedConfig: AudioModelConfig | null = null;
-let cachedModelId: string | null = null;
-let fetchPromise: Promise<AudioModelConfig> | null = null;
+// Module-level cache — keyed by modelId, shared across all component instances
+const configCache = new Map<string, AudioModelConfig>();
+const fetchPromises = new Map<string, Promise<AudioModelConfig>>();
 
 async function fetchModelConfig(modelId: string): Promise<AudioModelConfig> {
   const url = `https://socket.sogni.ai/api/v1/models/tiers/${encodeURIComponent(modelId)}`;
@@ -53,7 +52,7 @@ async function fetchModelConfig(modelId: string): Promise<AudioModelConfig> {
 }
 
 export function useAudioModelConfig({ modelId, enabled = true }: UseAudioModelConfigParams): UseAudioModelConfigResult {
-  const [config, setConfig] = useState<AudioModelConfig | null>(cachedConfig);
+  const [config, setConfig] = useState<AudioModelConfig | null>(configCache.get(modelId) ?? null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
@@ -61,8 +60,9 @@ export function useAudioModelConfig({ modelId, enabled = true }: UseAudioModelCo
     if (!enabled || !modelId) return;
 
     // Return from cache if already fetched for this model
-    if (cachedConfig && cachedModelId === modelId) {
-      setConfig(cachedConfig);
+    const cached = configCache.get(modelId);
+    if (cached) {
+      setConfig(cached);
       setLoading(false);
       setError(null);
       return;
@@ -75,16 +75,15 @@ export function useAudioModelConfig({ modelId, enabled = true }: UseAudioModelCo
       setError(null);
 
       try {
-        // Deduplicate in-flight requests
-        if (!fetchPromise || cachedModelId !== modelId) {
-          cachedModelId = modelId;
-          fetchPromise = fetchModelConfig(modelId);
+        // Deduplicate in-flight requests per model
+        if (!fetchPromises.has(modelId)) {
+          fetchPromises.set(modelId, fetchModelConfig(modelId));
         }
 
-        const result = await fetchPromise;
+        const result = await fetchPromises.get(modelId)!;
 
         if (!cancelled) {
-          cachedConfig = result;
+          configCache.set(modelId, result);
           setConfig(result);
           setLoading(false);
         }
@@ -93,7 +92,7 @@ export function useAudioModelConfig({ modelId, enabled = true }: UseAudioModelCo
           console.warn('[useAudioModelConfig] Failed to fetch model config:', err);
           setError(err as Error);
           setLoading(false);
-          fetchPromise = null;
+          fetchPromises.delete(modelId);
         }
       }
     }

@@ -62,6 +62,7 @@ import VideoSelectionPopup from './VideoSelectionPopup';
 import AnimateMovePopup from './AnimateMovePopup';
 import AnimateReplacePopup from './AnimateReplacePopup';
 import SoundToVideoPopup from './SoundToVideoPopup';
+import MusicGeneratorModal from './MusicGeneratorModal';
 import ConfettiCelebration from './ConfettiCelebration';
 import StitchOptionsPopup from './StitchOptionsPopup';
 import VideoReviewPopup from './VideoReviewPopup';
@@ -1610,6 +1611,7 @@ const PhotoGallery = ({
   const [trackSearchQuery, setTrackSearchQuery] = useState('');
   const [trackPreviewingId, setTrackPreviewingId] = useState(null);
   const [isTrackPreviewPlaying, setIsTrackPreviewPlaying] = useState(false);
+  const [showTransitionMusicGenerator, setShowTransitionMusicGenerator] = useState(false);
   const trackPreviewAudioRef = useRef(null);
   const musicFileInputRef = useRef(null);
   const waveformCanvasRef = useRef(null);
@@ -9988,6 +9990,67 @@ const PhotoGallery = ({
     setIsTrackPreviewPlaying(false);
   }, []);
 
+  // Handle AI-generated music track selection for transition video
+  const handleTransitionGeneratedTrackSelect = useCallback(async (track) => {
+    setShowTransitionMusicGenerator(false);
+    setSelectedPresetId(null);
+    stopTransitionTrackPreview();
+    setShowTrackBrowser(false);
+
+    try {
+      // Create placeholder File object matching preset pattern
+      const generatedFile = new File([], `ai-generated-${Date.now()}.mp3`, { type: 'audio/mpeg' });
+      generatedFile.presetUrl = track.url;
+      generatedFile.isPreset = true;
+      generatedFile.isGenerated = true;
+
+      // Get duration via Audio element
+      const audio = new Audio();
+      audio.crossOrigin = 'anonymous';
+      await new Promise((resolve, reject) => {
+        audio.onloadedmetadata = () => {
+          setAudioDuration(audio.duration);
+          resolve();
+        };
+        audio.onerror = () => {
+          // Fallback: use track duration if available
+          if (track.duration) {
+            setAudioDuration(track.duration);
+          }
+          resolve();
+        };
+        audio.src = track.url;
+      });
+
+      setMusicFile(generatedFile);
+
+      // Set up audio preview
+      if (audioPreviewRef.current) {
+        audioPreviewRef.current.src = track.url;
+        audioPreviewRef.current.crossOrigin = 'anonymous';
+      }
+
+      // Generate placeholder waveform (same as presets - avoids CORS issues)
+      const samples = 200;
+      const waveformData = [];
+      for (let i = 0; i < samples; i++) {
+        const seed = (track.url || '').charCodeAt(i % Math.max((track.url || '').length, 1));
+        const noise = Math.sin(i * 0.1 + seed) * 0.3 + 0.5;
+        const envelope = Math.sin((i / samples) * Math.PI) * 0.3 + 0.7;
+        waveformData.push(noise * envelope);
+      }
+      setAudioWaveform(waveformData);
+      setMusicStartOffset(0);
+    } catch (error) {
+      console.error('Failed to load generated track:', error);
+      showToast({
+        title: 'Load Error',
+        message: 'Failed to load generated track. Please try again.',
+        type: 'error'
+      });
+    }
+  }, [showToast]);
+
   // Toggle play/pause for a track in the browser
   const handleTransitionPreviewToggle = useCallback((track) => {
     const audio = trackPreviewAudioRef.current;
@@ -10328,6 +10391,7 @@ const PhotoGallery = ({
       setIsTrackPreviewPlaying(false);
       setShowTrackBrowser(false);
       setTrackSearchQuery('');
+      setShowTransitionMusicGenerator(false);
       if (playbackAnimationRef.current) {
         cancelAnimationFrame(playbackAnimationRef.current);
       }
@@ -18346,6 +18410,7 @@ const PhotoGallery = ({
           }}
           onClick={() => {
             setShowTransitionVideoPopup(false);
+            setShowTransitionMusicGenerator(false);
             // Stop any playing preview
             setIsPlayingPreview(false);
             if (audioPreviewRef.current) {
@@ -18765,8 +18830,44 @@ const PhotoGallery = ({
                     textAlign: 'center'
                   }}
                 >
-                  {musicFile && !selectedPresetId ? `✅ ${musicFile.name}` : '📁 Upload MP3/M4A'}
+                  {musicFile && !selectedPresetId && !musicFile?.isGenerated ? `✅ ${musicFile.name}` : '📁 Upload MP3/M4A'}
                 </button>
+
+                {/* AI Music Generation (authenticated users only) */}
+                {isAuthenticated && (
+                  <>
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      margin: '6px 0',
+                      color: 'rgba(0, 0, 0, 0.5)',
+                      fontSize: '10px'
+                    }}>
+                      <div style={{ flex: 1, height: '1px', backgroundColor: 'rgba(0, 0, 0, 0.2)' }} />
+                      <span>or</span>
+                      <div style={{ flex: 1, height: '1px', backgroundColor: 'rgba(0, 0, 0, 0.2)' }} />
+                    </div>
+
+                    <button
+                      onClick={() => setShowTransitionMusicGenerator(true)}
+                      style={{
+                        width: '100%',
+                        padding: '8px 10px',
+                        backgroundColor: musicFile?.isGenerated ? 'rgba(76, 175, 80, 0.3)' : 'rgba(255, 255, 255, 0.95)',
+                        border: musicFile?.isGenerated ? '2px solid rgba(76, 175, 80, 0.6)' : '1px dashed rgba(0, 0, 0, 0.35)',
+                        borderRadius: '6px',
+                        color: '#000',
+                        cursor: 'pointer',
+                        fontSize: '12px',
+                        fontWeight: '500',
+                        textAlign: 'center'
+                      }}
+                    >
+                      {musicFile?.isGenerated ? '✅ AI Generated Track' : '✨ Create AI Music'}
+                    </button>
+                  </>
+                )}
 
                 {/* Waveform Visualization */}
                 {musicFile && audioWaveform && (
@@ -18939,6 +19040,17 @@ const PhotoGallery = ({
         </div>,
         document.body
       )}
+
+      {/* AI Music Generator for Transition Video */}
+      <MusicGeneratorModal
+        visible={showTransitionMusicGenerator}
+        onClose={() => setShowTransitionMusicGenerator(false)}
+        onTrackSelect={handleTransitionGeneratedTrackSelect}
+        sogniClient={sogniClient}
+        isAuthenticated={isAuthenticated}
+        tokenType={tokenType}
+        zIndex={10000001}
+      />
 
 
       {/* Video Dropdown Portal for Gallery Mode (when not in slideshow) */}
