@@ -947,10 +947,10 @@ const SoundToVideoPopup = ({
             padding: '4px'
           }}>
             {[
-              { id: 'sample', label: '🎵 Samples', hasContent: !!selectedSample },
-              { id: 'record', label: '🎤 Record', hasContent: !!recordedAudio },
-              { id: 'upload', label: '📁 Upload', hasContent: !!uploadedAudio },
-              { id: 'create', label: '✨ Create', hasContent: !!selectedGeneratedTrack }
+              { id: 'sample', emoji: '🎵', label: 'Samples', hasContent: !!selectedSample },
+              { id: 'record', emoji: '🎤', label: 'Record', hasContent: !!recordedAudio },
+              { id: 'upload', emoji: '📁', label: 'Upload', hasContent: !!uploadedAudio },
+              { id: 'create', emoji: '✨', label: 'Create', hasContent: !!selectedGeneratedTrack }
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -960,9 +960,9 @@ const SoundToVideoPopup = ({
                   padding: '8px 12px',
                   borderRadius: '6px',
                   border: 'none',
-                  background: sourceType === tab.id 
-                    ? 'rgba(255, 255, 255, 0.95)' 
-                    : tab.hasContent 
+                  background: sourceType === tab.id
+                    ? 'rgba(255, 255, 255, 0.95)'
+                    : tab.hasContent
                       ? 'rgba(255, 255, 255, 0.12)'
                       : 'transparent',
                   color: sourceType === tab.id ? '#db2777' : 'white',
@@ -970,10 +970,23 @@ const SoundToVideoPopup = ({
                   fontWeight: '600',
                   cursor: 'pointer',
                   transition: 'all 0.2s ease',
-                  position: 'relative'
+                  position: 'relative',
+                  ...(isMobile ? {
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '2px'
+                  } : {})
                 }}
               >
-                {tab.label}
+                {isMobile ? (
+                  <>
+                    <span>{tab.emoji}</span>
+                    <span>{tab.label}</span>
+                  </>
+                ) : (
+                  `${tab.emoji} ${tab.label}`
+                )}
                 {tab.hasContent && sourceType !== tab.id && (
                   <span style={{
                     position: 'absolute',
