@@ -419,7 +419,7 @@ const BaldForBaseConfirmationPopup = ({
                     textShadow: '0 1px 6px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3)'
                   }}>
                     Sogni <a href="https://www.sogni.ai/super-apps" target="_blank" rel="noopener noreferrer" style={{ color: 'white', textDecoration: 'underline', fontWeight: '700' }}>SuperApps</a> will be going live in Coinbase's Base App soon.
-                    Share a Bald for Base video on X or Base, tag <a href="https://x.com/Sogni_Protocol" target="_blank" rel="noopener noreferrer" style={{ color: 'white', textDecoration: 'underline', fontWeight: '700' }}>@Sogni_Protocol</a> for a chance at your share of 100,000 SOGNI tokens! <strong>[Contest Starts in February]</strong> 
+                    Share a Bald for Base video on X or Base, tag <a href="https://x.com/Sogni_Protocol" target="_blank" rel="noopener noreferrer" style={{ color: 'white', textDecoration: 'underline', fontWeight: '700' }}>@Sogni_Protocol</a> for a chance at your share of 100,000 SOGNI tokens! <strong>[Contest Starts in March]</strong> 
                   </p>
                 </div>
 
@@ -494,7 +494,7 @@ const BaldForBaseConfirmationPopup = ({
               flexShrink: 0
             }}>
               Sogni <a href="https://www.sogni.ai/super-apps" target="_blank" rel="noopener noreferrer" style={{ color: 'white', textDecoration: 'underline', fontWeight: '700' }}>SuperApps</a> will be going live in Coinbase's Base App soon!
-              Share a Bald for Base video on X or Base, tag <a href="https://x.com/Sogni_Protocol" target="_blank" rel="noopener noreferrer" style={{ color: 'white', textDecoration: 'underline', fontWeight: '700' }}>@Sogni_Protocol</a> for a chance at your share of 100,000 SOGNI tokens! <strong>[Contest Starts in Febuary]</strong> 
+              Share a Bald for Base video on X or Base, tag <a href="https://x.com/Sogni_Protocol" target="_blank" rel="noopener noreferrer" style={{ color: 'white', textDecoration: 'underline', fontWeight: '700' }}>@Sogni_Protocol</a> for a chance at your share of 100,000 SOGNI tokens! <strong>[Contest Starts in March]</strong> 
             </p>
           )}
 
@@ -569,7 +569,7 @@ const BaldForBaseConfirmationPopup = ({
                 zIndex: 5,
                 pointerEvents: 'none'
               }}>
-                <div style={{ fontSize: isWideScreen ? '11px' : (isTablet ? '11px' : '10px'), opacity: 0.9 }}>Contest Starts Jan 2025</div>
+                <div style={{ fontSize: isWideScreen ? '11px' : (isTablet ? '11px' : '10px'), opacity: 0.9 }}>Contest Starts March 2026</div>
               </div>
             </div>
           )}
@@ -646,7 +646,7 @@ const BaldForBaseConfirmationPopup = ({
                 zIndex: 5,
                 pointerEvents: 'none'
               }}>
-                <div style={{ fontSize: '11px', opacity: 0.9 }}>Contest Starts in Feb 2025</div>
+                <div style={{ fontSize: '11px', opacity: 0.9 }}>Contest Starts in Mar 2026</div>
               </div>
             </div>
           )}

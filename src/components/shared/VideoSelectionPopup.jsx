@@ -42,6 +42,7 @@ const VideoSelectionPopup = ({
   const [animateMoveMuted, setAnimateMoveMuted] = useState(true); // Animate Move video muted by default
   const [animateReplaceMuted, setAnimateReplaceMuted] = useState(true); // Animate Replace video muted by default
   const [transitionMuted, setTransitionMuted] = useState(true); // Transition videos muted by default
+  const [cameraMuted, setCameraMuted] = useState(true); // 360 Camera video muted by default
   const [videoLoadedStates, setVideoLoadedStates] = useState({
     'prompt': false,
     'emoji': false,
@@ -165,6 +166,16 @@ const VideoSelectionPopup = ({
         exampleVideo: animateMoveVideo,
         isNew: true
       },
+      // 360 Camera
+      {
+        id: '360-camera',
+        icon: '📷',
+        title: '360 Camera',
+        description: 'Generate smooth 360 rotation videos from a single photo. COMING SOON',
+        gradient: 'linear-gradient(135deg, #14b8a6 0%, #0d9488 100%)',
+        exampleVideo: 'https://cdn.sogni.ai/videos/360-camera-demo.mp4',
+        comingSoon: true
+      },
       // Replace Subject second
       {
         id: isBatch ? 'batch-animate-replace' : 'animate-replace',
@@ -237,6 +248,7 @@ const VideoSelectionPopup = ({
     setAnimateMoveMuted(true); // Reset animate move mute state when popup opens
     setAnimateReplaceMuted(true); // Reset animate replace mute state when popup opens
     setTransitionMuted(true); // Reset transition mute state when popup opens
+    setCameraMuted(true); // Reset 360 camera mute state when popup opens
     // Reset loading states when popup opens
     setVideoLoadedStates({
       'prompt': false,
@@ -523,19 +535,20 @@ const VideoSelectionPopup = ({
         >
           {videoOptions.map((option) => {
             const isDisabled = option.disabled;
+            const isComingSoon = option.comingSoon;
             return (
               <div
                 key={option.id}
                 role="button"
-                tabIndex={isDisabled ? -1 : 0}
-                onClick={() => !isDisabled && onSelectVideoType(option.id)}
+                tabIndex={(isDisabled || isComingSoon) ? -1 : 0}
+                onClick={() => !isDisabled && !isComingSoon && onSelectVideoType(option.id)}
                 onKeyDown={(e) => {
-                  if (!isDisabled && (e.key === 'Enter' || e.key === ' ')) {
+                  if (!isDisabled && !isComingSoon && (e.key === 'Enter' || e.key === ' ')) {
                     e.preventDefault();
                     onSelectVideoType(option.id);
                   }
                 }}
-                aria-disabled={isDisabled}
+                aria-disabled={isDisabled || isComingSoon}
                 style={{
                   background: isDisabled
                     ? 'linear-gradient(135deg, #E5E7EB 0%, #D1D5DB 100%)'
@@ -545,7 +558,7 @@ const VideoSelectionPopup = ({
                   border: isDisabled
                     ? '2px solid #D1D5DB'
                     : '2px solid rgba(0, 0, 0, 0.08)',
-                  cursor: isDisabled ? 'not-allowed' : 'pointer',
+                  cursor: (isDisabled || isComingSoon) ? 'not-allowed' : 'pointer',
                   transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
                   textAlign: 'left',
                   position: 'relative',
@@ -563,17 +576,17 @@ const VideoSelectionPopup = ({
                   boxSizing: 'border-box'
                 }}
                 onMouseOver={(e) => {
-                  if (!isDisabled) {
+                  if (!isDisabled && !isComingSoon) {
                     e.currentTarget.style.transform = 'translateY(-4px)';
                     e.currentTarget.style.boxShadow = '0 12px 40px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(0, 0, 0, 0.08)';
                     e.currentTarget.style.borderColor = 'rgba(0, 0, 0, 0.15)';
                   }
                 }}
                 onMouseOut={(e) => {
-                  if (!isDisabled) {
+                  if (!isDisabled && !isComingSoon) {
                     e.currentTarget.style.transform = 'translateY(0)';
-                    e.currentTarget.style.boxShadow = isDisabled 
-                      ? '0 2px 8px rgba(0, 0, 0, 0.08)' 
+                    e.currentTarget.style.boxShadow = isDisabled
+                      ? '0 2px 8px rgba(0, 0, 0, 0.08)'
                       : '0 4px 20px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.04)';
                     e.currentTarget.style.borderColor = 'rgba(0, 0, 0, 0.08)';
                   }
@@ -665,6 +678,7 @@ const VideoSelectionPopup = ({
                           (option.id === 'animate-move' || option.id === 'batch-animate-move') ? animateMoveMuted :
                           (option.id === 'animate-replace' || option.id === 'batch-animate-replace') ? animateReplaceMuted :
                           (option.id === 'transition' || option.id === 'batch-transition') ? transitionMuted :
+                          option.id === '360-camera' ? cameraMuted :
                           true
                         }
                         playsInline
@@ -724,6 +738,7 @@ const VideoSelectionPopup = ({
                               setAnimateMoveMuted(true);
                               setAnimateReplaceMuted(true);
                               setTransitionMuted(true);
+                              setCameraMuted(true);
                             }
                             setS2vMuted(!s2vMuted);
                           }}
@@ -768,6 +783,7 @@ const VideoSelectionPopup = ({
                               setS2vMuted(true);
                               setAnimateReplaceMuted(true);
                               setTransitionMuted(true);
+                              setCameraMuted(true);
                             }
                             setAnimateMoveMuted(!animateMoveMuted);
                           }}
@@ -812,6 +828,7 @@ const VideoSelectionPopup = ({
                               setS2vMuted(true);
                               setAnimateMoveMuted(true);
                               setTransitionMuted(true);
+                              setCameraMuted(true);
                             }
                             setAnimateReplaceMuted(!animateReplaceMuted);
                           }}
@@ -856,6 +873,7 @@ const VideoSelectionPopup = ({
                               setS2vMuted(true);
                               setAnimateMoveMuted(true);
                               setAnimateReplaceMuted(true);
+                              setCameraMuted(true);
                             }
                             setTransitionMuted(!transitionMuted);
                           }}
@@ -889,6 +907,49 @@ const VideoSelectionPopup = ({
                           }}
                         >
                           {transitionMuted ? '🔇' : '🔊'}
+                        </button>
+                      ) : (option.id === '360-camera' && videoLoadedStates['360-camera']) ? (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (cameraMuted) {
+                              setS2vMuted(true);
+                              setAnimateMoveMuted(true);
+                              setAnimateReplaceMuted(true);
+                              setTransitionMuted(true);
+                            }
+                            setCameraMuted(!cameraMuted);
+                          }}
+                          style={{
+                            position: 'absolute',
+                            bottom: '12px',
+                            right: '12px',
+                            width: '36px',
+                            height: '36px',
+                            borderRadius: '50%',
+                            border: 'none',
+                            background: 'rgba(0, 0, 0, 0.7)',
+                            color: 'white',
+                            fontSize: '18px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            transition: 'all 0.2s ease',
+                            zIndex: 10,
+                            backdropFilter: 'blur(10px)',
+                            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)'
+                          }}
+                          onMouseOver={(e) => {
+                            e.currentTarget.style.background = 'rgba(0, 0, 0, 0.85)';
+                            e.currentTarget.style.transform = 'scale(1.1)';
+                          }}
+                          onMouseOut={(e) => {
+                            e.currentTarget.style.background = 'rgba(0, 0, 0, 0.7)';
+                            e.currentTarget.style.transform = 'scale(1)';
+                          }}
+                        >
+                          {cameraMuted ? '🔇' : '🔊'}
                         </button>
                       ) : null}
                     </>
@@ -935,7 +996,7 @@ const VideoSelectionPopup = ({
                     </span>
                     <h3 style={{
                       margin: 0,
-                      color: isDisabled ? '#9CA3AF' : '#1a1a1a',
+                      color: (isDisabled || isComingSoon) ? '#9CA3AF' : '#1a1a1a',
                       fontSize: isMobile ? '16px' : isTablet ? '18px' : '20px',
                       fontWeight: '700',
                       fontFamily: '"Permanent Marker", cursive',
@@ -973,7 +1034,7 @@ const VideoSelectionPopup = ({
                   {/* Description */}
                   <p style={{
                     margin: 0,
-                    color: isDisabled ? '#9CA3AF' : '#666',
+                    color: (isDisabled || isComingSoon) ? '#9CA3AF' : '#666',
                     fontSize: isMobile ? '13px' : isTablet ? '14px' : '13px',
                     lineHeight: '1.4',
                     fontWeight: '400',
@@ -1000,7 +1061,7 @@ const VideoSelectionPopup = ({
                       textAlign: 'center',
                       border: '1px solid rgba(156, 163, 175, 0.2)'
                     }}>
-                      Requires 2+ images
+                      {option.disabledMessage || 'Requires 2+ images'}
                     </div>
                   )}
 
