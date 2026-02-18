@@ -28,7 +28,14 @@ const VideoSettingsFooter = ({
   showDuration = true,
   showResolution = true,
   colorScheme = 'light', // 'light' = dark text, 'dark' = light text
-  tokenType = 'spark' // 'spark' or 'sogni'
+  tokenType = 'spark', // 'spark' or 'sogni'
+  // Optional override props - when provided, use these instead of AppContext
+  resolution: overrideResolution,
+  onResolutionChange: overrideOnResolutionChange,
+  quality: overrideQuality,
+  onQualityChange: overrideOnQualityChange,
+  duration: overrideDuration,
+  onDurationChange: overrideOnDurationChange
 }) => {
   const { settings, updateSetting } = useApp();
 
@@ -62,10 +69,10 @@ const VideoSettingsFooter = ({
     }
   }, [openDropdown]);
 
-  // Current values from settings
-  const currentResolution = settings.videoResolution || '480p';
-  const currentDuration = settings.videoDuration || 5;
-  const currentQuality = settings.videoQuality || 'fast';
+  // Current values: use override props if provided, otherwise fall back to AppContext
+  const currentResolution = overrideResolution !== undefined ? overrideResolution : (settings.videoResolution || '480p');
+  const currentDuration = overrideDuration !== undefined ? overrideDuration : (settings.videoDuration || 5);
+  const currentQuality = overrideQuality !== undefined ? overrideQuality : (settings.videoQuality || 'fast');
 
   // Generate duration options (1-8 seconds in 0.5 increments)
   const durationOptions = [];
@@ -73,21 +80,33 @@ const VideoSettingsFooter = ({
     durationOptions.push(d);
   }
 
-  // Handle setting changes
+  // Handle setting changes - use override callbacks if provided, otherwise AppContext
   const handleResolutionChange = useCallback((resolution) => {
-    updateSetting('videoResolution', resolution);
+    if (overrideOnResolutionChange) {
+      overrideOnResolutionChange(resolution);
+    } else {
+      updateSetting('videoResolution', resolution);
+    }
     setOpenDropdown(null);
-  }, [updateSetting]);
+  }, [updateSetting, overrideOnResolutionChange]);
 
   const handleDurationChange = useCallback((duration) => {
-    updateSetting('videoDuration', duration);
+    if (overrideOnDurationChange) {
+      overrideOnDurationChange(duration);
+    } else {
+      updateSetting('videoDuration', duration);
+    }
     setOpenDropdown(null);
-  }, [updateSetting]);
+  }, [updateSetting, overrideOnDurationChange]);
 
   const handleQualityChange = useCallback((quality) => {
-    updateSetting('videoQuality', quality);
+    if (overrideOnQualityChange) {
+      overrideOnQualityChange(quality);
+    } else {
+      updateSetting('videoQuality', quality);
+    }
     setOpenDropdown(null);
-  }, [updateSetting]);
+  }, [updateSetting, overrideOnQualityChange]);
 
   // Toggle dropdown
   const toggleDropdown = (dropdown) => (e) => {
@@ -357,7 +376,14 @@ VideoSettingsFooter.propTypes = {
   showDuration: PropTypes.bool,
   showResolution: PropTypes.bool,
   colorScheme: PropTypes.oneOf(['light', 'dark']),
-  tokenType: PropTypes.oneOf(['spark', 'sogni'])
+  tokenType: PropTypes.oneOf(['spark', 'sogni']),
+  // Override props - use these instead of AppContext when provided
+  resolution: PropTypes.string,
+  onResolutionChange: PropTypes.func,
+  quality: PropTypes.string,
+  onQualityChange: PropTypes.func,
+  duration: PropTypes.number,
+  onDurationChange: PropTypes.func
 };
 
 export default VideoSettingsFooter;

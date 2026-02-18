@@ -124,6 +124,8 @@ export interface CameraAngleReviewPopupProps {
 export interface MultiAngleGenerationParams {
   /** Source image URL or data URL */
   sourceImageUrl: string;
+  /** Per-slot source image URLs (when different images per angle, e.g. gallery mode) */
+  sourceImageUrls?: string[];
   /** Source photo ID (for reference) */
   sourcePhotoId: string;
   /** Array of angle configurations to generate */

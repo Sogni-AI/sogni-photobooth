@@ -181,27 +181,38 @@ async function generateSingleAngle(
         // Track our project/job IDs for filtering events
         const ourProjectId = project.id;
         let ourJobId: string | null = null;
+        let cachedWorkerName: string | undefined;
 
         // Listen for job events
         project.on('job', (event: any) => {
-          // Filter to only handle events for our project
-          if (event.projectId && event.projectId !== ourProjectId) {
+          // Strict filter: only handle events for our project (matches sogni-360 pattern)
+          if (event.projectId !== ourProjectId) {
             return;
           }
 
-          const { type, jobId, progress, workerName } = event;
+          const { type, jobId, progress } = event;
+
+          // Cache worker name from started/initiating events (SDK only sends it on these)
+          if ((type === 'started' || type === 'initiating') && event.workerName) {
+            cachedWorkerName = event.workerName;
+          }
 
           if (type === 'started' && jobId) {
             ourJobId = jobId;
+            callbacks.onItemProgress?.(index, 0, undefined, cachedWorkerName);
           }
 
           if (type === 'progress' && progress !== undefined) {
+            // Filter by jobId when available for extra safety
+            if (ourJobId && event.jobId && event.jobId !== ourJobId) {
+              return;
+            }
             const progressPercent = Math.floor((typeof progress === 'number' ? progress : 0) * 100);
-            callbacks.onItemProgress?.(index, progressPercent, undefined, workerName);
+            callbacks.onItemProgress?.(index, progressPercent, undefined, cachedWorkerName);
           }
 
           if (type === 'eta' && event.eta !== undefined) {
-            callbacks.onItemProgress?.(index, undefined as any, event.eta, workerName);
+            callbacks.onItemProgress?.(index, undefined as any, event.eta, cachedWorkerName);
           }
 
           if (type === 'queued' && event.queuePosition !== undefined) {
@@ -289,19 +300,53 @@ export async function generateMultipleAngles(
   params: MultiAngleGenerationParams,
   callbacks: MultiAngleGenerationCallbacks = {}
 ): Promise<MultiAngleGenerationResult> {
-  const { angles, sourceImageUrl } = params;
+  const { angles, sourceImageUrl, sourceImageUrls } = params;
 
   // Filter out isOriginal slots - they use the source image directly and don't need AI generation.
   // This must match the filtering in createAngleGenerationItems to ensure indices align.
   const generatableAngles = angles.filter(slot => !slot.isOriginal);
 
-  // Load source image once
+  // Determine per-slot source URLs: if sourceImageUrls provided, map each generatable
+  // slot to its corresponding URL (cycling through the array). Otherwise use the single sourceImageUrl.
+  const hasPerSlotImages = sourceImageUrls && sourceImageUrls.length > 0;
+  const perSlotUrls: string[] = [];
+  if (hasPerSlotImages) {
+    // Map generatable angles back to their original index in the full angles array
+    // to get the correct source image URL for each
+    let genIndex = 0;
+    for (let i = 0; i < angles.length; i++) {
+      if (!angles[i].isOriginal) {
+        perSlotUrls[genIndex] = sourceImageUrls[i % sourceImageUrls.length];
+        genIndex++;
+      }
+    }
+  }
+
+  // Load source image(s)
   const outputFormat = params.outputFormat || 'jpg';
-  let imageBuffer: Uint8Array;
+  let sharedImageBuffer: Uint8Array | null = null;
+  const perSlotBuffers: (Uint8Array | null)[] = new Array(generatableAngles.length).fill(null);
+
   try {
-    imageBuffer = await loadImageAsBuffer(sourceImageUrl, outputFormat);
+    if (hasPerSlotImages) {
+      // Load unique per-slot images (deduplicate to avoid loading the same image multiple times)
+      const uniqueUrls = [...new Set(perSlotUrls)];
+      const bufferCache = new Map<string, Uint8Array>();
+
+      await Promise.all(uniqueUrls.map(async (url) => {
+        const buffer = await loadImageAsBuffer(url, outputFormat);
+        bufferCache.set(url, buffer);
+      }));
+
+      for (let i = 0; i < generatableAngles.length; i++) {
+        perSlotBuffers[i] = bufferCache.get(perSlotUrls[i]) || null;
+      }
+    } else {
+      // Single shared image for all angles
+      sharedImageBuffer = await loadImageAsBuffer(sourceImageUrl, outputFormat);
+    }
   } catch (error) {
-    // Fail all items if we can't load the source
+    // Fail all items if we can't load a source image
     const errorMsg = error instanceof Error ? error.message : 'Failed to load source image';
     for (let i = 0; i < generatableAngles.length; i++) {
       callbacks.onItemError?.(i, errorMsg);
@@ -336,8 +381,9 @@ export async function generateMultipleAngles(
   };
 
   // Generate all angles concurrently (only non-original slots)
-  const promises = generatableAngles.map((slot, index) =>
-    generateSingleAngle(sogniClient, imageBuffer, slot, params, enhancedCallbacks, index)
+  const promises = generatableAngles.map((slot, index) => {
+    const buffer = perSlotBuffers[index] || sharedImageBuffer!;
+    return generateSingleAngle(sogniClient, buffer, slot, params, enhancedCallbacks, index)
       .then(url => {
         urls[index] = url;
         results.push({ index, success: true, url });
@@ -346,8 +392,8 @@ export async function generateMultipleAngles(
         const errorMsg = err instanceof Error ? err.message : 'Unknown error';
         errors.set(index, errorMsg);
         results.push({ index, success: false, error: errorMsg });
-      })
-  );
+      });
+  });
 
   // Wait for all to complete
   await Promise.all(promises);

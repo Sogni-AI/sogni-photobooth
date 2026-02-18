@@ -70,6 +70,7 @@ import VideoReviewPopup from './VideoReviewPopup';
 import VideoSettingsFooter from './VideoSettingsFooter';
 import CameraAnglePopup from './CameraAnglePopup';
 import CameraAngleReviewPopup from './CameraAngleReviewPopup';
+import Camera360WorkflowPopup from './Camera360WorkflowPopup';
 import SaveToLocalProjectPopup, { generateDefaultProjectName } from './SaveToLocalProjectPopup';
 import { useLocalProjects } from '../../hooks/useLocalProjects';
 import { extractLastFrame, extractFirstFrame } from '../../utils/videoFrameExtraction';
@@ -1050,6 +1051,9 @@ const PhotoGallery = ({
   const [showBatchAnimateReplacePopup, setShowBatchAnimateReplacePopup] = useState(false); // Batch Animate Replace popup
   const [showS2VPopup, setShowS2VPopup] = useState(false); // Single Sound to Video popup
   const [showBatchS2VPopup, setShowBatchS2VPopup] = useState(false); // Batch Sound to Video popup
+
+  // 360 Camera popup state
+  const [show360CameraPopup, setShow360CameraPopup] = useState(false);
 
   // Camera Angle popup states
   const [showCameraAnglePopup, setShowCameraAnglePopup] = useState(false);
@@ -3609,6 +3613,9 @@ const PhotoGallery = ({
         case 'batch-s2v':
           setShowBatchS2VPopup(true);
           break;
+        case '360-camera':
+          setShow360CameraPopup(true);
+          break;
         default:
           break;
       }
@@ -3635,6 +3642,9 @@ const PhotoGallery = ({
           break;
         case 's2v':
           setShowS2VPopup(true);
+          break;
+        case '360-camera':
+          setShow360CameraPopup(true);
           break;
         default:
           break;
@@ -19472,6 +19482,20 @@ const PhotoGallery = ({
         onVersionChange={handleMultiAngleVersionChange}
         onCancelGeneration={handleMultiAngleCancelGeneration}
       />
+
+      {/* 360 Camera Workflow Popup */}
+      {show360CameraPopup && (
+        <Camera360WorkflowPopup
+          visible={show360CameraPopup}
+          sourceImageUrl={selectedPhoto ? (selectedPhoto.enhancedImageUrl || selectedPhoto.images?.[selectedSubIndex || 0] || selectedPhoto.originalDataUrl || '') : (loadedPhotoUrls[0] || '')}
+          galleryPhotoUrls={loadedPhotoUrls}
+          sourceWidth={desiredWidth || 1024}
+          sourceHeight={desiredHeight || 1024}
+          sogniClient={sogniClient}
+          onClose={() => setShow360CameraPopup(false)}
+          onOutOfCredits={onOutOfCredits}
+        />
+      )}
 
       {/* Custom Prompt Popup for Sample Gallery mode */}
       <CustomPromptPopup

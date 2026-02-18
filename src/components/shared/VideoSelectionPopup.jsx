@@ -170,10 +170,10 @@ const VideoSelectionPopup = ({
         id: '360-camera',
         icon: '📷',
         title: '360 Camera',
-        description: 'Generate smooth 360 rotation videos from a single photo. COMING SOON',
+        description: 'Generate smooth 360 rotation videos from multiple camera angles.',
         gradient: 'linear-gradient(135deg, #14b8a6 0%, #0d9488 100%)',
         exampleVideo: 'https://cdn.sogni.ai/videos/360-camera-demo.mp4',
-        comingSoon: true
+        isNew: true
       },
       // Replace Subject second
       {
