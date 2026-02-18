@@ -874,10 +874,13 @@ const MusicGeneratorModal = ({
                         background: 'rgba(255, 255, 255, 0.1)',
                         color: 'rgba(255, 255, 255, 0.8)',
                         fontSize: '10px',
-                        fontWeight: '600',
+                        fontWeight: '400',
                         cursor: 'pointer',
                         outline: 'none',
-                        maxWidth: isMobile ? '160px' : '220px'
+                        maxWidth: isMobile ? '140px' : '200px',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap'
                       }}
                     >
                       <option value="" disabled>Samples...</option>
