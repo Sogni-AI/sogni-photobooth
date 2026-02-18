@@ -95,27 +95,39 @@ export const getDashboardData = async () => {
   if (!redis) {
     console.warn('[Analytics] Redis not available, returning empty dashboard data');
     return {
-      daily: { 
-        downloads: 0, 
-        shares: 0, 
+      daily: {
+        downloads: 0,
+        shares: 0,
         combined: 0,
         batches_generated: 0,
         photos_generated: 0,
         photos_enhanced: 0,
         photos_taken_camera: 0,
         photos_uploaded_browse: 0,
-        twitter_shares: 0
+        twitter_shares: 0,
+        videos_generated: 0,
+        videos_generated_failed: 0,
+        videos_generated_480p: 0,
+        videos_generated_720p: 0,
+        videos_taken_camera: 0,
+        videos_uploaded_browse: 0
       },
-      lifetime: { 
-        downloads: 0, 
-        shares: 0, 
+      lifetime: {
+        downloads: 0,
+        shares: 0,
         combined: 0,
         batches_generated: 0,
         photos_generated: 0,
         photos_enhanced: 0,
         photos_taken_camera: 0,
         photos_uploaded_browse: 0,
-        twitter_shares: 0
+        twitter_shares: 0,
+        videos_generated: 0,
+        videos_generated_failed: 0,
+        videos_generated_480p: 0,
+        videos_generated_720p: 0,
+        videos_taken_camera: 0,
+        videos_uploaded_browse: 0
       },
       topPrompts: [],
       date: getCurrentUTCDate()
@@ -134,7 +146,13 @@ export const getDashboardData = async () => {
     const dailyCamera = parseInt(await redis.get(`analytics:daily:${date}:photos_taken_camera:total`) || '0', 10);
     const dailyUploaded = parseInt(await redis.get(`analytics:daily:${date}:photos_uploaded_browse:total`) || '0', 10);
     const dailyTwitter = parseInt(await redis.get(`analytics:daily:${date}:twitter_shares:total`) || '0', 10);
-    
+    const dailyVideos = parseInt(await redis.get(`analytics:daily:${date}:videos_generated:total`) || '0', 10);
+    const dailyVideosFailed = parseInt(await redis.get(`analytics:daily:${date}:videos_generated_failed:total`) || '0', 10);
+    const dailyVideos480p = parseInt(await redis.get(`analytics:daily:${date}:videos_generated_480p:total`) || '0', 10);
+    const dailyVideos720p = parseInt(await redis.get(`analytics:daily:${date}:videos_generated_720p:total`) || '0', 10);
+    const dailyVideosCamera = parseInt(await redis.get(`analytics:daily:${date}:videos_taken_camera:total`) || '0', 10);
+    const dailyVideosUploaded = parseInt(await redis.get(`analytics:daily:${date}:videos_uploaded_browse:total`) || '0', 10);
+
     const lifetimeDownloads = parseInt(await redis.get(`analytics:lifetime:downloads:total`) || '0', 10);
     const lifetimeShares = parseInt(await redis.get(`analytics:lifetime:shares:total`) || '0', 10);
     const lifetimeBatches = parseInt(await redis.get(`analytics:lifetime:batches_generated:total`) || '0', 10);
@@ -143,7 +161,13 @@ export const getDashboardData = async () => {
     const lifetimeCamera = parseInt(await redis.get(`analytics:lifetime:photos_taken_camera:total`) || '0', 10);
     const lifetimeUploaded = parseInt(await redis.get(`analytics:lifetime:photos_uploaded_browse:total`) || '0', 10);
     const lifetimeTwitter = parseInt(await redis.get(`analytics:lifetime:twitter_shares:total`) || '0', 10);
-    
+    const lifetimeVideos = parseInt(await redis.get(`analytics:lifetime:videos_generated:total`) || '0', 10);
+    const lifetimeVideosFailed = parseInt(await redis.get(`analytics:lifetime:videos_generated_failed:total`) || '0', 10);
+    const lifetimeVideos480p = parseInt(await redis.get(`analytics:lifetime:videos_generated_480p:total`) || '0', 10);
+    const lifetimeVideos720p = parseInt(await redis.get(`analytics:lifetime:videos_generated_720p:total`) || '0', 10);
+    const lifetimeVideosCamera = parseInt(await redis.get(`analytics:lifetime:videos_taken_camera:total`) || '0', 10);
+    const lifetimeVideosUploaded = parseInt(await redis.get(`analytics:lifetime:videos_uploaded_browse:total`) || '0', 10);
+
     // Get top prompts efficiently using sorted sets
     const lifetimeDownloadLeaderboard = await redis.zRangeWithScores('analytics:lifetime:downloads:leaderboard', 0, 19, { REV: true });
     const lifetimeShareLeaderboard = await redis.zRangeWithScores('analytics:lifetime:shares:leaderboard', 0, 19, { REV: true });
@@ -189,7 +213,13 @@ export const getDashboardData = async () => {
         photos_enhanced: dailyEnhanced,
         photos_taken_camera: dailyCamera,
         photos_uploaded_browse: dailyUploaded,
-        twitter_shares: dailyTwitter
+        twitter_shares: dailyTwitter,
+        videos_generated: dailyVideos,
+        videos_generated_failed: dailyVideosFailed,
+        videos_generated_480p: dailyVideos480p,
+        videos_generated_720p: dailyVideos720p,
+        videos_taken_camera: dailyVideosCamera,
+        videos_uploaded_browse: dailyVideosUploaded
       },
       lifetime: {
         downloads: lifetimeDownloads,
@@ -200,7 +230,13 @@ export const getDashboardData = async () => {
         photos_enhanced: lifetimeEnhanced,
         photos_taken_camera: lifetimeCamera,
         photos_uploaded_browse: lifetimeUploaded,
-        twitter_shares: lifetimeTwitter
+        twitter_shares: lifetimeTwitter,
+        videos_generated: lifetimeVideos,
+        videos_generated_failed: lifetimeVideosFailed,
+        videos_generated_480p: lifetimeVideos480p,
+        videos_generated_720p: lifetimeVideos720p,
+        videos_taken_camera: lifetimeVideosCamera,
+        videos_uploaded_browse: lifetimeVideosUploaded
       },
       topPrompts,
       date
@@ -208,27 +244,39 @@ export const getDashboardData = async () => {
   } catch (error) {
     console.error('[Analytics] ❌ Error getting dashboard data:', error);
     return {
-      daily: { 
-        downloads: 0, 
-        shares: 0, 
+      daily: {
+        downloads: 0,
+        shares: 0,
         combined: 0,
         batches_generated: 0,
         photos_generated: 0,
         photos_enhanced: 0,
         photos_taken_camera: 0,
         photos_uploaded_browse: 0,
-        twitter_shares: 0
+        twitter_shares: 0,
+        videos_generated: 0,
+        videos_generated_failed: 0,
+        videos_generated_480p: 0,
+        videos_generated_720p: 0,
+        videos_taken_camera: 0,
+        videos_uploaded_browse: 0
       },
-      lifetime: { 
-        downloads: 0, 
-        shares: 0, 
+      lifetime: {
+        downloads: 0,
+        shares: 0,
         combined: 0,
         batches_generated: 0,
         photos_generated: 0,
         photos_enhanced: 0,
         photos_taken_camera: 0,
         photos_uploaded_browse: 0,
-        twitter_shares: 0
+        twitter_shares: 0,
+        videos_generated: 0,
+        videos_generated_failed: 0,
+        videos_generated_480p: 0,
+        videos_generated_720p: 0,
+        videos_taken_camera: 0,
+        videos_uploaded_browse: 0
       },
       topPrompts: [],
       date: getCurrentUTCDate()
@@ -297,7 +345,9 @@ export const getHistoricalData = async (days = 30) => {
       const dailyCamera = parseInt(await redis.get(`analytics:daily:${dateStr}:photos_taken_camera:total`) || '0', 10);
       const dailyUploaded = parseInt(await redis.get(`analytics:daily:${dateStr}:photos_uploaded_browse:total`) || '0', 10);
       const dailyTwitter = parseInt(await redis.get(`analytics:daily:${dateStr}:twitter_shares:total`) || '0', 10);
-      
+      const dailyVideos = parseInt(await redis.get(`analytics:daily:${dateStr}:videos_generated:total`) || '0', 10);
+      const dailyVideosFailed = parseInt(await redis.get(`analytics:daily:${dateStr}:videos_generated_failed:total`) || '0', 10);
+
       historicalData.push({
         date: dateStr,
         downloads: dailyDownloads,
@@ -308,7 +358,9 @@ export const getHistoricalData = async (days = 30) => {
         photos_enhanced: dailyEnhanced,
         photos_taken_camera: dailyCamera,
         photos_uploaded_browse: dailyUploaded,
-        twitter_shares: dailyTwitter
+        twitter_shares: dailyTwitter,
+        videos_generated: dailyVideos,
+        videos_generated_failed: dailyVideosFailed
       });
     }
     

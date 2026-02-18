@@ -191,6 +191,20 @@ const AnalyticsDashboard = () => {
           borderColor: 'rgb(29, 161, 242)',
           backgroundColor: `rgba(29, 161, 242, ${backgroundOpacity})`,
           tension: 0.1,
+        },
+        {
+          label: 'Videos Generated',
+          data: data.map(item => item.videos_generated),
+          borderColor: 'rgb(255, 20, 147)',
+          backgroundColor: `rgba(255, 20, 147, ${backgroundOpacity})`,
+          tension: 0.1,
+        },
+        {
+          label: 'Videos Failed',
+          data: data.map(item => item.videos_generated_failed),
+          borderColor: 'rgb(178, 34, 34)',
+          backgroundColor: `rgba(178, 34, 34, ${backgroundOpacity})`,
+          tension: 0.1,
         }
       ]
     };
@@ -423,6 +437,50 @@ const AnalyticsDashboard = () => {
             <div className="metric">
               <span className="value">{formatNumber(lifetime?.twitter_shares)}</span>
               <span className="label">X/Twitter</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="summary-card today">
+          <h3>🎬 Today - Video Creations</h3>
+          <div className="metrics">
+            <div className="metric">
+              <span className="value">{formatNumber(daily?.videos_generated)}</span>
+              <span className="label">Generated</span>
+            </div>
+            <div className="metric">
+              <span className="value">{formatNumber(daily?.videos_generated_failed)}</span>
+              <span className="label">Failed</span>
+            </div>
+            <div className="metric">
+              <span className="value">{formatNumber(daily?.videos_generated_480p)}</span>
+              <span className="label">480p</span>
+            </div>
+            <div className="metric">
+              <span className="value">{formatNumber(daily?.videos_generated_720p)}</span>
+              <span className="label">720p</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="summary-card lifetime">
+          <h3>🎬 All Time - Video Creations</h3>
+          <div className="metrics">
+            <div className="metric">
+              <span className="value">{formatNumber(lifetime?.videos_generated)}</span>
+              <span className="label">Generated</span>
+            </div>
+            <div className="metric">
+              <span className="value">{formatNumber(lifetime?.videos_generated_failed)}</span>
+              <span className="label">Failed</span>
+            </div>
+            <div className="metric">
+              <span className="value">{formatNumber(lifetime?.videos_generated_480p)}</span>
+              <span className="label">480p</span>
+            </div>
+            <div className="metric">
+              <span className="value">{formatNumber(lifetime?.videos_generated_720p)}</span>
+              <span className="label">720p</span>
             </div>
           </div>
         </div>
