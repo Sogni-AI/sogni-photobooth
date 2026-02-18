@@ -129,6 +129,7 @@ const Camera360AngleReviewStep: React.FC<Camera360AngleReviewStepProps> = ({
           flexShrink: 0,
           minWidth: '280px',
           maxWidth: '480px',
+          maxHeight: '100%',
           display: 'flex',
           flexDirection: 'column',
           borderRadius: '12px',
@@ -139,7 +140,7 @@ const Camera360AngleReviewStep: React.FC<Camera360AngleReviewStepProps> = ({
         }}>
           {/* Image area */}
           <div style={{
-            flex: 'none',
+            flex: '0 1 auto',
             minHeight: 0,
             width: '100%',
             display: 'flex',
@@ -195,6 +196,7 @@ const Camera360AngleReviewStep: React.FC<Camera360AngleReviewStepProps> = ({
                 flexShrink: 0,
                 minWidth: '280px',
                 maxWidth: '480px',
+                maxHeight: '100%',
                 display: 'flex',
                 flexDirection: 'column',
                 borderRadius: '12px',
@@ -209,9 +211,9 @@ const Camera360AngleReviewStep: React.FC<Camera360AngleReviewStepProps> = ({
                 scrollSnapAlign: 'center'
               }}
             >
-              {/* Image area - aspect ratio driven */}
+              {/* Image area - aspect ratio driven, shrinks when carousel height is constrained */}
               <div style={{
-                flex: 'none',
+                flex: '0 1 auto',
                 minHeight: 0,
                 position: 'relative',
                 width: '100%',
