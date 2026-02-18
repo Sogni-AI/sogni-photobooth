@@ -873,11 +873,11 @@ const MusicGeneratorModal = ({
                         border: '1px solid rgba(255, 255, 255, 0.25)',
                         background: 'rgba(255, 255, 255, 0.1)',
                         color: 'rgba(255, 255, 255, 0.8)',
-                        fontSize: '10px',
+                        fontSize: '9px',
                         fontWeight: '400',
                         cursor: 'pointer',
                         outline: 'none',
-                        maxWidth: isMobile ? '140px' : '200px',
+                        maxWidth: isMobile ? '170px' : '240px',
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
                         whiteSpace: 'nowrap'
