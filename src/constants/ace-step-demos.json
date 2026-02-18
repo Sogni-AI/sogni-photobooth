@@ -1,5 +1,16 @@
 [
   {
+    "id": "arabic-folk",
+    "title": "Arabic - Folk Ballad",
+    "language": "ar",
+    "bpm": 95,
+    "duration": 60,
+    "timesignature": "4",
+    "keyscale": "D minor",
+    "positivePrompt": "An emotive Arabic folk song beginning with a virtuosic, melancholic oud solo, soon joined by an expressive violin playing in harmony. A steady, mid-tempo groove is established by hand percussion, likely a darbuka and riq. A warm, clear male vocal enters, delivering a heartfelt melody with characteristic Arabic ornamentation. The arrangement features instrumental breaks where the oud and violin engage in intricate, improvisational-sounding solos. The track builds to a dynamic instrumental section with rapid, cascading runs from the oud and violin before concluding with a final, resonant oud chord.",
+    "lyrics": "[Intro: Oud and Percussion]\n\n[Verse 1]\nيا جمال عينّي في شفاه عينيك\nيا وردي يا وردي يا زهرة العمر\nيا نور الدنيا في قلبي يسري\nيا مسك الشذا يا سحر الجمال\nيا أغلى الناس في هذا الكون\n\n[Instrumental Break: Oud and Violin]\n\n[Verse 2]\nيا حب الأول ونور العيون\nيا حب الآخر ونار الشوق\nيا نسمة هوى في هذا البستان\nيا ملهم الدنيا يا روح الروح\nيا شمس العشق في قلب الجيران\nيا ضوء القمر في هذا الظلام\nيا حب رقيق يا فرح الأيام\nيا ضحكة عمري يا سر الحياة\nيا نبع الحب في قلب المساء\n\n[Bridge]\nيا روح الروح يا سر القلوب\nيا نجم الليل في هذا السماء\n\n[Instrumental Outro: Oud, Violin, and Percussion Fade]"
+  },
+  {
     "id": "en-synth-dnb",
     "title": "Break 'Em (Dark DnB)",
     "language": "en",
@@ -11,6 +22,17 @@
     "lyrics": "[Intro lead hook melody with fast drum beat fades in]\n\n[Verse - Deep bass melody with soft strained female voice]\nI never asked for this, but you've got what's coming,\nBrace yourself now, 'cause there's no more running.\nMy shadows are creeping, time to face the fate,\nNo more hiding, it's decided now, it's too late.\n\n[Pre Chorus - pleading male voice movie sample] Why does it have to be this way.\n\n[Chorus female voice] BREAK'EM Oi la la Oi la la, BREAK'EM Oi la la Oi la la\n\n[Post Chorus female voice] It's too late, It's too late, it's too late, it's too late!\n\n[Spoken word movie sample] LET THE BEAT DROP!!!\n\n[Breakdown - Heavy half time trap phonk style groove]\n\n[Pre Chorus - anguished male voice movie sample] Why does it have to be this way.\n\n[Chorus] BREAK'EM Oi la la Oi la la, BREAK'EM Oi la la Oi la la\n\n[Outro]"
   },
   {
+    "id": "yue-pop",
+    "title": "Cantonese - Dawn Light (Cantopop)",
+    "language": "yue",
+    "bpm": 110,
+    "duration": 60,
+    "timesignature": "4",
+    "keyscale": "C major",
+    "positivePrompt": "A polished Cantopop track built on an ethereal foundation of layered female vocal harmonies that create atmospheric pads with wordless 'oohs' and 'aahs'. A crisp electronic drum machine provides a steady mid-tempo beat, complemented by clean synth keys and a subtle bassline. The lead female vocal is clear and melodic, sung entirely in Cantonese, guiding the listener through verses and into an uplifting chorus where her voice becomes more powerful and layered. The arrangement includes brief instrumental interludes featuring chime-like sound effects before concluding with a fade-out of the signature airy vocal textures.",
+    "lyrics": "[Intro: Layered Vocal Harmonies]\n(Ooooh-ooh-ooh)\n(Ooooh-ooh-ooh)\n(Ooooh-ooh-ooh)\n(Ooooh-ooh-ooh)\n\n[Verse 1]\n沿路無盡的街角\n萬家燈火映背光\n像跌倒再起\n你像風能變幻無常\n曾走錯的每一步\n都寫成璀璨的詩篇\n時光化作金輝燦爛\n帶領我向夢飛翔\n\n[Pre-Chorus]\n乘風直上終有自由\n與能可笑著擁抱\n\n[Chorus]\n曙光指引方向\n夜空中綻放燦爛\n曾走錯的每一步\n都寫成璀璨的詩篇\n時光化作金輝燦爛\n帶領我向夢飛翔\n\n[Post-Chorus]\n沿路無盡的街角\n萬家燈火映背光\n像跌倒再起\n你像風能變幻無常\n曾走錯的每一步\n都寫成璀璨的詩篇\n時光化作金輝燦爛\n帶領我向夢飛翔\n\n[Bridge]\n沿路無盡的街角\n萬家燈火映背光\n像跌倒再起\n你像風能變幻無常\n曾走錯的每一步\n都寫成璀璨的詩篇\n時光化作金輝燦爛\n帶領我向夢飛翔\n\n[Outro: Layered Vocal Harmonies]\n(Ooooh-ooh-ooh)\n[Music fades out]"
+  },
+  {
     "id": "en-phonk",
     "title": "Cat Phonk",
     "language": "en",
@@ -20,6 +42,39 @@
     "keyscale": "C minor",
     "positivePrompt": "An aggressive, high-energy phonk track, driven by a sharp, repetitive cowbell pattern that defines the groove. Dark minor-key synths blend with Japanese-inspired instruments such as koto plucks, shamisen-style melodies, and taiko-like percussion hits, creating an eastern atmosphere layered over a gritty trap framework. The rhythm is powered by a punchy, hard-clipped drum kit and an overdriven, distorted 808 bass typical of phonk. A deep, low-pitched male vocal delivers a raw rap performance, characterized by a monotone, chant-like flow and heavy processing including saturation, phasing, distortion, and tape-style compression. Lo-fi vinyl noise, subtle pitch warble, glitchy dropouts, and abrupt beat cuts reinforce the raw Memphis aesthetic and underground phonk character.",
     "lyrics": "[Intro – whispered, distorted]\nYeah… meow…\n\n[Verse 1]\nI'm a cat with a laptop, paws on the pad\nTryna cook a beat but the beat cook me back\nHit the space bar—whoops, deleted the track\nTail hit the mouse, now the screen go black\n\nI got nine lives, zero clue\nGarageBand cryin' like \"what you do?\"\nMic smell like tuna, cables in knots\nEvery time I rap I just knock down pots\n\nTryna sound hard, tryna sound mean\nBut I cough up hair in between sixteen\nProducer said \"yo, keep the tempo straight\"\nI sat on the keyboard, changed the key to \"HISS\"\n\n[Pre-Chorus]\nLights low, bowl empty, vibes kinda sad\nI wanted a hit, now I mad in my pad\nDreams of fame, but the song fell apart\nSo I cry in autotune from the litter box heart\n\n[Chorus]\nMeow, Purrra, Miu, Miu, Miu, Miu, Miu\nMeow, Purrra, Miu, Miu, Miu, Miu, Miu\nMeow, Purrra, Miu, Miu, Miu, Miu, Miu"
+  },
+  {
+    "id": "zh-fusion",
+    "title": "Chinese - Dark Minimal Rap",
+    "language": "zh",
+    "bpm": 85,
+    "duration": 90,
+    "timesignature": "4",
+    "keyscale": "D minor",
+    "positivePrompt": "rap,minimal,spoken worddark,rap,minimal beats with heavy basslines; sharp snares; spoken-word flow intertwined with rhythmic delivery; female vocals. introspective and raw energy.",
+    "lyrics": "[Intro]\n[Music box style synth melody]\n[whispered] Yeah, eh\n[whispered] 好像穿著在的封印\n[whispered] 腳下是落葉的歸根\n[whispered] 被禁錮的聲音\n\n[Verse 1]\n這不是我的街 我的根\nichi的傷疤比城市更狠\n地下的 pum pum 像心跳\n敲響那律動 我的兄弟\n多少夢想被現實嘲諷\n卡住像永不停止的風\n空氣瀰漫著咖啡的香味\n但窗外聞不到改變的變味\n他們說努力就有回報\n我看到有時候向他們發出警告\n教育風景 對不起幾十幾\n祖議上被遺忘只剩下畏懼\n為什麼有時候比火箭飛得遙遠\n窗裡的燈火是那麼璀璨\n\n[Chorus]\n[whispered] Synth melody\n[whispered] 好像穿著在的封印 (好像穿著外的怪影)\n[whispered] 被禁錮的聲音\n不是抱怨 只是看清\n在這迷幻的夜裡思考人生的意義\n[whispered] a cappella, a cappella 裡藏不住的焦虑\n我是池中鳥想出不去\n被回不去\n\n[Verse 2]\n見過的小店都奇奇怪怪\n味道像你先吃的不敢嘗試的菜\n他們眼神裡的不解和等待\n彷彿我是被無情的遊戲拋棄外\n跟強制幾次的像人性的被被\n問問他們為什麼不能輕鬆點去累贅\n這個 system它怕 się是太過分\n把人命当做奇思他奇\n被禁錮的字句像玩文字遊戲\n解開謎團裡 mmm mmm mmm\n是個謎團 這個世界不是\n他們 so unfair 有時候只是不夠好\n不夠菜\n但眼淚\n\n[Chorus]\n[whispered] Synth melody\n[whispered] 好像穿著在的封印 (好像穿著在的法印)\n[whispered] 述著\n[whispered] 那聲帶著光環的諷刺\n我不是誇大 我只是看得ไกล\n這場幻境路像個無底的海\n[whispered] a cappella, a cappella 藏不住的焦慮\n我是池中鳥想出不去\n被回不去\n\n[Outro]\n[Beat continues and fades out]"
+  },
+  {
+    "id": "zh-jazz",
+    "title": "Chinese - Moonlit Jazz Duet",
+    "language": "zh",
+    "bpm": 82,
+    "duration": 90,
+    "timesignature": "4",
+    "keyscale": "Bb major",
+    "positivePrompt": "A smooth, jazzy lo-fi hip-hop track built on a foundation of a gentle piano melody and a relaxed, steady drum machine groove. A warm, round bassline provides a solid harmonic base. The song features a duet between a clear, melodic female vocalist and a smooth, conversational male vocalist who trade verses and harmonize beautifully in the choruses. The arrangement is punctuated by tasteful, melodic saxophone fills that enhance the jazzy, late-night atmosphere. The track concludes with an extended instrumental outro where the saxophone takes center stage with an expressive, improvisational solo over the core piano and rhythm section, before fading out with a final, lingering piano chord and a soft whoosh effect.",
+    "lyrics": "[Intro: Piano & Saxophone]\n\n[Verse 1: Female Vocal]\n月光落进窗\n像是起色的那杯\n你还在我的心底旋转\n抛开所有烦忧\n这爱像流星坠落\n在夜空闪耀\n无需解答 心动是唯一的解药\n\n[Verse 2: Male Vocal]\n你的眼神像迷宫\n我徘徊其中\n每个音符都带了心脏的轰鸣\n触碰你的温度就像电流穿心\n无法抗拒你的爱把我拉入梦境\n\n[Chorus: Duet]\n心跳随着你狂奔\n如海潮汹涌\n爱的节奏翻滚着\n像梦境中梦\n你的名字是旋律\n旋律中成风\n每一拍都诉说爱无声的悸动\n\n[Instrumental Break: Saxophone Solo]\n\n[Verse 3: Male Vocal]\n黑夜像个舞台\n我们点了彩灯\n节拍跟随心跳\n默契融成一吻\n别让夜晚停下来\n爱永远在认真\n每一秒都像歌\n开启奇妙人生\n\n[Chorus: Duet]\n心跳随着你狂奔\n如海潮汹涌\n爱的节奏翻滚着\n像梦境中梦\n你的名字是旋律\n旋律中成风\n每一拍都诉说爱无声的悸动\n\n[Bridge: Duet]\n当黎明来临时\n我们点燃光芒\n你的爱是我心中最暖的信仰\n再多风雨兼程\n也不愿停下\n因为你的存在是我唯一牵挂\n\n[Instrumental Break: Saxophone Solo]\n\n[Chorus: Duet]\n心跳随着你狂奔\n如海潮汹涌\n爱的节奏翻滚着\n像梦境中梦\n你的名字是旋律\n旋律中成风\n每一拍都诉说爱无声的悸动\n\n[Outro: Duet & Saxophone]\n当黎明来临时\n我们点燃光芒\n你的爱是我心中最暖的信仰\n再多风雨兼程\n也不愿停下\n因为你的存在是我唯一牵挂\n[Saxophone melody fades out]"
+  },
+  {
+    "id": "zh-gufeng",
+    "title": "Chinese - Pipa Song (Classical Rock)",
+    "language": "zh",
+    "bpm": 90,
+    "duration": 90,
+    "timesignature": "4",
+    "keyscale": "D minor",
+    "positivePrompt": "A dramatic, cinematic rock interpretation of a classical Chinese poem, blending traditional lyrical imagery with modern electric instrumentation. The arrangement features dynamic contrasts: verses are intimate and narrative-driven with clean guitar and sparse percussion, while the chorus erupts with distorted power chords, driving drums, and expressive lead guitar mimicking the intensity of the pipa. Male vocals deliver the ancient text with gravitas, occasionally layered with ethereal backing harmonies to evoke the moonlit river scene.",
+    "lyrics": "[Intro – Clean Guitar Arpeggio, Ambient Pads]\n\n[Verse 1]\nxun2 yang2 jiang1 tou2 ye4 song4 ke4\nfeng1 ye4 di2 hua1 qiu1 se4 se4\nzhu3 ren2 xia4 ma3 ke4 zai4 chuan2\nju3 jiu3 yu4 yin3 wu2 guan3 xian2\n\n[Verse 2]\nzui4 bu4 cheng2 huan1 can3 jiang1 bie2\nbie2 shi2 mang2 mang2 jiang1 jin4 yue4\nhu1 wen2 shui3 shang4 pi2 pa2 sheng1\nzhu3 ren2 wang4 gui1 ke4 bu4 fa1\n\n[Verse 3]\nxun2 sheng1 an4 wen4 tan2 zhe3 shei2\npi2 pa2 sheng1 ting2 yu4 yu3 chi2\nyi2 chuan2 xiang1 jin4 yao1 xiang1 jian4\ntian1 jiu3 hui2 deng1 zhong4 kai1 yan4\n\n[Verse 4]\nqian1 hu1 wan4 huan4 shi3 chu1 lai2\nyou2 bao4 pi2 pa2 ban4 zhe1 mian4\n\n[Verse 5]\nzhuan3 zhou2 bo1 xian2 san1 liang3 sheng1\nwei4 cheng2 qu3 diao4 xian1 you3 qing2\nxian2 xian2 yan3 yi4 sheng1 sheng1 si1\nsi4 su4 ping2 sheng1 bu4 de2 zhi4\ndi1 mei2 xin4 shou3 xu4 xu4 tan2\nshuo1 jin4 xin1 zhong1 wu2 xian4 shi4\nqing1 long3 man4 nian3 mo4 fu4 tiao1\nchu1 wei2 ni2 shang1 hou4 liu4 yao1\n\n[Chorus]\nda4 xian2 cao1 cao1 ru2 ji2 yu3\nxiao3 xian2 qie4 qie4 ru2 si1 yu3\ncao1 cao1 qie4 qie4 cuo4 za2 tan2\nda4 zhu1 xiao3 zhu1 luo4 yu4 pan2\njian1 guan1 ying1 yu3 hua1 di3 hua2\nyou1 ye4 quan2 liu2 bing1 xia4 nan2\nbing1 quan2 leng3 se4 xian2 ning2 jue2\nning2 jue2 bu4 tong1 sheng1 zan4 xie1\n\n[Bridge – Instrumental Break: Guitar mimics pipa phrases]\n\n[Chorus]\nbie2 you3 you1 chou2 an4 hen4 sheng1\nci3 shi2 wu2 sheng1 sheng4 you3 sheng1\nyin2 ping2 zha4 po4 shui3 jiang1 beng4\ntie3 qi4 tu1 chu1 dao1 qiang1 ming2\nqu1 zhong1 shou1 bo2 dang1 xin1 hua4\nsi4 xian2 yi1 sheng1 ru2 lie4 bo2\ndong1 chuan2 xi1 fang3 qiao3 wu2 yan2\nwei2 jian4 jiang1 xin1 qiu1 yue4 bai2"
   },
   {
     "id": "chiptune",
@@ -121,6 +176,28 @@
     "lyrics": "[Intro Industrial drones, metallic clangs, sparse high arpeggios, building tension]\n\n[Build-Up Steady percussion, rising rapid arpeggios, gritty textures, increasing suspense]\n\n[Main Drive / Chase Relentless rhythm, intertwined arpeggios, industrial crashes, dissonance, chaos]\n\n[Suspense Moment Brief pause, sustained dissonant drone, slow distorted arpeggio, then re-engagement]\n\n[Climax / Chaos Peak intensity: fast arpeggios, layered metallic sounds, aggressive textures, chaos]\n\n[Ominous Fade Slow deceleration, industrial noise fades, final high arpeggio or clang, ending in silence]"
   },
   {
+    "id": "ja-pop",
+    "title": "Japanese - J-Pop Electronic",
+    "language": "ja",
+    "bpm": 130,
+    "duration": 60,
+    "timesignature": "4",
+    "keyscale": "E major",
+    "positivePrompt": "An energetic, bilingual J-pop and French pop vocal performance over a driving electronic beat. The track is built on a foundation of punchy synth bass, crisp drum machine rhythms, and layered synthesizers. A powerful female lead vocal delivers catchy melodies in Japanese, contrasted by a male rapper who performs a verse in French and English. The production is polished and modern, featuring vocal chops, synth arpeggios, and dynamic builds that lead into an anthemic, soaring chorus with layered harmonies and expressive vocal ad-libs. The song concludes with a brief, reflective spoken-word section in Japanese before fading out.",
+    "lyrics": "[Intro]\nKaze ni notte\nAtarashii\nDoboji to omoide\n\n[Verse 1]\nJono wa hirogaru  100% yorokobi\nKamishime dori mo imi ni naru shi\nMinna ore o yurugasu\nTaifuu ga shinai no kamo\n\n[Pre-Chorus]\nJinchou onna no you ni ikki\nKoukou de kyou mo ikitsuku\nJiyuu no kaze ni notte yotte\nDoboji to omoide\n\n[Chorus]\nChoushi sawarazu\nHidari ni wo terashite\nKyou mo tokubetsu sugite\nOre no jinsei wo kakeru\n\n[Post-Chorus]\nSubete wo yakareta ore no machi\nIchido ikiru nara imi ga wakaru\nOmae wa sou yatte karada wo katte\nKuzusenai nai\nKoko de doko made mo yukou ka\n\n[Instrumental Break]\n\n[Verse 2 - Male Rap]\nCulte de fiesta\nHousou shite\nKyou mo tokubetsu sugite\nOre no jinsei wo kakeru\n\n[Bridge]\nSubete wo yakareta ore no machi\nIchido ikiru nara imi ga wakaru\nOmae wa sou yatte karada wo katte\nKuzusenai nai\nKoko de doko made mo yukou ka\n\n[Chorus]\nSubete wo yakareta ore no machi\nIchido ikiru nara imi ga wakaru\nOmae wa sou yatte karada wo katte\nKuzusenai nai\nKoko de doko made mo yukou ka\n\n[Outro]\nSubete wo yakareta ore no machi\nIchido ikiru nara imi ga wakaru\nOmae wa sou yatte karada wo katte\nKuzusenai nai\nKoko de doko made mo yukou ka\nSaa saa doko made mo oikakero\nJiyuu no kaze ni notte yotte\nDoboji to omoide\n[Synth arpeggio fades out]"
+  },
+  {
+    "id": "ko-pop",
+    "title": "Korean - K-Pop EDM Anthem",
+    "language": "ko",
+    "bpm": 128,
+    "duration": 60,
+    "timesignature": "4",
+    "keyscale": "F# minor",
+    "positivePrompt": "An explosive, high-energy K-pop and EDM track driven by a relentless four-on-the-floor beat and a pulsing synth bassline. The arrangement opens with a bright piano melody and shimmering arpeggiated synths before slamming into the main groove. A powerful, clear male lead vocal delivers an anthemic melody, punctuated by energetic ad-libs and hype-man shouts. The production is dense with layered synthesizers, including soaring leads, atmospheric pads, and dynamic FX like risers and sweeps that build tension into the explosive choruses. A mid-song instrumental break features a melodic synth lead and vocal chops, leading into a final, climactic chorus and an abrupt ending with a tape-stop sound effect.",
+    "lyrics": "[Intro]\n[Synth arpeggio and pads]\n\n[Verse 1]\nhwangholhan i jilseo-e neon ppajyeo\n(oh yeah)\nlideum wi-e sinhoneul jilleo\n(oh, let's go)\neodum sog-e bich-eul kkeul-eo\nmodeun geos-i bultago\n\n[Pre-Chorus]\nbich-i nal mag-eulyeo\nmoduga geudaelo bichna\ngeo-ul sog-e bichwojwo\nnaneun jasin-ui jibjunghae\n\n[Chorus]\noelo-un i jilseo gip-eojyeo\n(yeah, yeah)\nlideum wi-e him-eul jwi-yeo\n(let's go)\nsaelo-un sidaeleul yeol-eo\n(oh yeah)\ngaseumsog-e bulkkoch-i pi-eo\n\n[Verse 2]\ngeodashan mudae sog-eseo\nnan tae-eonal geo-ya\nmodeun geos-i choego-ui jilseo\nuli hamkke chumchwo\n\n[Bridge]\nbichgwa eodum-i salajigo\nulin seololeul bichwo\neunmilhan i sungan sog-eseo\nulin hamkke mandeul-eoga\n\n[Chorus]\noelo-un i jilseo gip-eojyeo\n(yeah, yeah)\nlideum wi-e him-eul jwi-yeo\n(let's go)\nsaelo-un sidaeleul yeol-eo\n(oh yeah)\ngaseumsog-e bulkkoch-i pi-eo\n\n[Instrumental Break]\n[Synth lead melody with vocal chops]\n\n[Outro]\n[Synth arpeggio fades out]\n[abrupt silence]"
+  },
+  {
     "id": "en-ballad",
     "title": "New Low (Synthpop)",
     "language": "en",
@@ -130,6 +207,17 @@
     "keyscale": "G major",
     "positivePrompt": "Romantic and active synthpop anthem. Captures the joyful energy and the irresistible charm , delivered with bright, engaging female vocals in a similar style , Feelgood and danceable.",
     "lyrics": "Midnight talks with my regrets,\nWhiskey lips and cigarettes.\nPromises like shattered glass,\nCut me deep but never last.\n\nI danced with fire, played the fool,\nBroke the rules and called it cool.\nNow the mirror wont lie\nI dont recognize these eyes.\n\nI was right, I was left\nCaught between the lines, no regrets\nI was wrong, I was left behind\nLike a shadow fading with the light\n\nI've been up, but mostly down\nChasing dreams that hit the ground\nEvery high just slips away\nLeaving echoes of my name\n\nI was right, I was left,\nTorn in two with every step.\nI was wrong, I was left behind,\nAnother love I couldnt find.\n\nIve been up, but mostly down,\nChasing highs that let me drown.\nI was right, I was left,\nNow Im at a new low.\n\nSilent screams, a crowded room,\nLaughing loud to hide the bruise.\nYou said \"forever,\" but it bends,\nTil \"goodbye\" is how it ends.\n\nI built a castle out of dust,\nLeaned on love I couldnt trust.\nNow the ashes taste like smoke,\nAnother joke I didnt know.\n\nI was strong, I was weak\nFighting battles I can't repeat\nI was lost, then I was found\nBut the silence is the loudest sound\n\nI've been up, but mostly down\nPainted smiles hide my frown\nEvery step feels like the past\nRunning fast but never last\n\nI was right, I was left,\nTorn in two with every step.\nI was wrong, I was left behind,\nAnother love I couldnt find.\n\nIve been up, but mostly down,\nChasing highs that let me drown.\nI was right, I was left,\nNow Im at a new low.\n\nOne more drink to numb the pain,\nOne more name I cant erase.\nFunny how the fall feels slow\nNow Im at a new low.\n\nNe lo, ne lo, ne lo ooh\nWhispered words I used to know\nNe lo, ne lo, ne lo ooh\nLove just comes and love just goes\n\nMaybe one day Ill be free\nFrom the chains of memory\nTill then, Ill sing it low\nNelo, nelo, ne lo\n\nI was right, I was left,\nTorn in two with every step.\nI was wrong, I was left behind,\nAnother love I couldnt find.\n\nIve been up, but mostly down,\nChasing highs that let me drown.\nI was right, I was left,\nNow Im at a new low.\n\nI've been right; I've been left\nI've been wrong; I've been left behind\nI've been up, but mostly down\n\nI've been right; I've been left\nI've been wrong; I've been left behind\nI've been up, but mostly down\n\nI was right I was left\nI was wrong I was left behind\nIve been up but mostly down."
+  },
+  {
+    "id": "no-folk",
+    "title": "Norwegian - Skogrotten (Folk Metal)",
+    "language": "no",
+    "bpm": 130,
+    "duration": 60,
+    "timesignature": "4",
+    "keyscale": "A minor",
+    "positivePrompt": "female vokal,folkmetal, Electro ,Violin,Piano,extinct,ad' baseline,jane breakbeat; guitar,Harmonium,bass),child's voice.",
+    "lyrics": "[Verse 1]\nEg våknar og regnstyr har stått opp\nTil å taMidten og flyr til Skots bakke\nSørfør begynner å holde på båten\nEg trykker gjei bremse og kjøser fersk gløtt på gløtt\n\n[Chorus]\nSkogrotten går forbi midten\nEg såg han kjem tilbake\nSkogrotten går forbi midten\nEg såg han kjem tilbake\n\n[Instrumental Drop]\n\n[Chorus]\nSkogrotten går forbi midten\nEg såg han kjem tilbake\nSkogrotten går forbi midten\nEg såg han kjem tilbake\n\n[Verse 2]\nEg våknar og regnstyr har stått opp\nTil å taMidten og flyr til Skots bakke\nSørfør begynner å holde på båten\nEg trykker gjei bremse og kjøser fersk gløtt på gløtt\n\n[Chorus]\nSkogrotten går forbi midten\nEg såg han kjem tilbake\nSkogrotten går forbi midten\nEg såg han kjem tilbake\n\n[Chorus]\nSkogrotten går forbi midten\nEg såg han kjem tilbake\nSkogrotten går forbi midten\nEg såg han kjem tilbake\n\n[Instrumental Drop]\n\n[Chorus]\nSkogrotten går forbi midten\nEg såg han kjem tilbake\nSkogrotten går forbi midten\nEg såg han kjem tilbake\n\n[Instrumental Break]\n\n[Chorus]\nSkogrotten går forbi midten\nEg såg han kjem tilbake\nSkogrotten går forbi midten\nEg såg han kjem tilbake\n\n[Outro]\nSkogrotten går forbi midten\nEg såg han kjem tilbake\nSkogrotten går forbi midten\nEg såg han kjem tilbake"
   },
   {
     "id": "en-rnb",
@@ -165,116 +253,6 @@
     "lyrics": "[Intro - Arpeggiated Electric Guitar]\n\n[Verse 1]\nUnder neon lights, they flicker and fade\nLost in the hum of this restless parade\nA city's heartbeat pulses in my veins\nSearching for answers in the acid rain\nShadows stretch long, they're clawing my way\nThe night is alive but it's mine to obey\n\n[Chorus]\nOh, shadows of neon\nWhere do you run?\nBleeding out the night just to make us one\nOh, shadows of neon\nTell me the truth\nAre you the ghost or the one I chase with you?\n\n[Guitar Solo]\n\n[Verse 2]\nThe walls are whispering secrets they can't keep\nEchoes of footsteps buried six feet deep\nEvery corner's a story you'll never forget\nI'm tangled in chaos, dressed up as regret\n\n[Chorus]\nOh, shadows of neon\nWhere do you run?\nBleeding out the night just to make us one\nOh, shadows of neon\nTell me the truth\nAre you the ghost or the one I chase with you?\n\n[Outro - Extended Guitar Solo]\n[Music fades out]"
   },
   {
-    "id": "en-trap",
-    "title": "Spin the Same (Dark Trap)",
-    "language": "en",
-    "bpm": 140,
-    "duration": 60,
-    "timesignature": "4",
-    "keyscale": "C minor",
-    "positivePrompt": "Dark carnival trap. Circus calliope meets 808 sub-bass. Horror clown aesthetic with modern hi-hat programming and maniacal rap delivery",
-    "lyrics": "[Verse]\nWoke up in the same architecture\nMemory's texture, pressure's lecture\nSame four walls, same projector\nGroundhog cycle, same connector\nSkeleton key in the same door\nSame hallway, same worn floor\n\n[Verse]\nBroke the mirror, broke the measure\nBroke the tether, broke the pressure\nBut the pieces knew their lecture\nReassembled, same texture\nThe shards spelled out my name backwards\nSame story, same fractured actors\n\n[Verse]\nFound the pattern in the fracture\nSame departure, same recapture\nThe loop's not outside, it's the passenger\nI'm the driver and the passenger\nI built the cage, I am the cage\nSame script, same stage\n\n[Chorus]\nSpin the same, make it stranger\nFrame the pain, rearrange it\nName the game, then derange it\nSpin the same, make it stranger\n\n[Bridge]\nRound's got corners, sound's got mourners\nBack's got forwards, map's got orders\nLost the compass, compass got borders\nCost the promise, promise got quarters\n\n[Chorus]\nSpin the same, make it stranger\nStack the lack, make it major\nTrack attack, make it wager\nSpin the same, make it stranger\n\n[Outro]\nSpin the same, spin the same, spin the same\nBut the danger's got a new name\nSame same same same same same\nBut the frame's got a new game"
-  },
-  {
-    "id": "vocal-chopped",
-    "title": "Vocal Chops DnB",
-    "language": "en",
-    "bpm": 174,
-    "duration": 45,
-    "timesignature": "4",
-    "keyscale": "G minor",
-    "positivePrompt": "An energetic drum and bass track driven by heavily processed vocal chops that serve as both rhythmic and melodic hooks. The song opens with layered, pitched-up female-sounding vocal samples creating an atmospheric texture before slamming into a high-tempo breakbeat at 0:12. A powerful synth bassline underpins the driving rhythm section. The arrangement is dynamic, featuring intense build-ups where filters sweep open to create tension, followed by impactful drops that reintroduce the core groove. The vocal samples are treated as instruments rather than lyrical carriers, chopped and pitched to form catchy phrases like 'uh' and 'ah' that define the track's character.",
-    "lyrics": "[Intro]\n[Verse]\n[Pre Chorus]\n[Chorus]\n[Post Chorus]\n[Drop]\n[Breakdown]\n[Pre Chorus]\n[Chorus]\n[Outro]"
-  },
-  {
-    "id": "arabic-folk",
-    "title": "Arabic - Folk Ballad",
-    "language": "ar",
-    "bpm": 95,
-    "duration": 60,
-    "timesignature": "4",
-    "keyscale": "D minor",
-    "positivePrompt": "An emotive Arabic folk song beginning with a virtuosic, melancholic oud solo, soon joined by an expressive violin playing in harmony. A steady, mid-tempo groove is established by hand percussion, likely a darbuka and riq. A warm, clear male vocal enters, delivering a heartfelt melody with characteristic Arabic ornamentation. The arrangement features instrumental breaks where the oud and violin engage in intricate, improvisational-sounding solos. The track builds to a dynamic instrumental section with rapid, cascading runs from the oud and violin before concluding with a final, resonant oud chord.",
-    "lyrics": "[Intro: Oud and Percussion]\n\n[Verse 1]\nيا جمال عينّي في شفاه عينيك\nيا وردي يا وردي يا زهرة العمر\nيا نور الدنيا في قلبي يسري\nيا مسك الشذا يا سحر الجمال\nيا أغلى الناس في هذا الكون\n\n[Instrumental Break: Oud and Violin]\n\n[Verse 2]\nيا حب الأول ونور العيون\nيا حب الآخر ونار الشوق\nيا نسمة هوى في هذا البستان\nيا ملهم الدنيا يا روح الروح\nيا شمس العشق في قلب الجيران\nيا ضوء القمر في هذا الظلام\nيا حب رقيق يا فرح الأيام\nيا ضحكة عمري يا سر الحياة\nيا نبع الحب في قلب المساء\n\n[Bridge]\nيا روح الروح يا سر القلوب\nيا نجم الليل في هذا السماء\n\n[Instrumental Outro: Oud, Violin, and Percussion Fade]"
-  },
-  {
-    "id": "yue-pop",
-    "title": "Cantonese - Dawn Light (Cantopop)",
-    "language": "yue",
-    "bpm": 110,
-    "duration": 60,
-    "timesignature": "4",
-    "keyscale": "C major",
-    "positivePrompt": "A polished Cantopop track built on an ethereal foundation of layered female vocal harmonies that create atmospheric pads with wordless 'oohs' and 'aahs'. A crisp electronic drum machine provides a steady mid-tempo beat, complemented by clean synth keys and a subtle bassline. The lead female vocal is clear and melodic, sung entirely in Cantonese, guiding the listener through verses and into an uplifting chorus where her voice becomes more powerful and layered. The arrangement includes brief instrumental interludes featuring chime-like sound effects before concluding with a fade-out of the signature airy vocal textures.",
-    "lyrics": "[Intro: Layered Vocal Harmonies]\n(Ooooh-ooh-ooh)\n(Ooooh-ooh-ooh)\n(Ooooh-ooh-ooh)\n(Ooooh-ooh-ooh)\n\n[Verse 1]\n沿路無盡的街角\n萬家燈火映背光\n像跌倒再起\n你像風能變幻無常\n曾走錯的每一步\n都寫成璀璨的詩篇\n時光化作金輝燦爛\n帶領我向夢飛翔\n\n[Pre-Chorus]\n乘風直上終有自由\n與能可笑著擁抱\n\n[Chorus]\n曙光指引方向\n夜空中綻放燦爛\n曾走錯的每一步\n都寫成璀璨的詩篇\n時光化作金輝燦爛\n帶領我向夢飛翔\n\n[Post-Chorus]\n沿路無盡的街角\n萬家燈火映背光\n像跌倒再起\n你像風能變幻無常\n曾走錯的每一步\n都寫成璀璨的詩篇\n時光化作金輝燦爛\n帶領我向夢飛翔\n\n[Bridge]\n沿路無盡的街角\n萬家燈火映背光\n像跌倒再起\n你像風能變幻無常\n曾走錯的每一步\n都寫成璀璨的詩篇\n時光化作金輝燦爛\n帶領我向夢飛翔\n\n[Outro: Layered Vocal Harmonies]\n(Ooooh-ooh-ooh)\n[Music fades out]"
-  },
-  {
-    "id": "zh-fusion",
-    "title": "Chinese - Dark Minimal Rap",
-    "language": "zh",
-    "bpm": 85,
-    "duration": 90,
-    "timesignature": "4",
-    "keyscale": "D minor",
-    "positivePrompt": "rap,minimal,spoken worddark,rap,minimal beats with heavy basslines; sharp snares; spoken-word flow intertwined with rhythmic delivery; female vocals. introspective and raw energy.",
-    "lyrics": "[Intro]\n[Music box style synth melody]\n[whispered] Yeah, eh\n[whispered] 好像穿著在的封印\n[whispered] 腳下是落葉的歸根\n[whispered] 被禁錮的聲音\n\n[Verse 1]\n這不是我的街 我的根\nichi的傷疤比城市更狠\n地下的 pum pum 像心跳\n敲響那律動 我的兄弟\n多少夢想被現實嘲諷\n卡住像永不停止的風\n空氣瀰漫著咖啡的香味\n但窗外聞不到改變的變味\n他們說努力就有回報\n我看到有時候向他們發出警告\n教育風景 對不起幾十幾\n祖議上被遺忘只剩下畏懼\n為什麼有時候比火箭飛得遙遠\n窗裡的燈火是那麼璀璨\n\n[Chorus]\n[whispered] Synth melody\n[whispered] 好像穿著在的封印 (好像穿著外的怪影)\n[whispered] 被禁錮的聲音\n不是抱怨 只是看清\n在這迷幻的夜裡思考人生的意義\n[whispered] a cappella, a cappella 裡藏不住的焦虑\n我是池中鳥想出不去\n被回不去\n\n[Verse 2]\n見過的小店都奇奇怪怪\n味道像你先吃的不敢嘗試的菜\n他們眼神裡的不解和等待\n彷彿我是被無情的遊戲拋棄外\n跟強制幾次的像人性的被被\n問問他們為什麼不能輕鬆點去累贅\n這個 system它怕 się是太過分\n把人命当做奇思他奇\n被禁錮的字句像玩文字遊戲\n解開謎團裡 mmm mmm mmm\n是個謎團 這個世界不是\n他們 so unfair 有時候只是不夠好\n不夠菜\n但眼淚\n\n[Chorus]\n[whispered] Synth melody\n[whispered] 好像穿著在的封印 (好像穿著在的法印)\n[whispered] 述著\n[whispered] 那聲帶著光環的諷刺\n我不是誇大 我只是看得ไกล\n這場幻境路像個無底的海\n[whispered] a cappella, a cappella 藏不住的焦慮\n我是池中鳥想出不去\n被回不去\n\n[Outro]\n[Beat continues and fades out]"
-  },
-  {
-    "id": "zh-jazz",
-    "title": "Chinese - Moonlit Jazz Duet",
-    "language": "zh",
-    "bpm": 82,
-    "duration": 90,
-    "timesignature": "4",
-    "keyscale": "Bb major",
-    "positivePrompt": "A smooth, jazzy lo-fi hip-hop track built on a foundation of a gentle piano melody and a relaxed, steady drum machine groove. A warm, round bassline provides a solid harmonic base. The song features a duet between a clear, melodic female vocalist and a smooth, conversational male vocalist who trade verses and harmonize beautifully in the choruses. The arrangement is punctuated by tasteful, melodic saxophone fills that enhance the jazzy, late-night atmosphere. The track concludes with an extended instrumental outro where the saxophone takes center stage with an expressive, improvisational solo over the core piano and rhythm section, before fading out with a final, lingering piano chord and a soft whoosh effect.",
-    "lyrics": "[Intro: Piano & Saxophone]\n\n[Verse 1: Female Vocal]\n月光落进窗\n像是起色的那杯\n你还在我的心底旋转\n抛开所有烦忧\n这爱像流星坠落\n在夜空闪耀\n无需解答 心动是唯一的解药\n\n[Verse 2: Male Vocal]\n你的眼神像迷宫\n我徘徊其中\n每个音符都带了心脏的轰鸣\n触碰你的温度就像电流穿心\n无法抗拒你的爱把我拉入梦境\n\n[Chorus: Duet]\n心跳随着你狂奔\n如海潮汹涌\n爱的节奏翻滚着\n像梦境中梦\n你的名字是旋律\n旋律中成风\n每一拍都诉说爱无声的悸动\n\n[Instrumental Break: Saxophone Solo]\n\n[Verse 3: Male Vocal]\n黑夜像个舞台\n我们点了彩灯\n节拍跟随心跳\n默契融成一吻\n别让夜晚停下来\n爱永远在认真\n每一秒都像歌\n开启奇妙人生\n\n[Chorus: Duet]\n心跳随着你狂奔\n如海潮汹涌\n爱的节奏翻滚着\n像梦境中梦\n你的名字是旋律\n旋律中成风\n每一拍都诉说爱无声的悸动\n\n[Bridge: Duet]\n当黎明来临时\n我们点燃光芒\n你的爱是我心中最暖的信仰\n再多风雨兼程\n也不愿停下\n因为你的存在是我唯一牵挂\n\n[Instrumental Break: Saxophone Solo]\n\n[Chorus: Duet]\n心跳随着你狂奔\n如海潮汹涌\n爱的节奏翻滚着\n像梦境中梦\n你的名字是旋律\n旋律中成风\n每一拍都诉说爱无声的悸动\n\n[Outro: Duet & Saxophone]\n当黎明来临时\n我们点燃光芒\n你的爱是我心中最暖的信仰\n再多风雨兼程\n也不愿停下\n因为你的存在是我唯一牵挂\n[Saxophone melody fades out]"
-  },
-  {
-    "id": "zh-gufeng",
-    "title": "Chinese - Pipa Song (Classical Rock)",
-    "language": "zh",
-    "bpm": 90,
-    "duration": 90,
-    "timesignature": "4",
-    "keyscale": "D minor",
-    "positivePrompt": "A dramatic, cinematic rock interpretation of a classical Chinese poem, blending traditional lyrical imagery with modern electric instrumentation. The arrangement features dynamic contrasts: verses are intimate and narrative-driven with clean guitar and sparse percussion, while the chorus erupts with distorted power chords, driving drums, and expressive lead guitar mimicking the intensity of the pipa. Male vocals deliver the ancient text with gravitas, occasionally layered with ethereal backing harmonies to evoke the moonlit river scene.",
-    "lyrics": "[Intro – Clean Guitar Arpeggio, Ambient Pads]\n\n[Verse 1]\nxun2 yang2 jiang1 tou2 ye4 song4 ke4\nfeng1 ye4 di2 hua1 qiu1 se4 se4\nzhu3 ren2 xia4 ma3 ke4 zai4 chuan2\nju3 jiu3 yu4 yin3 wu2 guan3 xian2\n\n[Verse 2]\nzui4 bu4 cheng2 huan1 can3 jiang1 bie2\nbie2 shi2 mang2 mang2 jiang1 jin4 yue4\nhu1 wen2 shui3 shang4 pi2 pa2 sheng1\nzhu3 ren2 wang4 gui1 ke4 bu4 fa1\n\n[Verse 3]\nxun2 sheng1 an4 wen4 tan2 zhe3 shei2\npi2 pa2 sheng1 ting2 yu4 yu3 chi2\nyi2 chuan2 xiang1 jin4 yao1 xiang1 jian4\ntian1 jiu3 hui2 deng1 zhong4 kai1 yan4\n\n[Verse 4]\nqian1 hu1 wan4 huan4 shi3 chu1 lai2\nyou2 bao4 pi2 pa2 ban4 zhe1 mian4\n\n[Verse 5]\nzhuan3 zhou2 bo1 xian2 san1 liang3 sheng1\nwei4 cheng2 qu3 diao4 xian1 you3 qing2\nxian2 xian2 yan3 yi4 sheng1 sheng1 si1\nsi4 su4 ping2 sheng1 bu4 de2 zhi4\ndi1 mei2 xin4 shou3 xu4 xu4 tan2\nshuo1 jin4 xin1 zhong1 wu2 xian4 shi4\nqing1 long3 man4 nian3 mo4 fu4 tiao1\nchu1 wei2 ni2 shang1 hou4 liu4 yao1\n\n[Chorus]\nda4 xian2 cao1 cao1 ru2 ji2 yu3\nxiao3 xian2 qie4 qie4 ru2 si1 yu3\ncao1 cao1 qie4 qie4 cuo4 za2 tan2\nda4 zhu1 xiao3 zhu1 luo4 yu4 pan2\njian1 guan1 ying1 yu3 hua1 di3 hua2\nyou1 ye4 quan2 liu2 bing1 xia4 nan2\nbing1 quan2 leng3 se4 xian2 ning2 jue2\nning2 jue2 bu4 tong1 sheng1 zan4 xie1\n\n[Bridge – Instrumental Break: Guitar mimics pipa phrases]\n\n[Chorus]\nbie2 you3 you1 chou2 an4 hen4 sheng1\nci3 shi2 wu2 sheng1 sheng4 you3 sheng1\nyin2 ping2 zha4 po4 shui3 jiang1 beng4\ntie3 qi4 tu1 chu1 dao1 qiang1 ming2\nqu1 zhong1 shou1 bo2 dang1 xin1 hua4\nsi4 xian2 yi1 sheng1 ru2 lie4 bo2\ndong1 chuan2 xi1 fang3 qiao3 wu2 yan2\nwei2 jian4 jiang1 xin1 qiu1 yue4 bai2"
-  },
-  {
-    "id": "ja-pop",
-    "title": "Japanese - J-Pop Electronic",
-    "language": "ja",
-    "bpm": 130,
-    "duration": 60,
-    "timesignature": "4",
-    "keyscale": "E major",
-    "positivePrompt": "An energetic, bilingual J-pop and French pop vocal performance over a driving electronic beat. The track is built on a foundation of punchy synth bass, crisp drum machine rhythms, and layered synthesizers. A powerful female lead vocal delivers catchy melodies in Japanese, contrasted by a male rapper who performs a verse in French and English. The production is polished and modern, featuring vocal chops, synth arpeggios, and dynamic builds that lead into an anthemic, soaring chorus with layered harmonies and expressive vocal ad-libs. The song concludes with a brief, reflective spoken-word section in Japanese before fading out.",
-    "lyrics": "[Intro]\nKaze ni notte\nAtarashii\nDoboji to omoide\n\n[Verse 1]\nJono wa hirogaru  100% yorokobi\nKamishime dori mo imi ni naru shi\nMinna ore o yurugasu\nTaifuu ga shinai no kamo\n\n[Pre-Chorus]\nJinchou onna no you ni ikki\nKoukou de kyou mo ikitsuku\nJiyuu no kaze ni notte yotte\nDoboji to omoide\n\n[Chorus]\nChoushi sawarazu\nHidari ni wo terashite\nKyou mo tokubetsu sugite\nOre no jinsei wo kakeru\n\n[Post-Chorus]\nSubete wo yakareta ore no machi\nIchido ikiru nara imi ga wakaru\nOmae wa sou yatte karada wo katte\nKuzusenai nai\nKoko de doko made mo yukou ka\n\n[Instrumental Break]\n\n[Verse 2 - Male Rap]\nCulte de fiesta\nHousou shite\nKyou mo tokubetsu sugite\nOre no jinsei wo kakeru\n\n[Bridge]\nSubete wo yakareta ore no machi\nIchido ikiru nara imi ga wakaru\nOmae wa sou yatte karada wo katte\nKuzusenai nai\nKoko de doko made mo yukou ka\n\n[Chorus]\nSubete wo yakareta ore no machi\nIchido ikiru nara imi ga wakaru\nOmae wa sou yatte karada wo katte\nKuzusenai nai\nKoko de doko made mo yukou ka\n\n[Outro]\nSubete wo yakareta ore no machi\nIchido ikiru nara imi ga wakaru\nOmae wa sou yatte karada wo katte\nKuzusenai nai\nKoko de doko made mo yukou ka\nSaa saa doko made mo oikakero\nJiyuu no kaze ni notte yotte\nDoboji to omoide\n[Synth arpeggio fades out]"
-  },
-  {
-    "id": "ko-pop",
-    "title": "Korean - K-Pop EDM Anthem",
-    "language": "ko",
-    "bpm": 128,
-    "duration": 60,
-    "timesignature": "4",
-    "keyscale": "F# minor",
-    "positivePrompt": "An explosive, high-energy K-pop and EDM track driven by a relentless four-on-the-floor beat and a pulsing synth bassline. The arrangement opens with a bright piano melody and shimmering arpeggiated synths before slamming into the main groove. A powerful, clear male lead vocal delivers an anthemic melody, punctuated by energetic ad-libs and hype-man shouts. The production is dense with layered synthesizers, including soaring leads, atmospheric pads, and dynamic FX like risers and sweeps that build tension into the explosive choruses. A mid-song instrumental break features a melodic synth lead and vocal chops, leading into a final, climactic chorus and an abrupt ending with a tape-stop sound effect.",
-    "lyrics": "[Intro]\n[Synth arpeggio and pads]\n\n[Verse 1]\nhwangholhan i jilseo-e neon ppajyeo\n(oh yeah)\nlideum wi-e sinhoneul jilleo\n(oh, let's go)\neodum sog-e bich-eul kkeul-eo\nmodeun geos-i bultago\n\n[Pre-Chorus]\nbich-i nal mag-eulyeo\nmoduga geudaelo bichna\ngeo-ul sog-e bichwojwo\nnaneun jasin-ui jibjunghae\n\n[Chorus]\noelo-un i jilseo gip-eojyeo\n(yeah, yeah)\nlideum wi-e him-eul jwi-yeo\n(let's go)\nsaelo-un sidaeleul yeol-eo\n(oh yeah)\ngaseumsog-e bulkkoch-i pi-eo\n\n[Verse 2]\ngeodashan mudae sog-eseo\nnan tae-eonal geo-ya\nmodeun geos-i choego-ui jilseo\nuli hamkke chumchwo\n\n[Bridge]\nbichgwa eodum-i salajigo\nulin seololeul bichwo\neunmilhan i sungan sog-eseo\nulin hamkke mandeul-eoga\n\n[Chorus]\noelo-un i jilseo gip-eojyeo\n(yeah, yeah)\nlideum wi-e him-eul jwi-yeo\n(let's go)\nsaelo-un sidaeleul yeol-eo\n(oh yeah)\ngaseumsog-e bulkkoch-i pi-eo\n\n[Instrumental Break]\n[Synth lead melody with vocal chops]\n\n[Outro]\n[Synth arpeggio fades out]\n[abrupt silence]"
-  },
-  {
-    "id": "no-folk",
-    "title": "Norwegian - Skogrotten (Folk Metal)",
-    "language": "no",
-    "bpm": 130,
-    "duration": 60,
-    "timesignature": "4",
-    "keyscale": "A minor",
-    "positivePrompt": "female vokal,folkmetal, Electro ,Violin,Piano,extinct,ad' baseline,jane breakbeat; guitar,Harmonium,bass),child's voice.",
-    "lyrics": "[Verse 1]\nEg våknar og regnstyr har stått opp\nTil å taMidten og flyr til Skots bakke\nSørfør begynner å holde på båten\nEg trykker gjei bremse og kjøser fersk gløtt på gløtt\n\n[Chorus]\nSkogrotten går forbi midten\nEg såg han kjem tilbake\nSkogrotten går forbi midten\nEg såg han kjem tilbake\n\n[Instrumental Drop]\n\n[Chorus]\nSkogrotten går forbi midten\nEg såg han kjem tilbake\nSkogrotten går forbi midten\nEg såg han kjem tilbake\n\n[Verse 2]\nEg våknar og regnstyr har stått opp\nTil å taMidten og flyr til Skots bakke\nSørfør begynner å holde på båten\nEg trykker gjei bremse og kjøser fersk gløtt på gløtt\n\n[Chorus]\nSkogrotten går forbi midten\nEg såg han kjem tilbake\nSkogrotten går forbi midten\nEg såg han kjem tilbake\n\n[Chorus]\nSkogrotten går forbi midten\nEg såg han kjem tilbake\nSkogrotten går forbi midten\nEg såg han kjem tilbake\n\n[Instrumental Drop]\n\n[Chorus]\nSkogrotten går forbi midten\nEg såg han kjem tilbake\nSkogrotten går forbi midten\nEg såg han kjem tilbake\n\n[Instrumental Break]\n\n[Chorus]\nSkogrotten går forbi midten\nEg såg han kjem tilbake\nSkogrotten går forbi midten\nEg såg han kjem tilbake\n\n[Outro]\nSkogrotten går forbi midten\nEg såg han kjem tilbake\nSkogrotten går forbi midten\nEg såg han kjem tilbake"
-  },
-  {
     "id": "es-reggaeton",
     "title": "Spanish - Esta Noche (Reggaeton)",
     "language": "es",
@@ -286,6 +264,17 @@
     "lyrics": "[Intro: Sampled Vocal Loop]\n(Oh-oh-oh-oh-oh-oh-oh-oh)\n(Oh-oh-oh-oh-oh-oh-oh-oh)\n\n[Chorus]\nEsta noche todo te lo daré\nEs libre ya no me amarraré\nGrita mi nombre, dime que me quieres\nMe pierdo en tus ojos como si fuera nieve\nEsta noche todo te lo daré\nEntre tus brazos me quedaré\nGrita mi nombre, dime que me quieres\nMe pierdo en tus ojos como si fuera nieve\n\n[Verse 1]\nTus ojos me hipnotizan, me hacen suspirar\nTus labios me llaman, no puedo escapar\nTus manos me tocan, siento la pasión\nCada latido es una explosión\nAcércate más, no me dejes caer\nBailamos juntos hasta el amanecer\n\n[Pre-Chorus]\nTus labios me tocan, tus ojos me miran\nNo puedo escapar, mi alma se inspira\n\n[Chorus]\nEsta noche todo te lo daré\nEsta noche todo te lo daré\nEs libre ya no me amarraré\nGrita mi nombre, dime que me quieres\nMe pierdo en tus ojos como si fuera nieve\nEsta noche todo te lo daré\nEntre tus brazos me quedaré\nGrita mi nombre, dime que me quieres\nMe pierdo en tus ojos como si fuera nieve\n\n[Verse 2]\nTus besos me alzan, me hacen volar\nNo hay dudas, no hay miedo, solo quiero amar\nTu voz me llama, tu cuerpo me arde\nCon cada susurro todo se comparte\nJuntos en el fuego, no hay que temer\nEsta noche nunca lo vas a olvidar\n\n[Bridge]\nSolo un instante\nDeja que te acerque, ven a mí\nSolo un instante\nDeja que te acerque, ven a mí\nSolo un instante\nDeja que te acerque, ven a mí\nSolo un instante\nDeja que te acerque, ven a mí\nSolo un instante\nDeja que te acerque, ven a mí\n\n[Chorus]\nEsta noche todo te lo daré\nEs libre ya no me amarraré\nGrita mi nombre, dime que me quieres\nMe pierdo en tus ojos como si fuera nieve\nEsta noche todo te lo daré\nEntre tus brazos me quedaré\nGrita mi nombre, dime que me quieres\nMe pierdo en tus ojos como si fuera nieve\n\n[Outro]\nSolo una noche más\nHasta que me desvuelva\nY de que me quede sin nada"
   },
   {
+    "id": "en-trap",
+    "title": "Spin the Same (Dark Trap)",
+    "language": "en",
+    "bpm": 140,
+    "duration": 60,
+    "timesignature": "4",
+    "keyscale": "C minor",
+    "positivePrompt": "Dark carnival trap. Circus calliope meets 808 sub-bass. Horror clown aesthetic with modern hi-hat programming and maniacal rap delivery",
+    "lyrics": "[Verse]\nWoke up in the same architecture\nMemory's texture, pressure's lecture\nSame four walls, same projector\nGroundhog cycle, same connector\nSkeleton key in the same door\nSame hallway, same worn floor\n\n[Verse]\nBroke the mirror, broke the measure\nBroke the tether, broke the pressure\nBut the pieces knew their lecture\nReassembled, same texture\nThe shards spelled out my name backwards\nSame story, same fractured actors\n\n[Verse]\nFound the pattern in the fracture\nSame departure, same recapture\nThe loop's not outside, it's the passenger\nI'm the driver and the passenger\nI built the cage, I am the cage\nSame script, same stage\n\n[Chorus]\nSpin the same, make it stranger\nFrame the pain, rearrange it\nName the game, then derange it\nSpin the same, make it stranger\n\n[Bridge]\nRound's got corners, sound's got mourners\nBack's got forwards, map's got orders\nLost the compass, compass got borders\nCost the promise, promise got quarters\n\n[Chorus]\nSpin the same, make it stranger\nStack the lack, make it major\nTrack attack, make it wager\nSpin the same, make it stranger\n\n[Outro]\nSpin the same, spin the same, spin the same\nBut the danger's got a new name\nSame same same same same same\nBut the frame's got a new game"
+  },
+  {
     "id": "thai-hiphop",
     "title": "Thai - Hip-Hop",
     "language": "th",
@@ -295,5 +284,16 @@
     "keyscale": "E minor",
     "positivePrompt": "A clean, melodic electric guitar loop with a slightly lo-fi, chiptune-like quality establishes the track's foundation. A punchy, straightforward drum machine beat and a subtle synth bass enter, supporting a confident male vocal performance in Thai. The delivery blends melodic rap with sung passages, maintaining a consistent, assertive tone throughout the verses and chorus. The arrangement features instrumental breaks where the guitar loop is layered with evolving synth textures and arpeggios, adding a slightly electronic depth before returning to the core vocal and guitar -driven groove.",
     "lyrics": "[Intro - Arpeggiated Synth Melody]\n\n[Verse 1]\nฉันเป็นคนพูดเบาๆ แต่มันแรงเหมือนพิพิธภัณฑ์\nฉันรักเธอ แต่ฉันเป็นอิสระ\nฉันมีความปรารถนา แม้ต้องจิตจะแข็งแรง\nฉันมีจมปรารถนา และพบความสัมพันธ์ที่\n\n[Chorus]\nฉันเป็นอิสระ ความแข็งแรงและดี\nนี่คือการตัดสินใจที่ฉันอยากจะควบคุมตัวเองได้\nแต่เธอกลับทำหน้าไม่ดี ความปรารถนาเริ่มส่องแสง\nนี่คือการตัดสินใจที่ฉันอยากจะตัดสินใจได้\n\n[Instrumental Break - Synth Melody & Drums]\n\n[Verse 2]\nฉันเป็นคนพูดเบาๆ แต่มันแรงเหมือนพิพิธภัณฑ์\nฉันรักเธอ แต่ฉันเป็นอิสระ\nฉันมีความปรารถนา แม้ต้องจิตจะแข็งแรง\nฉันมีจมปรารถนา และพบความสัมพันธ์ที่\n\n[Chorus]\nฉันเป็นอิสระ ความแข็งแรงและดี\nนี่คือการตัดสินใจที่ฉันอยากจะควบคุมตัวเองได้\nแต่เธอกลับทำหน้าไม่ดี ความปรารถนาเริ่มส่องแสง\nนี่คือการตัดสินใจที่ฉันอยากจะตัดสินใจได้\n\n[Instrumental Break - Synth Melody & Drums]\n\n[Bridge - Synth Arpeggios & Pads]\n\n[Verse 3]\nฉันเป็นคนพูดเบาๆ แต่มันแรงเหมือนพิพิธภัณฑ์\nฉันรักเธอ แต่ฉันเป็นอิสระ\nฉันมีความปรารถนา แม้ต้องจิตจะแข็งแรง\nฉันมีจมปรารถนา และพบความสัมพันธ์ที่\n\n[Chorus]\nฉันเป็นอิสระ ความแข็งแรงและดี\nนี่คือการตัดสินใจที่ฉันอยากจะควบคุมตัวเองได้\nแต่เธอกลับทำหน้าไม่ดี ความปรารถนาเริ่มส่องแสง\nนี่คือการตัดสินใจที่ฉันอยากจะตัดสินใจได้\n\n[Outro - Fading Synth Melody]"
+  },
+  {
+    "id": "vocal-chopped",
+    "title": "Vocal Chops DnB",
+    "language": "en",
+    "bpm": 174,
+    "duration": 45,
+    "timesignature": "4",
+    "keyscale": "G minor",
+    "positivePrompt": "An energetic drum and bass track driven by heavily processed vocal chops that serve as both rhythmic and melodic hooks. The song opens with layered, pitched-up female-sounding vocal samples creating an atmospheric texture before slamming into a high-tempo breakbeat at 0:12. A powerful synth bassline underpins the driving rhythm section. The arrangement is dynamic, featuring intense build-ups where filters sweep open to create tension, followed by impactful drops that reintroduce the core groove. The vocal samples are treated as instruments rather than lyrical carriers, chopped and pitched to form catchy phrases like 'uh' and 'ah' that define the track's character.",
+    "lyrics": "[Intro]\n[Verse]\n[Pre Chorus]\n[Chorus]\n[Post Chorus]\n[Drop]\n[Breakdown]\n[Pre Chorus]\n[Chorus]\n[Outro]"
   }
 ]
