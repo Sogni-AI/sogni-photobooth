@@ -47,7 +47,6 @@ type SogniClient = {
 
 interface UseCamera360WorkflowProps {
   sourceImageUrl: string;
-  galleryPhotoUrls?: string[];
   sourceWidth: number;
   sourceHeight: number;
   sogniClient: SogniClient | null;
@@ -103,7 +102,6 @@ function buildTransitions(angles: AngleSlot[]): Camera360TransitionItem[] {
 
 export function useCamera360Workflow({
   sourceImageUrl,
-  galleryPhotoUrls = [],
   sourceWidth,
   sourceHeight,
   sogniClient,
@@ -189,15 +187,10 @@ export function useCamera360Workflow({
 
     const tokenType = getPaymentMethod();
 
-    // Build per-slot source image URLs from gallery photos (cycle through them)
-    const photos = galleryPhotoUrls.length > 0 ? galleryPhotoUrls : [sourceImageUrl];
-    const perSlotSourceUrls = angles.map((_, i) => photos[i % photos.length]);
-
     try {
       await generateMultipleAngles(sogniClient, {
         angles,
         sourceImageUrl,
-        sourceImageUrls: perSlotSourceUrls,
         imageWidth: sourceWidth,
         imageHeight: sourceHeight,
         tokenType,
@@ -207,7 +200,7 @@ export function useCamera360Workflow({
           setAngleItems(prev => markItemStarted(prev, index));
         },
         onItemProgress: (index, progress, eta, workerName) => {
-          setAngleItems(prev => updateItemProgress(prev, index, progress ?? 0, eta, workerName));
+          setAngleItems(prev => updateItemProgress(prev, index, progress, eta, workerName));
         },
         onItemComplete: (index, url) => {
           setAngleItems(prev => markItemComplete(prev, index, url));
@@ -237,28 +230,12 @@ export function useCamera360Workflow({
     const slot = generatableAngles[index];
     if (!slot) return;
 
-    // Find the original full-array index for this generatable slot to get correct source image
-    let originalIndex = 0;
-    let genCount = 0;
-    for (let i = 0; i < angles.length; i++) {
-      if (!angles[i].isOriginal) {
-        if (genCount === index) {
-          originalIndex = i;
-          break;
-        }
-        genCount++;
-      }
-    }
-
-    const photos = galleryPhotoUrls.length > 0 ? galleryPhotoUrls : [sourceImageUrl];
-    const slotSourceUrl = photos[originalIndex % photos.length];
-
     const tokenType = getPaymentMethod();
 
     try {
       await generateMultipleAngles(sogniClient, {
         angles: [slot],
-        sourceImageUrl: slotSourceUrl,
+        sourceImageUrl,
         imageWidth: sourceWidth,
         imageHeight: sourceHeight,
         tokenType,
@@ -268,7 +245,7 @@ export function useCamera360Workflow({
           setAngleItems(prev => markItemStarted(prev, index));
         },
         onItemProgress: (_, progress, eta, workerName) => {
-          setAngleItems(prev => updateItemProgress(prev, index, progress ?? 0, eta, workerName));
+          setAngleItems(prev => updateItemProgress(prev, index, progress, eta, workerName));
         },
         onItemComplete: (_, url) => {
           setAngleItems(prev => markItemComplete(prev, index, url));
@@ -516,11 +493,18 @@ export function useCamera360Workflow({
       // Prepare audio options
       let audioOptions: { buffer: ArrayBuffer; startOffset: number } | undefined;
       if (transitionSettings.musicPresetId) {
-        const preset = TRANSITION_MUSIC_PRESETS.find(
-          (p: any) => p.id === transitionSettings.musicPresetId
-        );
-        if (preset) {
-          const audioResponse = await fetch(preset.url);
+        // AI-generated music uses customMusicUrl; presets use the preset URL
+        let audioUrl: string | null = null;
+        if (transitionSettings.musicPresetId.startsWith('ai-generated-') && transitionSettings.customMusicUrl) {
+          audioUrl = transitionSettings.customMusicUrl;
+        } else {
+          const preset = TRANSITION_MUSIC_PRESETS.find(
+            (p: any) => p.id === transitionSettings.musicPresetId
+          );
+          audioUrl = preset?.url || null;
+        }
+        if (audioUrl) {
+          const audioResponse = await fetch(audioUrl);
           const audioBuffer = await audioResponse.arrayBuffer();
           audioOptions = {
             buffer: audioBuffer,
@@ -546,18 +530,25 @@ export function useCamera360Workflow({
       setIsStitching(false);
       setStitchingProgress(100);
     }
-  }, [transitions, transitionSettings.musicPresetId, transitionSettings.musicStartOffset]);
+  }, [transitions, transitionSettings.musicPresetId, transitionSettings.musicStartOffset, transitionSettings.customMusicUrl]);
 
   /**
    * Re-stitch the final video with a different music preset (or no music).
    * Called from the final video step when user changes music.
    */
-  const restitchWithMusic = useCallback(async (musicPresetId: string | null, musicStartOffset: number = 0) => {
+  const restitchWithMusic = useCallback(async (
+    musicPresetId: string | null,
+    musicStartOffset: number = 0,
+    customMusicUrl?: string,
+    customMusicTitle?: string
+  ) => {
     // Update settings
     setTransitionSettings(prev => ({
       ...prev,
       musicPresetId,
-      musicStartOffset
+      musicStartOffset,
+      customMusicUrl: customMusicUrl ?? (musicPresetId?.startsWith('ai-generated-') ? prev.customMusicUrl : null),
+      customMusicTitle: customMusicTitle ?? (musicPresetId?.startsWith('ai-generated-') ? prev.customMusicTitle : null)
     }));
 
     // Clean up old video URL
@@ -580,11 +571,21 @@ export function useCamera360Workflow({
 
       let audioOptions: { buffer: ArrayBuffer; startOffset: number } | undefined;
       if (musicPresetId) {
-        const preset = TRANSITION_MUSIC_PRESETS.find(
-          (p: any) => p.id === musicPresetId
-        );
-        if (preset) {
-          const audioResponse = await fetch(preset.url);
+        // AI-generated music uses customMusicUrl; presets use the preset URL
+        let audioUrl: string | null = null;
+        if (musicPresetId.startsWith('ai-generated-') && customMusicUrl) {
+          audioUrl = customMusicUrl;
+        } else if (musicPresetId.startsWith('ai-generated-')) {
+          // Fallback: check current settings for the URL
+          audioUrl = transitionSettings.customMusicUrl || null;
+        } else {
+          const preset = TRANSITION_MUSIC_PRESETS.find(
+            (p: any) => p.id === musicPresetId
+          );
+          audioUrl = preset?.url || null;
+        }
+        if (audioUrl) {
+          const audioResponse = await fetch(audioUrl);
           const audioBuffer = await audioResponse.arrayBuffer();
           audioOptions = {
             buffer: audioBuffer,
@@ -610,7 +611,7 @@ export function useCamera360Workflow({
       setIsStitching(false);
       setStitchingProgress(100);
     }
-  }, [transitions, finalVideoUrl]);
+  }, [transitions, finalVideoUrl, transitionSettings.customMusicUrl]);
 
   // ---- Navigation ----
 

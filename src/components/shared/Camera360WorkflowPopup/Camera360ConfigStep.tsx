@@ -7,11 +7,13 @@
 
 import React, { useCallback } from 'react';
 import type { AngleSlot } from '../../../types/cameraAngle';
+import type { VideoResolution, VideoQualityPreset } from '../../../constants/videoSettings';
 import { MULTI_ANGLE_PRESETS, MAX_ANGLES } from '../../../constants/cameraAngleSettings';
 import { COLORS } from '../../../constants/camera360Settings';
 import AngleSlotCard from '../AngleSlotCard';
+import VideoSettingsFooter from '../VideoSettingsFooter';
 import { useCameraAngleCostEstimation } from '../../../hooks/useCameraAngleCostEstimation';
-import { getPaymentMethod, getTokenLabel } from '../../../services/walletService';
+import { getPaymentMethod } from '../../../services/walletService';
 
 interface Camera360ConfigStepProps {
   angles: AngleSlot[];
@@ -26,6 +28,20 @@ interface Camera360ConfigStepProps {
   isGenerating: boolean;
   sourceWidth: number;
   sourceHeight: number;
+  /** Video resolution setting for the upcoming transitions */
+  resolution: VideoResolution;
+  /** Video quality preset for the upcoming transitions */
+  quality: VideoQualityPreset;
+  /** Callback to change the resolution */
+  onResolutionChange: (resolution: string) => void;
+  /** Callback to change the quality */
+  onQualityChange: (quality: string) => void;
+  /** In batch mode, the available gallery photos to pick from */
+  galleryPhotoUrls?: string[];
+  /** Index of the currently selected source photo in galleryPhotoUrls */
+  selectedSourceIndex?: number;
+  /** Callback to change the selected source photo */
+  onSelectSourcePhoto?: (index: number) => void;
 }
 
 const Camera360ConfigStep: React.FC<Camera360ConfigStepProps> = ({
@@ -40,7 +56,14 @@ const Camera360ConfigStep: React.FC<Camera360ConfigStepProps> = ({
   generatableAngleCount,
   isGenerating,
   sourceWidth,
-  sourceHeight
+  sourceHeight,
+  resolution,
+  quality,
+  onResolutionChange,
+  onQualityChange,
+  galleryPhotoUrls,
+  selectedSourceIndex = 0,
+  onSelectSourcePhoto
 }) => {
   const tokenType = getPaymentMethod();
 
@@ -63,6 +86,61 @@ const Camera360ConfigStep: React.FC<Camera360ConfigStepProps> = ({
       overflow: 'hidden',
       minHeight: 0
     }}>
+      {/* Source photo picker - shown in batch mode when multiple gallery photos exist */}
+      {galleryPhotoUrls && galleryPhotoUrls.length > 1 && onSelectSourcePhoto && (
+        <div style={{
+          padding: '10px 20px',
+          flexShrink: 0,
+          borderBottom: `1px solid ${COLORS.borderLight}`
+        }}>
+          <div style={{
+            fontSize: '11px',
+            color: COLORS.textMuted,
+            fontWeight: '600',
+            textTransform: 'uppercase',
+            letterSpacing: '0.5px',
+            marginBottom: '8px'
+          }}>
+            Source Photo
+          </div>
+          <div style={{
+            display: 'flex',
+            gap: '6px',
+            overflowX: 'auto',
+            paddingBottom: '4px'
+          }}>
+            {galleryPhotoUrls.map((url, index) => (
+              <button
+                key={index}
+                onClick={() => onSelectSourcePhoto(index)}
+                style={{
+                  flexShrink: 0,
+                  height: '48px',
+                  borderRadius: '8px',
+                  border: `2px solid ${index === selectedSourceIndex ? COLORS.accent : 'transparent'}`,
+                  padding: 0,
+                  cursor: 'pointer',
+                  overflow: 'hidden',
+                  background: 'transparent',
+                  opacity: index === selectedSourceIndex ? 1 : 0.5,
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                <img
+                  src={url}
+                  alt={`Photo ${index + 1}`}
+                  style={{
+                    height: '100%',
+                    width: 'auto',
+                    display: 'block'
+                  }}
+                />
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Preset selector - fixed top bar */}
       <div style={{
         padding: '12px 20px',
@@ -178,31 +256,38 @@ const Camera360ConfigStep: React.FC<Camera360ConfigStepProps> = ({
         )}
       </div>
 
-      {/* Generate button - fixed bottom bar */}
+      {/* Footer row 1: VideoSettingsFooter pills + cost */}
       <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '12px 20px',
+        padding: '6px 20px',
         borderTop: `1px solid ${COLORS.borderLight}`,
         flexShrink: 0
       }}>
-        <div style={{
-          fontSize: '12px',
-          color: COLORS.textMuted
-        }}>
-          {generatableAngleCount > 0 && (
-            <>
-              {generatableAngleCount} angle{generatableAngleCount !== 1 ? 's' : ''} to generate
-              {!costLoading && formattedCost && (
-                <span style={{ color: COLORS.textSecondary, marginLeft: '8px' }}>
-                  ~ {formattedCost} {getTokenLabel(tokenType)}
-                </span>
-              )}
-            </>
-          )}
-        </div>
+        {/* @ts-expect-error VideoSettingsFooter is JSX without type declarations */}
+        <VideoSettingsFooter
+          videoCount={generatableAngleCount}
+          countLabel="angle"
+          cost={formattedCost ? parseFloat(formattedCost) : null}
+          loading={costLoading}
+          colorScheme="dark"
+          tokenType={tokenType}
+          showDuration={false}
+          showResolution={true}
+          showQuality={true}
+          resolution={resolution}
+          onResolutionChange={onResolutionChange}
+          quality={quality}
+          onQualityChange={onQualityChange}
+        />
+      </div>
 
+      {/* Footer row 2: Generate button */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'flex-end',
+        padding: '8px 20px 12px',
+        flexShrink: 0
+      }}>
         <button
           onClick={onGenerate}
           disabled={generatableAngleCount === 0 || isGenerating}

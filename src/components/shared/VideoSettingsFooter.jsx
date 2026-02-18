@@ -19,6 +19,7 @@ import { getTokenLabel } from '../../services/walletService';
  */
 const VideoSettingsFooter = ({
   videoCount = 1,
+  countLabel = null, // e.g. 'angle' — defaults to 'video'
   cost = null,
   costUSD = null,
   loading = false,
@@ -296,7 +297,7 @@ const VideoSettingsFooter = ({
       }}>
         {/* Video count (static) */}
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
-          📹 {videoCount} video{videoCount !== 1 ? 's' : ''}
+          📹 {videoCount} {(countLabel || 'video') + (videoCount !== 1 ? 's' : '')}
         </span>
 
         {/* Resolution selector */}
@@ -367,6 +368,7 @@ const VideoSettingsFooter = ({
 
 VideoSettingsFooter.propTypes = {
   videoCount: PropTypes.number,
+  countLabel: PropTypes.string,
   cost: PropTypes.number,
   costUSD: PropTypes.number,
   loading: PropTypes.bool,

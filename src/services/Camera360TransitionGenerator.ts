@@ -199,6 +199,8 @@ async function generateTransitionSDK(
     let result: GenerateTransitionResult | null = null;
     const sentJobCompletions = new Set<string>();
     let cachedWorkerName: string | undefined;
+    let hasReceivedProgress = false;
+    let currentProgress = 0;
 
     const jobHandler = (event: any) => {
       if (event.projectId !== project.id) return;
@@ -212,13 +214,17 @@ async function generateTransitionSDK(
         case 'started':
         case 'initiating':
           if (event.workerName) cachedWorkerName = event.workerName;
-          onProgress?.(0, cachedWorkerName);
+          // Only emit 0% if we haven't received real progress yet (prevents looping)
+          if (!hasReceivedProgress) {
+            onProgress?.(0, cachedWorkerName);
+          }
           break;
 
         case 'progress':
-          if (event.step && event.stepCount) {
-            const progress = (event.step / event.stepCount) * 100;
-            onProgress?.(progress, cachedWorkerName);
+          hasReceivedProgress = true;
+          if (event.step !== undefined && event.stepCount) {
+            currentProgress = (event.step / event.stepCount) * 100;
+            onProgress?.(currentProgress, cachedWorkerName);
           }
           break;
 

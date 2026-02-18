@@ -16,8 +16,8 @@ import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import CameraAngle3DControl from './CameraAngle3DControl';
 import AngleSlotCard from './AngleSlotCard';
-import { useCameraAngleCostEstimation } from '../../hooks/useCameraAngleCostEstimation';
-import { getTokenLabel } from '../../services/walletService';
+import VideoSettingsFooter from './VideoSettingsFooter';
+import useCameraAngleCostEstimation from '../../hooks/useCameraAngleCostEstimation';
 import {
   type AzimuthKey,
   type ElevationKey,
@@ -786,59 +786,29 @@ const CameraAnglePopup: React.FC<CameraAnglePopupProps> = ({
             </button>
           </div>
 
-          {/* Cost Display - below buttons */}
-          <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center'
-          }}>
-            <span style={{
-              fontSize: '12px',
-              color: COLORS.textMuted,
-              textTransform: 'lowercase',
-              fontWeight: '500'
-            }}>
-              {mode === 'multiple' && angleSlots.length > 0
-                ? `${generatedAngleCount} angle${generatedAngleCount !== 1 ? 's' : ''} × 1 image`
-                : mode === 'per-image' && angleSlots.length > 0
-                  ? `${generatedAngleCount} angle${generatedAngleCount !== 1 ? 's' : ''} × ${itemCount} image${itemCount !== 1 ? 's' : ''}`
-                  : `${totalJobCount} image${totalJobCount > 1 ? 's' : ''}`
-              }
-            </span>
-            <div style={{ textAlign: 'right' }}>
-              {costLoading ? (
-                <span style={{
-                  fontSize: '12px',
-                  color: COLORS.textMuted,
-                  textTransform: 'lowercase'
-                }}>
-                  estimating...
-                </span>
-              ) : cost !== null ? (
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
-                  <span style={{
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    color: COLORS.textPrimary
-                  }}>
-                    {cost.toFixed(2)} {getTokenLabel(tokenType).toLowerCase()}
-                  </span>
-                  {costInUSD !== null && (
-                    <span style={{
-                      fontSize: '11px',
-                      color: COLORS.textMuted
-                    }}>
-                      ≈ ${costInUSD.toFixed(2)}
-                    </span>
-                  )}
-                </div>
-              ) : (
-                <span style={{ fontSize: '12px', color: COLORS.textMuted }}>
-                  —
-                </span>
-              )}
-            </div>
-          </div>
+          {/* Settings pills + Cost Display - below buttons */}
+          {/* @ts-expect-error VideoSettingsFooter is JSX without type declarations */}
+          <VideoSettingsFooter
+            videoCount={mode === 'multiple' && angleSlots.length > 0
+              ? generatedAngleCount
+              : mode === 'per-image' && angleSlots.length > 0
+                ? generatedAngleCount
+                : totalJobCount
+            }
+            countLabel={
+              mode === 'multiple' || mode === 'per-image'
+                ? 'angle'
+                : 'image'
+            }
+            cost={cost}
+            costUSD={costInUSD}
+            loading={costLoading}
+            colorScheme="dark"
+            tokenType={tokenType}
+            showDuration={false}
+            showResolution={false}
+            showQuality={true}
+          />
         </div>
       </div>
 

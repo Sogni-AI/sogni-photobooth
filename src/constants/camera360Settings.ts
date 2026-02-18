@@ -32,7 +32,9 @@ export const DEFAULT_360_TRANSITION_SETTINGS: Camera360TransitionSettings = {
   prompt: DEFAULT_360_TRANSITION_PROMPT,
   negativePrompt: DEFAULT_360_NEGATIVE_PROMPT,
   musicPresetId: null,
-  musicStartOffset: 0
+  musicStartOffset: 0,
+  customMusicUrl: null,
+  customMusicTitle: null
 };
 
 /**

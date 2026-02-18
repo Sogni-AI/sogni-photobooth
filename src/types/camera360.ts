@@ -34,6 +34,8 @@ export interface Camera360TransitionSettings {
   negativePrompt: string;
   musicPresetId: string | null;
   musicStartOffset: number;
+  customMusicUrl: string | null;
+  customMusicTitle: string | null;
 }
 
 /**

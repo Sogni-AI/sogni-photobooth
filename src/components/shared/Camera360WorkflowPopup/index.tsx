@@ -4,14 +4,16 @@
  * Main popup shell for the 360 Camera video generation workflow.
  * Full-width overlay with step navigation and phase-specific content.
  *
- * When opened from gallery view (no single photo selected), uses all gallery photos
- * as thumbnails for angle slots, cycling through them.
+ * In batch mode (gallery view), defaults to using the first photo for all angles
+ * with a picker to switch to a different gallery photo before generating.
  */
 
-import React, { useCallback, useEffect, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useCamera360Workflow } from '../../../hooks/useCamera360Workflow';
 import { COLORS } from '../../../constants/camera360Settings';
+import { useSogniAuth } from '../../../services/sogniAuth';
+import { getPaymentMethod } from '../../../services/walletService';
 import Camera360ConfigStep from './Camera360ConfigStep';
 import Camera360AngleReviewStep from './Camera360AngleReviewStep';
 import Camera360TransitionReviewStep from './Camera360TransitionReviewStep';
@@ -57,20 +59,30 @@ const Camera360WorkflowPopup: React.FC<Camera360WorkflowPopupProps> = ({
   onClose,
   onOutOfCredits
 }) => {
+  const { isAuthenticated } = useSogniAuth();
+  const tokenType = getPaymentMethod();
+
+  // Batch mode: when opened from gallery view with multiple photos,
+  // user picks which photo to use as source for all angles (default = first)
+  const isBatchMode = galleryPhotoUrls.length > 1;
+  const [selectedSourceIndex, setSelectedSourceIndex] = useState(0);
+
+  const effectiveSourceUrl = isBatchMode
+    ? (galleryPhotoUrls[selectedSourceIndex] || galleryPhotoUrls[0])
+    : sourceImageUrl;
+
   const workflow = useCamera360Workflow({
-    sourceImageUrl,
-    galleryPhotoUrls,
+    sourceImageUrl: effectiveSourceUrl,
     sourceWidth,
     sourceHeight,
     sogniClient,
     onOutOfCredits
   });
 
-  // Build per-slot thumbnail URLs: cycle through gallery photos, fallback to sourceImageUrl
+  // All slot thumbnails use the same selected source (no cycling in batch mode)
   const slotThumbnailUrls = useMemo(() => {
-    const photos = galleryPhotoUrls.length > 0 ? galleryPhotoUrls : [sourceImageUrl];
-    return workflow.angles.map((_, i) => photos[i % photos.length]);
-  }, [galleryPhotoUrls, sourceImageUrl, workflow.angles]);
+    return workflow.angles.map(() => effectiveSourceUrl);
+  }, [effectiveSourceUrl, workflow.angles]);
 
   const handleClose = useCallback(() => {
     workflow.abort();
@@ -116,13 +128,20 @@ const Camera360WorkflowPopup: React.FC<Camera360WorkflowPopupProps> = ({
             isGenerating={workflow.isGeneratingAngles}
             sourceWidth={sourceWidth}
             sourceHeight={sourceHeight}
+            resolution={workflow.transitionSettings.resolution}
+            quality={workflow.transitionSettings.quality}
+            onResolutionChange={(r) => workflow.updateTransitionSettings({ resolution: r as any })}
+            onQualityChange={(q) => workflow.updateTransitionSettings({ quality: q as any })}
+            galleryPhotoUrls={isBatchMode ? galleryPhotoUrls : undefined}
+            selectedSourceIndex={selectedSourceIndex}
+            onSelectSourcePhoto={setSelectedSourceIndex}
           />
         );
       case 'review-angles':
         return (
           <Camera360AngleReviewStep
             angleItems={workflow.angleItems}
-            sourceImageUrl={sourceImageUrl}
+            sourceImageUrl={effectiveSourceUrl}
             isGenerating={workflow.isGeneratingAngles}
             allReady={workflow.allAnglesReady}
             onRegenerate={workflow.regenerateAngle}
@@ -149,6 +168,9 @@ const Camera360WorkflowPopup: React.FC<Camera360WorkflowPopupProps> = ({
             settings={workflow.transitionSettings}
             onUpdateSettings={workflow.updateTransitionSettings}
             onGenerate={workflow.startTransitionGeneration}
+            sogniClient={sogniClient}
+            isAuthenticated={isAuthenticated}
+            tokenType={tokenType}
           />
         );
       case 'final-video':
@@ -159,10 +181,17 @@ const Camera360WorkflowPopup: React.FC<Camera360WorkflowPopupProps> = ({
             isStitching={workflow.isStitching}
             progress={workflow.stitchingProgress}
             musicPresetId={workflow.transitionSettings.musicPresetId}
+            musicStartOffset={workflow.transitionSettings.musicStartOffset}
+            customMusicUrl={workflow.transitionSettings.customMusicUrl}
+            customMusicTitle={workflow.transitionSettings.customMusicTitle}
             onBack={workflow.goBack}
             onStartOver={workflow.resetWorkflow}
             onClose={handleClose}
             onRestitchWithMusic={workflow.restitchWithMusic}
+            totalVideoDuration={workflow.transitions.length * workflow.transitionSettings.duration}
+            sogniClient={sogniClient}
+            isAuthenticated={isAuthenticated}
+            tokenType={tokenType}
           />
         );
       default:

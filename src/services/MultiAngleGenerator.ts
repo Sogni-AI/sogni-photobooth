@@ -182,6 +182,8 @@ async function generateSingleAngle(
         const ourProjectId = project.id;
         let ourJobId: string | null = null;
         let cachedWorkerName: string | undefined;
+        let hasReceivedProgress = false;
+        let currentProgress = 0;
 
         // Listen for job events
         project.on('job', (event: any) => {
@@ -199,20 +201,25 @@ async function generateSingleAngle(
 
           if (type === 'started' && jobId) {
             ourJobId = jobId;
-            callbacks.onItemProgress?.(index, 0, undefined, cachedWorkerName);
+            // Only emit 0% if we haven't received real progress yet (prevents looping)
+            if (!hasReceivedProgress) {
+              callbacks.onItemProgress?.(index, 0, undefined, cachedWorkerName);
+            }
           }
 
           if (type === 'progress' && progress !== undefined) {
+            hasReceivedProgress = true;
             // Filter by jobId when available for extra safety
             if (ourJobId && event.jobId && event.jobId !== ourJobId) {
               return;
             }
-            const progressPercent = Math.floor((typeof progress === 'number' ? progress : 0) * 100);
-            callbacks.onItemProgress?.(index, progressPercent, undefined, cachedWorkerName);
+            currentProgress = Math.floor((typeof progress === 'number' ? progress : 0) * 100);
+            callbacks.onItemProgress?.(index, currentProgress, undefined, cachedWorkerName);
           }
 
           if (type === 'eta' && event.eta !== undefined) {
-            callbacks.onItemProgress?.(index, undefined as any, event.eta, cachedWorkerName);
+            // Pass last known progress to avoid resetting to 0%
+            callbacks.onItemProgress?.(index, currentProgress, event.eta, cachedWorkerName);
           }
 
           if (type === 'queued' && event.queuePosition !== undefined) {

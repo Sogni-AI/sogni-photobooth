@@ -103,7 +103,7 @@ const Camera360AngleReviewStep: React.FC<Camera360AngleReviewStepProps> = ({
         padding: '20px 24px',
         overflowX: 'auto',
         overflowY: 'hidden',
-        alignItems: 'stretch',
+        alignItems: 'flex-start',
         scrollSnapType: 'x mandatory',
         scrollPadding: '0 24px',
         WebkitOverflowScrolling: 'touch',
@@ -124,7 +124,7 @@ const Camera360AngleReviewStep: React.FC<Camera360AngleReviewStepProps> = ({
         }}>
           {/* Image area */}
           <div style={{
-            flex: '1 1 0',
+            flex: 'none',
             minHeight: 0,
             width: '100%',
             display: 'flex',
@@ -192,9 +192,9 @@ const Camera360AngleReviewStep: React.FC<Camera360AngleReviewStepProps> = ({
                 scrollSnapAlign: 'center'
               }}
             >
-              {/* Image area - flex fill */}
+              {/* Image area - aspect ratio driven */}
               <div style={{
-                flex: '1 1 0',
+                flex: 'none',
                 minHeight: 0,
                 position: 'relative',
                 width: '100%',

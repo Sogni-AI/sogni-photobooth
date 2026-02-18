@@ -15,6 +15,8 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { COLORS } from '../../../constants/camera360Settings';
 import { TRANSITION_MUSIC_PRESETS } from '../../../constants/transitionMusicPresets';
+import AudioTrimPreview from '../AudioTrimPreview';
+import MusicGeneratorModal from '../MusicGeneratorModal';
 
 interface Camera360FinalVideoStepProps {
   videoUrl: string | null;
@@ -22,10 +24,19 @@ interface Camera360FinalVideoStepProps {
   isStitching: boolean;
   progress: number;
   musicPresetId: string | null;
+  musicStartOffset?: number;
+  customMusicUrl?: string | null;
+  customMusicTitle?: string | null;
   onBack: () => void;
   onStartOver: () => void;
   onClose: () => void;
-  onRestitchWithMusic: (musicPresetId: string | null, musicStartOffset?: number) => void;
+  onRestitchWithMusic: (musicPresetId: string | null, musicStartOffset?: number, customMusicUrl?: string, customMusicTitle?: string) => void;
+  /** Total video duration in seconds (transitions * per-transition duration) */
+  totalVideoDuration?: number;
+  // Auth/SDK props for AI music generation
+  sogniClient?: any;
+  isAuthenticated?: boolean;
+  tokenType?: string;
 }
 
 const Camera360FinalVideoStep: React.FC<Camera360FinalVideoStepProps> = ({
@@ -34,15 +45,23 @@ const Camera360FinalVideoStep: React.FC<Camera360FinalVideoStepProps> = ({
   isStitching,
   progress,
   musicPresetId,
+  musicStartOffset = 0,
+  customMusicUrl,
+  customMusicTitle,
   onBack,
   onStartOver,
   onClose,
-  onRestitchWithMusic
+  onRestitchWithMusic,
+  totalVideoDuration = 15,
+  sogniClient,
+  isAuthenticated = false,
+  tokenType = 'spark'
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(true);
   const [uiVisible, setUiVisible] = useState(true);
   const [showMusicSelector, setShowMusicSelector] = useState(false);
+  const [showMusicGenerator, setShowMusicGenerator] = useState(false);
   const [needsPlayPrompt, setNeedsPlayPrompt] = useState(false);
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -119,8 +138,10 @@ const Camera360FinalVideoStep: React.FC<Camera360FinalVideoStepProps> = ({
   const handleDownload = useCallback(() => {
     if (!videoBlob) return;
 
-    // Mobile: try native share sheet first
-    if (navigator.share) {
+    // Only use native share on mobile devices (desktop browsers also support navigator.share
+    // but it opens the OS share sheet instead of downloading)
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    if (isMobile && navigator.share) {
       try {
         const file = new File([videoBlob], 'sogni-360-camera.mp4', { type: 'video/mp4' });
         navigator.share({
@@ -157,13 +178,19 @@ const Camera360FinalVideoStep: React.FC<Camera360FinalVideoStepProps> = ({
     }
   }, [videoBlob, handleDownload]);
 
-  const handleMusicSelect = useCallback((presetId: string | null) => {
+  const handleMusicSelect = useCallback((presetId: string | null, startOffset: number = 0) => {
     setShowMusicSelector(false);
-    onRestitchWithMusic(presetId, 0);
+    onRestitchWithMusic(presetId, startOffset);
+  }, [onRestitchWithMusic]);
+
+  const handleAIMusicSelect = useCallback((track: any) => {
+    setShowMusicGenerator(false);
+    setShowMusicSelector(false);
+    onRestitchWithMusic(`ai-generated-${track.id}`, 0, track.url, 'AI Generated');
   }, [onRestitchWithMusic]);
 
   const currentMusicTitle = musicPresetId
-    ? (TRANSITION_MUSIC_PRESETS as any[]).find((p: any) => p.id === musicPresetId)?.title || 'Music'
+    ? (customMusicTitle || (TRANSITION_MUSIC_PRESETS as any[]).find((p: any) => p.id === musicPresetId)?.title || 'Music')
     : null;
 
   const uiOpacity = uiVisible ? 1 : 0;
@@ -361,7 +388,9 @@ const Camera360FinalVideoStep: React.FC<Camera360FinalVideoStepProps> = ({
               title="Share"
               active={false}
             >
-              ⤴
+              <svg fill="currentColor" width="20" height="20" viewBox="0 0 24 24">
+                <path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92c0-1.61-1.31-2.92-2.92-2.92z"/>
+              </svg>
             </ActionButton>
           )}
 
@@ -439,10 +468,26 @@ const Camera360FinalVideoStep: React.FC<Camera360FinalVideoStepProps> = ({
       {showMusicSelector && (
         <MusicSelectorModal
           currentPresetId={musicPresetId}
+          musicStartOffset={musicStartOffset}
+          customMusicUrl={customMusicUrl}
+          totalVideoDuration={totalVideoDuration}
           onSelect={handleMusicSelect}
           onClose={() => setShowMusicSelector(false)}
+          onOpenMusicGenerator={() => setShowMusicGenerator(true)}
+          isAuthenticated={isAuthenticated}
         />
       )}
+
+      {/* AI Music Generator Modal */}
+      <MusicGeneratorModal
+        visible={showMusicGenerator}
+        onClose={() => setShowMusicGenerator(false)}
+        onTrackSelect={handleAIMusicSelect}
+        sogniClient={sogniClient}
+        isAuthenticated={isAuthenticated}
+        tokenType={tokenType}
+        zIndex={99999999}
+      />
     </div>
   );
 };
@@ -485,17 +530,28 @@ const ActionButton: React.FC<ActionButtonProps> = ({ onClick, title, active, chi
 
 interface MusicSelectorModalProps {
   currentPresetId: string | null;
-  onSelect: (presetId: string | null) => void;
+  musicStartOffset?: number;
+  customMusicUrl?: string | null;
+  totalVideoDuration?: number;
+  onSelect: (presetId: string | null, startOffset?: number) => void;
   onClose: () => void;
+  onOpenMusicGenerator?: () => void;
+  isAuthenticated?: boolean;
 }
 
 const MusicSelectorModal: React.FC<MusicSelectorModalProps> = ({
   currentPresetId,
+  musicStartOffset = 0,
+  customMusicUrl,
+  totalVideoDuration = 15,
   onSelect,
-  onClose
+  onClose,
+  onOpenMusicGenerator,
+  isAuthenticated = false
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [previewId, setPreviewId] = useState<string | null>(null);
+  const [trimOffset, setTrimOffset] = useState(musicStartOffset);
   const audioRef = useRef<HTMLAudioElement>(null);
 
   const filteredTracks = searchQuery
@@ -503,6 +559,14 @@ const MusicSelectorModal: React.FC<MusicSelectorModalProps> = ({
         t.title.toLowerCase().includes(searchQuery.toLowerCase())
       )
     : TRANSITION_MUSIC_PRESETS;
+
+  // Compute URL for the currently selected music for trim preview
+  const selectedMusicUrl = (() => {
+    if (!currentPresetId) return null;
+    if (customMusicUrl) return customMusicUrl;
+    const preset = (TRANSITION_MUSIC_PRESETS as any[]).find((p: any) => p.id === currentPresetId);
+    return preset?.url || null;
+  })();
 
   const togglePreview = useCallback((track: any) => {
     if (previewId === track.id) {
@@ -576,24 +640,45 @@ const MusicSelectorModal: React.FC<MusicSelectorModalProps> = ({
           }}>
             Background Music
           </h3>
-          <button
-            onClick={onClose}
-            style={{
-              width: '32px',
-              height: '32px',
-              borderRadius: '50%',
-              border: 'none',
-              background: 'rgba(255,255,255,0.1)',
-              color: 'rgba(255,255,255,0.6)',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '14px'
-            }}
-          >
-            ✕
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {isAuthenticated && onOpenMusicGenerator && (
+              <button
+                onClick={onOpenMusicGenerator}
+                style={{
+                  padding: '6px 12px',
+                  borderRadius: '8px',
+                  border: `1px solid ${COLORS.accent}`,
+                  background: 'transparent',
+                  color: COLORS.accent,
+                  cursor: 'pointer',
+                  fontSize: '12px',
+                  fontWeight: '600',
+                  fontFamily: 'inherit',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                {String.fromCodePoint(0x2728)} Generate
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              style={{
+                width: '32px',
+                height: '32px',
+                borderRadius: '50%',
+                border: 'none',
+                background: 'rgba(255,255,255,0.1)',
+                color: 'rgba(255,255,255,0.6)',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '14px'
+              }}
+            >
+              ✕
+            </button>
+          </div>
         </div>
 
         {/* Search */}
@@ -720,6 +805,23 @@ const MusicSelectorModal: React.FC<MusicSelectorModalProps> = ({
             );
           })}
         </div>
+
+        {/* Audio trim preview when a track is selected */}
+        {selectedMusicUrl && currentPresetId && (
+          <div style={{ padding: '8px 20px 12px' }}>
+            <AudioTrimPreview
+              audioUrl={selectedMusicUrl}
+              startOffset={trimOffset}
+              duration={totalVideoDuration}
+              onOffsetChange={(offset) => {
+                setTrimOffset(offset);
+                onSelect(currentPresetId, offset);
+              }}
+              accentColor={COLORS.accent}
+              height={48}
+            />
+          </div>
+        )}
 
         {/* Hidden audio element for previews */}
         <audio ref={audioRef} onEnded={() => setPreviewId(null)} />

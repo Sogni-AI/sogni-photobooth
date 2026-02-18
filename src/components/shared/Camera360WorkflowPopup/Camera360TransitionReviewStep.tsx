@@ -11,13 +11,15 @@
 import React, { useCallback, useRef, useState, useMemo } from 'react';
 import type { Camera360TransitionItem, Camera360TransitionSettings } from '../../../types/camera360';
 import type { VideoResolution, VideoQualityPreset } from '../../../constants/videoSettings';
-import { calculateVideoFrames } from '../../../constants/videoSettings';
+import { calculateVideoFrames, calculateVideoDimensions } from '../../../constants/videoSettings';
 import { COLORS, DEFAULT_360_TRANSITION_PROMPT } from '../../../constants/camera360Settings';
 import { TRANSITION_MUSIC_PRESETS } from '../../../constants/transitionMusicPresets';
 import { useVideoCostEstimation } from '../../../hooks/useVideoCostEstimation';
 import { getPaymentMethod } from '../../../services/walletService';
 import TestPatternPlaceholder from '../TestPatternPlaceholder';
 import VideoSettingsFooter from '../VideoSettingsFooter';
+import AudioTrimPreview from '../AudioTrimPreview';
+import MusicGeneratorModal from '../MusicGeneratorModal';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -36,6 +38,10 @@ interface Camera360TransitionReviewStepProps {
   settings: Camera360TransitionSettings;
   onUpdateSettings: (updates: Partial<Camera360TransitionSettings>) => void;
   onGenerate: () => void;
+  // Auth/SDK props for AI music generation
+  sogniClient?: any;
+  isAuthenticated?: boolean;
+  tokenType?: string;
 }
 
 const Camera360TransitionReviewStep: React.FC<Camera360TransitionReviewStepProps> = ({
@@ -51,11 +57,22 @@ const Camera360TransitionReviewStep: React.FC<Camera360TransitionReviewStepProps
   sourceHeight,
   settings,
   onUpdateSettings,
-  onGenerate
+  onGenerate,
+  sogniClient,
+  isAuthenticated = false,
+  tokenType = 'spark'
 }) => {
   const readyCount = transitions.filter(t => t.status === 'ready').length;
   const totalCount = transitions.length;
   const hasGenerated = transitions.some(t => t.status !== 'pending');
+
+  // AI Music Generator state
+  const [showMusicGenerator, setShowMusicGenerator] = useState(false);
+
+  // Music section state
+  const [showTrackBrowser, setShowTrackBrowser] = useState(false);
+  const [trackSearchQuery, setTrackSearchQuery] = useState('');
+  const musicFileInputRef = useRef<HTMLInputElement>(null);
 
   // Collapsible settings panel - starts expanded, auto-collapses on generate
   const [settingsExpanded, setSettingsExpanded] = useState(true);
@@ -68,7 +85,7 @@ const Camera360TransitionReviewStep: React.FC<Camera360TransitionReviewStepProps
   prevIsGenerating.current = isGenerating;
 
   // Cost estimation
-  const tokenType = getPaymentMethod();
+  const costTokenType = getPaymentMethod();
   const frames = useMemo(() => calculateVideoFrames(settings.duration), [settings.duration]);
   const { cost, costInUSD, loading: costLoading } = useVideoCostEstimation({
     imageWidth: sourceWidth,
@@ -91,8 +108,58 @@ const Camera360TransitionReviewStep: React.FC<Camera360TransitionReviewStepProps
     onUpdateSettings({ prompt: e.target.value });
   }, [onUpdateSettings]);
 
-  const handleMusicChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
-    onUpdateSettings({ musicPresetId: e.target.value || null });
+  const handlePresetSelect = useCallback((presetId: string) => {
+    setShowTrackBrowser(false);
+    onUpdateSettings({
+      musicPresetId: presetId,
+      customMusicUrl: null,
+      customMusicTitle: null,
+      musicStartOffset: 0
+    });
+  }, [onUpdateSettings]);
+
+  const handleRemoveMusic = useCallback(() => {
+    onUpdateSettings({
+      musicPresetId: null,
+      customMusicUrl: null,
+      customMusicTitle: null,
+      musicStartOffset: 0
+    });
+  }, [onUpdateSettings]);
+
+  const handleMusicUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const blobUrl = URL.createObjectURL(file);
+    onUpdateSettings({
+      musicPresetId: 'uploaded',
+      customMusicUrl: blobUrl,
+      customMusicTitle: file.name,
+      musicStartOffset: 0
+    });
+  }, [onUpdateSettings]);
+
+  // AI music track selection handler
+  const handleAIMusicSelect = useCallback((track: any) => {
+    setShowMusicGenerator(false);
+    onUpdateSettings({
+      musicPresetId: `ai-generated-${track.id}`,
+      customMusicUrl: track.url,
+      customMusicTitle: 'AI Generated',
+      musicStartOffset: 0
+    });
+  }, [onUpdateSettings]);
+
+  // Compute selected music URL for AudioTrimPreview
+  const selectedMusicUrl = useMemo(() => {
+    if (!settings.musicPresetId) return null;
+    if (settings.customMusicUrl) return settings.customMusicUrl;
+    const preset = (TRANSITION_MUSIC_PRESETS as any[]).find((p: any) => p.id === settings.musicPresetId);
+    return preset?.url || null;
+  }, [settings.musicPresetId, settings.customMusicUrl]);
+
+  const handleMusicStartOffsetChange = useCallback((offset: number) => {
+    onUpdateSettings({ musicStartOffset: offset });
   }, [onUpdateSettings]);
 
   // VideoSettingsFooter override callbacks
@@ -123,18 +190,12 @@ const Camera360TransitionReviewStep: React.FC<Camera360TransitionReviewStepProps
     display: 'block'
   };
 
-  const selectStyle: React.CSSProperties = {
-    width: '100%',
-    padding: '8px 12px',
-    borderRadius: '8px',
-    border: `1px solid ${COLORS.border}`,
-    background: COLORS.surfaceLight,
-    color: COLORS.textPrimary,
-    fontSize: '13px',
-    fontFamily: 'inherit',
-    cursor: 'pointer',
-    outline: 'none'
-  };
+  // Compute actual video output dimensions (rounded to 16px divisor)
+  // This is what the transition generator actually renders at
+  const videoDimensions = useMemo(() =>
+    calculateVideoDimensions(sourceWidth, sourceHeight, settings.resolution),
+    [sourceWidth, sourceHeight, settings.resolution]
+  );
 
   // Determine action button state
   const canGenerate = !isGenerating && totalCount > 0;
@@ -212,7 +273,7 @@ const Camera360TransitionReviewStep: React.FC<Camera360TransitionReviewStepProps
 
       {/* Collapsible settings panel */}
       <div style={{
-        maxHeight: settingsExpanded ? '300px' : '0px',
+        maxHeight: settingsExpanded ? '600px' : '0px',
         overflow: 'hidden',
         transition: 'max-height 0.3s ease',
         borderBottom: settingsExpanded ? `1px solid ${COLORS.borderLight}` : 'none',
@@ -248,18 +309,247 @@ const Camera360TransitionReviewStep: React.FC<Camera360TransitionReviewStepProps
             {/* Background Music */}
             <div style={{ flex: '1 1 200px', minWidth: '160px' }}>
               <label style={labelStyle}>Background Music</label>
-              <select
-                value={settings.musicPresetId || ''}
-                onChange={handleMusicChange}
-                style={selectStyle}
+
+              {/* Remove music button - shown when any music is selected */}
+              {settings.musicPresetId && (
+                <button
+                  onClick={handleRemoveMusic}
+                  style={{
+                    width: '100%',
+                    padding: '6px 10px',
+                    borderRadius: '6px',
+                    border: `1px solid rgba(255,100,100,0.3)`,
+                    background: 'rgba(255,100,100,0.08)',
+                    color: 'rgba(255,150,150,0.9)',
+                    cursor: 'pointer',
+                    fontSize: '11px',
+                    fontWeight: '500',
+                    fontFamily: 'inherit',
+                    textAlign: 'center',
+                    marginBottom: '6px'
+                  }}
+                >
+                  Remove Music
+                </button>
+              )}
+
+              {/* Browse Preset Tracks - collapsible */}
+              <button
+                onClick={() => {
+                  setShowTrackBrowser(!showTrackBrowser);
+                  setTrackSearchQuery('');
+                }}
+                style={{
+                  width: '100%',
+                  padding: '8px 10px',
+                  backgroundColor: settings.musicPresetId && !settings.musicPresetId.startsWith('ai-generated-') && settings.musicPresetId !== 'uploaded'
+                    ? 'rgba(76, 175, 80, 0.2)' : COLORS.surfaceLight,
+                  border: settings.musicPresetId && !settings.musicPresetId.startsWith('ai-generated-') && settings.musicPresetId !== 'uploaded'
+                    ? `2px solid rgba(76, 175, 80, 0.5)` : `1px solid ${COLORS.border}`,
+                  borderRadius: '6px',
+                  borderBottomLeftRadius: showTrackBrowser ? '0' : '6px',
+                  borderBottomRightRadius: showTrackBrowser ? '0' : '6px',
+                  color: COLORS.textPrimary,
+                  cursor: 'pointer',
+                  fontSize: '12px',
+                  fontWeight: '500',
+                  fontFamily: 'inherit',
+                  textAlign: 'left',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginBottom: showTrackBrowser ? '0' : '0'
+                }}
               >
-                <option value="">No Music</option>
-                {TRANSITION_MUSIC_PRESETS.map((preset: any) => (
-                  <option key={preset.id} value={preset.id}>
-                    {preset.emoji} {preset.title} ({preset.duration})
-                  </option>
-                ))}
-              </select>
+                <span>
+                  {settings.musicPresetId && !settings.musicPresetId.startsWith('ai-generated-') && settings.musicPresetId !== 'uploaded'
+                    ? (() => {
+                        const preset = (TRANSITION_MUSIC_PRESETS as any[]).find((p: any) => p.id === settings.musicPresetId);
+                        return preset ? `${preset.emoji} ${preset.title}` : '🎵 Browse Preset Tracks...';
+                      })()
+                    : '🎵 Browse Preset Tracks...'}
+                </span>
+                <span style={{
+                  fontSize: '10px',
+                  transition: 'transform 0.2s ease',
+                  transform: showTrackBrowser ? 'rotate(180deg)' : 'rotate(0deg)'
+                }}>▼</span>
+              </button>
+
+              {/* Expandable track browser */}
+              {showTrackBrowser && (
+                <div style={{
+                  border: `1px solid ${COLORS.border}`,
+                  borderTop: 'none',
+                  borderBottomLeftRadius: '6px',
+                  borderBottomRightRadius: '6px',
+                  background: COLORS.surfaceLight,
+                  marginBottom: '0',
+                  overflow: 'hidden'
+                }}>
+                  {/* Search */}
+                  <div style={{ padding: '8px 8px 4px' }}>
+                    <input
+                      type="text"
+                      value={trackSearchQuery}
+                      onChange={(e) => setTrackSearchQuery(e.target.value)}
+                      placeholder="Search tracks..."
+                      style={{
+                        width: '100%',
+                        padding: '7px 10px',
+                        borderRadius: '5px',
+                        border: `1px solid ${COLORS.border}`,
+                        background: COLORS.surface,
+                        color: COLORS.textPrimary,
+                        fontSize: '12px',
+                        fontFamily: 'inherit',
+                        outline: 'none',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                  </div>
+                  {/* Scrollable track list */}
+                  <div style={{ maxHeight: '180px', overflowY: 'auto', overscrollBehavior: 'contain' }}>
+                    {(TRANSITION_MUSIC_PRESETS as any[])
+                      .filter((track: any) => track.title.toLowerCase().includes(trackSearchQuery.toLowerCase()))
+                      .map((track: any) => {
+                        const isSelected = settings.musicPresetId === track.id;
+                        return (
+                          <div
+                            key={track.id}
+                            onClick={() => handlePresetSelect(track.id)}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                              padding: '8px 10px',
+                              cursor: 'pointer',
+                              background: isSelected ? 'rgba(76, 175, 80, 0.15)' : 'transparent',
+                              borderLeft: isSelected ? `3px solid ${COLORS.accent}` : '3px solid transparent',
+                              transition: 'background 0.15s ease'
+                            }}
+                          >
+                            <span style={{ fontSize: '14px', flexShrink: 0 }}>{track.emoji}</span>
+                            <span style={{
+                              flex: 1,
+                              fontSize: '12px',
+                              fontWeight: isSelected ? '600' : '400',
+                              color: isSelected ? COLORS.accent : COLORS.textPrimary,
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap'
+                            }}>
+                              {track.title}
+                            </span>
+                            <span style={{
+                              fontSize: '11px',
+                              color: COLORS.textMuted,
+                              flexShrink: 0,
+                              fontVariantNumeric: 'tabular-nums'
+                            }}>
+                              {track.duration}
+                            </span>
+                          </div>
+                        );
+                      })}
+                  </div>
+                </div>
+              )}
+
+              {/* "or" divider */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                margin: '6px 0',
+                color: COLORS.textMuted,
+                fontSize: '10px'
+              }}>
+                <div style={{ flex: 1, height: '1px', backgroundColor: COLORS.border }} />
+                <span>or</span>
+                <div style={{ flex: 1, height: '1px', backgroundColor: COLORS.border }} />
+              </div>
+
+              {/* Upload Music */}
+              <input
+                ref={musicFileInputRef}
+                type="file"
+                accept="audio/*,.mp3,.m4a,.wav,.ogg"
+                style={{ display: 'none' }}
+                onChange={handleMusicUpload}
+              />
+              <button
+                onClick={() => musicFileInputRef.current?.click()}
+                style={{
+                  width: '100%',
+                  padding: '8px 10px',
+                  backgroundColor: settings.musicPresetId === 'uploaded' ? 'rgba(76, 175, 80, 0.2)' : COLORS.surfaceLight,
+                  border: settings.musicPresetId === 'uploaded' ? '2px solid rgba(76, 175, 80, 0.5)' : `1px dashed ${COLORS.border}`,
+                  borderRadius: '6px',
+                  color: COLORS.textPrimary,
+                  cursor: 'pointer',
+                  fontSize: '12px',
+                  fontWeight: '500',
+                  fontFamily: 'inherit',
+                  textAlign: 'center'
+                }}
+              >
+                {settings.musicPresetId === 'uploaded' && settings.customMusicTitle
+                  ? `✅ ${settings.customMusicTitle}`
+                  : '📁 Upload MP3/M4A'}
+              </button>
+
+              {/* AI Music Generation (authenticated users only) */}
+              {isAuthenticated && (
+                <>
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    margin: '6px 0',
+                    color: COLORS.textMuted,
+                    fontSize: '10px'
+                  }}>
+                    <div style={{ flex: 1, height: '1px', backgroundColor: COLORS.border }} />
+                    <span>or</span>
+                    <div style={{ flex: 1, height: '1px', backgroundColor: COLORS.border }} />
+                  </div>
+                  <button
+                    onClick={() => setShowMusicGenerator(true)}
+                    style={{
+                      width: '100%',
+                      padding: '8px 10px',
+                      backgroundColor: settings.musicPresetId?.startsWith('ai-generated-') ? 'rgba(76, 175, 80, 0.2)' : COLORS.surfaceLight,
+                      border: settings.musicPresetId?.startsWith('ai-generated-') ? '2px solid rgba(76, 175, 80, 0.5)' : `1px dashed ${COLORS.border}`,
+                      borderRadius: '6px',
+                      color: COLORS.textPrimary,
+                      cursor: 'pointer',
+                      fontSize: '12px',
+                      fontWeight: '500',
+                      fontFamily: 'inherit',
+                      textAlign: 'center'
+                    }}
+                  >
+                    {settings.musicPresetId?.startsWith('ai-generated-')
+                      ? '✅ AI Generated Track'
+                      : `${String.fromCodePoint(0x2728)} Create AI Music`}
+                  </button>
+                </>
+              )}
+
+              {/* Audio trim preview when music is selected */}
+              {selectedMusicUrl && (
+                <div style={{ marginTop: '8px' }}>
+                  <AudioTrimPreview
+                    audioUrl={selectedMusicUrl}
+                    startOffset={settings.musicStartOffset || 0}
+                    duration={settings.duration * totalCount}
+                    onOffsetChange={handleMusicStartOffsetChange}
+                    accentColor={COLORS.accent}
+                    height={48}
+                  />
+                </div>
+              )}
             </div>
           </div>
 
@@ -297,7 +587,7 @@ const Camera360TransitionReviewStep: React.FC<Camera360TransitionReviewStepProps
         padding: '20px 24px',
         overflowX: 'auto',
         overflowY: 'hidden',
-        alignItems: 'stretch',
+        alignItems: 'flex-start',
         scrollSnapType: 'x mandatory',
         scrollPadding: '0 24px',
         WebkitOverflowScrolling: 'touch',
@@ -312,8 +602,8 @@ const Camera360TransitionReviewStep: React.FC<Camera360TransitionReviewStepProps
             toImageUrl={angleImageUrls[transition.toIndex] || ''}
             onRegenerate={() => onRegenerate(transition.id)}
             onVersionChange={(version) => onVersionChange(transition.id, version)}
-            sourceWidth={sourceWidth}
-            sourceHeight={sourceHeight}
+            videoWidth={videoDimensions.width}
+            videoHeight={videoDimensions.height}
           />
         ))}
       </div>
@@ -331,7 +621,7 @@ const Camera360TransitionReviewStep: React.FC<Camera360TransitionReviewStepProps
           costUSD={costInUSD}
           loading={costLoading}
           colorScheme="dark"
-          tokenType={tokenType}
+          tokenType={costTokenType}
           showDuration={true}
           showResolution={true}
           showQuality={true}
@@ -418,6 +708,17 @@ const Camera360TransitionReviewStep: React.FC<Camera360TransitionReviewStepProps
           )}
         </div>
       </div>
+
+      {/* AI Music Generator Modal */}
+      <MusicGeneratorModal
+        visible={showMusicGenerator}
+        onClose={() => setShowMusicGenerator(false)}
+        onTrackSelect={handleAIMusicSelect}
+        sogniClient={sogniClient}
+        isAuthenticated={isAuthenticated}
+        tokenType={tokenType}
+        zIndex={99999999}
+      />
     </div>
   );
 };
@@ -431,8 +732,8 @@ interface TransitionCardProps {
   toImageUrl: string;
   onRegenerate: () => void;
   onVersionChange: (version: number) => void;
-  sourceWidth: number;
-  sourceHeight: number;
+  videoWidth: number;
+  videoHeight: number;
 }
 
 const TransitionCard: React.FC<TransitionCardProps> = ({
@@ -442,8 +743,8 @@ const TransitionCard: React.FC<TransitionCardProps> = ({
   toImageUrl,
   onRegenerate,
   onVersionChange,
-  sourceWidth,
-  sourceHeight
+  videoWidth,
+  videoHeight
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const currentVideoUrl = transition.versionHistory[transition.selectedVersion]?.videoUrl || transition.videoUrl;
@@ -462,6 +763,7 @@ const TransitionCard: React.FC<TransitionCardProps> = ({
       flexShrink: 0,
       minWidth: '320px',
       maxWidth: '520px',
+      maxHeight: '100%',
       display: 'flex',
       flexDirection: 'column',
       borderRadius: '12px',
@@ -513,9 +815,9 @@ const TransitionCard: React.FC<TransitionCardProps> = ({
         </span>
       </div>
 
-      {/* Video / Progress area - flex fill */}
+      {/* Video / Progress area - aspect ratio driven, shrinks when carousel height is constrained */}
       <div style={{
-        flex: '1 1 0',
+        flex: '0 1 auto',
         minHeight: 0,
         position: 'relative',
         width: '100%',
@@ -524,7 +826,7 @@ const TransitionCard: React.FC<TransitionCardProps> = ({
         justifyContent: 'center',
         overflow: 'hidden',
         background: 'rgba(0,0,0,0.4)',
-        aspectRatio: `${sourceWidth || 1024} / ${sourceHeight || 1024}`,
+        aspectRatio: `${videoWidth} / ${videoHeight}`,
         cursor: transition.status === 'ready' ? 'pointer' : 'default'
       }}
         onClick={transition.status === 'ready' ? togglePlayback : undefined}
@@ -557,7 +859,7 @@ const TransitionCard: React.FC<TransitionCardProps> = ({
           }}>
             {/* Test pattern behind progress */}
             <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <TestPatternPlaceholder width={sourceWidth || 1024} height={sourceHeight || 1024} />
+              <TestPatternPlaceholder width={videoWidth} height={videoHeight} />
             </div>
             {/* Progress overlay */}
             <div style={{
@@ -607,7 +909,7 @@ const TransitionCard: React.FC<TransitionCardProps> = ({
             alignItems: 'center',
             justifyContent: 'center'
           }}>
-            <TestPatternPlaceholder width={sourceWidth || 1024} height={sourceHeight || 1024} />
+            <TestPatternPlaceholder width={videoWidth} height={videoHeight} />
             <div style={{
               position: 'absolute',
               background: 'rgba(0,0,0,0.6)',
@@ -623,7 +925,7 @@ const TransitionCard: React.FC<TransitionCardProps> = ({
           </div>
         ) : (
           /* Pending - show test pattern */
-          <TestPatternPlaceholder width={sourceWidth || 1024} height={sourceHeight || 1024} />
+          <TestPatternPlaceholder width={videoWidth} height={videoHeight} />
         )}
       </div>
 
