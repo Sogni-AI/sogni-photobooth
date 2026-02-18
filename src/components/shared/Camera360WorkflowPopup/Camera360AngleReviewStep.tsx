@@ -118,7 +118,7 @@ const Camera360AngleReviewStep: React.FC<Camera360AngleReviewStepProps> = ({
         padding: '20px 24px',
         overflowX: 'auto',
         overflowY: 'hidden',
-        alignItems: 'flex-start',
+        alignItems: 'stretch',
         scrollSnapType: 'x mandatory',
         scrollPadding: '0 24px',
         WebkitOverflowScrolling: 'touch',
@@ -129,7 +129,6 @@ const Camera360AngleReviewStep: React.FC<Camera360AngleReviewStepProps> = ({
           flexShrink: 0,
           minWidth: '280px',
           maxWidth: '480px',
-          maxHeight: '100%',
           display: 'flex',
           flexDirection: 'column',
           borderRadius: '12px',
@@ -154,10 +153,8 @@ const Camera360AngleReviewStep: React.FC<Camera360AngleReviewStepProps> = ({
               src={sourceImageUrl}
               alt="Original"
               style={{
-                maxWidth: '100%',
-                maxHeight: '100%',
-                width: 'auto',
-                height: 'auto',
+                width: '100%',
+                height: '100%',
                 objectFit: 'contain',
                 display: 'block'
               }}
@@ -196,7 +193,6 @@ const Camera360AngleReviewStep: React.FC<Camera360AngleReviewStepProps> = ({
                 flexShrink: 0,
                 minWidth: '280px',
                 maxWidth: '480px',
-                maxHeight: '100%',
                 display: 'flex',
                 flexDirection: 'column',
                 borderRadius: '12px',
@@ -231,10 +227,8 @@ const Camera360AngleReviewStep: React.FC<Camera360AngleReviewStepProps> = ({
                       src={displayUrl}
                       alt={`Angle ${index + 1}`}
                       style={{
-                        maxWidth: '100%',
-                        maxHeight: '100%',
-                        width: 'auto',
-                        height: 'auto',
+                        width: '100%',
+                        height: '100%',
                         objectFit: 'contain',
                         display: 'block',
                         opacity: 0.5
@@ -292,10 +286,8 @@ const Camera360AngleReviewStep: React.FC<Camera360AngleReviewStepProps> = ({
                     src={displayUrl}
                     alt={`Angle ${index + 1}`}
                     style={{
-                      maxWidth: '100%',
-                      maxHeight: '100%',
-                      width: 'auto',
-                      height: 'auto',
+                      width: '100%',
+                      height: '100%',
                       objectFit: 'contain',
                       display: 'block'
                     }}

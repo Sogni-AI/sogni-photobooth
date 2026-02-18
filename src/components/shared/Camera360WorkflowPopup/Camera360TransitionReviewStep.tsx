@@ -295,370 +295,391 @@ const Camera360TransitionReviewStep: React.FC<Camera360TransitionReviewStepProps
         </div>
       </div>
 
-      {/* Collapsible settings panel */}
-      <div style={{
-        maxHeight: settingsExpanded ? '600px' : '0px',
-        overflow: 'hidden',
-        transition: 'max-height 0.3s ease',
-        borderBottom: settingsExpanded ? `1px solid ${COLORS.borderLight}` : 'none',
-        opacity: isGenerating ? 0.5 : 1,
-        pointerEvents: isGenerating ? 'none' : 'auto'
-      }}>
-        <div style={{ padding: '12px 20px' }}>
-          {/* Settings row */}
-          <div style={{
-            display: 'flex',
-            gap: '16px',
-            flexWrap: 'wrap',
-            alignItems: 'flex-start'
-          }}>
-            {/* Duration slider */}
-            <div style={{ flex: '0 0 160px' }}>
-              <label style={labelStyle}>Duration ({settings.duration}s)</label>
-              <input
-                type="range"
-                min="1"
-                max="8"
-                step="0.5"
-                value={settings.duration}
-                onChange={handleDurationChange}
-                style={{
-                  width: '100%',
-                  accentColor: COLORS.accent,
-                  marginTop: '4px'
-                }}
-              />
-            </div>
+      {/* Carousel + settings overlay container */}
+      <div style={{ flex: 1, position: 'relative', overflow: 'hidden', minHeight: 0 }}>
+        {/* Horizontal carousel - always takes full space */}
+        <div style={{
+          height: '100%',
+          display: 'flex',
+          gap: '20px',
+          padding: '20px 24px',
+          overflowX: 'auto',
+          overflowY: 'hidden',
+          alignItems: 'stretch',
+          scrollSnapType: 'x mandatory',
+          scrollPadding: '0 24px',
+          WebkitOverflowScrolling: 'touch',
+        }}>
+          {transitions.map((transition, index) => (
+            <TransitionCard
+              key={transition.id}
+              transition={transition}
+              index={index}
+              fromImageUrl={angleImageUrls[transition.fromIndex] || ''}
+              toImageUrl={angleImageUrls[transition.toIndex] || ''}
+              onRegenerate={() => onRegenerate(transition.id)}
+              onVersionChange={(version) => onVersionChange(transition.id, version)}
+              videoWidth={videoDimensions.width}
+              videoHeight={videoDimensions.height}
+            />
+          ))}
+        </div>
 
-            {/* Background Music */}
-            <div style={{ flex: '1 1 200px', minWidth: '160px' }}>
-              <label style={labelStyle}>Background Music</label>
-
-              {/* Remove music button - shown when any music is selected */}
-              {settings.musicPresetId && (
-                <button
-                  onClick={handleRemoveMusic}
+        {/* Settings overlay - slides down over carousel */}
+        <div
+          onClick={() => setSettingsExpanded(false)}
+          style={{
+            position: 'absolute',
+            inset: 0,
+            background: 'rgba(0,0,0,0.5)',
+            zIndex: 9,
+            opacity: settingsExpanded ? 1 : 0,
+            pointerEvents: settingsExpanded ? 'auto' : 'none',
+            transition: 'opacity 0.3s ease'
+          }}
+        />
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          maxHeight: settingsExpanded ? '90%' : '0px',
+          overflowY: settingsExpanded ? 'auto' : 'hidden',
+          overscrollBehavior: 'contain',
+          transition: 'max-height 0.3s ease',
+          background: 'rgba(28, 28, 30, 0.97)',
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
+          borderBottom: settingsExpanded ? `1px solid ${COLORS.borderLight}` : 'none',
+          zIndex: 10,
+          opacity: isGenerating ? 0.5 : 1,
+          pointerEvents: isGenerating ? 'none' : 'auto'
+        }}>
+          <div style={{ padding: '12px 20px' }}>
+            {/* Settings row */}
+            <div style={{
+              display: 'flex',
+              gap: '16px',
+              flexWrap: 'wrap',
+              alignItems: 'flex-start'
+            }}>
+              {/* Duration slider */}
+              <div style={{ flex: '0 0 160px' }}>
+                <label style={labelStyle}>Duration ({settings.duration}s)</label>
+                <input
+                  type="range"
+                  min="1"
+                  max="8"
+                  step="0.5"
+                  value={settings.duration}
+                  onChange={handleDurationChange}
                   style={{
                     width: '100%',
-                    padding: '6px 10px',
-                    borderRadius: '6px',
-                    border: `1px solid rgba(255,100,100,0.3)`,
-                    background: 'rgba(255,100,100,0.08)',
-                    color: 'rgba(255,150,150,0.9)',
-                    cursor: 'pointer',
-                    fontSize: '11px',
-                    fontWeight: '500',
-                    fontFamily: 'inherit',
-                    textAlign: 'center',
-                    marginBottom: '6px'
+                    accentColor: COLORS.accent,
+                    marginTop: '4px'
                   }}
-                >
-                  Remove Music
-                </button>
-              )}
-
-              {/* Browse Preset Tracks - collapsible */}
-              <button
-                onClick={() => {
-                  if (showTrackBrowser) stopPreview();
-                  setShowTrackBrowser(!showTrackBrowser);
-                  setTrackSearchQuery('');
-                }}
-                style={{
-                  width: '100%',
-                  padding: '8px 10px',
-                  backgroundColor: settings.musicPresetId && !settings.musicPresetId.startsWith('ai-generated-') && settings.musicPresetId !== 'uploaded'
-                    ? 'rgba(76, 175, 80, 0.2)' : COLORS.surfaceLight,
-                  border: settings.musicPresetId && !settings.musicPresetId.startsWith('ai-generated-') && settings.musicPresetId !== 'uploaded'
-                    ? `2px solid rgba(76, 175, 80, 0.5)` : `1px solid ${COLORS.border}`,
-                  borderRadius: '6px',
-                  borderBottomLeftRadius: showTrackBrowser ? '0' : '6px',
-                  borderBottomRightRadius: showTrackBrowser ? '0' : '6px',
-                  color: COLORS.textPrimary,
-                  cursor: 'pointer',
-                  fontSize: '12px',
-                  fontWeight: '500',
-                  fontFamily: 'inherit',
-                  textAlign: 'left',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  marginBottom: showTrackBrowser ? '0' : '0'
-                }}
-              >
-                <span>
-                  {settings.musicPresetId && !settings.musicPresetId.startsWith('ai-generated-') && settings.musicPresetId !== 'uploaded'
-                    ? (() => {
-                        const preset = (TRANSITION_MUSIC_PRESETS as any[]).find((p: any) => p.id === settings.musicPresetId);
-                        return preset ? `${preset.emoji} ${preset.title}` : '🎵 Browse Preset Tracks...';
-                      })()
-                    : '🎵 Browse Preset Tracks...'}
-                </span>
-                <span style={{
-                  fontSize: '10px',
-                  transition: 'transform 0.2s ease',
-                  transform: showTrackBrowser ? 'rotate(180deg)' : 'rotate(0deg)'
-                }}>▼</span>
-              </button>
-
-              {/* Expandable track browser */}
-              {showTrackBrowser && (
-                <div style={{
-                  border: `1px solid ${COLORS.border}`,
-                  borderTop: 'none',
-                  borderBottomLeftRadius: '6px',
-                  borderBottomRightRadius: '6px',
-                  background: COLORS.surfaceLight,
-                  marginBottom: '0',
-                  overflow: 'hidden'
-                }}>
-                  {/* Search */}
-                  <div style={{ padding: '8px 8px 4px' }}>
-                    <input
-                      type="text"
-                      value={trackSearchQuery}
-                      onChange={(e) => setTrackSearchQuery(e.target.value)}
-                      placeholder="Search tracks..."
-                      style={{
-                        width: '100%',
-                        padding: '7px 10px',
-                        borderRadius: '5px',
-                        border: `1px solid ${COLORS.border}`,
-                        background: COLORS.surface,
-                        color: COLORS.textPrimary,
-                        fontSize: '12px',
-                        fontFamily: 'inherit',
-                        outline: 'none',
-                        boxSizing: 'border-box'
-                      }}
-                    />
-                  </div>
-                  {/* Hidden audio element for track preview */}
-                  <audio ref={previewAudioRef} onEnded={stopPreview} />
-                  {/* Scrollable track list */}
-                  <div style={{ maxHeight: '180px', overflowY: 'auto', overscrollBehavior: 'contain' }}>
-                    {(TRANSITION_MUSIC_PRESETS as any[])
-                      .filter((track: any) => track.title.toLowerCase().includes(trackSearchQuery.toLowerCase()))
-                      .map((track: any) => {
-                        const isSelected = settings.musicPresetId === track.id;
-                        const isPreviewing = previewingTrackId === track.id;
-                        return (
-                          <div
-                            key={track.id}
-                            onClick={() => handlePresetSelect(track.id)}
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '6px',
-                              padding: '6px 10px',
-                              cursor: 'pointer',
-                              background: isPreviewing
-                                ? 'rgba(100, 181, 246, 0.12)'
-                                : isSelected ? 'rgba(76, 175, 80, 0.15)' : 'transparent',
-                              borderLeft: isSelected ? `3px solid ${COLORS.accent}` : '3px solid transparent',
-                              transition: 'background 0.15s ease'
-                            }}
-                          >
-                            {/* Play/Pause preview button */}
-                            <button
-                              onClick={(e) => handlePreviewToggle(e, track.id, track.url)}
-                              title={isPreviewing ? 'Pause preview' : 'Preview track'}
-                              style={{
-                                width: '24px',
-                                height: '24px',
-                                borderRadius: '50%',
-                                border: `1px solid ${isPreviewing ? 'rgba(100, 181, 246, 0.5)' : COLORS.border}`,
-                                background: isPreviewing ? 'rgba(100, 181, 246, 0.2)' : 'transparent',
-                                color: isPreviewing ? 'rgb(100, 181, 246)' : COLORS.textMuted,
-                                cursor: 'pointer',
-                                fontSize: '10px',
-                                padding: 0,
-                                flexShrink: 0,
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                transition: 'all 0.15s ease'
-                              }}
-                            >
-                              {isPreviewing ? '\u23F8' : '\u25B6'}
-                            </button>
-                            <span style={{ fontSize: '14px', flexShrink: 0 }}>{track.emoji}</span>
-                            <span style={{
-                              flex: 1,
-                              fontSize: '12px',
-                              fontWeight: isSelected ? '600' : '400',
-                              color: isSelected ? COLORS.accent : COLORS.textPrimary,
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              whiteSpace: 'nowrap'
-                            }}>
-                              {track.title}
-                            </span>
-                            <span style={{
-                              fontSize: '11px',
-                              color: COLORS.textMuted,
-                              flexShrink: 0,
-                              fontVariantNumeric: 'tabular-nums'
-                            }}>
-                              {track.duration}
-                            </span>
-                          </div>
-                        );
-                      })}
-                  </div>
-                </div>
-              )}
-
-              {/* "or" divider */}
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                margin: '6px 0',
-                color: COLORS.textMuted,
-                fontSize: '10px'
-              }}>
-                <div style={{ flex: 1, height: '1px', backgroundColor: COLORS.border }} />
-                <span>or</span>
-                <div style={{ flex: 1, height: '1px', backgroundColor: COLORS.border }} />
+                />
               </div>
 
-              {/* Upload Music */}
-              <input
-                ref={musicFileInputRef}
-                type="file"
-                accept="audio/*,.mp3,.m4a,.wav,.ogg"
-                style={{ display: 'none' }}
-                onChange={handleMusicUpload}
-              />
-              <button
-                onClick={() => musicFileInputRef.current?.click()}
-                style={{
-                  width: '100%',
-                  padding: '8px 10px',
-                  backgroundColor: settings.musicPresetId === 'uploaded' ? 'rgba(76, 175, 80, 0.2)' : COLORS.surfaceLight,
-                  border: settings.musicPresetId === 'uploaded' ? '2px solid rgba(76, 175, 80, 0.5)' : `1px dashed ${COLORS.border}`,
-                  borderRadius: '6px',
-                  color: COLORS.textPrimary,
-                  cursor: 'pointer',
-                  fontSize: '12px',
-                  fontWeight: '500',
-                  fontFamily: 'inherit',
-                  textAlign: 'center'
-                }}
-              >
-                {settings.musicPresetId === 'uploaded' && settings.customMusicTitle
-                  ? `✅ ${settings.customMusicTitle}`
-                  : '📁 Upload MP3/M4A'}
-              </button>
+              {/* Background Music */}
+              <div style={{ flex: '1 1 200px', minWidth: '160px' }}>
+                <label style={labelStyle}>Background Music</label>
 
-              {/* AI Music Generation (authenticated users only) */}
-              {isAuthenticated && (
-                <>
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    margin: '6px 0',
-                    color: COLORS.textMuted,
-                    fontSize: '10px'
-                  }}>
-                    <div style={{ flex: 1, height: '1px', backgroundColor: COLORS.border }} />
-                    <span>or</span>
-                    <div style={{ flex: 1, height: '1px', backgroundColor: COLORS.border }} />
-                  </div>
+                {/* Remove music button - shown when any music is selected */}
+                {settings.musicPresetId && (
                   <button
-                    onClick={() => setShowMusicGenerator(true)}
+                    onClick={handleRemoveMusic}
                     style={{
                       width: '100%',
-                      padding: '8px 10px',
-                      backgroundColor: settings.musicPresetId?.startsWith('ai-generated-') ? 'rgba(76, 175, 80, 0.2)' : COLORS.surfaceLight,
-                      border: settings.musicPresetId?.startsWith('ai-generated-') ? '2px solid rgba(76, 175, 80, 0.5)' : `1px dashed ${COLORS.border}`,
+                      padding: '6px 10px',
                       borderRadius: '6px',
-                      color: COLORS.textPrimary,
+                      border: `1px solid rgba(255,100,100,0.3)`,
+                      background: 'rgba(255,100,100,0.08)',
+                      color: 'rgba(255,150,150,0.9)',
                       cursor: 'pointer',
-                      fontSize: '12px',
+                      fontSize: '11px',
                       fontWeight: '500',
                       fontFamily: 'inherit',
-                      textAlign: 'center'
+                      textAlign: 'center',
+                      marginBottom: '6px'
                     }}
                   >
-                    {settings.musicPresetId?.startsWith('ai-generated-')
-                      ? '✅ AI Generated Track'
-                      : `${String.fromCodePoint(0x2728)} Create AI Music`}
+                    Remove Music
                   </button>
-                </>
-              )}
+                )}
 
-              {/* Audio trim preview when music is selected */}
-              {selectedMusicUrl && (
-                <div style={{ marginTop: '8px' }}>
-                  <AudioTrimPreview
-                    audioUrl={selectedMusicUrl}
-                    startOffset={settings.musicStartOffset || 0}
-                    duration={settings.duration * totalCount}
-                    onOffsetChange={handleMusicStartOffsetChange}
-                    accentColor={COLORS.accent}
-                    height={48}
-                  />
+                {/* Browse Preset Tracks - collapsible */}
+                <button
+                  onClick={() => {
+                    if (showTrackBrowser) stopPreview();
+                    setShowTrackBrowser(!showTrackBrowser);
+                    setTrackSearchQuery('');
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '8px 10px',
+                    backgroundColor: settings.musicPresetId && !settings.musicPresetId.startsWith('ai-generated-') && settings.musicPresetId !== 'uploaded'
+                      ? 'rgba(76, 175, 80, 0.2)' : COLORS.surfaceLight,
+                    border: settings.musicPresetId && !settings.musicPresetId.startsWith('ai-generated-') && settings.musicPresetId !== 'uploaded'
+                      ? `2px solid rgba(76, 175, 80, 0.5)` : `1px solid ${COLORS.border}`,
+                    borderRadius: '6px',
+                    borderBottomLeftRadius: showTrackBrowser ? '0' : '6px',
+                    borderBottomRightRadius: showTrackBrowser ? '0' : '6px',
+                    color: COLORS.textPrimary,
+                    cursor: 'pointer',
+                    fontSize: '12px',
+                    fontWeight: '500',
+                    fontFamily: 'inherit',
+                    textAlign: 'left',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between'
+                  }}
+                >
+                  <span>
+                    {settings.musicPresetId && !settings.musicPresetId.startsWith('ai-generated-') && settings.musicPresetId !== 'uploaded'
+                      ? (() => {
+                          const preset = (TRANSITION_MUSIC_PRESETS as any[]).find((p: any) => p.id === settings.musicPresetId);
+                          return preset ? `${preset.emoji} ${preset.title}` : '🎵 Browse Preset Tracks...';
+                        })()
+                      : '🎵 Browse Preset Tracks...'}
+                  </span>
+                  <span style={{
+                    fontSize: '10px',
+                    transition: 'transform 0.2s ease',
+                    transform: showTrackBrowser ? 'rotate(180deg)' : 'rotate(0deg)'
+                  }}>▼</span>
+                </button>
+
+                {/* Expandable track browser */}
+                {showTrackBrowser && (
+                  <div style={{
+                    border: `1px solid ${COLORS.border}`,
+                    borderTop: 'none',
+                    borderBottomLeftRadius: '6px',
+                    borderBottomRightRadius: '6px',
+                    background: COLORS.surfaceLight,
+                    overflow: 'hidden'
+                  }}>
+                    {/* Search */}
+                    <div style={{ padding: '8px 8px 4px' }}>
+                      <input
+                        type="text"
+                        value={trackSearchQuery}
+                        onChange={(e) => setTrackSearchQuery(e.target.value)}
+                        placeholder="Search tracks..."
+                        style={{
+                          width: '100%',
+                          padding: '7px 10px',
+                          borderRadius: '5px',
+                          border: `1px solid ${COLORS.border}`,
+                          background: COLORS.surface,
+                          color: COLORS.textPrimary,
+                          fontSize: '12px',
+                          fontFamily: 'inherit',
+                          outline: 'none',
+                          boxSizing: 'border-box'
+                        }}
+                      />
+                    </div>
+                    {/* Hidden audio element for track preview */}
+                    <audio ref={previewAudioRef} onEnded={stopPreview} />
+                    {/* Scrollable track list */}
+                    <div style={{ maxHeight: '180px', overflowY: 'auto', overscrollBehavior: 'contain' }}>
+                      {(TRANSITION_MUSIC_PRESETS as any[])
+                        .filter((track: any) => track.title.toLowerCase().includes(trackSearchQuery.toLowerCase()))
+                        .map((track: any) => {
+                          const isSelected = settings.musicPresetId === track.id;
+                          const isPreviewing = previewingTrackId === track.id;
+                          return (
+                            <div
+                              key={track.id}
+                              onClick={() => handlePresetSelect(track.id)}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                padding: '6px 10px',
+                                cursor: 'pointer',
+                                background: isPreviewing
+                                  ? 'rgba(100, 181, 246, 0.12)'
+                                  : isSelected ? 'rgba(76, 175, 80, 0.15)' : 'transparent',
+                                borderLeft: isSelected ? `3px solid ${COLORS.accent}` : '3px solid transparent',
+                                transition: 'background 0.15s ease'
+                              }}
+                            >
+                              {/* Play/Pause preview button */}
+                              <button
+                                onClick={(e) => handlePreviewToggle(e, track.id, track.url)}
+                                title={isPreviewing ? 'Pause preview' : 'Preview track'}
+                                style={{
+                                  width: '24px',
+                                  height: '24px',
+                                  borderRadius: '50%',
+                                  border: `1px solid ${isPreviewing ? 'rgba(100, 181, 246, 0.5)' : COLORS.border}`,
+                                  background: isPreviewing ? 'rgba(100, 181, 246, 0.2)' : 'transparent',
+                                  color: isPreviewing ? 'rgb(100, 181, 246)' : COLORS.textMuted,
+                                  cursor: 'pointer',
+                                  fontSize: '10px',
+                                  padding: 0,
+                                  flexShrink: 0,
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  transition: 'all 0.15s ease'
+                                }}
+                              >
+                                {isPreviewing ? '\u23F8' : '\u25B6'}
+                              </button>
+                              <span style={{ fontSize: '14px', flexShrink: 0 }}>{track.emoji}</span>
+                              <span style={{
+                                flex: 1,
+                                fontSize: '12px',
+                                fontWeight: isSelected ? '600' : '400',
+                                color: isSelected ? COLORS.accent : COLORS.textPrimary,
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap'
+                              }}>
+                                {track.title}
+                              </span>
+                              <span style={{
+                                fontSize: '11px',
+                                color: COLORS.textMuted,
+                                flexShrink: 0,
+                                fontVariantNumeric: 'tabular-nums'
+                              }}>
+                                {track.duration}
+                              </span>
+                            </div>
+                          );
+                        })}
+                    </div>
+                  </div>
+                )}
+
+                {/* "or" divider */}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  margin: '6px 0',
+                  color: COLORS.textMuted,
+                  fontSize: '10px'
+                }}>
+                  <div style={{ flex: 1, height: '1px', backgroundColor: COLORS.border }} />
+                  <span>or</span>
+                  <div style={{ flex: 1, height: '1px', backgroundColor: COLORS.border }} />
                 </div>
-              )}
+
+                {/* Upload Music */}
+                <input
+                  ref={musicFileInputRef}
+                  type="file"
+                  accept="audio/*,.mp3,.m4a,.wav,.ogg"
+                  style={{ display: 'none' }}
+                  onChange={handleMusicUpload}
+                />
+                <button
+                  onClick={() => musicFileInputRef.current?.click()}
+                  style={{
+                    width: '100%',
+                    padding: '8px 10px',
+                    backgroundColor: settings.musicPresetId === 'uploaded' ? 'rgba(76, 175, 80, 0.2)' : COLORS.surfaceLight,
+                    border: settings.musicPresetId === 'uploaded' ? '2px solid rgba(76, 175, 80, 0.5)' : `1px dashed ${COLORS.border}`,
+                    borderRadius: '6px',
+                    color: COLORS.textPrimary,
+                    cursor: 'pointer',
+                    fontSize: '12px',
+                    fontWeight: '500',
+                    fontFamily: 'inherit',
+                    textAlign: 'center'
+                  }}
+                >
+                  {settings.musicPresetId === 'uploaded' && settings.customMusicTitle
+                    ? `✅ ${settings.customMusicTitle}`
+                    : '📁 Upload MP3/M4A'}
+                </button>
+
+                {/* AI Music Generation (authenticated users only) */}
+                {isAuthenticated && (
+                  <>
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      margin: '6px 0',
+                      color: COLORS.textMuted,
+                      fontSize: '10px'
+                    }}>
+                      <div style={{ flex: 1, height: '1px', backgroundColor: COLORS.border }} />
+                      <span>or</span>
+                      <div style={{ flex: 1, height: '1px', backgroundColor: COLORS.border }} />
+                    </div>
+                    <button
+                      onClick={() => setShowMusicGenerator(true)}
+                      style={{
+                        width: '100%',
+                        padding: '8px 10px',
+                        backgroundColor: settings.musicPresetId?.startsWith('ai-generated-') ? 'rgba(76, 175, 80, 0.2)' : COLORS.surfaceLight,
+                        border: settings.musicPresetId?.startsWith('ai-generated-') ? '2px solid rgba(76, 175, 80, 0.5)' : `1px dashed ${COLORS.border}`,
+                        borderRadius: '6px',
+                        color: COLORS.textPrimary,
+                        cursor: 'pointer',
+                        fontSize: '12px',
+                        fontWeight: '500',
+                        fontFamily: 'inherit',
+                        textAlign: 'center'
+                      }}
+                    >
+                      {settings.musicPresetId?.startsWith('ai-generated-')
+                        ? '✅ AI Generated Track'
+                        : `${String.fromCodePoint(0x2728)} Create AI Music`}
+                    </button>
+                  </>
+                )}
+
+                {/* Audio trim preview when music is selected */}
+                {selectedMusicUrl && (
+                  <div style={{ marginTop: '8px' }}>
+                    <AudioTrimPreview
+                      audioUrl={selectedMusicUrl}
+                      startOffset={settings.musicStartOffset || 0}
+                      duration={settings.duration * totalCount}
+                      onOffsetChange={handleMusicStartOffsetChange}
+                      accentColor={COLORS.accent}
+                      height={48}
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Transition prompt */}
+            <div style={{ marginTop: '10px' }}>
+              <label style={labelStyle}>Transition Prompt</label>
+              <textarea
+                value={settings.prompt}
+                onChange={handlePromptChange}
+                placeholder={DEFAULT_360_TRANSITION_PROMPT}
+                rows={2}
+                style={{
+                  width: '100%',
+                  padding: '8px 12px',
+                  borderRadius: '8px',
+                  border: `1px solid ${COLORS.border}`,
+                  background: COLORS.surfaceLight,
+                  color: COLORS.textPrimary,
+                  fontSize: '12px',
+                  fontFamily: 'inherit',
+                  resize: 'vertical',
+                  outline: 'none',
+                  boxSizing: 'border-box'
+                }}
+              />
             </div>
           </div>
-
-          {/* Transition prompt */}
-          <div style={{ marginTop: '10px' }}>
-            <label style={labelStyle}>Transition Prompt</label>
-            <textarea
-              value={settings.prompt}
-              onChange={handlePromptChange}
-              placeholder={DEFAULT_360_TRANSITION_PROMPT}
-              rows={2}
-              style={{
-                width: '100%',
-                padding: '8px 12px',
-                borderRadius: '8px',
-                border: `1px solid ${COLORS.border}`,
-                background: COLORS.surfaceLight,
-                color: COLORS.textPrimary,
-                fontSize: '12px',
-                fontFamily: 'inherit',
-                resize: 'vertical',
-                outline: 'none',
-                boxSizing: 'border-box'
-              }}
-            />
-          </div>
         </div>
-      </div>
-
-      {/* Horizontal carousel */}
-      <div style={{
-        flex: 1,
-        display: 'flex',
-        gap: '20px',
-        padding: '20px 24px',
-        overflowX: 'auto',
-        overflowY: 'hidden',
-        alignItems: 'flex-start',
-        scrollSnapType: 'x mandatory',
-        scrollPadding: '0 24px',
-        WebkitOverflowScrolling: 'touch',
-        minHeight: 0
-      }}>
-        {transitions.map((transition, index) => (
-          <TransitionCard
-            key={transition.id}
-            transition={transition}
-            index={index}
-            fromImageUrl={angleImageUrls[transition.fromIndex] || ''}
-            toImageUrl={angleImageUrls[transition.toIndex] || ''}
-            onRegenerate={() => onRegenerate(transition.id)}
-            onVersionChange={(version) => onVersionChange(transition.id, version)}
-            videoWidth={videoDimensions.width}
-            videoHeight={videoDimensions.height}
-          />
-        ))}
       </div>
 
       {/* Footer row 1: VideoSettingsFooter pills + cost */}
@@ -816,7 +837,6 @@ const TransitionCard: React.FC<TransitionCardProps> = ({
       flexShrink: 0,
       minWidth: '320px',
       maxWidth: '520px',
-      maxHeight: '100%',
       display: 'flex',
       flexDirection: 'column',
       borderRadius: '12px',
@@ -893,10 +913,8 @@ const TransitionCard: React.FC<TransitionCardProps> = ({
             autoPlay
             playsInline
             style={{
-              maxWidth: '100%',
-              maxHeight: '100%',
-              width: 'auto',
-              height: 'auto',
+              width: '100%',
+              height: '100%',
               objectFit: 'contain',
               display: 'block'
             }}
