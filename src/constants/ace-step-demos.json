@@ -51,7 +51,7 @@
     "duration": 90,
     "timesignature": "4",
     "keyscale": "D minor",
-    "positivePrompt": "rap,minimal,spoken worddark,rap,minimal beats with heavy basslines; sharp snares; spoken-word flow intertwined with rhythmic delivery; female vocals. introspective and raw energy.",
+    "positivePrompt": "rap, minimal, spoken worddark, rap, minimal beats with heavy basslines; sharp snares; spoken-word flow intertwined with rhythmic delivery; female vocals. introspective and raw energy.",
     "lyrics": "[Intro]\n[Music box style synth melody]\n[whispered] Yeah, eh\n[whispered] 好像穿著在的封印\n[whispered] 腳下是落葉的歸根\n[whispered] 被禁錮的聲音\n\n[Verse 1]\n這不是我的街 我的根\nichi的傷疤比城市更狠\n地下的 pum pum 像心跳\n敲響那律動 我的兄弟\n多少夢想被現實嘲諷\n卡住像永不停止的風\n空氣瀰漫著咖啡的香味\n但窗外聞不到改變的變味\n他們說努力就有回報\n我看到有時候向他們發出警告\n教育風景 對不起幾十幾\n祖議上被遺忘只剩下畏懼\n為什麼有時候比火箭飛得遙遠\n窗裡的燈火是那麼璀璨\n\n[Chorus]\n[whispered] Synth melody\n[whispered] 好像穿著在的封印 (好像穿著外的怪影)\n[whispered] 被禁錮的聲音\n不是抱怨 只是看清\n在這迷幻的夜裡思考人生的意義\n[whispered] a cappella, a cappella 裡藏不住的焦虑\n我是池中鳥想出不去\n被回不去\n\n[Verse 2]\n見過的小店都奇奇怪怪\n味道像你先吃的不敢嘗試的菜\n他們眼神裡的不解和等待\n彷彿我是被無情的遊戲拋棄外\n跟強制幾次的像人性的被被\n問問他們為什麼不能輕鬆點去累贅\n這個 system它怕 się是太過分\n把人命当做奇思他奇\n被禁錮的字句像玩文字遊戲\n解開謎團裡 mmm mmm mmm\n是個謎團 這個世界不是\n他們 so unfair 有時候只是不夠好\n不夠菜\n但眼淚\n\n[Chorus]\n[whispered] Synth melody\n[whispered] 好像穿著在的封印 (好像穿著在的法印)\n[whispered] 述著\n[whispered] 那聲帶著光環的諷刺\n我不是誇大 我只是看得ไกล\n這場幻境路像個無底的海\n[whispered] a cappella, a cappella 藏不住的焦慮\n我是池中鳥想出不去\n被回不去\n\n[Outro]\n[Beat continues and fades out]"
   },
   {
@@ -95,7 +95,7 @@
     "duration": 60,
     "timesignature": "4",
     "keyscale": "A minor",
-    "positivePrompt": "female vocals,rap,modern,hip hibhi, Indian fusion,whispered.",
+    "positivePrompt": "female vocals, rap, modern, hip hibhi, Indian fusion, whispered.",
     "lyrics": "[Intro - Plucked Synth Melody]\n\n[Verse 1]\nThe sun melts over the endless plain\nA mirage dances like a golden chain\nBare feet trace stories in the cracked dry land\nWho holds the map in this empty game?\n\n[Chorus]\nDesert echoes\nThey call my name\nDrums of the earth, they beat the same\nStep to the rhythm, no one to blame\nDesert echoes\nDesert echoes\n\n[Instrumental Break - Plucked Synth Melody]\n\n[Verse 2]\nA lone wind whispers secrets untold\nStars blink brighter than the city's gold\nMy shadow stretches long in the moonlit fold\nThis is my world, fierce and bold\n\n[Bridge]\nDo you hear it? The silence screams\nDid you see it? The shifting dreams\n[Vocal chop: 'dreams']\n\n[Chorus]\nDesert echoes\nThey call my name\nDrums of the earth, they beat the same\nStep to the rhythm, no one to blame\nDesert echoes\n\n[Plucked synth melody fades out]"
   },
   {
@@ -106,7 +106,7 @@
     "duration": 60,
     "timesignature": "4",
     "keyscale": "A minor",
-    "positivePrompt": "Slow tempo,haunting piano,deep strings,somber mood,echoing vocals,soft acoustic guitar,silence,slow beat gradually builds,reflecting loss in a haunting melody.",
+    "positivePrompt": "Slow tempo, haunting piano, deep strings, somber mood, echoing vocals, soft acoustic guitar, silence, slow beat gradually builds, reflecting loss in a haunting melody.",
     "lyrics": "[Intro - Arpeggiated Electric Guitar]\n\n[Verse 1]\nShadows whisper secrets low\nIn the night where dreams won't go\nHaunted by the ghost of you\nLost in echoes breaking through\n\n[Chorus]\nEclipse heart, a fading light\nLost in darkness of the night\nHolding on to pieces of us\nIn this nightmare's tender trust\n\n[Verse 2]\nSilence screams beneath the stars\nDrowning out these distant scars\nPhantom love, a bitter cup\nAfraid to wake and face it all\n\n[Pre-Chorus]\nWhispers linger in the haze\n'Neath the moonlit, gothic gaze\nLove decays in whispered lines\nDancing shadows intertwine\n\n[Chorus]\nEclipse heart, a fading light\nLost in darkness of the night\nHolding on to pieces of us\nIn this nightmare's tender trust\n\n[Bridge]\nTwisted fate and broken ties\nHeartbeat fading slow goodbyes\nIn your eyes I see the end\nBut I'll love you once again\n\n[Outro - Instrumental]\n[Guitar and synths fade out]"
   },
   {
@@ -216,7 +216,7 @@
     "duration": 60,
     "timesignature": "4",
     "keyscale": "A minor",
-    "positivePrompt": "female vokal,folkmetal, Electro ,Violin,Piano,extinct,ad' baseline,jane breakbeat; guitar,Harmonium,bass),child's voice.",
+    "positivePrompt": "female vokal, folkmetal, Electro, Violin, Piano, extinct, ad' baseline, jane breakbeat; guitar, Harmonium, bass), child's voice.",
     "lyrics": "[Verse 1]\nEg våknar og regnstyr har stått opp\nTil å taMidten og flyr til Skots bakke\nSørfør begynner å holde på båten\nEg trykker gjei bremse og kjøser fersk gløtt på gløtt\n\n[Chorus]\nSkogrotten går forbi midten\nEg såg han kjem tilbake\nSkogrotten går forbi midten\nEg såg han kjem tilbake\n\n[Instrumental Drop]\n\n[Chorus]\nSkogrotten går forbi midten\nEg såg han kjem tilbake\nSkogrotten går forbi midten\nEg såg han kjem tilbake\n\n[Verse 2]\nEg våknar og regnstyr har stått opp\nTil å taMidten og flyr til Skots bakke\nSørfør begynner å holde på båten\nEg trykker gjei bremse og kjøser fersk gløtt på gløtt\n\n[Chorus]\nSkogrotten går forbi midten\nEg såg han kjem tilbake\nSkogrotten går forbi midten\nEg såg han kjem tilbake\n\n[Chorus]\nSkogrotten går forbi midten\nEg såg han kjem tilbake\nSkogrotten går forbi midten\nEg såg han kjem tilbake\n\n[Instrumental Drop]\n\n[Chorus]\nSkogrotten går forbi midten\nEg såg han kjem tilbake\nSkogrotten går forbi midten\nEg såg han kjem tilbake\n\n[Instrumental Break]\n\n[Chorus]\nSkogrotten går forbi midten\nEg såg han kjem tilbake\nSkogrotten går forbi midten\nEg såg han kjem tilbake\n\n[Outro]\nSkogrotten går forbi midten\nEg såg han kjem tilbake\nSkogrotten går forbi midten\nEg såg han kjem tilbake"
   },
   {
