@@ -49,6 +49,7 @@ const MusicGeneratorModal = ({
   const [generatedTracks, setGeneratedTracks] = useState([]);
   const [previewingGeneratedTrackId, setPreviewingGeneratedTrackId] = useState(null);
   const [isGeneratedPreviewPlaying, setIsGeneratedPreviewPlaying] = useState(false);
+  const [selectedDemoId, setSelectedDemoId] = useState('');
 
   const generatedPreviewAudioRef = useRef(null);
   const musicProjectRef = useRef(null);
@@ -237,10 +238,10 @@ const MusicGeneratorModal = ({
     xhr.send();
   }, [musicPrompt, musicDuration, musicBpm, selectedModelId]);
 
-  // --- Random Demo ---
+  // --- Demo Sample Picker ---
 
-  const handleRandomDemo = useCallback(() => {
-    const demo = aceStepDemos[Math.floor(Math.random() * aceStepDemos.length)];
+  const applyDemo = useCallback((demo) => {
+    setSelectedDemoId(demo.id);
     setMusicPrompt(demo.positivePrompt);
     setMusicBpm(demo.bpm);
     setMusicDuration(demo.duration);
@@ -255,6 +256,16 @@ const MusicGeneratorModal = ({
       setMusicLyrics('');
     }
   }, []);
+
+  const handleDemoSelect = useCallback((e) => {
+    const value = e.target.value;
+    if (value === 'random') {
+      applyDemo(aceStepDemos[Math.floor(Math.random() * aceStepDemos.length)]);
+    } else if (value) {
+      const demo = aceStepDemos.find(d => d.id === value);
+      if (demo) applyDemo(demo);
+    }
+  }, [applyDemo]);
 
   // --- Music Generation ---
 
@@ -853,9 +864,9 @@ const MusicGeneratorModal = ({
                     }}>
                       Song Style
                     </label>
-                    <button
-                      onClick={handleRandomDemo}
-                      title="Load a random demo"
+                    <select
+                      value={selectedDemoId}
+                      onChange={handleDemoSelect}
                       style={{
                         padding: '2px 8px',
                         borderRadius: '4px',
@@ -865,19 +876,16 @@ const MusicGeneratorModal = ({
                         fontSize: '10px',
                         fontWeight: '600',
                         cursor: 'pointer',
-                        transition: 'all 0.15s ease'
-                      }}
-                      onMouseOver={(e) => {
-                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
-                        e.currentTarget.style.color = 'white';
-                      }}
-                      onMouseOut={(e) => {
-                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
-                        e.currentTarget.style.color = 'rgba(255, 255, 255, 0.8)';
+                        outline: 'none',
+                        maxWidth: isMobile ? '160px' : '220px'
                       }}
                     >
-                      🎲 Random
-                    </button>
+                      <option value="" disabled>Samples...</option>
+                      <option value="random">🎲 Random</option>
+                      {aceStepDemos.map(demo => (
+                        <option key={demo.id} value={demo.id}>{demo.title}</option>
+                      ))}
+                    </select>
                   </div>
                   <textarea
                     value={musicPrompt}
