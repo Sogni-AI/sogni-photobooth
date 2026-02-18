@@ -6,6 +6,7 @@ import { AUDIO_MODEL_ID_TURBO, AUDIO_MODELS, AUDIO_CONSTRAINTS, AUDIO_DEFAULTS }
 import { useAudioCostEstimation } from '../../hooks/useAudioCostEstimation';
 import { useAudioModelConfig } from '../../hooks/useAudioModelConfig';
 import aceStepDemos from '../../constants/ace-step-demos.json';
+import WaveformPlaybackBar from './WaveformPlaybackBar';
 
 const formatTime = (seconds) => {
   const mins = Math.floor(seconds / 60);
@@ -50,6 +51,7 @@ const MusicGeneratorModal = ({
   const [previewingGeneratedTrackId, setPreviewingGeneratedTrackId] = useState(null);
   const [isGeneratedPreviewPlaying, setIsGeneratedPreviewPlaying] = useState(false);
   const [selectedDemoId, setSelectedDemoId] = useState('');
+  const [generatedTrackDuration, setGeneratedTrackDuration] = useState(0);
 
   const generatedPreviewAudioRef = useRef(null);
   const musicProjectRef = useRef(null);
@@ -159,6 +161,7 @@ const MusicGeneratorModal = ({
     }
     setPreviewingGeneratedTrackId(null);
     setIsGeneratedPreviewPlaying(false);
+    setGeneratedTrackDuration(0);
   }, []);
 
   const handleGeneratedPreviewToggle = useCallback((track) => {
@@ -506,6 +509,7 @@ const MusicGeneratorModal = ({
         {/* Hidden audio element for preview */}
         <audio
           ref={generatedPreviewAudioRef}
+          onLoadedMetadata={(e) => setGeneratedTrackDuration(e.target.duration || 0)}
           onEnded={() => { setPreviewingGeneratedTrackId(null); setIsGeneratedPreviewPlaying(false); }}
           onError={() => { setPreviewingGeneratedTrackId(null); setIsGeneratedPreviewPlaying(false); }}
           style={{ display: 'none' }}
@@ -658,106 +662,115 @@ const MusicGeneratorModal = ({
                 {generatedTracks.map((track, idx) => {
                   const isPreviewing = previewingGeneratedTrackId === track.id;
                   return (
-                    <div
-                      key={track.id}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '10px',
-                        padding: '8px 12px',
-                        background: 'transparent',
-                        borderLeft: '3px solid transparent',
-                        transition: 'background 0.15s ease'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.background = 'transparent';
-                      }}
-                    >
-                      <button
-                        onClick={() => handleGeneratedPreviewToggle(track)}
+                    <React.Fragment key={track.id}>
+                      <div
                         style={{
-                          width: '28px',
-                          height: '28px',
-                          borderRadius: '50%',
-                          border: 'none',
-                          background: isPreviewing && isGeneratedPreviewPlaying
-                            ? '#ec4899'
-                            : 'rgba(255, 255, 255, 0.15)',
-                          color: 'white',
-                          fontSize: '12px',
-                          cursor: 'pointer',
                           display: 'flex',
                           alignItems: 'center',
-                          justifyContent: 'center',
-                          flexShrink: 0,
-                          padding: 0
+                          gap: '10px',
+                          padding: '8px 12px',
+                          background: 'transparent',
+                          borderLeft: '3px solid transparent',
+                          transition: 'background 0.15s ease'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = 'transparent';
                         }}
                       >
-                        {isPreviewing && isGeneratedPreviewPlaying ? '⏸' : '▶'}
-                      </button>
-                      <span style={{
-                        flex: 1,
-                        color: 'white',
-                        fontSize: '13px',
-                        fontWeight: '500'
-                      }}>
-                        Version {idx + 1}
-                      </span>
-                      <span style={{
-                        color: 'rgba(255, 255, 255, 0.5)',
-                        fontSize: '11px',
-                        flexShrink: 0
-                      }}>
-                        {formatTime(musicDuration)}
-                      </span>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDownloadTrack(track, idx);
-                        }}
-                        title="Download track"
-                        style={{
-                          width: '26px',
-                          height: '26px',
-                          borderRadius: '50%',
-                          border: 'none',
-                          background: 'rgba(255, 255, 255, 0.1)',
-                          color: 'rgba(255, 255, 255, 0.7)',
+                        <button
+                          onClick={() => handleGeneratedPreviewToggle(track)}
+                          style={{
+                            width: '28px',
+                            height: '28px',
+                            borderRadius: '50%',
+                            border: 'none',
+                            background: isPreviewing && isGeneratedPreviewPlaying
+                              ? '#ec4899'
+                              : 'rgba(255, 255, 255, 0.15)',
+                            color: 'white',
+                            fontSize: '12px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flexShrink: 0,
+                            padding: 0
+                          }}
+                        >
+                          {isPreviewing && isGeneratedPreviewPlaying ? '⏸' : '▶'}
+                        </button>
+                        <span style={{
+                          flex: 1,
+                          color: 'white',
                           fontSize: '13px',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          flexShrink: 0,
-                          padding: 0
-                        }}
-                      >
-                        ↓
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleUseTrack(track);
-                        }}
-                        style={{
-                          padding: '4px 10px',
-                          borderRadius: '6px',
-                          border: '1px solid rgba(255, 255, 255, 0.3)',
-                          background: 'rgba(255, 255, 255, 0.1)',
-                          color: 'white',
-                          fontSize: '10px',
-                          fontWeight: '600',
-                          cursor: 'pointer',
-                          flexShrink: 0,
-                          transition: 'all 0.15s ease'
-                        }}
-                      >
-                        Use
-                      </button>
-                    </div>
+                          fontWeight: '500'
+                        }}>
+                          Version {idx + 1}
+                        </span>
+                        <span style={{
+                          color: 'rgba(255, 255, 255, 0.5)',
+                          fontSize: '11px',
+                          flexShrink: 0
+                        }}>
+                          {formatTime(musicDuration)}
+                        </span>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDownloadTrack(track, idx);
+                          }}
+                          title="Download track"
+                          style={{
+                            width: '26px',
+                            height: '26px',
+                            borderRadius: '50%',
+                            border: 'none',
+                            background: 'rgba(255, 255, 255, 0.1)',
+                            color: 'rgba(255, 255, 255, 0.7)',
+                            fontSize: '13px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flexShrink: 0,
+                            padding: 0
+                          }}
+                        >
+                          ↓
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleUseTrack(track);
+                          }}
+                          style={{
+                            padding: '4px 10px',
+                            borderRadius: '6px',
+                            border: '1px solid rgba(255, 255, 255, 0.3)',
+                            background: 'rgba(255, 255, 255, 0.1)',
+                            color: 'white',
+                            fontSize: '10px',
+                            fontWeight: '600',
+                            cursor: 'pointer',
+                            flexShrink: 0,
+                            transition: 'all 0.15s ease'
+                          }}
+                        >
+                          Use
+                        </button>
+                      </div>
+                      {isPreviewing && (
+                        <WaveformPlaybackBar
+                          audioUrl={track.url}
+                          audioRef={generatedPreviewAudioRef}
+                          isPlaying={isGeneratedPreviewPlaying}
+                          duration={generatedTrackDuration}
+                        />
+                      )}
+                    </React.Fragment>
                   );
                 })}
               </div>

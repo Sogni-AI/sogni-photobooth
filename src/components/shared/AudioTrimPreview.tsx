@@ -10,6 +10,7 @@
  */
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { generatePlaceholderWaveform } from '../../utils/audioWaveform';
 
 interface AudioTrimPreviewProps {
   audioUrl: string;
@@ -20,24 +21,7 @@ interface AudioTrimPreviewProps {
   height?: number;
 }
 
-const WAVEFORM_SAMPLES = 200;
 const SNAP_STEP = 0.25; // snap to 0.25s increments
-
-/**
- * Generate a deterministic pseudo-random waveform seeded from a string.
- * Matches the PhotoGallery pattern for preset/AI tracks where actual audio
- * data can't be decoded due to CORS restrictions on CDN URLs.
- */
-function generatePlaceholderWaveform(seed: string): number[] {
-  const samples: number[] = [];
-  for (let i = 0; i < WAVEFORM_SAMPLES; i++) {
-    const charCode = seed.charCodeAt(i % Math.max(seed.length, 1));
-    const noise = Math.sin(i * 0.1 + charCode) * 0.3 + 0.5;
-    const envelope = Math.sin((i / WAVEFORM_SAMPLES) * Math.PI) * 0.3 + 0.7;
-    samples.push(noise * envelope);
-  }
-  return samples;
-}
 
 const AudioTrimPreview: React.FC<AudioTrimPreviewProps> = ({
   audioUrl,
