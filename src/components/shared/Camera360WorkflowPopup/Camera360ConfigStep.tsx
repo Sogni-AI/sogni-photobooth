@@ -309,18 +309,8 @@ const Camera360ConfigStep: React.FC<Camera360ConfigStepProps> = ({
       </div>
 
       <style>{`
-        @media (min-width: 768px) {
-          .camera360-config-carousel {
-            flex-wrap: wrap !important;
-            justify-content: center !important;
-            overflow-x: hidden !important;
-            overflow-y: auto !important;
-            scroll-snap-type: none !important;
-            align-content: flex-start !important;
-          }
-          .camera360-config-carousel .camera360-config-card-wrapper {
-            scroll-snap-align: unset !important;
-          }
+        .camera360-config-carousel::-webkit-scrollbar {
+          display: none;
         }
       `}</style>
     </div>

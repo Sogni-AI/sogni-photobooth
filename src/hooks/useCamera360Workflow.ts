@@ -112,7 +112,7 @@ export function useCamera360Workflow({
   const [step, setStep] = useState<Camera360Step>('configure-angles');
 
   // Phase 1: Angle configuration
-  const defaultPreset = 'zoom-montage';
+  const defaultPreset = 'zoom-out-360';
   const [presetKey, setPresetKey] = useState(defaultPreset);
   const [angles, setAngles] = useState<AngleSlot[]>(() => createSlotsFromPreset(defaultPreset));
 

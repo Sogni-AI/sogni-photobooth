@@ -140,7 +140,7 @@ export const MULTI_ANGLE_PRESETS: MultiAnglePreset[] = [
       { azimuth: 'right', elevation: 'eye-level', distance: 'close-up' },
       { azimuth: 'back', elevation: 'eye-level', distance: 'close-up' },
       { azimuth: 'left', elevation: 'eye-level', distance: 'close-up' },
-      { azimuth: 'front', elevation: 'eye-level', distance: 'close-up' }
+      { azimuth: 'front', elevation: 'low-angle', distance: 'wide' }
     ]
   },
   {
