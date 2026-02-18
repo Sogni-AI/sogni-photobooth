@@ -69,3 +69,10 @@
   30%      { transform: rotate(-0.8deg); }
   60%      { transform: rotate(0.8deg); }
 }
+
+/* Hide slothicorn on mobile portrait when photo gallery is visible */
+@media (max-width: 768px) and (orientation: portrait) {
+  .film-strip-container.visible ~ .slothicorn-container {
+    display: none !important;
+  }
+}
