@@ -493,9 +493,9 @@ export function useCamera360Workflow({
       // Prepare audio options
       let audioOptions: { buffer: ArrayBuffer; startOffset: number } | undefined;
       if (transitionSettings.musicPresetId) {
-        // AI-generated music uses customMusicUrl; presets use the preset URL
+        // Custom music (uploaded or AI-generated) uses customMusicUrl; presets use the preset URL
         let audioUrl: string | null = null;
-        if (transitionSettings.musicPresetId.startsWith('ai-generated-') && transitionSettings.customMusicUrl) {
+        if (transitionSettings.customMusicUrl) {
           audioUrl = transitionSettings.customMusicUrl;
         } else {
           const preset = TRANSITION_MUSIC_PRESETS.find(
@@ -542,13 +542,14 @@ export function useCamera360Workflow({
     customMusicUrl?: string,
     customMusicTitle?: string
   ) => {
-    // Update settings
+    // Update settings — preserve custom URL/title for uploaded and AI-generated tracks
+    const hasCustomUrl = musicPresetId === 'uploaded' || musicPresetId?.startsWith('ai-generated-');
     setTransitionSettings(prev => ({
       ...prev,
       musicPresetId,
       musicStartOffset,
-      customMusicUrl: customMusicUrl ?? (musicPresetId?.startsWith('ai-generated-') ? prev.customMusicUrl : null),
-      customMusicTitle: customMusicTitle ?? (musicPresetId?.startsWith('ai-generated-') ? prev.customMusicTitle : null)
+      customMusicUrl: customMusicUrl ?? (hasCustomUrl ? prev.customMusicUrl : null),
+      customMusicTitle: customMusicTitle ?? (hasCustomUrl ? prev.customMusicTitle : null)
     }));
 
     // Clean up old video URL
@@ -571,13 +572,13 @@ export function useCamera360Workflow({
 
       let audioOptions: { buffer: ArrayBuffer; startOffset: number } | undefined;
       if (musicPresetId) {
-        // AI-generated music uses customMusicUrl; presets use the preset URL
+        // Custom music (uploaded or AI-generated) uses customMusicUrl; presets use the preset URL
         let audioUrl: string | null = null;
-        if (musicPresetId.startsWith('ai-generated-') && customMusicUrl) {
+        if (customMusicUrl) {
           audioUrl = customMusicUrl;
-        } else if (musicPresetId.startsWith('ai-generated-')) {
-          // Fallback: check current settings for the URL
-          audioUrl = transitionSettings.customMusicUrl || null;
+        } else if (transitionSettings.customMusicUrl) {
+          // Fallback: check current settings for the URL (e.g. AI-generated track from previous session)
+          audioUrl = transitionSettings.customMusicUrl;
         } else {
           const preset = TRANSITION_MUSIC_PRESETS.find(
             (p: any) => p.id === musicPresetId

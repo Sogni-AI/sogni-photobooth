@@ -330,15 +330,15 @@ const MusicGeneratorModal = ({
           case 'started':
             // Initialize progress entry so UI shows "Starting..." for this job
             setMusicProgress(prev => {
-              if (prev[jobId]) return prev;
-              return { ...prev, [jobId]: {} };
+              if (prev[jobId] && !event.workerName) return prev;
+              return { ...prev, [jobId]: { ...prev[jobId], ...(event.workerName ? { workerName: event.workerName } : {}) } };
             });
             break;
           case 'progress':
             if (event.step !== undefined) {
               setMusicProgress(prev => ({
                 ...prev,
-                [jobId]: { ...prev[jobId], step: event.step, stepCount: event.stepCount }
+                [jobId]: { ...prev[jobId], step: event.step, stepCount: event.stepCount, ...(event.workerName ? { workerName: event.workerName } : {}) }
               }));
             }
             break;
@@ -754,7 +754,14 @@ const MusicGeneratorModal = ({
                         color: 'rgba(255, 255, 255, 0.7)',
                         marginBottom: '4px'
                       }}>
-                        <span>Version {idx + 1}</span>
+                        <span>
+                          Version {idx + 1}
+                          {progress.workerName && (
+                            <span style={{ color: 'rgba(255, 255, 255, 0.4)', fontWeight: '400' }}>
+                              {' • '}{progress.workerName}
+                            </span>
+                          )}
+                        </span>
                         <span>
                           {progress.step !== undefined && progress.stepCount
                             ? `Step ${progress.step}/${progress.stepCount} (${Math.round((progress.step / progress.stepCount) * 100)}%)`

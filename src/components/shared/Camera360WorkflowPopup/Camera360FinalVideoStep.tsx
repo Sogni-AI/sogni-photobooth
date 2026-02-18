@@ -189,6 +189,11 @@ const Camera360FinalVideoStep: React.FC<Camera360FinalVideoStepProps> = ({
     onRestitchWithMusic(`ai-generated-${track.id}`, 0, track.url, 'AI Generated');
   }, [onRestitchWithMusic]);
 
+  const handleUploadMusic = useCallback((blobUrl: string, filename: string) => {
+    setShowMusicSelector(false);
+    onRestitchWithMusic('uploaded', 0, blobUrl, filename);
+  }, [onRestitchWithMusic]);
+
   const currentMusicTitle = musicPresetId
     ? (customMusicTitle || (TRANSITION_MUSIC_PRESETS as any[]).find((p: any) => p.id === musicPresetId)?.title || 'Music')
     : null;
@@ -470,8 +475,10 @@ const Camera360FinalVideoStep: React.FC<Camera360FinalVideoStepProps> = ({
           currentPresetId={musicPresetId}
           musicStartOffset={musicStartOffset}
           customMusicUrl={customMusicUrl}
+          customMusicTitle={customMusicTitle}
           totalVideoDuration={totalVideoDuration}
           onSelect={handleMusicSelect}
+          onUploadMusic={handleUploadMusic}
           onClose={() => setShowMusicSelector(false)}
           onOpenMusicGenerator={() => setShowMusicGenerator(true)}
           isAuthenticated={isAuthenticated}
@@ -532,8 +539,10 @@ interface MusicSelectorModalProps {
   currentPresetId: string | null;
   musicStartOffset?: number;
   customMusicUrl?: string | null;
+  customMusicTitle?: string | null;
   totalVideoDuration?: number;
   onSelect: (presetId: string | null, startOffset?: number) => void;
+  onUploadMusic: (blobUrl: string, filename: string) => void;
   onClose: () => void;
   onOpenMusicGenerator?: () => void;
   isAuthenticated?: boolean;
@@ -543,16 +552,24 @@ const MusicSelectorModal: React.FC<MusicSelectorModalProps> = ({
   currentPresetId,
   musicStartOffset = 0,
   customMusicUrl,
+  customMusicTitle,
   totalVideoDuration = 15,
   onSelect,
+  onUploadMusic,
   onClose,
   onOpenMusicGenerator,
   isAuthenticated = false
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [previewId, setPreviewId] = useState<string | null>(null);
-  const [trimOffset, setTrimOffset] = useState(musicStartOffset);
   const audioRef = useRef<HTMLAudioElement>(null);
+  const musicFileInputRef = useRef<HTMLInputElement>(null);
+
+  // Staged selection: user picks a track, previews waveform + trims, then hits "Apply"
+  const [stagedId, setStagedId] = useState<string | null>(currentPresetId);
+  const [stagedCustomUrl, setStagedCustomUrl] = useState<string | null>(customMusicUrl || null);
+  const [stagedCustomTitle, setStagedCustomTitle] = useState<string | null>(customMusicTitle || null);
+  const [trimOffset, setTrimOffset] = useState(musicStartOffset);
 
   const filteredTracks = searchQuery
     ? (TRANSITION_MUSIC_PRESETS as any[]).filter((t: any) =>
@@ -560,24 +577,26 @@ const MusicSelectorModal: React.FC<MusicSelectorModalProps> = ({
       )
     : TRANSITION_MUSIC_PRESETS;
 
-  // Compute URL for the currently selected music for trim preview
-  const selectedMusicUrl = (() => {
-    if (!currentPresetId) return null;
-    if (customMusicUrl) return customMusicUrl;
-    const preset = (TRANSITION_MUSIC_PRESETS as any[]).find((p: any) => p.id === currentPresetId);
+  // Compute URL for the staged (not yet applied) track for waveform preview
+  const stagedMusicUrl = (() => {
+    if (!stagedId) return null;
+    if (stagedCustomUrl) return stagedCustomUrl;
+    const preset = (TRANSITION_MUSIC_PRESETS as any[]).find((p: any) => p.id === stagedId);
     return preset?.url || null;
   })();
 
+  // Whether the staged selection differs from the currently applied one
+  const hasChanges = stagedId !== currentPresetId || trimOffset !== musicStartOffset
+    || stagedCustomUrl !== (customMusicUrl || null);
+
   const togglePreview = useCallback((track: any) => {
     if (previewId === track.id) {
-      // Stop preview
       if (audioRef.current) {
         audioRef.current.pause();
         audioRef.current.currentTime = 0;
       }
       setPreviewId(null);
     } else {
-      // Start preview
       if (audioRef.current) {
         audioRef.current.src = track.url;
         audioRef.current.play().catch(() => {});
@@ -585,6 +604,16 @@ const MusicSelectorModal: React.FC<MusicSelectorModalProps> = ({
       setPreviewId(track.id);
     }
   }, [previewId]);
+
+  const handleApply = useCallback(() => {
+    if (!stagedId) {
+      onSelect(null);
+    } else if (stagedId === 'uploaded' && stagedCustomUrl && stagedCustomTitle) {
+      onUploadMusic(stagedCustomUrl, stagedCustomTitle);
+    } else {
+      onSelect(stagedId, trimOffset);
+    }
+  }, [stagedId, stagedCustomUrl, stagedCustomTitle, trimOffset, onSelect, onUploadMusic]);
 
   // Cleanup audio on unmount
   useEffect(() => {
@@ -640,52 +669,60 @@ const MusicSelectorModal: React.FC<MusicSelectorModalProps> = ({
           }}>
             Background Music
           </h3>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            {isAuthenticated && onOpenMusicGenerator && (
-              <button
-                onClick={onOpenMusicGenerator}
-                style={{
-                  padding: '6px 12px',
-                  borderRadius: '8px',
-                  border: `1px solid ${COLORS.accent}`,
-                  background: 'transparent',
-                  color: COLORS.accent,
-                  cursor: 'pointer',
-                  fontSize: '12px',
-                  fontWeight: '600',
-                  fontFamily: 'inherit',
-                  whiteSpace: 'nowrap'
-                }}
-              >
-                {String.fromCodePoint(0x2728)} Generate
-              </button>
-            )}
-            <button
-              onClick={onClose}
-              style={{
-                width: '32px',
-                height: '32px',
-                borderRadius: '50%',
-                border: 'none',
-                background: 'rgba(255,255,255,0.1)',
-                color: 'rgba(255,255,255,0.6)',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '14px'
-              }}
-            >
-              ✕
-            </button>
-          </div>
+          <button
+            onClick={onClose}
+            style={{
+              width: '32px',
+              height: '32px',
+              borderRadius: '50%',
+              border: 'none',
+              background: 'rgba(255,255,255,0.1)',
+              color: 'rgba(255,255,255,0.6)',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '14px'
+            }}
+          >
+            ✕
+          </button>
         </div>
 
+        {/* Remove music option */}
+        {(stagedId || currentPresetId) && (
+          <div style={{ padding: '12px 20px 0' }}>
+            <button
+              onClick={() => {
+                setStagedId(null);
+                setStagedCustomUrl(null);
+                setStagedCustomTitle(null);
+                setTrimOffset(0);
+              }}
+              style={{
+                width: '100%',
+                padding: '8px 14px',
+                borderRadius: '8px',
+                border: '1px solid rgba(255,100,100,0.3)',
+                background: 'rgba(255,100,100,0.08)',
+                color: 'rgba(255,150,150,0.9)',
+                cursor: 'pointer',
+                fontSize: '12px',
+                fontWeight: '500',
+                fontFamily: 'inherit',
+                textAlign: 'center'
+              }}
+            >
+              Remove Music
+            </button>
+          </div>
+        )}
+
         {/* Search */}
-        <div style={{ padding: '12px 20px' }}>
+        <div style={{ padding: '12px 20px 4px' }}>
           <input
             type="text"
-            placeholder="Search tracks..."
+            placeholder="Search preset tracks..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             style={{
@@ -703,40 +740,16 @@ const MusicSelectorModal: React.FC<MusicSelectorModalProps> = ({
           />
         </div>
 
-        {/* Remove music option */}
-        {currentPresetId && (
-          <div style={{ padding: '0 20px 8px' }}>
-            <button
-              onClick={() => onSelect(null)}
-              style={{
-                width: '100%',
-                padding: '10px 14px',
-                borderRadius: '10px',
-                border: '1px solid rgba(255,100,100,0.2)',
-                background: 'rgba(255,100,100,0.08)',
-                color: 'rgba(255,150,150,0.9)',
-                cursor: 'pointer',
-                fontSize: '12px',
-                fontWeight: '500',
-                fontFamily: 'inherit',
-                textAlign: 'left'
-              }}
-            >
-              Remove music
-            </button>
-          </div>
-        )}
-
         {/* Track list */}
         <div style={{
           flex: 1,
           overflowY: 'auto',
-          padding: '0 12px 12px',
+          padding: '4px 12px 8px',
           minHeight: 0,
-          maxHeight: '400px'
+          maxHeight: '280px'
         }}>
           {filteredTracks.map((track: any) => {
-            const isSelected = track.id === currentPresetId;
+            const isStaged = track.id === stagedId;
             const isPreviewing = track.id === previewId;
 
             return (
@@ -749,12 +762,17 @@ const MusicSelectorModal: React.FC<MusicSelectorModalProps> = ({
                   padding: '10px 12px',
                   borderRadius: '10px',
                   cursor: 'pointer',
-                  background: isSelected ? 'rgba(236,182,48,0.12)' : 'transparent',
-                  borderLeft: isSelected ? `3px solid ${COLORS.accent}` : '3px solid transparent',
+                  background: isStaged ? 'rgba(236,182,48,0.12)' : 'transparent',
+                  borderLeft: isStaged ? `3px solid ${COLORS.accent}` : '3px solid transparent',
                   transition: 'all 0.15s ease',
                   marginBottom: '2px'
                 }}
-                onClick={() => onSelect(track.id)}
+                onClick={() => {
+                  setStagedId(track.id);
+                  setStagedCustomUrl(null);
+                  setStagedCustomTitle(null);
+                  setTrimOffset(0);
+                }}
               >
                 {/* Preview button */}
                 <button
@@ -782,8 +800,8 @@ const MusicSelectorModal: React.FC<MusicSelectorModalProps> = ({
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{
                     fontSize: '13px',
-                    color: isSelected ? COLORS.accent : '#fff',
-                    fontWeight: isSelected ? '600' : '400',
+                    color: isStaged ? COLORS.accent : '#fff',
+                    fontWeight: isStaged ? '600' : '400',
                     whiteSpace: 'nowrap',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis'
@@ -806,22 +824,138 @@ const MusicSelectorModal: React.FC<MusicSelectorModalProps> = ({
           })}
         </div>
 
-        {/* Audio trim preview when a track is selected */}
-        {selectedMusicUrl && currentPresetId && (
-          <div style={{ padding: '8px 20px 12px' }}>
+        {/* "or" divider */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px',
+          margin: '0',
+          padding: '0 20px',
+          color: 'rgba(255,255,255,0.3)',
+          fontSize: '10px'
+        }}>
+          <div style={{ flex: 1, height: '1px', backgroundColor: 'rgba(255,255,255,0.1)' }} />
+          <span>or</span>
+          <div style={{ flex: 1, height: '1px', backgroundColor: 'rgba(255,255,255,0.1)' }} />
+        </div>
+
+        {/* Upload Music */}
+        <div style={{ padding: '8px 20px 0' }}>
+          <input
+            ref={musicFileInputRef}
+            type="file"
+            accept="audio/*,.mp3,.m4a,.wav,.ogg"
+            style={{ display: 'none' }}
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) {
+                const blobUrl = URL.createObjectURL(file);
+                setStagedId('uploaded');
+                setStagedCustomUrl(blobUrl);
+                setStagedCustomTitle(file.name);
+                setTrimOffset(0);
+              }
+            }}
+          />
+          <button
+            onClick={() => musicFileInputRef.current?.click()}
+            style={{
+              width: '100%',
+              padding: '8px 10px',
+              backgroundColor: stagedId === 'uploaded' ? 'rgba(76, 175, 80, 0.2)' : 'rgba(255,255,255,0.05)',
+              border: stagedId === 'uploaded' ? '2px solid rgba(76, 175, 80, 0.5)' : '1px dashed rgba(255,255,255,0.2)',
+              borderRadius: '8px',
+              color: '#fff',
+              cursor: 'pointer',
+              fontSize: '12px',
+              fontWeight: '500',
+              fontFamily: 'inherit',
+              textAlign: 'center'
+            }}
+          >
+            {stagedId === 'uploaded' && stagedCustomTitle
+              ? `✅ ${stagedCustomTitle}`
+              : '📁 Upload MP3/M4A'}
+          </button>
+        </div>
+
+        {/* AI Music Generation */}
+        {isAuthenticated && onOpenMusicGenerator && (
+          <>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              margin: '0',
+              padding: '8px 20px 0',
+              color: 'rgba(255,255,255,0.3)',
+              fontSize: '10px'
+            }}>
+              <div style={{ flex: 1, height: '1px', backgroundColor: 'rgba(255,255,255,0.1)' }} />
+              <span>or</span>
+              <div style={{ flex: 1, height: '1px', backgroundColor: 'rgba(255,255,255,0.1)' }} />
+            </div>
+            <div style={{ padding: '8px 20px 0' }}>
+              <button
+                onClick={onOpenMusicGenerator}
+                style={{
+                  width: '100%',
+                  padding: '8px 10px',
+                  backgroundColor: stagedId?.startsWith('ai-generated-') ? 'rgba(76, 175, 80, 0.2)' : 'rgba(255,255,255,0.05)',
+                  border: stagedId?.startsWith('ai-generated-') ? '2px solid rgba(76, 175, 80, 0.5)' : '1px dashed rgba(255,255,255,0.2)',
+                  borderRadius: '8px',
+                  color: '#fff',
+                  cursor: 'pointer',
+                  fontSize: '12px',
+                  fontWeight: '500',
+                  fontFamily: 'inherit',
+                  textAlign: 'center'
+                }}
+              >
+                {stagedId?.startsWith('ai-generated-')
+                  ? '✅ AI Generated Track'
+                  : `${String.fromCodePoint(0x2728)} Create AI Music`}
+              </button>
+            </div>
+          </>
+        )}
+
+        {/* Audio trim preview when a track is staged */}
+        {stagedMusicUrl && stagedId && (
+          <div style={{ padding: '8px 20px 0' }}>
             <AudioTrimPreview
-              audioUrl={selectedMusicUrl}
+              audioUrl={stagedMusicUrl}
               startOffset={trimOffset}
               duration={totalVideoDuration}
-              onOffsetChange={(offset) => {
-                setTrimOffset(offset);
-                onSelect(currentPresetId, offset);
-              }}
+              onOffsetChange={setTrimOffset}
               accentColor={COLORS.accent}
               height={48}
             />
           </div>
         )}
+
+        {/* Apply / Confirm button */}
+        <div style={{ padding: '12px 20px', flexShrink: 0 }}>
+          <button
+            onClick={handleApply}
+            disabled={!hasChanges}
+            style={{
+              width: '100%',
+              padding: '10px 16px',
+              borderRadius: '10px',
+              border: 'none',
+              background: hasChanges ? COLORS.accent : 'rgba(255,255,255,0.1)',
+              color: hasChanges ? '#000' : 'rgba(255,255,255,0.3)',
+              cursor: hasChanges ? 'pointer' : 'default',
+              fontSize: '13px',
+              fontWeight: '700',
+              fontFamily: 'inherit',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            {!stagedId ? 'Remove Music & Restitch' : 'Apply & Restitch'}
+          </button>
+        </div>
 
         {/* Hidden audio element for previews */}
         <audio ref={audioRef} onEnded={() => setPreviewId(null)} />
