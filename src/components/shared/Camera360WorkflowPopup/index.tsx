@@ -18,6 +18,7 @@ import Camera360ConfigStep from './Camera360ConfigStep';
 import Camera360AngleReviewStep from './Camera360AngleReviewStep';
 import Camera360TransitionReviewStep from './Camera360TransitionReviewStep';
 import Camera360FinalVideoStep from './Camera360FinalVideoStep';
+import EnhancePromptPopup from './EnhancePromptPopup';
 import type { Camera360Step } from '../../../types/camera360';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -142,7 +143,7 @@ const Camera360WorkflowPopup: React.FC<Camera360WorkflowPopupProps> = ({
           <Camera360AngleReviewStep
             angleItems={workflow.angleItems}
             sourceImageUrl={effectiveSourceUrl}
-            isGenerating={workflow.isGeneratingAngles}
+            isGenerating={workflow.isGenerating}
             allReady={workflow.allAnglesReady}
             onRegenerate={workflow.regenerateAngle}
             onVersionChange={workflow.selectAngleVersion}
@@ -150,6 +151,12 @@ const Camera360WorkflowPopup: React.FC<Camera360WorkflowPopupProps> = ({
             onBack={workflow.goBack}
             sourceWidth={sourceWidth}
             sourceHeight={sourceHeight}
+            onEnhance={workflow.openEnhancePopup}
+            onEnhanceAll={workflow.openEnhanceAllPopup}
+            isEnhancingAll={workflow.isEnhancingAll}
+            enhanceAllProgress={workflow.enhanceAllProgress}
+            anyEnhancing={workflow.anyEnhancing}
+            enhancableCount={workflow.enhancableCount}
           />
         );
       case 'review-transitions':
@@ -330,7 +337,17 @@ const Camera360WorkflowPopup: React.FC<Camera360WorkflowPopupProps> = ({
     </div>
   );
 
-  return createPortal(popup, document.body);
+  return (
+    <>
+      {createPortal(popup, document.body)}
+      <EnhancePromptPopup
+        isOpen={workflow.showEnhancePopup}
+        onClose={workflow.closeEnhancePopup}
+        onConfirm={workflow.handleEnhanceConfirm}
+        imageCount={workflow.isEnhanceAllMode ? workflow.enhancableCount : 1}
+      />
+    </>
+  );
 };
 
 export default Camera360WorkflowPopup;

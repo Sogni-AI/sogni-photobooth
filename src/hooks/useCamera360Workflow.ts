@@ -35,6 +35,7 @@ import {
 import { concatenateVideos } from '../utils/videoConcatenation';
 import { TRANSITION_MUSIC_PRESETS } from '../constants/transitionMusicPresets';
 import { getPaymentMethod } from '../services/walletService';
+import { enhanceImage } from '../services/ImageEnhancer';
 
 type SogniClient = {
   supportsVideo?: boolean;
@@ -134,6 +135,14 @@ export function useCamera360Workflow({
   const [stitchingProgress, setStitchingProgress] = useState(0);
   const [isStitching, setIsStitching] = useState(false);
 
+  // Enhancement state
+  const [isEnhancingAngle, setIsEnhancingAngle] = useState(false);
+  const [isEnhancingAll, setIsEnhancingAll] = useState(false);
+  const [enhanceAllProgress, setEnhanceAllProgress] = useState({ done: 0, total: 0 });
+  const [showEnhancePopup, setShowEnhancePopup] = useState(false);
+  const [pendingEnhanceIndex, setPendingEnhanceIndex] = useState<number | null>(null);
+  const [isEnhanceAllMode, setIsEnhanceAllMode] = useState(false);
+
   // Abort ref
   const abortRef = useRef(false);
 
@@ -141,7 +150,8 @@ export function useCamera360Workflow({
   const transitionsRef = useRef(transitions);
   transitionsRef.current = transitions;
 
-  const isGenerating = isGeneratingAngles || isGeneratingTransitions || isStitching;
+  const anyEnhancing = angleItems.some(i => i.enhancing);
+  const isGenerating = isGeneratingAngles || isGeneratingTransitions || isStitching || isEnhancingAngle || isEnhancingAll;
 
   // ---- Phase 1 Actions ----
 
@@ -274,6 +284,209 @@ export function useCamera360Workflow({
       };
     }));
   }, []);
+
+  // ---- Phase 2b: Enhancement Actions ----
+
+  const openEnhancePopup = useCallback((index: number) => {
+    setPendingEnhanceIndex(index);
+    setIsEnhanceAllMode(false);
+    setShowEnhancePopup(true);
+  }, []);
+
+  const openEnhanceAllPopup = useCallback(() => {
+    setPendingEnhanceIndex(null);
+    setIsEnhanceAllMode(true);
+    setShowEnhancePopup(true);
+  }, []);
+
+  const closeEnhancePopup = useCallback(() => {
+    setShowEnhancePopup(false);
+    setPendingEnhanceIndex(null);
+    setIsEnhanceAllMode(false);
+  }, []);
+
+  /**
+   * Enhance a single angle image. The enhanced URL is pushed to versionHistory
+   * so the user gets free undo/redo via the existing version nav arrows.
+   */
+  const enhanceAngle = useCallback(async (index: number, prompt: string, steps: number = 6) => {
+    if (!sogniClient) return;
+
+    const item = angleItems[index];
+    if (!item || item.status !== 'ready' || item.enhancing) return;
+
+    const displayUrl = item.versionHistory[item.selectedVersion] || item.resultUrl;
+    if (!displayUrl) return;
+
+    setIsEnhancingAngle(true);
+
+    // Mark item as enhancing
+    setAngleItems(prev => prev.map((it, i) =>
+      i === index ? { ...it, enhancing: true, enhancementProgress: 0, enhanceWorkerName: undefined } : it
+    ));
+
+    const tokenType = getPaymentMethod();
+
+    try {
+      const result = await enhanceImage({
+        imageUrl: displayUrl,
+        width: sourceWidth,
+        height: sourceHeight,
+        sogniClient,
+        tokenType,
+        prompt,
+        steps,
+        onProgress: (progress, workerName) => {
+          setAngleItems(prev => prev.map((it, i) =>
+            i === index ? { ...it, enhancementProgress: progress, enhanceWorkerName: workerName || it.enhanceWorkerName } : it
+          ));
+        },
+        onComplete: (enhancedUrl) => {
+          // Push enhanced URL as new version history entry
+          setAngleItems(prev => prev.map((it, i) => {
+            if (i !== index) return it;
+            const newHistory = [...it.versionHistory, enhancedUrl];
+            return {
+              ...it,
+              enhancing: false,
+              enhanced: true,
+              enhancementProgress: 100,
+              enhancedImageUrl: enhancedUrl,
+              originalImageUrl: displayUrl,
+              versionHistory: newHistory,
+              selectedVersion: newHistory.length - 1,
+              resultUrl: enhancedUrl
+            };
+          }));
+        },
+        onError: (error) => {
+          console.error(`[360-Workflow] Enhancement error for angle ${index}:`, error);
+          setAngleItems(prev => prev.map((it, i) =>
+            i === index ? { ...it, enhancing: false, enhancementProgress: 0, enhanceWorkerName: undefined } : it
+          ));
+          if (error.message.includes('Insufficient') || error.message.includes('insufficient')) {
+            onOutOfCredits?.();
+          }
+        }
+      });
+
+      if (!result) {
+        // Ensure enhancing is cleared even if result is null but onError wasn't called
+        setAngleItems(prev => prev.map((it, i) =>
+          i === index && it.enhancing ? { ...it, enhancing: false, enhancementProgress: 0 } : it
+        ));
+      }
+    } catch (error) {
+      console.error('[360-Workflow] Enhancement error:', error);
+      setAngleItems(prev => prev.map((it, i) =>
+        i === index ? { ...it, enhancing: false, enhancementProgress: 0 } : it
+      ));
+    } finally {
+      setIsEnhancingAngle(false);
+    }
+  }, [sogniClient, angleItems, sourceWidth, sourceHeight, onOutOfCredits]);
+
+  /**
+   * Enhance all ready angles in parallel.
+   */
+  const enhanceAllAngles = useCallback(async (prompt: string, steps: number = 6) => {
+    if (!sogniClient) return;
+
+    const readyIndices = angleItems
+      .map((item, i) => ({ item, i }))
+      .filter(({ item }) => item.status === 'ready' && !item.enhancing)
+      .map(({ i }) => i);
+
+    if (readyIndices.length === 0) return;
+
+    setIsEnhancingAll(true);
+    setEnhanceAllProgress({ done: 0, total: readyIndices.length });
+
+    // Mark all as enhancing
+    setAngleItems(prev => prev.map((it, i) =>
+      readyIndices.includes(i) ? { ...it, enhancing: true, enhancementProgress: 0, enhanceWorkerName: undefined } : it
+    ));
+
+    const tokenType = getPaymentMethod();
+    let doneCount = 0;
+
+    const promises = readyIndices.map(async (index) => {
+      const item = angleItems[index];
+      const displayUrl = item.versionHistory[item.selectedVersion] || item.resultUrl;
+      if (!displayUrl) return;
+
+      try {
+        await enhanceImage({
+          imageUrl: displayUrl,
+          width: sourceWidth,
+          height: sourceHeight,
+          sogniClient,
+          tokenType,
+          prompt,
+          steps,
+          onProgress: (progress, workerName) => {
+            setAngleItems(prev => prev.map((it, i) =>
+              i === index ? { ...it, enhancementProgress: progress, enhanceWorkerName: workerName || it.enhanceWorkerName } : it
+            ));
+          },
+          onComplete: (enhancedUrl) => {
+            doneCount++;
+            setEnhanceAllProgress({ done: doneCount, total: readyIndices.length });
+            setAngleItems(prev => prev.map((it, i) => {
+              if (i !== index) return it;
+              const newHistory = [...it.versionHistory, enhancedUrl];
+              return {
+                ...it,
+                enhancing: false,
+                enhanced: true,
+                enhancementProgress: 100,
+                enhancedImageUrl: enhancedUrl,
+                originalImageUrl: displayUrl,
+                versionHistory: newHistory,
+                selectedVersion: newHistory.length - 1,
+                resultUrl: enhancedUrl
+              };
+            }));
+          },
+          onError: (error) => {
+            doneCount++;
+            setEnhanceAllProgress({ done: doneCount, total: readyIndices.length });
+            console.error(`[360-Workflow] Enhancement error for angle ${index}:`, error);
+            setAngleItems(prev => prev.map((it, i) =>
+              i === index ? { ...it, enhancing: false, enhancementProgress: 0, enhanceWorkerName: undefined } : it
+            ));
+            if (error.message.includes('Insufficient') || error.message.includes('insufficient')) {
+              onOutOfCredits?.();
+            }
+          }
+        });
+      } catch (error) {
+        doneCount++;
+        setEnhanceAllProgress({ done: doneCount, total: readyIndices.length });
+        console.error(`[360-Workflow] Enhancement error for angle ${index}:`, error);
+        setAngleItems(prev => prev.map((it, i) =>
+          i === index ? { ...it, enhancing: false, enhancementProgress: 0 } : it
+        ));
+      }
+    });
+
+    await Promise.all(promises);
+    setIsEnhancingAll(false);
+  }, [sogniClient, angleItems, sourceWidth, sourceHeight, onOutOfCredits]);
+
+  /**
+   * Dispatcher called by popup confirmation.
+   */
+  const handleEnhanceConfirm = useCallback((prompt: string, steps: number) => {
+    setShowEnhancePopup(false);
+    if (isEnhanceAllMode) {
+      enhanceAllAngles(prompt, steps);
+    } else if (pendingEnhanceIndex !== null) {
+      enhanceAngle(pendingEnhanceIndex, prompt, steps);
+    }
+    setPendingEnhanceIndex(null);
+    setIsEnhanceAllMode(false);
+  }, [isEnhanceAllMode, pendingEnhanceIndex, enhanceAllAngles, enhanceAngle]);
 
   // ---- Phase 3 Actions ----
 
@@ -641,6 +854,12 @@ export function useCamera360Workflow({
     setAngles(createSlotsFromPreset(defaultPreset));
     setAngleItems([]);
     setIsGeneratingAngles(false);
+    setIsEnhancingAngle(false);
+    setIsEnhancingAll(false);
+    setEnhanceAllProgress({ done: 0, total: 0 });
+    setShowEnhancePopup(false);
+    setPendingEnhanceIndex(null);
+    setIsEnhanceAllMode(false);
     setTransitionSettings(DEFAULT_360_TRANSITION_SETTINGS);
     setTransitions([]);
     setIsGeneratingTransitions(false);
@@ -659,9 +878,10 @@ export function useCamera360Workflow({
 
   // ---- Computed values ----
 
-  const allAnglesReady = angleItems.length > 0 && angleItems.every(item => item.status === 'ready');
+  const allAnglesReady = angleItems.length > 0 && angleItems.every(item => item.status === 'ready') && !anyEnhancing;
   const allTransitionsReady = transitions.length > 0 && transitions.every(t => t.status === 'ready');
   const generatableAngleCount = angles.filter(s => !s.isOriginal).length;
+  const enhancableCount = angleItems.filter(i => i.status === 'ready' && !i.enhancing).length;
 
   return {
     // State
@@ -683,6 +903,8 @@ export function useCamera360Workflow({
     allAnglesReady,
     allTransitionsReady,
     generatableAngleCount,
+    anyEnhancing,
+    enhancableCount,
 
     // Phase 1
     selectPreset,
@@ -694,6 +916,18 @@ export function useCamera360Workflow({
     startAngleGeneration,
     regenerateAngle,
     selectAngleVersion,
+
+    // Phase 2b: Enhancement
+    isEnhancingAngle,
+    isEnhancingAll,
+    enhanceAllProgress,
+    showEnhancePopup,
+    pendingEnhanceIndex,
+    isEnhanceAllMode,
+    openEnhancePopup,
+    openEnhanceAllPopup,
+    closeEnhancePopup,
+    handleEnhanceConfirm,
 
     // Phase 3
     proceedToTransitions,

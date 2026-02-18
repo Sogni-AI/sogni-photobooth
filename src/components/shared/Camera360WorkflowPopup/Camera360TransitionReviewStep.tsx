@@ -72,6 +72,8 @@ const Camera360TransitionReviewStep: React.FC<Camera360TransitionReviewStepProps
   // Music section state
   const [showTrackBrowser, setShowTrackBrowser] = useState(false);
   const [trackSearchQuery, setTrackSearchQuery] = useState('');
+  const [previewingTrackId, setPreviewingTrackId] = useState<string | null>(null);
+  const previewAudioRef = useRef<HTMLAudioElement>(null);
   const musicFileInputRef = useRef<HTMLInputElement>(null);
 
   // Collapsible settings panel - starts expanded, auto-collapses on generate
@@ -108,7 +110,29 @@ const Camera360TransitionReviewStep: React.FC<Camera360TransitionReviewStepProps
     onUpdateSettings({ prompt: e.target.value });
   }, [onUpdateSettings]);
 
+  const stopPreview = useCallback(() => {
+    if (previewAudioRef.current) {
+      previewAudioRef.current.pause();
+      previewAudioRef.current.src = '';
+    }
+    setPreviewingTrackId(null);
+  }, []);
+
+  const handlePreviewToggle = useCallback((e: React.MouseEvent, trackId: string, trackUrl: string) => {
+    e.stopPropagation();
+    if (previewingTrackId === trackId) {
+      stopPreview();
+      return;
+    }
+    if (previewAudioRef.current) {
+      previewAudioRef.current.src = trackUrl;
+      previewAudioRef.current.play().catch(() => {});
+    }
+    setPreviewingTrackId(trackId);
+  }, [previewingTrackId, stopPreview]);
+
   const handlePresetSelect = useCallback((presetId: string) => {
+    stopPreview();
     setShowTrackBrowser(false);
     onUpdateSettings({
       musicPresetId: presetId,
@@ -116,7 +140,7 @@ const Camera360TransitionReviewStep: React.FC<Camera360TransitionReviewStepProps
       customMusicTitle: null,
       musicStartOffset: 0
     });
-  }, [onUpdateSettings]);
+  }, [onUpdateSettings, stopPreview]);
 
   const handleRemoveMusic = useCallback(() => {
     onUpdateSettings({
@@ -336,6 +360,7 @@ const Camera360TransitionReviewStep: React.FC<Camera360TransitionReviewStepProps
               {/* Browse Preset Tracks - collapsible */}
               <button
                 onClick={() => {
+                  if (showTrackBrowser) stopPreview();
                   setShowTrackBrowser(!showTrackBrowser);
                   setTrackSearchQuery('');
                 }}
@@ -408,12 +433,15 @@ const Camera360TransitionReviewStep: React.FC<Camera360TransitionReviewStepProps
                       }}
                     />
                   </div>
+                  {/* Hidden audio element for track preview */}
+                  <audio ref={previewAudioRef} onEnded={stopPreview} />
                   {/* Scrollable track list */}
                   <div style={{ maxHeight: '180px', overflowY: 'auto', overscrollBehavior: 'contain' }}>
                     {(TRANSITION_MUSIC_PRESETS as any[])
                       .filter((track: any) => track.title.toLowerCase().includes(trackSearchQuery.toLowerCase()))
                       .map((track: any) => {
                         const isSelected = settings.musicPresetId === track.id;
+                        const isPreviewing = previewingTrackId === track.id;
                         return (
                           <div
                             key={track.id}
@@ -421,14 +449,39 @@ const Camera360TransitionReviewStep: React.FC<Camera360TransitionReviewStepProps
                             style={{
                               display: 'flex',
                               alignItems: 'center',
-                              gap: '8px',
-                              padding: '8px 10px',
+                              gap: '6px',
+                              padding: '6px 10px',
                               cursor: 'pointer',
-                              background: isSelected ? 'rgba(76, 175, 80, 0.15)' : 'transparent',
+                              background: isPreviewing
+                                ? 'rgba(100, 181, 246, 0.12)'
+                                : isSelected ? 'rgba(76, 175, 80, 0.15)' : 'transparent',
                               borderLeft: isSelected ? `3px solid ${COLORS.accent}` : '3px solid transparent',
                               transition: 'background 0.15s ease'
                             }}
                           >
+                            {/* Play/Pause preview button */}
+                            <button
+                              onClick={(e) => handlePreviewToggle(e, track.id, track.url)}
+                              title={isPreviewing ? 'Pause preview' : 'Preview track'}
+                              style={{
+                                width: '24px',
+                                height: '24px',
+                                borderRadius: '50%',
+                                border: `1px solid ${isPreviewing ? 'rgba(100, 181, 246, 0.5)' : COLORS.border}`,
+                                background: isPreviewing ? 'rgba(100, 181, 246, 0.2)' : 'transparent',
+                                color: isPreviewing ? 'rgb(100, 181, 246)' : COLORS.textMuted,
+                                cursor: 'pointer',
+                                fontSize: '10px',
+                                padding: 0,
+                                flexShrink: 0,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                transition: 'all 0.15s ease'
+                              }}
+                            >
+                              {isPreviewing ? '\u23F8' : '\u25B6'}
+                            </button>
                             <span style={{ fontSize: '14px', flexShrink: 0 }}>{track.emoji}</span>
                             <span style={{
                               flex: 1,

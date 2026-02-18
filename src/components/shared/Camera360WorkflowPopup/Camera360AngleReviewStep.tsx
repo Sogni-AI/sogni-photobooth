@@ -2,7 +2,8 @@
  * Camera360AngleReviewStep (Phase 2)
  *
  * Horizontal carousel review of generated angle images with progress indicators,
- * worker names, SMPTE test pattern placeholders, regeneration, and version history.
+ * worker names, SMPTE test pattern placeholders, regeneration, version history,
+ * and per-card / batch enhancement.
  */
 
 import React, { useCallback } from 'react';
@@ -26,6 +27,12 @@ interface Camera360AngleReviewStepProps {
   onBack: () => void;
   sourceWidth: number;
   sourceHeight: number;
+  onEnhance: (index: number) => void;
+  onEnhanceAll: () => void;
+  isEnhancingAll: boolean;
+  enhanceAllProgress: { done: number; total: number };
+  anyEnhancing: boolean;
+  enhancableCount: number;
 }
 
 const formatETA = (seconds?: number): string => {
@@ -46,7 +53,13 @@ const Camera360AngleReviewStep: React.FC<Camera360AngleReviewStepProps> = ({
   onProceed,
   onBack,
   sourceWidth,
-  sourceHeight
+  sourceHeight,
+  onEnhance,
+  onEnhanceAll,
+  isEnhancingAll,
+  enhanceAllProgress,
+  anyEnhancing,
+  enhancableCount
 }) => {
   const readyCount = angleItems.filter(i => i.status === 'ready').length;
   const totalCount = angleItems.length;
@@ -80,11 +93,13 @@ const Camera360AngleReviewStep: React.FC<Camera360AngleReviewStepProps> = ({
           color: COLORS.textSecondary,
           fontWeight: '600'
         }}>
-          {allReady
-            ? `All ${totalCount} angles ready`
-            : `${readyCount} of ${totalCount} complete`}
+          {anyEnhancing
+            ? 'Enhancing...'
+            : allReady
+              ? `All ${totalCount} angles ready`
+              : `${readyCount} of ${totalCount} complete`}
         </div>
-        {isGenerating && (
+        {isGenerating && !anyEnhancing && (
           <div style={{
             fontSize: '11px',
             color: COLORS.warning,
@@ -171,6 +186,7 @@ const Camera360AngleReviewStep: React.FC<Camera360AngleReviewStepProps> = ({
           const azimuth = getAzimuthConfig(item.angleConfig.azimuth);
           const elevation = getElevationConfig(item.angleConfig.elevation);
           const distance = getDistanceConfig(item.angleConfig.distance);
+          const isItemEnhancing = item.enhancing;
 
           return (
             <div
@@ -183,6 +199,7 @@ const Camera360AngleReviewStep: React.FC<Camera360AngleReviewStepProps> = ({
                 flexDirection: 'column',
                 borderRadius: '12px',
                 border: `1px solid ${
+                  isItemEnhancing ? COLORS.warning :
                   item.status === 'ready' ? COLORS.border :
                   item.status === 'failed' ? COLORS.error :
                   COLORS.borderLight
@@ -205,7 +222,70 @@ const Camera360AngleReviewStep: React.FC<Camera360AngleReviewStepProps> = ({
                 background: 'rgba(0,0,0,0.4)',
                 aspectRatio: `${sourceWidth || 1024} / ${sourceHeight || 1024}`
               }}>
-                {item.status === 'ready' && displayUrl ? (
+                {/* Show existing image with enhancement overlay when enhancing */}
+                {isItemEnhancing && displayUrl ? (
+                  <>
+                    <img
+                      src={displayUrl}
+                      alt={`Angle ${index + 1}`}
+                      style={{
+                        maxWidth: '100%',
+                        maxHeight: '100%',
+                        width: 'auto',
+                        height: 'auto',
+                        objectFit: 'contain',
+                        display: 'block',
+                        opacity: 0.5
+                      }}
+                    />
+                    {/* Enhancement progress overlay */}
+                    <div style={{
+                      position: 'absolute',
+                      inset: 0,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px'
+                    }}>
+                      <div style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: '8px',
+                        background: 'rgba(0,0,0,0.6)',
+                        borderRadius: '12px',
+                        padding: '16px 24px'
+                      }}>
+                        <svg width="48" height="48" viewBox="0 0 48 48">
+                          <circle cx="24" cy="24" r="20" fill="none" stroke={COLORS.borderLight} strokeWidth="3" />
+                          <circle
+                            cx="24" cy="24" r="20" fill="none"
+                            stroke={COLORS.warning}
+                            strokeWidth="3"
+                            strokeLinecap="round"
+                            strokeDasharray={`${(item.enhancementProgress || 0) / 100 * 125.6} 125.6`}
+                            transform="rotate(-90 24 24)"
+                            style={{ transition: 'stroke-dasharray 0.3s ease' }}
+                          />
+                        </svg>
+                        <div style={{ fontSize: '12px', color: COLORS.warning, fontWeight: '600' }}>
+                          Enhancing {Math.round(item.enhancementProgress || 0)}%
+                        </div>
+                        {item.enhanceWorkerName && (
+                          <div style={{
+                            fontSize: '9px',
+                            color: 'rgba(255, 255, 255, 0.4)',
+                            whiteSpace: 'nowrap',
+                            textAlign: 'center'
+                          }}>
+                            {item.enhanceWorkerName}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                ) : item.status === 'ready' && displayUrl ? (
                   <img
                     src={displayUrl}
                     alt={`Angle ${index + 1}`}
@@ -340,7 +420,7 @@ const Camera360AngleReviewStep: React.FC<Camera360AngleReviewStepProps> = ({
                   {azimuth.label} / {elevation.label} / {distance.label}
                 </div>
 
-                {/* Version nav + Regenerate */}
+                {/* Version nav + Enhance + Regenerate */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                   {item.versionHistory.length > 1 && (
                     <>
@@ -383,7 +463,32 @@ const Camera360AngleReviewStep: React.FC<Camera360AngleReviewStepProps> = ({
                       </button>
                     </>
                   )}
-                  {(item.status === 'ready' || item.status === 'failed') && (
+                  {item.status === 'ready' && !isItemEnhancing && (
+                    <button
+                      onClick={() => onEnhance(index)}
+                      title="Enhance"
+                      style={{
+                        padding: '4px 10px',
+                        borderRadius: '6px',
+                        border: 'none',
+                        background: 'rgba(251, 191, 36, 0.15)',
+                        color: COLORS.warning,
+                        cursor: 'pointer',
+                        fontSize: '11px',
+                        fontWeight: '500',
+                        fontFamily: 'inherit',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '3px'
+                      }}
+                    >
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                      </svg>
+                      Enhance
+                    </button>
+                  )}
+                  {(item.status === 'ready' || item.status === 'failed') && !isItemEnhancing && (
                     <button
                       onClick={() => onRegenerate(index)}
                       title="Regenerate"
@@ -437,24 +542,55 @@ const Camera360AngleReviewStep: React.FC<Camera360AngleReviewStepProps> = ({
           Back
         </button>
 
-        <button
-          onClick={onProceed}
-          disabled={!allReady}
-          style={{
-            padding: '10px 24px',
-            borderRadius: '10px',
-            border: 'none',
-            background: allReady ? COLORS.accent : COLORS.surfaceLight,
-            color: allReady ? COLORS.black : COLORS.textMuted,
-            cursor: allReady ? 'pointer' : 'default',
-            fontSize: '13px',
-            fontWeight: '700',
-            fontFamily: 'inherit',
-            transition: 'all 0.15s ease'
-          }}
-        >
-          Generate Transitions
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {/* Enhance All button */}
+          <button
+            onClick={onEnhanceAll}
+            disabled={enhancableCount === 0 || anyEnhancing || isGenerating}
+            style={{
+              padding: '10px 16px',
+              borderRadius: '10px',
+              border: `1px solid ${COLORS.warning}`,
+              background: anyEnhancing ? 'rgba(251, 191, 36, 0.15)' : 'transparent',
+              color: enhancableCount === 0 || isGenerating ? COLORS.textMuted : COLORS.warning,
+              cursor: enhancableCount === 0 || anyEnhancing || isGenerating ? 'default' : 'pointer',
+              fontSize: '13px',
+              fontWeight: '600',
+              fontFamily: 'inherit',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              opacity: enhancableCount === 0 || isGenerating ? 0.5 : 1,
+              transition: 'all 0.15s ease'
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+            {isEnhancingAll
+              ? `Enhancing ${enhanceAllProgress.done}/${enhanceAllProgress.total}`
+              : 'Enhance All'}
+          </button>
+
+          <button
+            onClick={onProceed}
+            disabled={!allReady}
+            style={{
+              padding: '10px 24px',
+              borderRadius: '10px',
+              border: 'none',
+              background: allReady ? COLORS.accent : COLORS.surfaceLight,
+              color: allReady ? COLORS.black : COLORS.textMuted,
+              cursor: allReady ? 'pointer' : 'default',
+              fontSize: '13px',
+              fontWeight: '700',
+              fontFamily: 'inherit',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            Generate Transitions
+          </button>
+        </div>
       </div>
 
       <style>{`

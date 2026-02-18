@@ -9,7 +9,7 @@
  * - Play/pause preview with requestAnimationFrame loop
  */
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 interface AudioTrimPreviewProps {
   audioUrl: string;
@@ -51,7 +51,7 @@ const AudioTrimPreview: React.FC<AudioTrimPreviewProps> = ({
   const audioRef = useRef<HTMLAudioElement>(null);
   const animFrameRef = useRef<number | null>(null);
 
-  const [waveform, setWaveform] = useState<number[] | null>(null);
+  const waveform = useMemo(() => generatePlaceholderWaveform(audioUrl), [audioUrl]);
   const [audioDuration, setAudioDuration] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [playhead, setPlayhead] = useState(0);
@@ -93,9 +93,6 @@ const AudioTrimPreview: React.FC<AudioTrimPreviewProps> = ({
     audio.addEventListener('loadedmetadata', handleMetadata);
     audio.addEventListener('error', handleError);
     audio.src = audioUrl;
-
-    // Generate deterministic pseudo-random waveform (CORS-safe)
-    setWaveform(generatePlaceholderWaveform(audioUrl));
 
     // Set up audio preview element
     if (audioRef.current) {
@@ -359,22 +356,6 @@ const AudioTrimPreview: React.FC<AudioTrimPreviewProps> = ({
       animFrameRef.current = null;
     }
   }, [audioUrl]);
-
-  if (!waveform) {
-    return (
-      <div style={{
-        height: `${height}px`,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        opacity: 0.4,
-        fontSize: '11px',
-        color: 'rgba(255,255,255,0.5)'
-      }}>
-        Loading waveform...
-      </div>
-    );
-  }
 
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>

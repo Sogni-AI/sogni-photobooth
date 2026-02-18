@@ -50,6 +50,18 @@ export interface AngleGenerationItem {
   selectedVersion: number;
   /** Worker name processing this item */
   workerName?: string;
+  /** Whether this item is currently being enhanced */
+  enhancing?: boolean;
+  /** Whether this item has been enhanced */
+  enhanced?: boolean;
+  /** Enhancement progress (0-100) */
+  enhancementProgress?: number;
+  /** Original (pre-enhancement) image URL for undo via version history */
+  originalImageUrl?: string;
+  /** Enhanced image URL */
+  enhancedImageUrl?: string;
+  /** Worker name for the enhancement job */
+  enhanceWorkerName?: string;
   /** Camera angle configuration for this item */
   angleConfig: {
     azimuth: AzimuthKey;
