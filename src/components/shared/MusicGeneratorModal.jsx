@@ -5,6 +5,7 @@ import { getTokenLabel } from '../../services/walletService';
 import { AUDIO_MODEL_ID_TURBO, AUDIO_MODELS, AUDIO_CONSTRAINTS, AUDIO_DEFAULTS } from '../../constants/audioSettings';
 import { useAudioCostEstimation } from '../../hooks/useAudioCostEstimation';
 import { useAudioModelConfig } from '../../hooks/useAudioModelConfig';
+import aceStepDemos from '../../constants/ace-step-demos.json';
 
 const formatTime = (seconds) => {
   const mins = Math.floor(seconds / 60);
@@ -235,6 +236,25 @@ const MusicGeneratorModal = ({
 
     xhr.send();
   }, [musicPrompt, musicDuration, musicBpm, selectedModelId]);
+
+  // --- Random Demo ---
+
+  const handleRandomDemo = useCallback(() => {
+    const demo = aceStepDemos[Math.floor(Math.random() * aceStepDemos.length)];
+    setMusicPrompt(demo.positivePrompt);
+    setMusicBpm(demo.bpm);
+    setMusicDuration(demo.duration);
+    setMusicKeyscale(demo.keyscale);
+    setMusicTimesig(demo.timesignature);
+    if (demo.lyrics && demo.lyrics !== '[instrumental]') {
+      setMusicLyricsEnabled(true);
+      setMusicLyrics(demo.lyrics);
+      setMusicLanguage(demo.language);
+    } else {
+      setMusicLyricsEnabled(false);
+      setMusicLyrics('');
+    }
+  }, []);
 
   // --- Music Generation ---
 
@@ -820,15 +840,45 @@ const MusicGeneratorModal = ({
               <div>
                 {/* Song Style Prompt */}
                 <div style={{ marginBottom: '10px' }}>
-                  <label style={{
-                    display: 'block',
-                    color: 'rgba(255, 255, 255, 0.9)',
-                    fontSize: '11px',
-                    fontWeight: '600',
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
                     marginBottom: '4px'
                   }}>
-                    Song Style
-                  </label>
+                    <label style={{
+                      color: 'rgba(255, 255, 255, 0.9)',
+                      fontSize: '11px',
+                      fontWeight: '600'
+                    }}>
+                      Song Style
+                    </label>
+                    <button
+                      onClick={handleRandomDemo}
+                      title="Load a random demo"
+                      style={{
+                        padding: '2px 8px',
+                        borderRadius: '4px',
+                        border: '1px solid rgba(255, 255, 255, 0.25)',
+                        background: 'rgba(255, 255, 255, 0.1)',
+                        color: 'rgba(255, 255, 255, 0.8)',
+                        fontSize: '10px',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease'
+                      }}
+                      onMouseOver={(e) => {
+                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
+                        e.currentTarget.style.color = 'white';
+                      }}
+                      onMouseOut={(e) => {
+                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                        e.currentTarget.style.color = 'rgba(255, 255, 255, 0.8)';
+                      }}
+                    >
+                      🎲 Random
+                    </button>
+                  </div>
                   <textarea
                     value={musicPrompt}
                     onChange={(e) => setMusicPrompt(e.target.value)}
