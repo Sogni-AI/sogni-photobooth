@@ -1059,7 +1059,10 @@ const MusicGeneratorModal = ({
                           background: 'rgba(0, 0, 0, 0.3)',
                           color: 'white',
                           fontSize: '11px',
-                          outline: 'none'
+                          fontWeight: '400',
+                          outline: 'none',
+                          transform: 'scale(0.75)',
+                          transformOrigin: 'left center'
                         }}
                       >
                         {ac.language.allowed.filter(lang => lang !== 'unknown').map(lang => (
