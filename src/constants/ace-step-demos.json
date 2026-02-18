@@ -266,7 +266,7 @@
   {
     "id": "thai-hiphop",
     "title": "Thai Hip-Hop",
-    "language": "en",
+    "language": "th",
     "bpm": 95,
     "duration": 60,
     "timesignature": "4",
@@ -277,7 +277,7 @@
   {
     "id": "no-folk",
     "title": "Skogrotten (Norwegian Folk Metal)",
-    "language": "en",
+    "language": "no",
     "bpm": 130,
     "duration": 60,
     "timesignature": "4",
@@ -288,7 +288,7 @@
   {
     "id": "yue-pop",
     "title": "Dawn Light (Cantopop)",
-    "language": "zh",
+    "language": "yue",
     "bpm": 110,
     "duration": 60,
     "timesignature": "4",

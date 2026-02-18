@@ -53,16 +53,29 @@ export const AUDIO_CONSTRAINTS = {
     }
   },
   language: {
-    allowed: ['en', 'ja', 'zh', 'es', 'de', 'fr', 'pt', 'ru', 'it', 'nl',
-      'pl', 'tr', 'vi', 'cs', 'fa', 'id', 'ko', 'uk', 'hu', 'ar', 'sv', 'ro', 'el'],
-    default: 'en',
+    allowed: [
+      'ar', 'az', 'bg', 'bn', 'ca', 'cs', 'da', 'de', 'el', 'en',
+      'es', 'fa', 'fi', 'fr', 'he', 'hi', 'hr', 'ht', 'hu', 'id',
+      'is', 'it', 'ja', 'ko', 'la', 'lt', 'ms', 'ne', 'nl', 'no',
+      'pa', 'pl', 'pt', 'ro', 'ru', 'sa', 'sk', 'sr', 'sv', 'sw',
+      'ta', 'te', 'th', 'tl', 'tr', 'uk', 'ur', 'vi', 'yue', 'zh',
+      'unknown'
+    ],
+    default: 'unknown',
     labels: {
-      en: 'English', ja: 'Japanese', zh: 'Chinese', es: 'Spanish',
-      de: 'German', fr: 'French', pt: 'Portuguese', ru: 'Russian',
-      it: 'Italian', nl: 'Dutch', pl: 'Polish', tr: 'Turkish',
-      vi: 'Vietnamese', cs: 'Czech', fa: 'Persian', id: 'Indonesian',
-      ko: 'Korean', uk: 'Ukrainian', hu: 'Hungarian', ar: 'Arabic',
-      sv: 'Swedish', ro: 'Romanian', el: 'Greek', unknown: 'Auto-detect'
+      ar: 'Arabic', az: 'Azerbaijani', bg: 'Bulgarian', bn: 'Bengali',
+      ca: 'Catalan', cs: 'Czech', da: 'Danish', de: 'German',
+      el: 'Greek', en: 'English', es: 'Spanish', fa: 'Persian',
+      fi: 'Finnish', fr: 'French', he: 'Hebrew', hi: 'Hindi',
+      hr: 'Croatian', ht: 'Haitian Creole', hu: 'Hungarian', id: 'Indonesian',
+      is: 'Icelandic', it: 'Italian', ja: 'Japanese', ko: 'Korean',
+      la: 'Latin', lt: 'Lithuanian', ms: 'Malay', ne: 'Nepali',
+      nl: 'Dutch', no: 'Norwegian', pa: 'Punjabi', pl: 'Polish',
+      pt: 'Portuguese', ro: 'Romanian', ru: 'Russian', sa: 'Sanskrit',
+      sk: 'Slovak', sr: 'Serbian', sv: 'Swedish', sw: 'Swahili',
+      ta: 'Tamil', te: 'Telugu', th: 'Thai', tl: 'Tagalog',
+      tr: 'Turkish', uk: 'Ukrainian', ur: 'Urdu', vi: 'Vietnamese',
+      yue: 'Cantonese', zh: 'Chinese', unknown: 'Auto-detect'
     }
   },
   steps: { min: 4, max: 16, default: 8 },
@@ -81,7 +94,7 @@ export const AUDIO_DEFAULTS = {
   bpm: 120,
   keyscale: 'C major',
   timesig: '4',
-  language: 'en',
+  language: 'unknown',
   steps: 8,
   composerMode: true,
   promptStrength: 2.0,
