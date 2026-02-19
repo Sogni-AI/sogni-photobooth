@@ -8080,6 +8080,9 @@ const PhotoGallery = ({
       }
       setCachedInfiniteLoopUrl(URL.createObjectURL(concatenatedBlob));
 
+      // Store stitch data so music can be added via re-stitch
+      stitchedVideoStitchDataRef.current = { videos: allVideosToStitch, originalAudioOptions: null, preserveSourceAudio: false, isInfiniteLoop: true };
+
       // Complete!
       setInfiniteLoopProgress({
         phase: 'complete',
@@ -9315,14 +9318,24 @@ const PhotoGallery = ({
         musicPresetId ? false : stitchData.preserveSourceAudio
       );
 
-      // Revoke old URL
-      if (stitchedVideoUrl && stitchedVideoUrl.startsWith('blob:')) {
-        URL.revokeObjectURL(stitchedVideoUrl);
-      }
-
       const blobUrl = URL.createObjectURL(blob);
-      setStitchedVideoUrl(blobUrl);
-      setStitchedVideoMuted(false);
+
+      // Update the correct video state based on source workflow
+      if (stitchData.isInfiniteLoop) {
+        // Update infinite loop preview
+        if (cachedInfiniteLoopUrl) {
+          URL.revokeObjectURL(cachedInfiniteLoopUrl);
+        }
+        setCachedInfiniteLoopBlob(blob);
+        setCachedInfiniteLoopUrl(blobUrl);
+      } else {
+        // Update stitched video overlay
+        if (stitchedVideoUrl && stitchedVideoUrl.startsWith('blob:')) {
+          URL.revokeObjectURL(stitchedVideoUrl);
+        }
+        setStitchedVideoUrl(blobUrl);
+        setStitchedVideoMuted(false);
+      }
 
       // Update music state
       setStitchedVideoMusicPresetId(musicPresetId);
@@ -9340,7 +9353,7 @@ const PhotoGallery = ({
       setIsRestitchingWithMusic(false);
       setRestitchProgress(0);
     }
-  }, [stitchedVideoUrl, showToast]);
+  }, [stitchedVideoUrl, cachedInfiniteLoopUrl, showToast]);
 
   // Handle AI music track selection - stage it in MusicSelectorModal for trimming
   const handleStitchedVideoAIMusicSelect = useCallback((track) => {
@@ -9593,10 +9606,92 @@ const PhotoGallery = ({
           filename: `video-${index + 1}.mp4`
         }));
 
+        // Prepare audio options (same as Twitter share / regular share)
+        let audioOptions = null;
+
+        // Check appliedMusic first (user-selected music track)
+        if (appliedMusic?.file) {
+          try {
+            let audioBuffer;
+
+            if (appliedMusic.file.isPreset && appliedMusic.file.presetUrl) {
+              const presetUrl = appliedMusic.file.presetUrl;
+              const isMP3 = presetUrl.toLowerCase().endsWith('.mp3');
+
+              if (isMP3) {
+                console.log(`[QR Share Stitched] Fetching and transcoding MP3 preset from: ${presetUrl}`);
+                const mp3Response = await fetch(presetUrl);
+                if (!mp3Response.ok) throw new Error(`Failed to fetch preset audio: ${mp3Response.status}`);
+                const mp3Blob = await mp3Response.blob();
+
+                const formData = new FormData();
+                formData.append('audio', mp3Blob, 'preset.mp3');
+                const transcodeResponse = await fetch('/api/audio/mp3-to-m4a', { method: 'POST', body: formData });
+                if (!transcodeResponse.ok) {
+                  const error = await transcodeResponse.json().catch(() => ({ error: 'Unknown error' }));
+                  throw new Error(error.details || error.error || 'Transcoding failed');
+                }
+                audioBuffer = await transcodeResponse.arrayBuffer();
+                console.log(`[QR Share Stitched] MP3 transcoded to M4A: ${(audioBuffer.byteLength / 1024 / 1024).toFixed(2)}MB`);
+              } else {
+                console.log(`[QR Share Stitched] Fetching preset audio from: ${presetUrl}`);
+                const response = await fetch(presetUrl);
+                if (!response.ok) throw new Error(`Failed to fetch preset audio: ${response.status}`);
+                audioBuffer = await response.arrayBuffer();
+              }
+            } else {
+              audioBuffer = await appliedMusic.file.arrayBuffer();
+            }
+
+            audioOptions = {
+              buffer: audioBuffer,
+              startOffset: appliedMusic.startOffset || 0
+            };
+            console.log(`[QR Share Stitched] Audio prepared: ${(audioBuffer.byteLength / 1024 / 1024).toFixed(2)}MB, offset: ${appliedMusic.startOffset}s`);
+          } catch (audioError) {
+            console.warn('[QR Share Stitched] Failed to prepare audio, continuing without:', audioError);
+          }
+        }
+
+        // Fall back to montage audio source if no appliedMusic
+        if (!audioOptions) {
+          let audioSource = segmentReviewData?.audioSource;
+          if (!audioSource && activeMontageAudioSourceRef.current) {
+            audioSource = activeMontageAudioSourceRef.current;
+          }
+
+          if (audioSource && ['s2v', 'animate-move', 'animate-replace'].includes(segmentReviewData?.workflowType || audioSource.type)) {
+            try {
+              if (audioSource.type === 's2v') {
+                let audioBuffer = audioSource.audioBuffer;
+                if (audioBuffer instanceof Uint8Array) {
+                  audioBuffer = audioBuffer.buffer.slice(audioBuffer.byteOffset, audioBuffer.byteOffset + audioBuffer.byteLength);
+                }
+                if (audioBuffer) {
+                  audioOptions = { buffer: audioBuffer, startOffset: audioSource.startOffset || 0 };
+                  console.log(`[QR Share Stitched] Using S2V parent audio`);
+                }
+              } else if (audioSource.type === 'animate-move' || audioSource.type === 'animate-replace') {
+                let videoBuffer = audioSource.videoBuffer;
+                if (videoBuffer instanceof Uint8Array) {
+                  videoBuffer = videoBuffer.buffer.slice(videoBuffer.byteOffset, videoBuffer.byteOffset + videoBuffer.byteLength);
+                }
+                if (videoBuffer) {
+                  audioOptions = { buffer: videoBuffer, startOffset: audioSource.startOffset || 0, isVideoSource: true };
+                  console.log(`[QR Share Stitched] Using ${audioSource.type} parent audio`);
+                }
+              }
+            } catch (audioError) {
+              console.warn('[QR Share Stitched] Failed to prepare parent audio:', audioError);
+            }
+          }
+        }
+
         videoBlob = await concatenateVideos(
           videosToStitch,
           null,
-          null
+          audioOptions,
+          !audioOptions // Preserve source audio only if not using parent audio
         );
 
         // Cache the stitched video
@@ -18188,6 +18283,11 @@ const PhotoGallery = ({
           }}
           onClick={(e) => {
             if (e.target === e.currentTarget && cachedInfiniteLoopUrl) {
+              if (showStitchedVideoMusicSelector || showStitchedVideoMusicGenerator) {
+                setShowStitchedVideoMusicSelector(false);
+                setShowStitchedVideoMusicGenerator(false);
+                return;
+              }
               setShowInfiniteLoopPreview(false);
             }
           }}
@@ -18434,6 +18534,43 @@ const PhotoGallery = ({
                 </button>
               )}
 
+              {/* Music Button - add/change background music via re-stitch */}
+              {stitchedVideoStitchDataRef.current?.isInfiniteLoop && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowStitchedVideoMusicSelector(true);
+                  }}
+                  title={stitchedVideoMusicPresetId ? 'Change Music' : 'Add Music'}
+                  style={{
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '50%',
+                    background: stitchedVideoMusicPresetId ? 'rgba(76, 175, 80, 0.7)' : 'rgba(0, 0, 0, 0.6)',
+                    border: 'none',
+                    color: '#fff',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                    transition: 'all 0.2s ease'
+                  }}
+                  onMouseOver={e => {
+                    e.currentTarget.style.background = 'rgba(255, 152, 0, 0.9)';
+                    e.currentTarget.style.transform = 'scale(1.1)';
+                  }}
+                  onMouseOut={e => {
+                    e.currentTarget.style.background = stitchedVideoMusicPresetId ? 'rgba(76, 175, 80, 0.7)' : 'rgba(0, 0, 0, 0.6)';
+                    e.currentTarget.style.transform = 'scale(1)';
+                  }}
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
+                  </svg>
+                </button>
+              )}
+
               {/* Remix Button - opens transition review to regenerate individual transitions */}
               {pendingTransitions.length > 0 && transitionReviewData && (
                 <button
@@ -18473,7 +18610,76 @@ const PhotoGallery = ({
               )}
 
             </div>
+
+            {/* Re-stitching progress overlay */}
+            {isRestitchingWithMusic && (
+              <div
+                onClick={(e) => e.stopPropagation()}
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: 'rgba(0, 0, 0, 0.75)',
+                  zIndex: 30
+                }}
+              >
+                <svg width="72" height="72" viewBox="0 0 72 72">
+                  <circle cx="36" cy="36" r="30" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="4" />
+                  <circle
+                    cx="36" cy="36" r="30" fill="none"
+                    stroke="#ECB630"
+                    strokeWidth="4"
+                    strokeLinecap="round"
+                    strokeDasharray={`${(restitchProgress / 100) * 188.5} 188.5`}
+                    transform="rotate(-90 36 36)"
+                    style={{ transition: 'stroke-dasharray 0.3s ease' }}
+                  />
+                </svg>
+                <div style={{
+                  marginTop: '16px',
+                  fontSize: '14px',
+                  color: 'rgba(255,255,255,0.7)',
+                  fontWeight: '500'
+                }}>
+                  Adding music... {restitchProgress}%
+                </div>
+              </div>
+            )}
           </div>}
+
+          {/* Music Selector Modal - rendered outside video player container to avoid overflow clipping */}
+          {showStitchedVideoMusicSelector && (
+            <MusicSelectorModal
+              currentPresetId={stitchedVideoMusicPresetId}
+              musicStartOffset={stitchedVideoMusicStartOffset}
+              customMusicUrl={stitchedVideoMusicCustomUrl}
+              customMusicTitle={stitchedVideoMusicCustomTitle}
+              totalVideoDuration={infiniteLoopVideoRef.current?.duration || 15}
+              onSelect={handleStitchedVideoMusicSelect}
+              onUploadMusic={handleStitchedVideoUploadMusic}
+              onClose={() => setShowStitchedVideoMusicSelector(false)}
+              onOpenMusicGenerator={() => setShowStitchedVideoMusicGenerator(true)}
+              isAuthenticated={isAuthenticated}
+              applyLabel="Apply & Restitch"
+              removeLabel="Remove Music & Restitch"
+              pendingAITrack={pendingAITrack}
+              onPendingAITrackConsumed={() => setPendingAITrack(null)}
+            />
+          )}
+
+          {/* AI Music Generator Modal for infinite loop */}
+          <MusicGeneratorModal
+            visible={showStitchedVideoMusicGenerator}
+            onClose={() => setShowStitchedVideoMusicGenerator(false)}
+            onTrackSelect={handleStitchedVideoAIMusicSelect}
+            sogniClient={sogniClient}
+            isAuthenticated={isAuthenticated}
+            tokenType={tokenType}
+            zIndex={10000002}
+          />
         </div>,
         document.body
       )}
