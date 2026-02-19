@@ -48,6 +48,7 @@ const MusicGeneratorModal = ({
   const [musicProgress, setMusicProgress] = useState({});
   const [musicError, setMusicError] = useState('');
   const [generatedTracks, setGeneratedTracks] = useState([]);
+  const [showResultsScreen, setShowResultsScreen] = useState(false);
   const [previewingGeneratedTrackId, setPreviewingGeneratedTrackId] = useState(null);
   const [isGeneratedPreviewPlaying, setIsGeneratedPreviewPlaying] = useState(false);
   const [selectedDemoId, setSelectedDemoId] = useState('');
@@ -285,6 +286,7 @@ const MusicGeneratorModal = ({
     setMusicGenerating(true);
     setMusicError('');
     setMusicProgress({});
+    setShowResultsScreen(true);
 
     try {
       // Read latest config from ref to avoid stale closure values
@@ -447,7 +449,13 @@ const MusicGeneratorModal = ({
     }
     setMusicGenerating(false);
     setMusicProgress({});
+    setShowResultsScreen(false);
   }, []);
+
+  const handleBackToForm = useCallback(() => {
+    stopGeneratedTrackPreview();
+    setShowResultsScreen(false);
+  }, [stopGeneratedTrackPreview]);
 
   // --- Close Handler ---
 
@@ -557,7 +565,9 @@ const MusicGeneratorModal = ({
             gap: '8px',
             marginBottom: '4px'
           }}>
-            <span style={{ fontSize: isMobile ? '28px' : '32px' }}>✨</span>
+            <span style={{ fontSize: isMobile ? '28px' : '32px' }}>
+              {showResultsScreen && !musicGenerating ? '🎵' : '✨'}
+            </span>
             <h2 style={{
               margin: 0,
               color: 'white',
@@ -565,7 +575,9 @@ const MusicGeneratorModal = ({
               fontWeight: '700',
               fontFamily: '"Permanent Marker", cursive'
             }}>
-              Create AI Music
+              {showResultsScreen
+                ? (musicGenerating ? 'Generating Music...' : 'Your Generated Tracks')
+                : 'Create AI Music'}
             </h2>
           </div>
           <p style={{
@@ -573,7 +585,9 @@ const MusicGeneratorModal = ({
             color: 'rgba(255, 255, 255, 0.7)',
             fontSize: isMobile ? '11px' : '12px'
           }}>
-            Generate custom music tracks with AI
+            {showResultsScreen
+              ? (musicGenerating ? 'Creating your AI music tracks' : 'Preview and select a track to use')
+              : 'Generate custom music tracks with AI'}
           </p>
         </div>
 
@@ -591,7 +605,7 @@ const MusicGeneratorModal = ({
         ) : (
           <>
             {/* Model Selector */}
-            {!musicGenerating && (
+            {!showResultsScreen && !musicGenerating && (
               <div style={{ marginBottom: '12px' }}>
                 <div style={{
                   display: 'flex',
@@ -642,222 +656,245 @@ const MusicGeneratorModal = ({
               </div>
             )}
 
-            {/* Generated Tracks List */}
-            {generatedTracks.length > 0 && (
-              <div style={{
-                marginBottom: '12px',
-                background: 'rgba(0, 0, 0, 0.15)',
-                borderRadius: '8px',
-                overflow: 'hidden'
-              }}>
-                <div style={{
-                  padding: '8px 12px',
-                  fontSize: '11px',
-                  fontWeight: '600',
-                  color: 'rgba(255, 255, 255, 0.7)',
-                  borderBottom: '1px solid rgba(255, 255, 255, 0.1)'
-                }}>
-                  Generated Tracks
-                </div>
-                {generatedTracks.map((track, idx) => {
-                  const isPreviewing = previewingGeneratedTrackId === track.id;
-                  return (
-                    <React.Fragment key={track.id}>
-                      <div
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '10px',
-                          padding: '8px 12px',
-                          background: 'transparent',
-                          borderLeft: '3px solid transparent',
-                          transition: 'background 0.15s ease'
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.background = 'transparent';
-                        }}
-                      >
-                        <button
-                          onClick={() => handleGeneratedPreviewToggle(track)}
-                          style={{
-                            width: '28px',
-                            height: '28px',
-                            borderRadius: '50%',
-                            border: 'none',
-                            background: isPreviewing && isGeneratedPreviewPlaying
-                              ? '#ec4899'
-                              : 'rgba(255, 255, 255, 0.15)',
-                            color: 'white',
-                            fontSize: '12px',
-                            cursor: 'pointer',
+            {/* Results Screen (progress + completed tracks) */}
+            {showResultsScreen ? (
+              <div>
+                {musicGenerating ? (
+                  /* Progress View */
+                  <div style={{ padding: '12px 0' }}>
+                    {Object.entries(musicProgress).length > 0 ? (
+                      Object.entries(musicProgress).map(([jobId, progress], idx) => (
+                        <div key={jobId} style={{ marginBottom: '8px' }}>
+                          <div style={{
                             display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            flexShrink: 0,
-                            padding: 0
-                          }}
-                        >
-                          {isPreviewing && isGeneratedPreviewPlaying ? '⏸' : '▶'}
-                        </button>
-                        <span style={{
-                          flex: 1,
-                          color: 'white',
-                          fontSize: '13px',
-                          fontWeight: '500'
-                        }}>
-                          Version {idx + 1}
-                        </span>
-                        <span style={{
-                          color: 'rgba(255, 255, 255, 0.5)',
-                          fontSize: '11px',
-                          flexShrink: 0
-                        }}>
-                          {formatTime(musicDuration)}
-                        </span>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDownloadTrack(track, idx);
-                          }}
-                          title="Download track"
-                          style={{
-                            width: '26px',
-                            height: '26px',
-                            borderRadius: '50%',
-                            border: 'none',
-                            background: 'rgba(255, 255, 255, 0.1)',
+                            justifyContent: 'space-between',
+                            fontSize: '11px',
                             color: 'rgba(255, 255, 255, 0.7)',
-                            fontSize: '13px',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            flexShrink: 0,
-                            padding: 0
-                          }}
-                        >
-                          ↓
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleUseTrack(track);
-                          }}
-                          style={{
-                            padding: '4px 10px',
-                            borderRadius: '6px',
-                            border: '1px solid rgba(255, 255, 255, 0.3)',
-                            background: 'rgba(255, 255, 255, 0.1)',
-                            color: 'white',
-                            fontSize: '10px',
-                            fontWeight: '600',
-                            cursor: 'pointer',
-                            flexShrink: 0,
-                            transition: 'all 0.15s ease'
-                          }}
-                        >
-                          Use
-                        </button>
-                      </div>
-                      {isPreviewing && (
-                        <WaveformPlaybackBar
-                          audioUrl={track.url}
-                          audioRef={generatedPreviewAudioRef}
-                          isPlaying={isGeneratedPreviewPlaying}
-                          duration={generatedTrackDuration}
-                        />
-                      )}
-                    </React.Fragment>
-                  );
-                })}
-              </div>
-            )}
-
-            {/* Progress View */}
-            {musicGenerating ? (
-              <div style={{ padding: '12px 0' }}>
-                <div style={{
-                  color: 'white',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  marginBottom: '12px',
-                  textAlign: 'center'
-                }}>
-                  Generating Music...
-                </div>
-                {Object.entries(musicProgress).length > 0 ? (
-                  Object.entries(musicProgress).map(([jobId, progress], idx) => (
-                    <div key={jobId} style={{ marginBottom: '8px' }}>
-                      <div style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        fontSize: '11px',
-                        color: 'rgba(255, 255, 255, 0.7)',
-                        marginBottom: '4px'
-                      }}>
-                        <span>
-                          Version {idx + 1}
-                          {progress.workerName && (
-                            <span style={{ color: 'rgba(255, 255, 255, 0.4)', fontWeight: '400' }}>
-                              {' • '}{progress.workerName}
+                            marginBottom: '4px'
+                          }}>
+                            <span>
+                              Version {idx + 1}
+                              {progress.workerName && (
+                                <span style={{ color: 'rgba(255, 255, 255, 0.4)', fontWeight: '400' }}>
+                                  {' • '}{progress.workerName}
+                                </span>
+                              )}
                             </span>
-                          )}
-                        </span>
-                        <span>
-                          {progress.step !== undefined && progress.stepCount
-                            ? `Step ${progress.step}/${progress.stepCount} (${Math.round((progress.step / progress.stepCount) * 100)}%)`
-                            : 'Starting...'}
-                          {progress.eta !== undefined && ` • ETA: ~${Math.round(progress.eta)}s`}
-                        </span>
-                      </div>
+                            <span>
+                              {progress.step !== undefined && progress.stepCount
+                                ? `Step ${progress.step}/${progress.stepCount} (${Math.round((progress.step / progress.stepCount) * 100)}%)`
+                                : 'Starting...'}
+                              {progress.eta !== undefined && ` • ETA: ~${Math.round(progress.eta)}s`}
+                            </span>
+                          </div>
+                          <div style={{
+                            height: '6px',
+                            background: 'rgba(0, 0, 0, 0.3)',
+                            borderRadius: '3px',
+                            overflow: 'hidden'
+                          }}>
+                            <div style={{
+                              height: '100%',
+                              background: 'linear-gradient(90deg, #ec4899, #f472b6)',
+                              borderRadius: '3px',
+                              width: progress.step !== undefined && progress.stepCount
+                                ? `${(progress.step / progress.stepCount) * 100}%`
+                                : '0%',
+                              transition: 'width 0.3s ease'
+                            }} />
+                          </div>
+                        </div>
+                      ))
+                    ) : (
                       <div style={{
-                        height: '6px',
-                        background: 'rgba(0, 0, 0, 0.3)',
-                        borderRadius: '3px',
-                        overflow: 'hidden'
+                        textAlign: 'center',
+                        color: 'rgba(255, 255, 255, 0.5)',
+                        fontSize: '12px',
+                        padding: '8px 0'
                       }}>
-                        <div style={{
-                          height: '100%',
-                          background: 'linear-gradient(90deg, #ec4899, #f472b6)',
-                          borderRadius: '3px',
-                          width: progress.step !== undefined && progress.stepCount
-                            ? `${(progress.step / progress.stepCount) * 100}%`
-                            : '0%',
-                          transition: 'width 0.3s ease'
-                        }} />
+                        Waiting for worker...
                       </div>
-                    </div>
-                  ))
+                    )}
+                    <button
+                      onClick={handleCancelMusicGeneration}
+                      style={{
+                        display: 'block',
+                        margin: '12px auto 0',
+                        padding: '8px 20px',
+                        borderRadius: '8px',
+                        border: '1px solid rgba(255, 255, 255, 0.3)',
+                        background: 'rgba(239, 68, 68, 0.2)',
+                        color: 'white',
+                        fontSize: '12px',
+                        fontWeight: '600',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Cancel Generation
+                    </button>
+                  </div>
                 ) : (
-                  <div style={{
-                    textAlign: 'center',
-                    color: 'rgba(255, 255, 255, 0.5)',
-                    fontSize: '12px',
-                    padding: '8px 0'
-                  }}>
-                    Waiting for worker...
+                  /* Completed Tracks */
+                  <div>
+                    {generatedTracks.length > 0 && (
+                      <div style={{
+                        background: 'rgba(0, 0, 0, 0.15)',
+                        borderRadius: '8px',
+                        overflow: 'hidden',
+                        marginBottom: '12px'
+                      }}>
+                        {generatedTracks.map((track, idx) => {
+                          const isPreviewing = previewingGeneratedTrackId === track.id;
+                          return (
+                            <React.Fragment key={track.id}>
+                              <div
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '10px',
+                                  padding: '10px 12px',
+                                  background: 'transparent',
+                                  transition: 'background 0.15s ease'
+                                }}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.background = 'transparent';
+                                }}
+                              >
+                                <button
+                                  onClick={() => handleGeneratedPreviewToggle(track)}
+                                  style={{
+                                    width: '32px',
+                                    height: '32px',
+                                    borderRadius: '50%',
+                                    border: 'none',
+                                    background: isPreviewing && isGeneratedPreviewPlaying
+                                      ? '#ec4899'
+                                      : 'rgba(255, 255, 255, 0.15)',
+                                    color: 'white',
+                                    fontSize: '13px',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    flexShrink: 0,
+                                    padding: 0
+                                  }}
+                                >
+                                  {isPreviewing && isGeneratedPreviewPlaying ? '⏸' : '▶'}
+                                </button>
+                                <span style={{
+                                  flex: 1,
+                                  color: 'white',
+                                  fontSize: '13px',
+                                  fontWeight: '500'
+                                }}>
+                                  Version {idx + 1}
+                                </span>
+                                <span style={{
+                                  color: 'rgba(255, 255, 255, 0.5)',
+                                  fontSize: '11px',
+                                  flexShrink: 0
+                                }}>
+                                  {formatTime(musicDuration)}
+                                </span>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDownloadTrack(track, idx);
+                                  }}
+                                  title="Download track"
+                                  style={{
+                                    width: '28px',
+                                    height: '28px',
+                                    borderRadius: '50%',
+                                    border: 'none',
+                                    background: 'rgba(255, 255, 255, 0.1)',
+                                    color: 'rgba(255, 255, 255, 0.7)',
+                                    fontSize: '13px',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    flexShrink: 0,
+                                    padding: 0
+                                  }}
+                                >
+                                  ↓
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleUseTrack(track);
+                                  }}
+                                  style={{
+                                    padding: '6px 14px',
+                                    borderRadius: '8px',
+                                    border: 'none',
+                                    background: 'rgba(255, 255, 255, 0.9)',
+                                    color: '#db2777',
+                                    fontSize: '11px',
+                                    fontWeight: '700',
+                                    cursor: 'pointer',
+                                    flexShrink: 0,
+                                    transition: 'all 0.15s ease'
+                                  }}
+                                >
+                                  Use
+                                </button>
+                              </div>
+                              {isPreviewing && (
+                                <WaveformPlaybackBar
+                                  audioUrl={track.url}
+                                  audioRef={generatedPreviewAudioRef}
+                                  isPlaying={isGeneratedPreviewPlaying}
+                                  duration={generatedTrackDuration}
+                                />
+                              )}
+                            </React.Fragment>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {/* Error */}
+                    {musicError && (
+                      <div style={{
+                        padding: '8px 10px',
+                        background: 'rgba(239, 68, 68, 0.3)',
+                        borderRadius: '6px',
+                        marginBottom: '12px',
+                        color: 'white',
+                        fontSize: '12px',
+                        fontWeight: '500',
+                        textAlign: 'center'
+                      }}>
+                        {musicError}
+                      </div>
+                    )}
+
+                    {/* Back to Create button */}
+                    <button
+                      onClick={handleBackToForm}
+                      style={{
+                        width: '100%',
+                        padding: '10px',
+                        borderRadius: '8px',
+                        border: '1px solid rgba(255, 255, 255, 0.3)',
+                        background: 'rgba(255, 255, 255, 0.1)',
+                        color: 'white',
+                        fontSize: '12px',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease'
+                      }}
+                    >
+                      ← Back to Create
+                    </button>
                   </div>
                 )}
-                <button
-                  onClick={handleCancelMusicGeneration}
-                  style={{
-                    display: 'block',
-                    margin: '12px auto 0',
-                    padding: '8px 20px',
-                    borderRadius: '8px',
-                    border: '1px solid rgba(255, 255, 255, 0.3)',
-                    background: 'rgba(239, 68, 68, 0.2)',
-                    color: 'white',
-                    fontSize: '12px',
-                    fontWeight: '600',
-                    cursor: 'pointer'
-                  }}
-                >
-                  Cancel Generation
-                </button>
               </div>
             ) : (
               /* Generation Form */
@@ -1474,6 +1511,31 @@ const MusicGeneratorModal = ({
                     </span>
                   )}
                 </button>
+
+                {/* Link to view previously generated tracks */}
+                {generatedTracks.length > 0 && (
+                  <button
+                    onClick={() => setShowResultsScreen(true)}
+                    style={{
+                      display: 'block',
+                      width: '100%',
+                      marginTop: '8px',
+                      padding: '6px',
+                      background: 'none',
+                      border: 'none',
+                      color: 'rgba(255, 255, 255, 0.6)',
+                      fontSize: '11px',
+                      fontWeight: '500',
+                      cursor: 'pointer',
+                      textAlign: 'center',
+                      transition: 'color 0.15s ease'
+                    }}
+                    onMouseOver={(e) => e.currentTarget.style.color = 'rgba(255, 255, 255, 0.9)'}
+                    onMouseOut={(e) => e.currentTarget.style.color = 'rgba(255, 255, 255, 0.6)'}
+                  >
+                    View {generatedTracks.length} Generated Track{generatedTracks.length !== 1 ? 's' : ''} →
+                  </button>
+                )}
               </div>
             )}
           </>
