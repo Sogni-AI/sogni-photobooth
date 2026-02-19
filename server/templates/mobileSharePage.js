@@ -293,16 +293,21 @@ export function renderMobileSharePage({
             left: 0;
             width: 100%;
             height: 100%;
-            height: 100vh;
-            background-color: rgba(0, 0, 0, 0.8);
+            height: 100dvh;
+            background-color: rgba(0, 0, 0, 0);
             display: flex;
             align-items: center;
             justify-content: center;
             z-index: 10000;
-            animation: fadeIn 0.3s ease-out;
             overflow-y: auto;
             padding: 20px 0;
             box-sizing: border-box;
+            animation: overlayFadeIn 0.3s ease-out forwards;
+          }
+
+          @keyframes overlayFadeIn {
+            from { background-color: rgba(0, 0, 0, 0); }
+            to { background-color: rgba(0, 0, 0, 0.8); }
           }
 
           .promo-modal {
@@ -316,10 +321,21 @@ export function renderMobileSharePage({
             overflow: hidden;
             display: flex;
             flex-direction: column;
-            animation: slideIn 0.4s ease-out;
+            animation: modalSlideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
             position: relative;
             color: white;
             margin: auto 0;
+          }
+
+          @keyframes modalSlideUp {
+            from {
+              opacity: 0;
+              transform: translateY(60px) scale(0.97);
+            }
+            to {
+              opacity: 1;
+              transform: translateY(0) scale(1);
+            }
           }
 
           .promo-modal-close {
@@ -506,13 +522,25 @@ export function renderMobileSharePage({
               align-items: flex-end;
               padding: 0;
             }
-            
+
             .promo-modal {
               width: 100%;
               margin: 0;
               border-radius: 20px 20px 0 0;
-              max-height: 85vh;
+              max-height: 85dvh;
               min-height: 300px;
+              padding-bottom: env(safe-area-inset-bottom, 20px);
+            }
+
+            @keyframes modalSlideUp {
+              from {
+                opacity: 0;
+                transform: translateY(100%);
+              }
+              to {
+                opacity: 1;
+                transform: translateY(0);
+              }
             }
 
             .promo-modal-close {
@@ -756,10 +784,9 @@ export function renderMobileSharePage({
             };
             document.addEventListener('keydown', handleEscape);
             
-            // Signup button
+            // Signup button - navigate to photobooth signup flow
             signupBtn.addEventListener('click', () => {
-              window.open('https://app.sogni.ai/create?code=PHOTOBOOTH', '_blank');
-              closeModal();
+              window.location.href = 'https://photobooth.sogni.ai/signup';
             });
           }
           

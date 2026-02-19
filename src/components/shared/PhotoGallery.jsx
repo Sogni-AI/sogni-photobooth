@@ -7409,7 +7409,16 @@ const PhotoGallery = ({
         console.log(`[Infinite Loop] Video params - detected duration: ${videoDuration}s, calculated frames: ${calculatedFrames}, transition frames: ${transitionFrames}, transition duration: ${transitionDuration}s, resolution: ${transitionResolution}, fps: ${transitionFramerate}`);
       } catch (error) {
         console.warn('[Infinite Loop] Could not detect video duration, using default 5s = 81 frames');
-        transitionFrames = (firstPhoto.videoDuration || 5) * 16 + 1;
+        transitionFrames = Math.round((firstPhoto.videoDuration || 5) * 16 + 1);
+        transitionDuration = (transitionFrames - 1) / 16;
+      }
+
+      // WAN 2.2 requires frames between 17 and 161 - clamp to minimum
+      // Video duration detection can return slightly less than the original generation duration,
+      // causing frame count to drop below 17 (e.g., 1s video detected as 0.96s → 16 frames)
+      if (transitionFrames < 17) {
+        console.warn(`[Infinite Loop] Calculated frames ${transitionFrames} below minimum 17, clamping to 17`);
+        transitionFrames = 17;
         transitionDuration = (transitionFrames - 1) / 16;
       }
 
@@ -18160,7 +18169,7 @@ const PhotoGallery = ({
       )}
 
       {/* Infinite Loop Video Preview - Fullscreen playback after generation */}
-      {showInfiniteLoopPreview && cachedInfiniteLoopBlob && cachedInfiniteLoopUrl && createPortal(
+      {showInfiniteLoopPreview && (cachedInfiniteLoopUrl || (infiniteLoopProgress?.phase === 'stitching')) && createPortal(
         <div
           style={{
             position: 'fixed',
@@ -18177,47 +18186,84 @@ const PhotoGallery = ({
             padding: '20px'
           }}
           onClick={(e) => {
-            if (e.target === e.currentTarget) {
+            if (e.target === e.currentTarget && cachedInfiniteLoopUrl) {
               setShowInfiniteLoopPreview(false);
             }
           }}
         >
-          {/* Close Button */}
-          <button
-            onClick={() => setShowInfiniteLoopPreview(false)}
-            style={{
-              position: 'absolute',
-              top: '20px',
-              right: '20px',
-              background: 'rgba(0, 0, 0, 0.6)',
-              border: 'none',
-              borderRadius: '50%',
-              width: '40px',
-              height: '40px',
-              cursor: 'pointer',
-              color: '#fff',
-              fontSize: '24px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              zIndex: 99999,
-              boxShadow: '0 2px 10px rgba(0,0,0,0.3)',
-              transition: 'all 0.2s ease'
-            }}
-            onMouseOver={e => {
-              e.currentTarget.style.background = 'rgba(255, 83, 83, 0.8)';
-              e.currentTarget.style.transform = 'scale(1.05)';
-            }}
-            onMouseOut={e => {
-              e.currentTarget.style.background = 'rgba(0, 0, 0, 0.6)';
-              e.currentTarget.style.transform = 'scale(1)';
-            }}
-          >
-            ×
-          </button>
+          {/* Close Button - only when video is ready */}
+          {cachedInfiniteLoopUrl && (
+            <button
+              onClick={() => setShowInfiniteLoopPreview(false)}
+              style={{
+                position: 'absolute',
+                top: '20px',
+                right: '20px',
+                background: 'rgba(0, 0, 0, 0.6)',
+                border: 'none',
+                borderRadius: '50%',
+                width: '40px',
+                height: '40px',
+                cursor: 'pointer',
+                color: '#fff',
+                fontSize: '24px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 99999,
+                boxShadow: '0 2px 10px rgba(0,0,0,0.3)',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseOver={e => {
+                e.currentTarget.style.background = 'rgba(255, 83, 83, 0.8)';
+                e.currentTarget.style.transform = 'scale(1.05)';
+              }}
+              onMouseOut={e => {
+                e.currentTarget.style.background = 'rgba(0, 0, 0, 0.6)';
+                e.currentTarget.style.transform = 'scale(1)';
+              }}
+            >
+              ×
+            </button>
+          )}
 
-          {/* Video Player */}
-          <div style={{
+          {/* Stitching Progress - shown while concatenating videos */}
+          {!cachedInfiniteLoopUrl && infiniteLoopProgress?.phase === 'stitching' && (
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '16px'
+            }}>
+              <div style={{
+                width: '48px',
+                height: '48px',
+                border: '3px solid rgba(255, 255, 255, 0.2)',
+                borderTopColor: '#667eea',
+                borderRadius: '50%',
+                animation: 'spin 1s linear infinite'
+              }} />
+              <div style={{
+                color: '#fff',
+                fontSize: '16px',
+                fontWeight: 600,
+                fontFamily: '"Permanent Marker", cursive'
+              }}>
+                {infiniteLoopProgress.message || 'Stitching videos...'}
+              </div>
+              {infiniteLoopProgress.total > 0 && (
+                <div style={{
+                  color: 'rgba(255, 255, 255, 0.6)',
+                  fontSize: '13px'
+                }}>
+                  {infiniteLoopProgress.current}/{infiniteLoopProgress.total}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Video Player - shown when video is ready */}
+          {cachedInfiniteLoopUrl && <div style={{
             position: 'relative',
             maxWidth: '90vw',
             maxHeight: '90vh',
@@ -18426,7 +18472,7 @@ const PhotoGallery = ({
               )}
 
             </div>
-          </div>
+          </div>}
         </div>,
         document.body
       )}
