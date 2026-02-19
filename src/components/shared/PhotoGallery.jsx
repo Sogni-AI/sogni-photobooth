@@ -64,6 +64,7 @@ import AnimateMovePopup from './AnimateMovePopup';
 import AnimateReplacePopup from './AnimateReplacePopup';
 import SoundToVideoPopup from './SoundToVideoPopup';
 import MusicGeneratorModal from './MusicGeneratorModal';
+import MusicSelectorModal from './MusicSelectorModal';
 import ConfettiCelebration from './ConfettiCelebration';
 import StitchOptionsPopup from './StitchOptionsPopup';
 import VideoReviewPopup from './VideoReviewPopup';
@@ -1554,6 +1555,18 @@ const PhotoGallery = ({
   const [stitchedVideoReturnToSegmentReview, setStitchedVideoReturnToSegmentReview] = useState(false); // Track if we should return to segment review on close
   const stitchedVideoRef = useRef(null);
 
+  // Music state for stitched video overlay
+  const [showStitchedVideoMusicSelector, setShowStitchedVideoMusicSelector] = useState(false);
+  const [showStitchedVideoMusicGenerator, setShowStitchedVideoMusicGenerator] = useState(false);
+  const [stitchedVideoMusicPresetId, setStitchedVideoMusicPresetId] = useState(null);
+  const [stitchedVideoMusicStartOffset, setStitchedVideoMusicStartOffset] = useState(0);
+  const [stitchedVideoMusicCustomUrl, setStitchedVideoMusicCustomUrl] = useState(null);
+  const [stitchedVideoMusicCustomTitle, setStitchedVideoMusicCustomTitle] = useState(null);
+  const [isRestitchingWithMusic, setIsRestitchingWithMusic] = useState(false);
+  const [restitchProgress, setRestitchProgress] = useState(0);
+  // Stores { videos, originalAudioOptions, preserveSourceAudio } from the last stitch for re-stitching with music
+  const stitchedVideoStitchDataRef = useRef(null);
+
   // Handle autoplay with audio when stitched video overlay opens
   // Browsers may block autoplay with audio, so we try to play and fallback to muted
   useEffect(() => {
@@ -1921,6 +1934,9 @@ const PhotoGallery = ({
             }
           }
 
+          // Store stitch data for re-stitching with music later
+          stitchedVideoStitchDataRef.current = { videos: videosToStitch, originalAudioOptions: audioOptions, preserveSourceAudio: false };
+
           const concatenatedBlob = await concatenateVideos(
             videosToStitch,
             (current, total, message) => {
@@ -1936,6 +1952,12 @@ const PhotoGallery = ({
 
           setIsGeneratingStitchedVideo(false);
           setBulkDownloadProgress({ current: 0, total: 0, message: '' });
+
+          // Reset music state for new stitch
+          setStitchedVideoMusicPresetId(null);
+          setStitchedVideoMusicStartOffset(0);
+          setStitchedVideoMusicCustomUrl(null);
+          setStitchedVideoMusicCustomTitle(null);
 
           // Close segment review and show video overlay directly (user already reviewed segments)
           setShowSegmentReview(false);
@@ -7247,6 +7269,9 @@ const PhotoGallery = ({
         }
       }
 
+      // Store stitch data for re-stitching with music later
+      stitchedVideoStitchDataRef.current = { videos: videosToStitch, originalAudioOptions: audioOptions, preserveSourceAudio: !audioOptions };
+
       // Use the working concatenation (CO strategy - extract + ctts) with optional parent audio
       const blob = await concatenateVideos(
         videosToStitch,
@@ -7270,6 +7295,12 @@ const PhotoGallery = ({
       setShowStitchedVideoOverlay(true);
       setIsGeneratingStitchedVideo(false);
       setIsBulkDownloading(false);
+
+      // Reset music state for new stitch
+      setStitchedVideoMusicPresetId(null);
+      setStitchedVideoMusicStartOffset(0);
+      setStitchedVideoMusicCustomUrl(null);
+      setStitchedVideoMusicCustomTitle(null);
       setBulkDownloadProgress({ current: 0, total: 0, message: '' });
 
     } catch (error) {
@@ -8768,6 +8799,9 @@ const PhotoGallery = ({
         }
       }
 
+      // Store stitch data for re-stitching with music later
+      stitchedVideoStitchDataRef.current = { videos: videosToStitch, originalAudioOptions: audioOptions, preserveSourceAudio: false };
+
       const concatenatedBlob = await concatenateVideos(
         videosToStitch,
         (current, total, message) => {
@@ -8788,6 +8822,12 @@ const PhotoGallery = ({
       // Complete!
       setIsGeneratingStitchedVideo(false);
       setBulkDownloadProgress({ current: 0, total: 0, message: '' });
+
+      // Reset music state for new stitch
+      setStitchedVideoMusicPresetId(null);
+      setStitchedVideoMusicStartOffset(0);
+      setStitchedVideoMusicCustomUrl(null);
+      setStitchedVideoMusicCustomTitle(null);
 
       // Close segment review and show video overlay directly (user already reviewed segments)
       setShowSegmentReview(false);
@@ -9212,6 +9252,104 @@ const PhotoGallery = ({
       });
     }
   }, [photos, filteredPhotos, isPromptSelectorMode, isBulkDownloading, cachedInfiniteLoopBlob, cachedStitchedVideoBlob, cachedStitchedVideoPhotosHash, readyTransitionVideo, isTransitionMode, transitionVideoQueue, stitchedVideoUrl, segmentReviewData, showToast, setIsBulkDownloading, setBulkDownloadProgress]);
+
+  // Handle re-stitching the current stitched video with new music selection
+  const handleRestitchWithMusic = useCallback(async (musicPresetId, musicStartOffset = 0, customMusicUrl = null, customMusicTitle = null) => {
+    const stitchData = stitchedVideoStitchDataRef.current;
+    if (!stitchData || !stitchData.videos || stitchData.videos.length === 0) {
+      showToast({
+        title: 'Cannot Add Music',
+        message: 'Original video segments are not available for re-stitching.',
+        type: 'error'
+      });
+      return;
+    }
+
+    setShowStitchedVideoMusicSelector(false);
+    setIsRestitchingWithMusic(true);
+    setRestitchProgress(0);
+
+    try {
+      // Prepare audio options
+      let audioOptions = null;
+      if (musicPresetId) {
+        let audioUrl = null;
+        if (customMusicUrl) {
+          audioUrl = customMusicUrl;
+        } else {
+          // Look up preset URL from TRANSITION_MUSIC_PRESETS (imported via MusicSelectorModal)
+          const { TRANSITION_MUSIC_PRESETS } = await import('../../constants/transitionMusicPresets');
+          const preset = TRANSITION_MUSIC_PRESETS.find(p => p.id === musicPresetId);
+          audioUrl = preset?.url || null;
+        }
+
+        if (audioUrl) {
+          const audioResponse = await fetch(audioUrl);
+          const audioBuffer = await audioResponse.arrayBuffer();
+          audioOptions = {
+            buffer: audioBuffer,
+            startOffset: musicStartOffset
+          };
+        }
+      } else {
+        // No music selected - use original audio options (restore workflow audio)
+        audioOptions = stitchData.originalAudioOptions;
+      }
+
+      const blob = await concatenateVideos(
+        stitchData.videos,
+        (current, total) => {
+          setRestitchProgress(Math.round((current / Math.max(total, 1)) * 100));
+        },
+        audioOptions,
+        musicPresetId ? false : stitchData.preserveSourceAudio
+      );
+
+      // Revoke old URL
+      if (stitchedVideoUrl && stitchedVideoUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(stitchedVideoUrl);
+      }
+
+      const blobUrl = URL.createObjectURL(blob);
+      setStitchedVideoUrl(blobUrl);
+      setStitchedVideoMuted(false);
+
+      // Update music state
+      setStitchedVideoMusicPresetId(musicPresetId);
+      setStitchedVideoMusicStartOffset(musicStartOffset);
+      setStitchedVideoMusicCustomUrl(customMusicUrl);
+      setStitchedVideoMusicCustomTitle(customMusicTitle);
+    } catch (error) {
+      console.error('[Restitch Music] Error:', error);
+      showToast({
+        title: 'Music Error',
+        message: 'Failed to add music to video. Please try again.',
+        type: 'error'
+      });
+    } finally {
+      setIsRestitchingWithMusic(false);
+      setRestitchProgress(0);
+    }
+  }, [stitchedVideoUrl, showToast]);
+
+  // Handle AI music track selection for stitched video overlay
+  const handleStitchedVideoAIMusicSelect = useCallback((track) => {
+    setShowStitchedVideoMusicGenerator(false);
+    setShowStitchedVideoMusicSelector(false);
+    handleRestitchWithMusic(`ai-generated-${track.id}`, 0, track.url, 'AI Generated');
+  }, [handleRestitchWithMusic]);
+
+  // Handle uploaded music for stitched video overlay
+  const handleStitchedVideoUploadMusic = useCallback((blobUrl, filename) => {
+    setShowStitchedVideoMusicSelector(false);
+    handleRestitchWithMusic('uploaded', 0, blobUrl, filename);
+  }, [handleRestitchWithMusic]);
+
+  // Handle preset music selection for stitched video overlay
+  const handleStitchedVideoMusicSelect = useCallback((presetId, startOffset = 0) => {
+    setShowStitchedVideoMusicSelector(false);
+    handleRestitchWithMusic(presetId, startOffset);
+  }, [handleRestitchWithMusic]);
 
   // Handle sharing stitched video to Twitter - stitch if needed, then open Twitter share modal
   const handleShareStitchedVideoToTwitter = useCallback(async () => {
@@ -10570,6 +10708,9 @@ const PhotoGallery = ({
         }
       }
 
+      // Store stitch data for re-stitching with music later
+      stitchedVideoStitchDataRef.current = { videos: orderedVideos, originalAudioOptions: audioOptions, preserveSourceAudio: false };
+
       // Concatenate videos into one seamless video (with optional audio)
       const concatenatedBlob = await concatenateVideos(
         orderedVideos,
@@ -10594,6 +10735,12 @@ const PhotoGallery = ({
       const blobUrl = URL.createObjectURL(concatenatedBlob);
       setStitchedVideoUrl(blobUrl);
       setShowStitchedVideoOverlay(true);
+
+      // Reset music state for new stitch
+      setStitchedVideoMusicPresetId(null);
+      setStitchedVideoMusicStartOffset(0);
+      setStitchedVideoMusicCustomUrl(null);
+      setStitchedVideoMusicCustomTitle(null);
       setIsBulkDownloading(false);
       setBulkDownloadProgress({ current: 0, total: 0, message: '' });
 
@@ -19552,12 +19699,20 @@ const PhotoGallery = ({
             padding: '20px'
           }}
           onClick={() => {
+            if (showStitchedVideoMusicSelector || showStitchedVideoMusicGenerator) {
+              // Close music modals first, not the whole overlay
+              setShowStitchedVideoMusicSelector(false);
+              setShowStitchedVideoMusicGenerator(false);
+              return;
+            }
             setShowStitchedVideoOverlay(false);
             // Don't revoke URL for individual segments, as they might be reused
             if (stitchedVideoUrl && stitchedVideoUrl.startsWith('blob:')) {
               URL.revokeObjectURL(stitchedVideoUrl);
             }
             setStitchedVideoUrl(null);
+            setShowStitchedVideoMusicSelector(false);
+            setShowStitchedVideoMusicGenerator(false);
             // Return to segment review if this was opened from there
             if (stitchedVideoReturnToSegmentReview) {
               setShowSegmentReview(true);
@@ -19577,6 +19732,8 @@ const PhotoGallery = ({
                 URL.revokeObjectURL(stitchedVideoUrl);
               }
               setStitchedVideoUrl(null);
+              setShowStitchedVideoMusicSelector(false);
+              setShowStitchedVideoMusicGenerator(false);
               // Return to segment review if this was opened from there
               if (stitchedVideoReturnToSegmentReview) {
                 setShowSegmentReview(true);
@@ -19784,6 +19941,43 @@ const PhotoGallery = ({
                 </button>
               )}
 
+              {/* Music Button - add/change background music via re-stitch */}
+              {!stitchedVideoReturnToSegmentReview && stitchedVideoStitchDataRef.current && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowStitchedVideoMusicSelector(true);
+                  }}
+                  title={stitchedVideoMusicPresetId ? 'Change Music' : 'Add Music'}
+                  style={{
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '50%',
+                    background: stitchedVideoMusicPresetId ? 'rgba(76, 175, 80, 0.7)' : 'rgba(0, 0, 0, 0.6)',
+                    border: 'none',
+                    color: '#fff',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                    transition: 'all 0.2s ease'
+                  }}
+                  onMouseOver={e => {
+                    e.currentTarget.style.background = 'rgba(255, 152, 0, 0.9)';
+                    e.currentTarget.style.transform = 'scale(1.1)';
+                  }}
+                  onMouseOut={e => {
+                    e.currentTarget.style.background = stitchedVideoMusicPresetId ? 'rgba(76, 175, 80, 0.7)' : 'rgba(0, 0, 0, 0.6)';
+                    e.currentTarget.style.transform = 'scale(1)';
+                  }}
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
+                  </svg>
+                </button>
+              )}
+
               {/* Remix Button - opens segment review to regenerate individual segments */}
               {pendingSegments.length > 0 && segmentReviewData && (
                 <button
@@ -19823,6 +20017,73 @@ const PhotoGallery = ({
                 </button>
               )}
             </div>
+
+            {/* Music Selector Modal - overlays the video player */}
+            {showStitchedVideoMusicSelector && (
+              <MusicSelectorModal
+                currentPresetId={stitchedVideoMusicPresetId}
+                musicStartOffset={stitchedVideoMusicStartOffset}
+                customMusicUrl={stitchedVideoMusicCustomUrl}
+                customMusicTitle={stitchedVideoMusicCustomTitle}
+                totalVideoDuration={stitchedVideoRef.current?.duration || 15}
+                onSelect={handleStitchedVideoMusicSelect}
+                onUploadMusic={handleStitchedVideoUploadMusic}
+                onClose={() => setShowStitchedVideoMusicSelector(false)}
+                onOpenMusicGenerator={() => setShowStitchedVideoMusicGenerator(true)}
+                isAuthenticated={isAuthenticated}
+                applyLabel="Apply & Restitch"
+                removeLabel="Remove Music & Restitch"
+              />
+            )}
+
+            {/* AI Music Generator Modal for stitched video */}
+            <MusicGeneratorModal
+              visible={showStitchedVideoMusicGenerator}
+              onClose={() => setShowStitchedVideoMusicGenerator(false)}
+              onTrackSelect={handleStitchedVideoAIMusicSelect}
+              sogniClient={sogniClient}
+              isAuthenticated={isAuthenticated}
+              tokenType={tokenType}
+              zIndex={10000002}
+            />
+
+            {/* Re-stitching progress overlay */}
+            {isRestitchingWithMusic && (
+              <div
+                onClick={(e) => e.stopPropagation()}
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: 'rgba(0, 0, 0, 0.75)',
+                  zIndex: 30
+                }}
+              >
+                <svg width="72" height="72" viewBox="0 0 72 72">
+                  <circle cx="36" cy="36" r="30" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="4" />
+                  <circle
+                    cx="36" cy="36" r="30" fill="none"
+                    stroke="#ECB630"
+                    strokeWidth="4"
+                    strokeLinecap="round"
+                    strokeDasharray={`${(restitchProgress / 100) * 188.5} 188.5`}
+                    transform="rotate(-90 36 36)"
+                    style={{ transition: 'stroke-dasharray 0.3s ease' }}
+                  />
+                </svg>
+                <div style={{
+                  marginTop: '16px',
+                  fontSize: '14px',
+                  color: 'rgba(255,255,255,0.7)',
+                  fontWeight: '500'
+                }}>
+                  Adding music... {restitchProgress}%
+                </div>
+              </div>
+            )}
           </div>
         </div>,
         document.body
