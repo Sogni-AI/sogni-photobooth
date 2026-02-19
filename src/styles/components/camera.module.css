@@ -468,6 +468,7 @@
     width: 20px;
     height: 20px;
   }
+
 }
 
 /* Control Overlay */
@@ -776,6 +777,45 @@
     transform: translateY(-50%) !important;
     width: 32px !important;
     height: 32px !important;
+  }
+}
+
+/* Reposition thumbnail and camera buttons for reduced border-bottom (70px vs 112px desktop).
+   translateY(-50%) shifts elements up by half their height, which overflows the 70px area.
+   Fix: remove translateY(-50%) and use bottom directly — same pattern as the aspect ratio
+   dropdown at @media (max-width: 768px). Bottom edges aligned at 12px from frame bottom.
+   IMPORTANT: This block must appear AFTER the base !important rules above to win the cascade. */
+@media (min-width: 481px) and (max-width: 600px) {
+  .thumbnailButtonCorner {
+    bottom: 12px !important;
+    transform: translateY(0%) !important;
+  }
+
+  .thumbnailButtonCorner:hover {
+    transform: scale(1.1) !important;
+  }
+
+  .cameraFlipButtonWithThumbnail {
+    bottom: 12px !important;
+    transform: translateY(0%) !important;
+  }
+
+  .cameraDeviceButtonNextToThumbnail {
+    bottom: 12px !important;
+    transform: translateY(0%) !important;
+  }
+
+  .cameraDeviceButtonNextToThumbnail:hover {
+    transform: scale(1.1) !important;
+  }
+
+  .cameraDeviceButtonDesktop {
+    bottom: 12px !important;
+    transform: translateY(0%) !important;
+  }
+
+  .cameraDeviceButtonDesktop:hover {
+    transform: scale(1.1) !important;
   }
 }
 
