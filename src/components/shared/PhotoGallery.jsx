@@ -5040,11 +5040,7 @@ const PhotoGallery = ({
       loraStrength: params.loraStrength,
       tokenType,
       onComplete: (resultUrl) => {
-        showToast({
-          title: '📐 New Angle Ready!',
-          message: 'Swipe to view the new angle!',
-          type: 'success'
-        });
+        // do nothing
       },
       onError: (error) => {
         showToast({
