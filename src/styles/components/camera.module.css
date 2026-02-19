@@ -926,6 +926,30 @@
   transform: translateY(-50%) scale(1.1);
 }
 
+/* Responsive overrides for desktop camera buttons on narrow viewports */
+/* Chrome device toolbar may not trigger JS isMobile detection, so desktop buttons */
+/* can render at mobile widths - must align with thumbnail and aspect ratio dropdown */
+@media (max-width: 480px) {
+  .cameraDeviceButtonNextToThumbnail {
+    bottom: -8px !important;
+    left: 60px !important;    /* Adjusted for mobile thumbnail (12px left + 40px width + 8px gap) */
+    transform: translateY(-50%) !important;
+    width: 32px !important;
+    height: 32px !important;
+  }
+
+  .cameraDeviceButtonNextToThumbnail:hover {
+    transform: translateY(-50%) scale(1.1) !important;
+  }
+}
+
+@media (max-width: 480px) and (orientation: portrait) {
+  .cameraDeviceButtonNextToThumbnail {
+    bottom: -5px !important;  /* Match portrait-specific thumbnail positioning */
+    left: 60px !important;
+  }
+}
+
 /* Desktop camera device button - positioned on right when no thumbnail */
 .cameraDeviceButtonDesktop {
   position: absolute;
@@ -949,6 +973,27 @@
   background: white;
   box-shadow: 0 4px 12px rgba(0,0,0,0.15);
   transform: translateY(-50%) scale(1.1);
+}
+
+@media (max-width: 480px) {
+  .cameraDeviceButtonDesktop {
+    bottom: -8px !important;
+    left: 12px !important;    /* Move to left side to avoid overlap with aspect ratio dropdown */
+    right: auto !important;
+    transform: translateY(-50%) !important;
+    width: 32px !important;
+    height: 32px !important;
+  }
+
+  .cameraDeviceButtonDesktop:hover {
+    transform: translateY(-50%) scale(1.1) !important;
+  }
+}
+
+@media (max-width: 480px) and (orientation: portrait) {
+  .cameraDeviceButtonDesktop {
+    bottom: -5px !important;  /* Match portrait-specific positioning */
+  }
 }
 
 /* Camera device dropdown menu */
