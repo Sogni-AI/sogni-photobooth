@@ -1564,6 +1564,7 @@ const PhotoGallery = ({
   const [stitchedVideoMusicCustomTitle, setStitchedVideoMusicCustomTitle] = useState(null);
   const [isRestitchingWithMusic, setIsRestitchingWithMusic] = useState(false);
   const [restitchProgress, setRestitchProgress] = useState(0);
+  const [pendingAITrack, setPendingAITrack] = useState(null);
   // Stores { videos, originalAudioOptions, preserveSourceAudio } from the last stitch for re-stitching with music
   const stitchedVideoStitchDataRef = useRef(null);
 
@@ -9341,12 +9342,12 @@ const PhotoGallery = ({
     }
   }, [stitchedVideoUrl, showToast]);
 
-  // Handle AI music track selection for stitched video overlay
+  // Handle AI music track selection - stage it in MusicSelectorModal for trimming
   const handleStitchedVideoAIMusicSelect = useCallback((track) => {
     setShowStitchedVideoMusicGenerator(false);
-    setShowStitchedVideoMusicSelector(false);
-    handleRestitchWithMusic(`ai-generated-${track.id}`, 0, track.url, 'AI Generated');
-  }, [handleRestitchWithMusic]);
+    // Keep music selector open so user can trim via waveform before applying
+    setPendingAITrack({ id: track.id, url: track.url, title: 'AI Generated' });
+  }, []);
 
   // Handle uploaded music for stitched video overlay
   const handleStitchedVideoUploadMusic = useCallback((blobUrl, filename) => {
@@ -9354,10 +9355,10 @@ const PhotoGallery = ({
     handleRestitchWithMusic('uploaded', 0, blobUrl, filename);
   }, [handleRestitchWithMusic]);
 
-  // Handle preset music selection for stitched video overlay
-  const handleStitchedVideoMusicSelect = useCallback((presetId, startOffset = 0) => {
+  // Handle music selection for stitched video overlay (presets and AI-generated tracks)
+  const handleStitchedVideoMusicSelect = useCallback((presetId, startOffset = 0, customUrl = null, customTitle = null) => {
     setShowStitchedVideoMusicSelector(false);
-    handleRestitchWithMusic(presetId, startOffset);
+    handleRestitchWithMusic(presetId, startOffset, customUrl, customTitle);
   }, [handleRestitchWithMusic]);
 
   // Handle sharing stitched video to Twitter - stitch if needed, then open Twitter share modal
@@ -20079,6 +20080,8 @@ const PhotoGallery = ({
                 isAuthenticated={isAuthenticated}
                 applyLabel="Apply & Restitch"
                 removeLabel="Remove Music & Restitch"
+                pendingAITrack={pendingAITrack}
+                onPendingAITrackConsumed={() => setPendingAITrack(null)}
               />
             )}
 

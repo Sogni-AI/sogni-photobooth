@@ -66,6 +66,7 @@ const Camera360FinalVideoStep: React.FC<Camera360FinalVideoStepProps> = ({
   const [showMusicSelector, setShowMusicSelector] = useState(false);
   const [showMusicGenerator, setShowMusicGenerator] = useState(false);
   const [needsPlayPrompt, setNeedsPlayPrompt] = useState(false);
+  const [pendingAITrack, setPendingAITrack] = useState<{ id: string; url: string; title: string } | null>(null);
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Auto-hide UI after 3 seconds of inactivity during playback
@@ -181,16 +182,16 @@ const Camera360FinalVideoStep: React.FC<Camera360FinalVideoStepProps> = ({
     }
   }, [videoBlob, handleDownload]);
 
-  const handleMusicSelect = useCallback((presetId: string | null, startOffset: number = 0) => {
+  const handleMusicSelect = useCallback((presetId: string | null, startOffset: number = 0, customUrl: string | null = null, customTitle: string | null = null) => {
     setShowMusicSelector(false);
-    onRestitchWithMusic(presetId, startOffset);
+    onRestitchWithMusic(presetId, startOffset, customUrl || undefined, customTitle || undefined);
   }, [onRestitchWithMusic]);
 
+  // Stage AI track in MusicSelectorModal for trimming instead of immediately stitching
   const handleAIMusicSelect = useCallback((track: any) => {
     setShowMusicGenerator(false);
-    setShowMusicSelector(false);
-    onRestitchWithMusic(`ai-generated-${track.id}`, 0, track.url, 'AI Generated');
-  }, [onRestitchWithMusic]);
+    setPendingAITrack({ id: track.id, url: track.url, title: 'AI Generated' });
+  }, []);
 
   const handleUploadMusic = useCallback((blobUrl: string, filename: string) => {
     setShowMusicSelector(false);
@@ -498,6 +499,8 @@ const Camera360FinalVideoStep: React.FC<Camera360FinalVideoStepProps> = ({
           onClose={() => setShowMusicSelector(false)}
           onOpenMusicGenerator={() => setShowMusicGenerator(true)}
           isAuthenticated={isAuthenticated}
+          pendingAITrack={pendingAITrack}
+          onPendingAITrackConsumed={() => setPendingAITrack(null)}
         />
       )}
 

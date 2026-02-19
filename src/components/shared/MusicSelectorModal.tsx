@@ -18,13 +18,19 @@ import AudioTrimPreview from './AudioTrimPreview';
 
 const ACCENT_COLOR = '#ECB630';
 
+export interface PendingAITrack {
+  id: string;
+  url: string;
+  title: string;
+}
+
 export interface MusicSelectorModalProps {
   currentPresetId: string | null;
   musicStartOffset?: number;
   customMusicUrl?: string | null;
   customMusicTitle?: string | null;
   totalVideoDuration?: number;
-  onSelect: (presetId: string | null, startOffset?: number) => void;
+  onSelect: (presetId: string | null, startOffset?: number, customUrl?: string | null, customTitle?: string | null) => void;
   onUploadMusic: (blobUrl: string, filename: string) => void;
   onClose: () => void;
   onOpenMusicGenerator?: () => void;
@@ -35,6 +41,10 @@ export interface MusicSelectorModalProps {
   applyLabel?: string;
   /** Label for the remove button. Defaults to "Remove Music & Restitch". */
   removeLabel?: string;
+  /** AI-generated track to stage for trimming (set when user clicks "Use" in MusicGeneratorModal). */
+  pendingAITrack?: PendingAITrack | null;
+  /** Called after the pending AI track has been consumed/staged. */
+  onPendingAITrackConsumed?: () => void;
 }
 
 const MusicSelectorModal: React.FC<MusicSelectorModalProps> = ({
@@ -50,7 +60,9 @@ const MusicSelectorModal: React.FC<MusicSelectorModalProps> = ({
   isAuthenticated = false,
   accentColor = ACCENT_COLOR,
   applyLabel = 'Apply & Restitch',
-  removeLabel = 'Remove Music & Restitch'
+  removeLabel = 'Remove Music & Restitch',
+  pendingAITrack,
+  onPendingAITrackConsumed
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [previewId, setPreviewId] = useState<string | null>(null);
@@ -97,11 +109,25 @@ const MusicSelectorModal: React.FC<MusicSelectorModalProps> = ({
     }
   }, [previewId]);
 
+  // When an AI track is selected from the generator, stage it for trimming
+  useEffect(() => {
+    if (pendingAITrack) {
+      setStagedId(`ai-generated-${pendingAITrack.id}`);
+      setStagedCustomUrl(pendingAITrack.url);
+      setStagedCustomTitle(pendingAITrack.title);
+      setTrimOffset(0);
+      onPendingAITrackConsumed?.();
+    }
+  }, [pendingAITrack]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleApply = useCallback(() => {
     if (!stagedId) {
       onSelect(null);
     } else if (stagedId === 'uploaded' && stagedCustomUrl && stagedCustomTitle) {
       onUploadMusic(stagedCustomUrl, stagedCustomTitle);
+    } else if (stagedCustomUrl) {
+      // AI-generated or other custom tracks - pass URL/title with trim offset
+      onSelect(stagedId, trimOffset, stagedCustomUrl, stagedCustomTitle);
     } else {
       onSelect(stagedId, trimOffset);
     }
