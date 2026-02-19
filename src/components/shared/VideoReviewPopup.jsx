@@ -1587,7 +1587,10 @@ const VideoReviewPopup = ({
                             fontWeight: '800',
                             transition: 'all 0.25s cubic-bezier(0.68, -0.55, 0.265, 1.55)',
                             boxShadow: `2px 2px 0 #1a1a1a`,
-                            textTransform: 'lowercase'
+                            textTransform: 'lowercase',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.4em'
                           }}
                           onMouseOver={(e) => {
                             e.currentTarget.style.transform = 'translate(-1px, -1px)';
@@ -1607,7 +1610,7 @@ const VideoReviewPopup = ({
                               : `regenerate this ${config.itemLabel.toLowerCase()}`
                           }
                         >
-                          🔄 redo
+                          <span>🔄</span> redo
                         </button>
                         {item.status === 'ready' && (
                           <span style={{
