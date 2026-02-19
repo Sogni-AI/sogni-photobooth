@@ -11,6 +11,7 @@ import { WinterMusicPlayerProvider } from '../context/WinterMusicPlayerContext';
 import GlobalMusicPlayer from './shared/GlobalMusicPlayer';
 import GlobalWinterMusicPlayer from './shared/GlobalWinterMusicPlayer';
 import PageMetadata from './shared/PageMetadata';
+import { redirectToAuth } from '../config/auth';
 
 // Create navigation context
 const NavigationContext = createContext();
@@ -21,6 +22,13 @@ const AppRouter = () => {
     // Check initial route
     const hash = window.location.hash;
     const pathname = window.location.pathname;
+
+    // Handle /signup route - redirect to auth signup flow
+    if (pathname === '/signup') {
+      redirectToAuth('signup', 'PHOTOBOOTH');
+      return 'main'; // Return main while redirect happens
+    }
+
     if (hash === '#analytics' || pathname === '/admin/analytics') {
       return 'analytics';
     }
@@ -77,6 +85,10 @@ const AppRouter = () => {
     const handleRouteChange = () => {
       const hash = window.location.hash;
       const pathname = window.location.pathname;
+      if (pathname === '/signup') {
+        redirectToAuth('signup', 'PHOTOBOOTH');
+        return;
+      }
       if (hash === '#analytics' || pathname === '/admin/analytics') {
         setCurrentRoute('analytics');
       } else if (hash === '#moderate' || pathname === '/admin/moderate') {

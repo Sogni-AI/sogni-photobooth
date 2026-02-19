@@ -338,6 +338,22 @@ export function renderMobileSharePage({
             }
           }
 
+          @keyframes overlayFadeOut {
+            from { background-color: rgba(0, 0, 0, 0.8); }
+            to { background-color: rgba(0, 0, 0, 0); }
+          }
+
+          @keyframes modalSlideDown {
+            from {
+              opacity: 1;
+              transform: translateY(0) scale(1);
+            }
+            to {
+              opacity: 0;
+              transform: translateY(60px) scale(0.97);
+            }
+          }
+
           .promo-modal-close {
             position: absolute;
             top: 16px;
@@ -540,6 +556,17 @@ export function renderMobileSharePage({
               to {
                 opacity: 1;
                 transform: translateY(0);
+              }
+            }
+
+            @keyframes modalSlideDown {
+              from {
+                opacity: 1;
+                transform: translateY(0);
+              }
+              to {
+                opacity: 0;
+                transform: translateY(100%);
               }
             }
 
@@ -763,9 +790,13 @@ export function renderMobileSharePage({
             const signupBtn = modal.querySelector('.promo-signup-btn');
             const maybeLaterBtn = modal.querySelector('.promo-maybe-later');
             
-            // Close modal function
+            // Close modal function with animation
             const closeModal = () => {
-              document.body.removeChild(overlay);
+              overlay.style.animation = 'overlayFadeOut 0.25s ease-in forwards';
+              modal.style.animation = 'modalSlideDown 0.25s ease-in forwards';
+              modal.addEventListener('animationend', () => {
+                if (overlay.parentNode) document.body.removeChild(overlay);
+              }, { once: true });
             };
             
             // Event listeners
