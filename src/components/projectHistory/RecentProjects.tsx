@@ -1536,7 +1536,7 @@ function RecentProjects({
                             key={image.id}
                             className="job-item local-project-image-item"
                             style={{
-                              width: `${Math.round(320 * aspect)}px`,
+                              aspectRatio: `${aspect}`,
                               cursor: 'pointer'
                             }}
                             onClick={() => handleLocalImageClick(
