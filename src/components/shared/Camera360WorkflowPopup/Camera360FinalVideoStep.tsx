@@ -37,6 +37,8 @@ interface Camera360FinalVideoStepProps {
   sogniClient?: any;
   isAuthenticated?: boolean;
   tokenType?: string;
+  /** Called to share the video via QR code (kiosk mode) */
+  onShareQRCode?: () => void;
 }
 
 const Camera360FinalVideoStep: React.FC<Camera360FinalVideoStepProps> = ({
@@ -55,7 +57,8 @@ const Camera360FinalVideoStep: React.FC<Camera360FinalVideoStepProps> = ({
   totalVideoDuration = 15,
   sogniClient,
   isAuthenticated = false,
-  tokenType = 'spark'
+  tokenType = 'spark',
+  onShareQRCode
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(true);
@@ -395,6 +398,19 @@ const Camera360FinalVideoStep: React.FC<Camera360FinalVideoStepProps> = ({
             >
               <svg fill="currentColor" width="20" height="20" viewBox="0 0 24 24">
                 <path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92c0-1.61-1.31-2.92-2.92-2.92z"/>
+              </svg>
+            </ActionButton>
+          )}
+
+          {/* QR Code Share */}
+          {onShareQRCode && (
+            <ActionButton
+              onClick={(e) => { e.stopPropagation(); onShareQRCode(); }}
+              title="Share as QR Code"
+              active={false}
+            >
+              <svg fill="currentColor" width="20" height="20" viewBox="0 0 24 24">
+                <path d="M3 11h8V3H3v8zm2-6h4v4H5V5zM3 21h8v-8H3v8zm2-6h4v4H5v-4zM13 3v8h8V3h-8zm6 6h-4V5h4v4zM13 13h2v2h-2zM15 15h2v2h-2zM13 17h2v2h-2zM15 19h2v2h-2zM17 17h2v2h-2zM17 13h2v2h-2zM19 15h2v2h-2z"/>
               </svg>
             </ActionButton>
           )}

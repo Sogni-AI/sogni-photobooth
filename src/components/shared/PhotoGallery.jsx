@@ -7167,8 +7167,10 @@ const PhotoGallery = ({
 
       // Check for cached version
       if (cachedStitchedVideoBlob && cachedStitchedVideoPhotosHash === photosHash) {
-        // Use cached version
-        downloadBlob(cachedStitchedVideoBlob, 'stitched-video.mp4');
+        // Use cached version - show preview overlay
+        const blobUrl = URL.createObjectURL(cachedStitchedVideoBlob);
+        setStitchedVideoUrl(blobUrl);
+        setShowStitchedVideoOverlay(true);
         setIsBulkDownloading(false);
         return;
       }
@@ -7262,32 +7264,13 @@ const PhotoGallery = ({
       const elapsedMs = performance.now() - startTime;
       const elapsedSec = (elapsedMs / 1000).toFixed(2);
 
-      // Download the stitched video
-      const timestamp = new Date().toISOString().split('T')[0];
-      const filename = `stitched-video-${timestamp}.mp4`;
+      // Show stitched video in preview overlay
       const blobUrl = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = blobUrl;
-      link.download = filename;
-      link.style.display = 'none';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
-
+      setStitchedVideoUrl(blobUrl);
+      setShowStitchedVideoOverlay(true);
       setIsGeneratingStitchedVideo(false);
-
-      showToast({
-        title: 'Video Created',
-        message: `Stitched ${photosWithVideos.length} videos in ${elapsedSec}s`,
-        type: 'success'
-      });
-
-      // Reset after a delay
-      setTimeout(() => {
-        setIsBulkDownloading(false);
-        setBulkDownloadProgress({ current: 0, total: 0, message: '' });
-      }, 3000);
+      setIsBulkDownloading(false);
+      setBulkDownloadProgress({ current: 0, total: 0, message: '' });
 
     } catch (error) {
       console.error('[Stitch] Error:', error);
@@ -10607,50 +10590,15 @@ const PhotoGallery = ({
         return concatenatedBlob;
       }
 
-      const timestamp = new Date().toISOString().split('T')[0];
-      const filename = includeMusic && appliedMusic 
-        ? `sogni-photobooth-transition-${timestamp}-with-music.mp4`
-        : `sogni-photobooth-transition-${timestamp}.mp4`;
-      
-      // On mobile, store blob for user to trigger share (user gesture required)
-      const isMobileDevice = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || 
-                             (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-      
-      if (isMobileDevice && navigator.share) {
-        // Store blob for share button (preserves user gesture requirement)
-        setReadyTransitionVideo({ blob: concatenatedBlob, filename });
-        setBulkDownloadProgress({
-          current: orderedVideos.length,
-          total: orderedVideos.length,
-          message: 'Ready! Tap to save video'
-        });
-      } else {
-        // Desktop - download immediately
-        const blobUrl = URL.createObjectURL(concatenatedBlob);
-        const link = document.createElement('a');
-        link.href = blobUrl;
-        link.download = filename;
-        link.style.display = 'none';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
-        
-        setBulkDownloadProgress({
-          current: orderedVideos.length,
-          total: orderedVideos.length,
-          message: 'Download complete!'
-        });
-        
-        // Mark transition video as downloaded
-        setTransitionVideoDownloaded(true);
-      }
+      // Show stitched video in preview overlay
+      const blobUrl = URL.createObjectURL(concatenatedBlob);
+      setStitchedVideoUrl(blobUrl);
+      setShowStitchedVideoOverlay(true);
+      setIsBulkDownloading(false);
+      setBulkDownloadProgress({ current: 0, total: 0, message: '' });
 
-      // Reset after a delay
-      setTimeout(() => {
-        setIsBulkDownloading(false);
-        setBulkDownloadProgress({ current: 0, total: 0, message: '' });
-      }, 3000);
+      // Mark transition video as downloaded
+      setTransitionVideoDownloaded(true);
 
     } catch (error) {
       const elapsedMs = performance.now() - startTime;
@@ -18249,6 +18197,49 @@ const PhotoGallery = ({
                 </button>
               )}
 
+              {/* QR Code Share Button */}
+              {handleStitchedVideoQRShare && cachedInfiniteLoopBlob && (
+                <button
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    try {
+                      const currentPhotosArray = isPromptSelectorMode ? filteredPhotos : photos;
+                      const thumbnailUrl = currentPhotosArray.find(p => !p.hidden && !p.loading && !p.generating && !p.error && p.videoUrl && !p.isOriginal)?.images?.[0] || null;
+                      await handleStitchedVideoQRShare(cachedInfiniteLoopBlob, thumbnailUrl);
+                    } catch (err) {
+                      console.error('[QR Share] Failed to share infinite loop video:', err);
+                    }
+                  }}
+                  title="Share as QR Code"
+                  style={{
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '50%',
+                    background: 'rgba(0, 0, 0, 0.6)',
+                    border: 'none',
+                    color: '#fff',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                    transition: 'all 0.2s ease'
+                  }}
+                  onMouseOver={e => {
+                    e.currentTarget.style.background = 'rgba(76, 175, 80, 0.9)';
+                    e.currentTarget.style.transform = 'scale(1.1)';
+                  }}
+                  onMouseOut={e => {
+                    e.currentTarget.style.background = 'rgba(0, 0, 0, 0.6)';
+                    e.currentTarget.style.transform = 'scale(1)';
+                  }}
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M3 11h8V3H3v8zm2-6h4v4H5V5zM3 21h8v-8H3v8zm2-6h4v4H5v-4zM13 3v8h8V3h-8zm6 6h-4V5h4v4zM13 13h2v2h-2zM15 15h2v2h-2zM13 17h2v2h-2zM15 19h2v2h-2zM17 17h2v2h-2zM17 13h2v2h-2zM19 15h2v2h-2z"/>
+                  </svg>
+                </button>
+              )}
+
               {/* Remix Button - opens transition review to regenerate individual transitions */}
               {pendingTransitions.length > 0 && transitionReviewData && (
                 <button
@@ -19490,6 +19481,7 @@ const PhotoGallery = ({
           sogniClient={sogniClient}
           onClose={() => setShow360CameraPopup(false)}
           onOutOfCredits={onOutOfCredits}
+          onShareQRCode={handleStitchedVideoQRShare}
         />
       )}
 
@@ -19743,6 +19735,51 @@ const PhotoGallery = ({
                 >
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"/>
+                  </svg>
+                </button>
+              )}
+
+              {/* QR Code Share Button - only for full stitches, not single segment previews */}
+              {handleStitchedVideoQRShare && !stitchedVideoReturnToSegmentReview && (
+                <button
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    try {
+                      const response = await fetch(stitchedVideoUrl);
+                      const blob = await response.blob();
+                      const currentPhotosArray = isPromptSelectorMode ? filteredPhotos : photos;
+                      const thumbnailUrl = currentPhotosArray.find(p => !p.hidden && !p.loading && !p.generating && !p.error && p.videoUrl && !p.isOriginal)?.images?.[0] || null;
+                      await handleStitchedVideoQRShare(blob, thumbnailUrl);
+                    } catch (err) {
+                      console.error('[QR Share] Failed to share stitched video:', err);
+                    }
+                  }}
+                  title="Share as QR Code"
+                  style={{
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '50%',
+                    background: 'rgba(0, 0, 0, 0.6)',
+                    border: 'none',
+                    color: '#fff',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                    transition: 'all 0.2s ease'
+                  }}
+                  onMouseOver={e => {
+                    e.currentTarget.style.background = 'rgba(76, 175, 80, 0.9)';
+                    e.currentTarget.style.transform = 'scale(1.1)';
+                  }}
+                  onMouseOut={e => {
+                    e.currentTarget.style.background = 'rgba(0, 0, 0, 0.6)';
+                    e.currentTarget.style.transform = 'scale(1)';
+                  }}
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M3 11h8V3H3v8zm2-6h4v4H5V5zM3 21h8v-8H3v8zm2-6h4v4H5v-4zM13 3v8h8V3h-8zm6 6h-4V5h4v4zM13 13h2v2h-2zM15 15h2v2h-2zM13 17h2v2h-2zM15 19h2v2h-2zM17 17h2v2h-2zM17 13h2v2h-2zM19 15h2v2h-2z"/>
                   </svg>
                 </button>
               )}

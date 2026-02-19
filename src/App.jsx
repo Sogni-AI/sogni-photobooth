@@ -7441,14 +7441,15 @@ const App = () => {
 
               <div style={{
                 display: 'flex',
+                flexDirection: 'column',
                 gap: '12px',
                 justifyContent: 'center'
               }}>
                 <button
-                  onClick={() => window.location.reload()}
+                  onClick={() => authState.checkExistingSession()}
                   style={{
                     flex: 1,
-                    background: 'linear-gradient(135deg, #2196f3 0%, #1976d2 100%)',
+                    background: 'linear-gradient(135deg, #4caf50 0%, #388e3c 100%)',
                     color: 'white',
                     border: 'none',
                     borderRadius: '8px',
@@ -7457,18 +7458,41 @@ const App = () => {
                     fontWeight: '600',
                     cursor: 'pointer',
                     transition: 'all 0.2s',
-                    boxShadow: '0 4px 12px rgba(33, 150, 243, 0.3)'
+                    boxShadow: '0 4px 12px rgba(76, 175, 80, 0.3)'
                   }}
                   onMouseOver={(e) => {
                     e.currentTarget.style.transform = 'translateY(-2px)';
-                    e.currentTarget.style.boxShadow = '0 6px 16px rgba(33, 150, 243, 0.4)';
+                    e.currentTarget.style.boxShadow = '0 6px 16px rgba(76, 175, 80, 0.4)';
                   }}
                   onMouseOut={(e) => {
                     e.currentTarget.style.transform = 'translateY(0)';
-                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(33, 150, 243, 0.3)';
+                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(76, 175, 80, 0.3)';
                   }}
                 >
-                  🔄 Refresh Browser
+                  Resume Here
+                </button>
+                <button
+                  onClick={() => window.location.reload()}
+                  style={{
+                    flex: 1,
+                    background: 'transparent',
+                    color: '#666',
+                    border: '1px solid #ddd',
+                    borderRadius: '8px',
+                    padding: '10px 24px',
+                    fontSize: '0.9rem',
+                    fontWeight: '500',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                  }}
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.background = '#f5f5f5';
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.background = 'transparent';
+                  }}
+                >
+                  Refresh Browser
                 </button>
               </div>
             </div>

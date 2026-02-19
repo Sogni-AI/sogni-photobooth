@@ -34,6 +34,8 @@ interface Camera360WorkflowPopupProps {
   sogniClient: any;
   onClose: () => void;
   onOutOfCredits?: () => void;
+  /** Called to share the final video via QR code (kiosk mode). Receives (videoBlob, thumbnailUrl). */
+  onShareQRCode?: (videoBlob: Blob, thumbnailUrl: string | null) => void;
 }
 
 const STEP_LABELS: Record<Camera360Step, string> = {
@@ -58,7 +60,8 @@ const Camera360WorkflowPopup: React.FC<Camera360WorkflowPopupProps> = ({
   sourceHeight,
   sogniClient,
   onClose,
-  onOutOfCredits
+  onOutOfCredits,
+  onShareQRCode
 }) => {
   const { isAuthenticated } = useSogniAuth();
   const tokenType = getPaymentMethod();
@@ -199,6 +202,11 @@ const Camera360WorkflowPopup: React.FC<Camera360WorkflowPopupProps> = ({
             sogniClient={sogniClient}
             isAuthenticated={isAuthenticated}
             tokenType={tokenType}
+            onShareQRCode={onShareQRCode && workflow.finalVideoBlob ? () => {
+              const angleUrls = workflow.getAngleImageUrls();
+              const thumbnailUrl = angleUrls[0] || effectiveSourceUrl || null;
+              onShareQRCode(workflow.finalVideoBlob!, thumbnailUrl);
+            } : undefined}
           />
         );
       default:
