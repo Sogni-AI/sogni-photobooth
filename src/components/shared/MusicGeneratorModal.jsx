@@ -497,7 +497,6 @@ const MusicGeneratorModal = ({
         animation: 'fadeIn 0.2s ease',
         overflowY: 'auto'
       }}
-      onClick={handleClose}
     >
       <div
         style={{
@@ -512,7 +511,6 @@ const MusicGeneratorModal = ({
           animation: 'slideUp 0.3s ease',
           position: 'relative'
         }}
-        onClick={(e) => e.stopPropagation()}
       >
         {/* Hidden audio element for preview */}
         <audio
