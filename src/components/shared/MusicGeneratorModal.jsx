@@ -8,6 +8,14 @@ import { useAudioModelConfig } from '../../hooks/useAudioModelConfig';
 import aceStepDemos from '../../constants/ace-step-demos.json';
 import WaveformPlaybackBar from './WaveformPlaybackBar';
 
+// Languages currently supported by deployed ComfyUI workers (pre-fix).
+// TODO: Remove once workers deploy https://github.com/Comfy-Org/ComfyUI/pull/12528
+const WORKER_SUPPORTED_LANGUAGES = new Set([
+  'en', 'ja', 'zh', 'es', 'de', 'fr', 'pt', 'ru', 'it', 'nl',
+  'pl', 'tr', 'vi', 'cs', 'fa', 'id', 'ko', 'uk', 'hu', 'ar',
+  'sv', 'ro', 'el'
+]);
+
 const formatTime = (seconds) => {
   const mins = Math.floor(seconds / 60);
   const secs = Math.floor(seconds % 60);
@@ -301,7 +309,9 @@ const MusicGeneratorModal = ({
         bpm: musicBpm,
         keyscale: musicKeyscale,
         timesignature: musicTimesig,
-        language: musicLanguage,
+        // TODO: Remove this fallback once ComfyUI workers deploy the expanded language list
+        // (see https://github.com/Comfy-Org/ComfyUI/pull/12528)
+        language: WORKER_SUPPORTED_LANGUAGES.has(musicLanguage) ? musicLanguage : 'en',
         composerMode: musicComposerMode,
         promptStrength: musicPromptStrength,
         creativity: musicCreativity,
