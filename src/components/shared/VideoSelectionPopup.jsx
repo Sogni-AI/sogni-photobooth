@@ -352,42 +352,6 @@ const VideoSelectionPopup = ({
         WebkitOverflowScrolling: 'touch'
       }}
     >
-      {/* Close button - positioned on the backdrop, outside the panel */}
-      <button
-        onClick={onClose}
-        style={{
-          position: 'absolute',
-          top: isTablet ? '10px' : '16px',
-          right: isTablet ? '10px' : '16px',
-          width: '40px',
-          height: '40px',
-          borderRadius: '50%',
-          border: 'none',
-          background: 'rgba(255, 255, 255, 0.2)',
-          color: '#fff',
-          fontSize: '24px',
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          transition: 'all 0.2s ease',
-          lineHeight: '1',
-          fontWeight: '300',
-          zIndex: 10001,
-          backdropFilter: 'blur(10px)'
-        }}
-        onMouseOver={(e) => {
-          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.35)';
-          e.currentTarget.style.transform = 'scale(1.1) rotate(90deg)';
-        }}
-        onMouseOut={(e) => {
-          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
-          e.currentTarget.style.transform = 'scale(1) rotate(0deg)';
-        }}
-      >
-        ×
-      </button>
-
       <div
         style={{
           background: isMobile ? 'rgba(255, 255, 255, 0.98)' : 'linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(250, 250, 255, 0.98) 100%)',
@@ -408,6 +372,43 @@ const VideoSelectionPopup = ({
         }}
         onClick={(e) => e.stopPropagation()}
       >
+        {/* Close button - inside the panel */}
+        <button
+          onClick={onClose}
+          style={{
+            position: 'absolute',
+            top: isTablet ? '12px' : '16px',
+            right: isTablet ? '12px' : '16px',
+            width: isTablet ? '36px' : '40px',
+            height: isTablet ? '36px' : '40px',
+            borderRadius: '50%',
+            border: '1px solid rgba(0, 0, 0, 0.1)',
+            background: 'rgba(0, 0, 0, 0.05)',
+            color: '#666',
+            fontSize: '20px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            transition: 'all 0.2s ease',
+            lineHeight: '1',
+            fontWeight: '400',
+            zIndex: 10
+          }}
+          onMouseOver={(e) => {
+            e.currentTarget.style.background = 'rgba(0, 0, 0, 0.1)';
+            e.currentTarget.style.color = '#333';
+            e.currentTarget.style.transform = 'scale(1.05)';
+          }}
+          onMouseOut={(e) => {
+            e.currentTarget.style.background = 'rgba(0, 0, 0, 0.05)';
+            e.currentTarget.style.color = '#666';
+            e.currentTarget.style.transform = 'scale(1)';
+          }}
+        >
+          ×
+        </button>
+
         {/* Header */}
         <div
           style={{
