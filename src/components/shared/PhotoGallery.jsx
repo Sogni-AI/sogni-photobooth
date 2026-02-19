@@ -20065,37 +20065,6 @@ const PhotoGallery = ({
               )}
             </div>
 
-            {/* Music Selector Modal - overlays the video player */}
-            {showStitchedVideoMusicSelector && (
-              <MusicSelectorModal
-                currentPresetId={stitchedVideoMusicPresetId}
-                musicStartOffset={stitchedVideoMusicStartOffset}
-                customMusicUrl={stitchedVideoMusicCustomUrl}
-                customMusicTitle={stitchedVideoMusicCustomTitle}
-                totalVideoDuration={stitchedVideoRef.current?.duration || 15}
-                onSelect={handleStitchedVideoMusicSelect}
-                onUploadMusic={handleStitchedVideoUploadMusic}
-                onClose={() => setShowStitchedVideoMusicSelector(false)}
-                onOpenMusicGenerator={() => setShowStitchedVideoMusicGenerator(true)}
-                isAuthenticated={isAuthenticated}
-                applyLabel="Apply & Restitch"
-                removeLabel="Remove Music & Restitch"
-                pendingAITrack={pendingAITrack}
-                onPendingAITrackConsumed={() => setPendingAITrack(null)}
-              />
-            )}
-
-            {/* AI Music Generator Modal for stitched video */}
-            <MusicGeneratorModal
-              visible={showStitchedVideoMusicGenerator}
-              onClose={() => setShowStitchedVideoMusicGenerator(false)}
-              onTrackSelect={handleStitchedVideoAIMusicSelect}
-              sogniClient={sogniClient}
-              isAuthenticated={isAuthenticated}
-              tokenType={tokenType}
-              zIndex={10000002}
-            />
-
             {/* Re-stitching progress overlay */}
             {isRestitchingWithMusic && (
               <div
@@ -20134,6 +20103,37 @@ const PhotoGallery = ({
               </div>
             )}
           </div>
+
+          {/* Music Selector Modal - rendered outside video player container to avoid overflow clipping */}
+          {showStitchedVideoMusicSelector && (
+            <MusicSelectorModal
+              currentPresetId={stitchedVideoMusicPresetId}
+              musicStartOffset={stitchedVideoMusicStartOffset}
+              customMusicUrl={stitchedVideoMusicCustomUrl}
+              customMusicTitle={stitchedVideoMusicCustomTitle}
+              totalVideoDuration={stitchedVideoRef.current?.duration || 15}
+              onSelect={handleStitchedVideoMusicSelect}
+              onUploadMusic={handleStitchedVideoUploadMusic}
+              onClose={() => setShowStitchedVideoMusicSelector(false)}
+              onOpenMusicGenerator={() => setShowStitchedVideoMusicGenerator(true)}
+              isAuthenticated={isAuthenticated}
+              applyLabel="Apply & Restitch"
+              removeLabel="Remove Music & Restitch"
+              pendingAITrack={pendingAITrack}
+              onPendingAITrackConsumed={() => setPendingAITrack(null)}
+            />
+          )}
+
+          {/* AI Music Generator Modal for stitched video */}
+          <MusicGeneratorModal
+            visible={showStitchedVideoMusicGenerator}
+            onClose={() => setShowStitchedVideoMusicGenerator(false)}
+            onTrackSelect={handleStitchedVideoAIMusicSelect}
+            sogniClient={sogniClient}
+            isAuthenticated={isAuthenticated}
+            tokenType={tokenType}
+            zIndex={10000002}
+          />
         </div>,
         document.body
       )}
