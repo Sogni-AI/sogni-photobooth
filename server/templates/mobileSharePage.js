@@ -134,6 +134,30 @@ export function renderMobileSharePage({
             justify-content: center;
             align-items: center;
             margin-bottom: 15px;
+            position: relative;
+          }
+
+          .video-sound-btn {
+            position: absolute;
+            bottom: 12px;
+            right: 12px;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.6);
+            border: none;
+            color: white;
+            font-size: 18px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 2;
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+          }
+          .video-sound-btn:active {
+            background: rgba(0, 0, 0, 0.8);
           }
           
           .photo {
@@ -606,15 +630,17 @@ export function renderMobileSharePage({
           <div class="content${isVideo ? ' video-page' : ''}">
             ${isVideo ? `
             <div class="video-container">
-              <video 
-                src="${videoUrl}" 
-                class="video" 
-                autoplay 
-                loop 
-                muted 
+              <video
+                id="shareVideo"
+                src="${videoUrl}"
+                class="video"
+                autoplay
+                loop
+                muted
                 playsinline
                 poster="${imageUrl}"
               ></video>
+              <button id="soundBtn" class="video-sound-btn" aria-label="Toggle sound">🔇</button>
             </div>
             ` : `
             <div class="photo-container">
@@ -823,6 +849,46 @@ export function renderMobileSharePage({
           
           // Expose handler globally for inline onclick
           window.showPromoPopup = showPromoPopup;
+
+          // Video sound toggle - detect if video has audio and show unmute button
+          (function() {
+            const video = document.getElementById('shareVideo');
+            const soundBtn = document.getElementById('soundBtn');
+            if (!video || !soundBtn) return;
+
+            // Show sound button once video metadata is loaded (check for audio tracks)
+            function checkForAudio() {
+              // Use mozHasAudio, webkitAudioDecodedByteCount, or audioTracks API
+              const hasAudio = (
+                video.mozHasAudio ||
+                (video.webkitAudioDecodedByteCount != null && video.webkitAudioDecodedByteCount > 0) ||
+                (video.audioTracks && video.audioTracks.length > 0)
+              );
+              if (hasAudio) {
+                soundBtn.style.display = 'flex';
+              } else {
+                // Fallback: show button after brief playback to detect decoded audio bytes
+                setTimeout(function() {
+                  if (video.webkitAudioDecodedByteCount > 0 ||
+                      (video.audioTracks && video.audioTracks.length > 0)) {
+                    soundBtn.style.display = 'flex';
+                  }
+                }, 500);
+              }
+            }
+
+            video.addEventListener('loadedmetadata', checkForAudio);
+            // Also check after some playback in case metadata detection fails
+            video.addEventListener('playing', function onPlaying() {
+              video.removeEventListener('playing', onPlaying);
+              setTimeout(checkForAudio, 300);
+            });
+
+            soundBtn.addEventListener('click', function() {
+              video.muted = !video.muted;
+              soundBtn.textContent = video.muted ? '🔇' : '🔊';
+            });
+          })();
 
           // Auto-focus on Twitter button for better UX
           document.addEventListener('DOMContentLoaded', function() {

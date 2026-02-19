@@ -1412,7 +1412,19 @@ const App = () => {
         updateUrlWithPrompt('copyImageStyle');
       }
   }, [stylePrompts, promptsData, currentPage]); // Removed selectedStyle from dependencies to prevent circular loop
-  
+
+  // Handle /signup route - auto-open signup modal when navigated from share page
+  useEffect(() => {
+    const pendingSignup = sessionStorage.getItem('pendingSignup');
+    if (pendingSignup === 'true') {
+      sessionStorage.removeItem('pendingSignup');
+      // Small delay to let AuthStatus mount and expose openSignupModal
+      setTimeout(() => {
+        authStatusRef.current?.openSignupModal();
+      }, 500);
+    }
+  }, []);
+
   // Handle browser navigation (back/forward) - allow URL prompt parameter to apply
   useEffect(() => {
     const handlePopState = () => {
@@ -10717,6 +10729,7 @@ const App = () => {
       <PromoPopup
         isOpen={showPromoPopup}
         onClose={handlePromoPopupClose}
+        onSignup={() => authStatusRef.current?.openSignupModal()}
       />
 
       {/* Out of Credits Popup */}

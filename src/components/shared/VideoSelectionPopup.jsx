@@ -329,6 +329,13 @@ const VideoSelectionPopup = ({
   const isMobile = false;
   const isTablet = windowWidth < 1024;
   const isDesktop = windowWidth >= 1024;
+  // Kiosk-like tall portrait displays get larger tiles (~1.67 visible instead of ~2.5)
+  const isKioskPortrait = isTablet && windowHeight / windowWidth > 1.4;
+  // Calculate tile width: available = viewport - outer padding (40) - carousel padding (48) - one gap (16)
+  // Divide by 1.67 to show ~1 and 2/3 tiles
+  const tabletTileWidth = isKioskPortrait
+    ? `${Math.round((windowWidth - 104) / 1.67)}px`
+    : '280px';
 
   if (!visible) return null;
 
@@ -506,8 +513,8 @@ const VideoSelectionPopup = ({
                   flexDirection: 'column',
                   opacity: isDisabled ? 0.5 : 1,
                   flexShrink: 0,
-                  width: isMobile ? 'calc(100vw - 100px)' : isTablet ? '280px' : '340px',
-                  minWidth: isMobile ? 'calc(100vw - 100px)' : isTablet ? '280px' : '340px',
+                  width: isMobile ? 'calc(100vw - 100px)' : isTablet ? tabletTileWidth : '340px',
+                  minWidth: isMobile ? 'calc(100vw - 100px)' : isTablet ? tabletTileWidth : '340px',
                   scrollSnapAlign: 'start',
                   boxSizing: 'border-box'
                 }}

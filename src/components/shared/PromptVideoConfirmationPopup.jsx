@@ -77,7 +77,7 @@ const PromptVideoConfirmationPopup = ({
           background: 'linear-gradient(135deg, #8B5CF6 0%, #6D28D9 100%)',
           borderRadius: '20px',
           padding: '30px',
-          maxWidth: '500px',
+          maxWidth: '560px',
           width: '100%',
           boxShadow: '0 20px 60px rgba(139, 92, 246, 0.5)',
           animation: 'slideUp 0.3s ease',

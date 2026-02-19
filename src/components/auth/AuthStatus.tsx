@@ -30,6 +30,7 @@ interface AuthStatusProps {
 
 export interface AuthStatusRef {
   openLoginModal: () => void;
+  openSignupModal: () => void;
 }
 
 export const AuthStatus = memo(forwardRef<AuthStatusRef, AuthStatusProps>(({ onPurchaseClick, onSignupComplete, onHistoryClick, textColor = '#ffffff', playRandomFlashSound, showToast: _showToast }, ref) => {
@@ -225,9 +226,15 @@ export const AuthStatus = memo(forwardRef<AuthStatusRef, AuthStatusProps>(({ onP
     setShowLoginModal(true);
   };
 
-  // Expose openLoginModal method to parent via ref
+  const handleSignupClick = () => {
+    setLoginModalMode('signup');
+    setShowLoginModal(true);
+  };
+
+  // Expose openLoginModal and openSignupModal methods to parent via ref
   useImperativeHandle(ref, () => ({
-    openLoginModal: handleLoginClick
+    openLoginModal: handleLoginClick,
+    openSignupModal: handleSignupClick
   }));
 
 
@@ -298,6 +305,9 @@ export const AuthStatus = memo(forwardRef<AuthStatusRef, AuthStatusProps>(({ onP
       setTimeout(() => {
         setHighlightDailyBoost(false);
       }, 10000);
+    } else {
+      // Boost was claimed - close the wallet popup if it's open
+      setShowUserMenu(false);
     }
   }, [canClaimDailyBoost, resetClaimState]);
 

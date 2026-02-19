@@ -11,7 +11,7 @@ import { WinterMusicPlayerProvider } from '../context/WinterMusicPlayerContext';
 import GlobalMusicPlayer from './shared/GlobalMusicPlayer';
 import GlobalWinterMusicPlayer from './shared/GlobalWinterMusicPlayer';
 import PageMetadata from './shared/PageMetadata';
-import { redirectToAuth } from '../config/auth';
+
 
 // Create navigation context
 const NavigationContext = createContext();
@@ -23,10 +23,13 @@ const AppRouter = () => {
     const hash = window.location.hash;
     const pathname = window.location.pathname;
 
-    // Handle /signup route - redirect to auth signup flow
+    // Handle /signup route - show signup modal within Photobooth
     if (pathname === '/signup') {
-      redirectToAuth('signup', 'PHOTOBOOTH');
-      return 'main'; // Return main while redirect happens
+      // Store flag so App can auto-open signup modal on mount
+      sessionStorage.setItem('pendingSignup', 'true');
+      // Clean up URL to root
+      window.history.replaceState({}, '', '/');
+      return 'main';
     }
 
     if (hash === '#analytics' || pathname === '/admin/analytics') {
@@ -86,7 +89,9 @@ const AppRouter = () => {
       const hash = window.location.hash;
       const pathname = window.location.pathname;
       if (pathname === '/signup') {
-        redirectToAuth('signup', 'PHOTOBOOTH');
+        sessionStorage.setItem('pendingSignup', 'true');
+        window.history.replaceState({}, '', '/');
+        setCurrentRoute('main');
         return;
       }
       if (hash === '#analytics' || pathname === '/admin/analytics') {

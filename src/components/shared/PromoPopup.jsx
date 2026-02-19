@@ -2,7 +2,7 @@ import React, { useRef, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import '../../styles/components/PromoPopup.css';
 
-const PromoPopup = ({ isOpen, onClose }) => {
+const PromoPopup = ({ isOpen, onClose, onSignup }) => {
   const modalRef = useRef(null);
   const overlayRef = useRef(null);
 
@@ -83,8 +83,10 @@ const PromoPopup = ({ isOpen, onClose }) => {
   }, [isOpen]);
 
   const handleSignupClick = () => {
-    window.open('https://app.sogni.ai/create?code=PHOTOBOOTH', '_blank');
     onClose();
+    if (onSignup) {
+      onSignup();
+    }
   };
 
   if (!isOpen) return null;
@@ -139,6 +141,7 @@ const PromoPopup = ({ isOpen, onClose }) => {
 PromoPopup.propTypes = {
   isOpen: PropTypes.bool.isRequired,
   onClose: PropTypes.func.isRequired,
+  onSignup: PropTypes.func,
 };
 
 export default PromoPopup; 
