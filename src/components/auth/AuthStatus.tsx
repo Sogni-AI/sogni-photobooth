@@ -294,10 +294,16 @@ export const AuthStatus = memo(forwardRef<AuthStatusRef, AuthStatusProps>(({ onP
   // Handle dismissal of celebration modal - fall back to wallet highlight
   const handleCelebrationDismiss = useCallback(() => {
     setShowDailyBoostCelebration(false);
+
+    // Check lastClaimSuccess BEFORE resetting it
+    const wasClaimed = lastClaimSuccess;
     resetClaimState();
 
-    // If not claimed yet, fall back to wallet highlight behavior
-    if (canClaimDailyBoost) {
+    if (wasClaimed) {
+      // Boost was claimed - close the wallet popup
+      setShowUserMenu(false);
+    } else {
+      // Not claimed (dismissed without claiming) - fall back to wallet highlight
       setShowUserMenu(true);
       setHighlightDailyBoost(true);
 
@@ -305,11 +311,8 @@ export const AuthStatus = memo(forwardRef<AuthStatusRef, AuthStatusProps>(({ onP
       setTimeout(() => {
         setHighlightDailyBoost(false);
       }, 10000);
-    } else {
-      // Boost was claimed - close the wallet popup if it's open
-      setShowUserMenu(false);
     }
-  }, [canClaimDailyBoost, resetClaimState]);
+  }, [lastClaimSuccess, resetClaimState]);
 
   // Handle claim from wallet button (for fallback flow)
   const handleClaimDailyBoost = useCallback(() => {
